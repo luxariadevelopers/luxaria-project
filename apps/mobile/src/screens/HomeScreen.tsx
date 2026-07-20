@@ -72,15 +72,14 @@ export function HomeScreen() {
 
       <Pressable
         style={styles.secondaryButton}
-        onPress={() => navigation.navigate('MaterialIssue')}
+        onPress={() => navigation.navigate('StockCountList')}
       >
-        <Text style={styles.secondaryButtonText}>Material issue</Text>
+        <Text style={styles.secondaryButtonText}>Stock Count</Text>
       </Pressable>
 
       <Text style={styles.note}>
-        GRN capture requires photos and GPS, then queues offline for sync
-        (media first, then submit). Material Issue → Return posts unused stock
-        back via offline sync.
+        GRN and stock counts queue offline for sync (media first, then submit).
+        Stock Count: Home › Stock Count.
       </Text>
     </Screen>
   );

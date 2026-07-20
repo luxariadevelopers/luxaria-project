@@ -9,12 +9,12 @@ import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
-import { MaterialIssueScreen } from '@/screens/MaterialIssueScreen';
-import { MaterialReturnScreen } from '@/screens/MaterialReturnScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
+import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
+import { StockCountListScreen } from '@/screens/StockCountListScreen';
 import { colors } from '@/theme/colors';
 import type {
   AppStackParamList,
@@ -141,14 +141,14 @@ function AppNavigator() {
         options={{ title: 'Daily Progress Report' }}
       />
       <AppStack.Screen
-        name="MaterialIssue"
-        component={MaterialIssueScreen}
-        options={{ title: 'Material issue' }}
+        name="StockCountList"
+        component={StockCountListScreen}
+        options={{ title: 'Stock Count' }}
       />
       <AppStack.Screen
-        name="MaterialReturn"
-        component={MaterialReturnScreen}
-        options={{ title: 'Material return' }}
+        name="StockCountEntry"
+        component={StockCountEntryScreen}
+        options={{ title: 'Count entry' }}
       />
     </AppStack.Navigator>
   );

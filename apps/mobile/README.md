@@ -30,23 +30,7 @@ Pending Sync screen shows errors and Retry. Expense capture will enqueue into th
 - Projects (+ project selection flow)
 - Pending Sync
 - Profile (permissions + push placeholder)
-- Goods receipt (offline GRN)
-- Daily progress report (offline DPR)
-- Material issue hub → Material return (unused stock back to store)
-
-## Material return (Micro Phase 126)
-
-Return unused material against a **confirmed** issue.
-
-| Item | Value |
-|------|--------|
-| Nested nav | Home → Material issue → Return |
-| Nest permission | `stock.issue` (prompt alias `material_issue.return` is not in the catalog) |
-| List / load issue | `GET /material-issues`, `GET /material-issues/:id` (`stock.view`) |
-| Post return | `POST /material-issues/:id/returns` |
-| Offline type | `material_return.create` (photos upload first; doc IDs folded into `notes`) |
-
-Client validation blocks return qty above `remainingBaseQuantity` before enqueue.
+- Stock Count (list + count entry with photos; offline draft + create/submit sync)
 
 ## API
 

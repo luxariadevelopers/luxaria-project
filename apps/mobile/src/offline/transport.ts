@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { apiClient, getErrorMessage } from '@/api/client';
 import {
-  isMaterialReturnEndpoint,
-  toCreateMaterialReturnBody,
-} from '@/features/material-issue/sanitizeReturnSyncPayload';
+  mergeStockCountItemPhotos,
+  wantsStockCountSubmitAfterCreate,
+} from '@/stock-count/mergeItemPhotos';
 import { uploadToPresignedUrl } from '@/utils/fileUpload';
 import {
   createSyncConflictError,
@@ -83,10 +83,14 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
 
     async syncTransaction(txn, payload) {
       try {
-        // Nest CreateMaterialReturnDto forbids offline envelope fields;
-        // fold photo_* document IDs into notes before POST.
-        const body = isMaterialReturnEndpoint(txn.endpoint)
-          ? toCreateMaterialReturnBody(payload)
+        const headers = {
+          'Idempotency-Key': txn.idempotencyKey,
+          ...(txn.projectId ? { 'X-Project-Id': txn.projectId } : {}),
+        };
+
+        const submitAfter = wantsStockCountSubmitAfterCreate(txn.type, payload);
+        const body = submitAfter
+          ? mergeStockCountItemPhotos(payload)
           : payload;
 
         const response = await apiClient.request<{
@@ -103,30 +107,55 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
           url: txn.endpoint,
           method: txn.method,
           data: body,
-          headers: {
-            'Idempotency-Key': txn.idempotencyKey,
-            ...(txn.projectId ? { 'X-Project-Id': txn.projectId } : {}),
-          },
+          headers,
         });
 
         const data = response.data.data;
-        const serverRecordId = data?.id ?? data?._id;
+        let serverRecordId = data?.id ?? data?._id;
         if (!serverRecordId) {
           throw new Error(
             response.data.message || 'Sync succeeded without server record id',
           );
         }
 
-        const serverTimestamp =
+        let serverTimestamp =
           data?.serverTimestamp ??
           data?.updatedAt ??
           data?.createdAt ??
           new Date().toISOString();
 
+        let responseBody: unknown = response.data;
+
+        // Nest stock counts: create is draft-only; submit is a separate POST.
+        if (submitAfter) {
+          const submitted = await apiClient.post<{
+            success: boolean;
+            message?: string;
+            data?: {
+              id?: string;
+              _id?: string;
+              serverTimestamp?: string;
+              updatedAt?: string;
+              createdAt?: string;
+            };
+          }>(`/stock-counts/${encodeURIComponent(String(serverRecordId))}/submit`, {}, {
+            headers,
+          });
+          const submittedData = submitted.data.data;
+          serverRecordId =
+            submittedData?.id ?? submittedData?._id ?? serverRecordId;
+          serverTimestamp =
+            submittedData?.serverTimestamp ??
+            submittedData?.updatedAt ??
+            submittedData?.createdAt ??
+            serverTimestamp;
+          responseBody = submitted.data;
+        }
+
         return {
           serverRecordId: String(serverRecordId),
           serverTimestamp: String(serverTimestamp),
-          response: response.data,
+          response: responseBody,
         };
       } catch (error) {
         if (axios.isAxiosError(error)) {
