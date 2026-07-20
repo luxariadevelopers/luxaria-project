@@ -64,3 +64,5 @@ apps/web/dist/
 **/playwright-report/
 **/blob-report/
 .playwright/
+apps/web/e2e/.auth/
+apps/web/e2e/.e2e/
