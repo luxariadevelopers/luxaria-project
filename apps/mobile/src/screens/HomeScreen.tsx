@@ -9,9 +9,15 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
+import {
+  canCreateSubmitStockCounts,
+  canViewStockCounts,
+} from '@/stock-count';
 import { colors } from '@/theme/colors';
+import { resolveWorkMeasurementCapabilities } from '@/work-measurement/permissions';
 
 type HomeNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Home'>,
@@ -19,11 +25,22 @@ type HomeNavigation = CompositeNavigationProp<
 >;
 
 export function HomeScreen() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
   const { activeCount } = useOfflineSync();
   const navigation = useNavigation<HomeNavigation>();
+  const workMeasurementCaps =
+    resolveWorkMeasurementCapabilities(hasPermission);
+  const canViewStockCount = canViewStockCounts(hasPermission);
+  const canCreateStockCount = canCreateSubmitStockCounts(hasPermission);
+  const canOpenMaterialIssue = hasPermission('stock.view');
+  const canViewLabourVoucher = hasPermission(
+    LABOUR_VOUCHER_PERMISSIONS.view,
+  );
+  const canCreateLabourVoucher = hasPermission(
+    LABOUR_VOUCHER_PERMISSIONS.createOrSubmit,
+  );
 
   return (
     <Screen
@@ -70,17 +87,63 @@ export function HomeScreen() {
         <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
       </Pressable>
 
-      <Pressable
-        style={styles.secondaryButton}
-        onPress={() => navigation.navigate('WorkMeasurementList')}
-      >
-        <Text style={styles.secondaryButtonText}>Work Measurement</Text>
-      </Pressable>
+      {workMeasurementCaps.canView || workMeasurementCaps.canCreate ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => {
+            if (workMeasurementCaps.canView) {
+              navigation.navigate('WorkMeasurementList');
+            } else {
+              navigation.navigate('WorkMeasurementForm');
+            }
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>Work measurement</Text>
+        </Pressable>
+      ) : null}
+
+      {canViewStockCount || canCreateStockCount ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => {
+            if (canViewStockCount) {
+              navigation.navigate('StockCountList');
+            } else {
+              navigation.navigate('StockCountEntry');
+            }
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>Stock count</Text>
+        </Pressable>
+      ) : null}
+
+      {canOpenMaterialIssue ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('MaterialIssue')}
+        >
+          <Text style={styles.secondaryButtonText}>Material issue</Text>
+        </Pressable>
+      ) : null}
+
+      {canViewLabourVoucher || canCreateLabourVoucher ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => {
+            if (canViewLabourVoucher) {
+              navigation.navigate('LabourVoucherHistory');
+            } else {
+              navigation.navigate('NewLabourVoucher');
+            }
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>Labour voucher</Text>
+        </Pressable>
+      ) : null}
 
       <Text style={styles.note}>
-        GRN capture requires photos and GPS, then queues offline for sync
-        (media first, then submit). Work measurements capture BOQ quantities
-        with evidence for later engineer verification.
+        Site capture flows keep the selected project context and queue supported
+        records for offline sync.
       </Text>
     </Screen>
   );

@@ -28,9 +28,10 @@ type ProfileNavigation = CompositeNavigationProp<
 
 export function ProfileScreen() {
   const navigation = useNavigation<ProfileNavigation>();
-  const { user, access, logout } = useAuth();
+  const { user, access, logout, hasPermission } = useAuth();
   const { syncPushRegistration, lastForegroundTitle } = usePushNotifications();
   const [busy, setBusy] = useState(false);
+  const canViewNotifications = hasPermission('notification.view');
 
   const runPermission = async (
     label: string,
@@ -63,6 +64,17 @@ export function ProfileScreen() {
       </View>
 
       <Text style={styles.section}>Notifications</Text>
+      <Pressable
+        style={[styles.action, !canViewNotifications && styles.disabled]}
+        disabled={!canViewNotifications}
+        onPress={() => navigation.navigate('Notifications')}
+      >
+        <Text style={styles.actionText}>
+          {canViewNotifications
+            ? 'Open notifications'
+            : 'Notifications (needs notification.view)'}
+        </Text>
+      </Pressable>
       <Pressable
         style={styles.action}
         onPress={() => navigation.navigate('NotificationPreferences')}

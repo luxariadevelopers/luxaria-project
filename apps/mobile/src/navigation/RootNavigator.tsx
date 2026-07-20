@@ -5,15 +5,28 @@ import { Text } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useProject } from '@/context/ProjectContext';
+import {
+  LabourVoucherDetailScreen,
+  LabourVoucherHistoryScreen,
+  NewLabourVoucherScreen,
+} from '@/labour-vouchers';
+import { ConflictDetailScreen } from '@/screens/ConflictDetailScreen';
 import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { MaterialIssueScreen } from '@/screens/MaterialIssueScreen';
+import { MaterialReturnScreen } from '@/screens/MaterialReturnScreen';
+import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { NotificationPreferencesScreen } from '@/screens/NotificationPreferencesScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
+import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
+import { StockCountListScreen } from '@/screens/StockCountListScreen';
+import { WorkMeasurementFormScreen } from '@/screens/WorkMeasurementFormScreen';
+import { WorkMeasurementListScreen } from '@/screens/WorkMeasurementListScreen';
 import { appNavigationRef } from '@/navigation/navigationRef';
 import { colors } from '@/theme/colors';
 import type {
@@ -141,9 +154,64 @@ function AppNavigator() {
         options={{ title: 'Daily Progress Report' }}
       />
       <AppStack.Screen
+        name="WorkMeasurementList"
+        component={WorkMeasurementListScreen}
+        options={{ title: 'Work measurement' }}
+      />
+      <AppStack.Screen
+        name="WorkMeasurementForm"
+        component={WorkMeasurementFormScreen}
+        options={{ title: 'New measurement' }}
+      />
+      <AppStack.Screen
+        name="StockCountList"
+        component={StockCountListScreen}
+        options={{ title: 'Stock count' }}
+      />
+      <AppStack.Screen
+        name="StockCountEntry"
+        component={StockCountEntryScreen}
+        options={{ title: 'Count entry' }}
+      />
+      <AppStack.Screen
+        name="MaterialIssue"
+        component={MaterialIssueScreen}
+        options={{ title: 'Material issue' }}
+      />
+      <AppStack.Screen
+        name="MaterialReturn"
+        component={MaterialReturnScreen}
+        options={{ title: 'Material return' }}
+      />
+      <AppStack.Screen
+        name="LabourVoucherHistory"
+        component={LabourVoucherHistoryScreen}
+        options={{ title: 'Labour vouchers' }}
+      />
+      <AppStack.Screen
+        name="NewLabourVoucher"
+        component={NewLabourVoucherScreen}
+        options={{ title: 'New labour voucher' }}
+      />
+      <AppStack.Screen
+        name="LabourVoucherDetail"
+        component={LabourVoucherDetailScreen}
+        options={{ title: 'Labour voucher' }}
+      />
+      <AppStack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
+      />
+      <AppStack.Screen
         name="NotificationPreferences"
         component={NotificationPreferencesScreen}
         options={{ title: 'Notification preferences' }}
+      />
+      <AppStack.Screen
+        name="ConflictDetail"
+        component={ConflictDetailScreen}
+        options={{ title: 'Sync conflict' }}
       />
     </AppStack.Navigator>
   );

@@ -1,10 +1,16 @@
 import type { NavigationContainerRef } from '@react-navigation/native';
 import type { AppStackParamList } from '@/navigation/types';
 
-export type NotificationRouteTarget = {
-  screen: keyof AppStackParamList;
-  params?: AppStackParamList[keyof AppStackParamList];
-};
+export type NotificationRouteTarget =
+  | {
+      screen: 'GoodsReceipt';
+      params?: AppStackParamList['GoodsReceipt'];
+    }
+  | { screen: 'DailyProgressReport' }
+  | {
+      screen: 'Tabs';
+      params: NonNullable<AppStackParamList['Tabs']>;
+    };
 
 export function resolveNotificationRoute(
   data: Record<string, unknown>,
@@ -19,6 +25,14 @@ export function resolveNotificationRoute(
     entityType.includes('purchase_order') ||
     eventType.includes('grn')
   ) {
+    const entityId =
+      typeof data.entityId === 'string' ? data.entityId.trim() : '';
+    if (entityType.includes('purchase_order') && entityId) {
+      return {
+        screen: 'GoodsReceipt',
+        params: { purchaseOrderId: entityId },
+      };
+    }
     return { screen: 'GoodsReceipt' };
   }
 
@@ -30,7 +44,7 @@ export function resolveNotificationRoute(
     return { screen: 'DailyProgressReport' };
   }
 
-  return { screen: 'Tabs' };
+  return { screen: 'Tabs', params: { screen: 'Home' } };
 }
 
 export function navigateFromNotificationData(
@@ -42,7 +56,12 @@ export function navigateFromNotificationData(
   }
 
   const target = resolveNotificationRoute(data);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (navigation as any).navigate(target.screen, target.params);
+  if (target.screen === 'GoodsReceipt') {
+    navigation.navigate('GoodsReceipt', target.params);
+  } else if (target.screen === 'DailyProgressReport') {
+    navigation.navigate('DailyProgressReport');
+  } else {
+    navigation.navigate('Tabs', target.params);
+  }
   return true;
 }

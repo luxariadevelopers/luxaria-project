@@ -52,6 +52,18 @@ describe('notificationNavigation', () => {
     ).toEqual({ screen: 'GoodsReceipt' });
   });
 
+  it('preserves a purchase order id for GRN capture', () => {
+    expect(
+      resolveNotificationRoute({
+        entityType: 'purchase_order',
+        entityId: '507f191e810c19729de860ea',
+      }),
+    ).toEqual({
+      screen: 'GoodsReceipt',
+      params: { purchaseOrderId: '507f191e810c19729de860ea' },
+    });
+  });
+
   it('routes missing DPR notifications', () => {
     expect(resolveNotificationRoute({ eventType: 'missing_dpr' })).toEqual({
       screen: 'DailyProgressReport',
@@ -61,6 +73,7 @@ describe('notificationNavigation', () => {
   it('defaults to tabs', () => {
     expect(resolveNotificationRoute({ eventType: 'payment_due' })).toEqual({
       screen: 'Tabs',
+      params: { screen: 'Home' },
     });
   });
 });
