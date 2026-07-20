@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import {
@@ -13,6 +14,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   Toolbar,
   Typography,
 } from '@mui/material';
@@ -27,30 +29,50 @@ type NavItem = {
   permission?: string;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', to: '/', icon: <DashboardOutlinedIcon /> },
+type NavSection = {
+  title?: string;
+  items: NavItem[];
+};
+
+const NAV_SECTIONS: NavSection[] = [
   {
-    label: 'Users',
-    to: '/users',
-    icon: <GroupOutlinedIcon />,
-    permission: 'user.view',
+    items: [
+      { label: 'Dashboard', to: '/', icon: <DashboardOutlinedIcon /> },
+      {
+        label: 'Users',
+        to: '/users',
+        icon: <GroupOutlinedIcon />,
+        permission: 'user.view',
+      },
+      {
+        label: 'Projects',
+        to: '/projects',
+        icon: <FolderOutlinedIcon />,
+        permission: 'project.view',
+      },
+      {
+        label: 'Daily Progress',
+        to: '/daily-progress-reports',
+        icon: <AssignmentOutlinedIcon />,
+        permission: 'dpr.view',
+      },
+      {
+        label: 'Settings',
+        to: '/settings',
+        icon: <SettingsOutlinedIcon />,
+      },
+    ],
   },
   {
-    label: 'Projects',
-    to: '/projects',
-    icon: <FolderOutlinedIcon />,
-    permission: 'project.view',
-  },
-  {
-    label: 'Daily Progress',
-    to: '/daily-progress-reports',
-    icon: <AssignmentOutlinedIcon />,
-    permission: 'dpr.view',
-  },
-  {
-    label: 'Settings',
-    to: '/settings',
-    icon: <SettingsOutlinedIcon />,
+    title: 'Administration',
+    items: [
+      {
+        label: 'System Health',
+        to: '/administration/system-health',
+        icon: <MonitorHeartOutlinedIcon />,
+        permission: 'audit.view',
+      },
+    ],
   },
 ];
 
@@ -62,11 +84,14 @@ type SidebarProps = {
 export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { hasPermission, access } = useAuth();
 
-  const items = NAV_ITEMS.filter((item) => {
-    if (!item.permission) return true;
-    if (!access) return true;
-    return hasPermission(item.permission);
-  });
+  const sections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (!item.permission) return true;
+      if (!access) return true;
+      return hasPermission(item.permission);
+    }),
+  })).filter((section) => section.items.length > 0);
 
   const content = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -97,26 +122,47 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       </Toolbar>
       <Divider />
       <List sx={{ px: 1.5, py: 2, flex: 1 }}>
-        {items.map((item) => (
-          <ListItemButton
-            key={item.to}
-            component={NavLink}
-            to={item.to}
-            end={item.to === '/'}
-            onClick={onClose}
-            sx={{
-              borderRadius: 2,
-              mb: 0.5,
-              '&.active': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '& .MuiListItemIcon-root': { color: 'inherit' },
-              },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
+        {sections.map((section) => (
+          <Box key={section.title ?? 'main'} component="li" sx={{ listStyle: 'none', mb: 1 }}>
+            {section.title ? (
+              <ListSubheader
+                disableSticky
+                sx={{
+                  px: 1,
+                  lineHeight: 2,
+                  bgcolor: 'transparent',
+                  color: 'text.secondary',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                {section.title}
+              </ListSubheader>
+            ) : null}
+            {section.items.map((item) => (
+              <ListItemButton
+                key={item.to}
+                component={NavLink}
+                to={item.to}
+                end={item.to === '/'}
+                onClick={onClose}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  '&.active': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '& .MuiListItemIcon-root': { color: 'inherit' },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            ))}
+          </Box>
         ))}
       </List>
     </Box>

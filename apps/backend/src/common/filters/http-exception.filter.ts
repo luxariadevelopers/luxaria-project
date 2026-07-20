@@ -3,11 +3,15 @@ import { Catch, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ErrorCodes } from '../constants/error-codes';
 import type { ApiErrorDetailDto, ApiErrorResponseDto } from '../dto/api-error.dto';
+import { redactString } from '../logging/log-redaction';
+import { ErrorTrackingService } from '../observability/error-tracking.service';
 import { REQUEST_ID_HEADER } from '../middleware/request-id.middleware';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  constructor(private readonly errorTracking: ErrorTrackingService) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -20,9 +24,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(
-        `Unhandled error requestId=${requestId}: ${message}`,
+        `Unhandled error requestId=${requestId}: ${redactString(message)}`,
         exception instanceof Error ? exception.stack : undefined,
       );
+      this.errorTracking.captureException(exception, {
+        requestId,
+        path: request.originalUrl,
+        method: request.method,
+        statusCode: status,
+      });
     }
 
     const body: ApiErrorResponseDto = {

@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { redactString } from '../logging/log-redaction';
 import { REQUEST_ID_HEADER } from '../middleware/request-id.middleware';
 
 @Injectable()
@@ -15,13 +16,22 @@ export class LoggingInterceptor implements NestInterceptor {
     const response = http.getResponse<Response>();
     const startedAt = Date.now();
     const requestId = String(request.headers[REQUEST_ID_HEADER] ?? '');
+    const safeUrl = redactString(request.originalUrl);
 
     return next.handle().pipe(
       tap({
         next: () => {
           const durationMs = Date.now() - startedAt;
           this.logger.log(
-            `${request.method} ${request.originalUrl} ${response.statusCode} ${durationMs}ms requestId=${requestId}`,
+            JSON.stringify({
+              level: 'info',
+              type: 'http',
+              method: request.method,
+              url: safeUrl,
+              statusCode: response.statusCode,
+              durationMs,
+              requestId,
+            }),
           );
         },
         error: (error: unknown) => {
@@ -34,7 +44,18 @@ export class LoggingInterceptor implements NestInterceptor {
               ? (error as { status: number }).status
               : 500;
           this.logger.error(
-            `${request.method} ${request.originalUrl} ${status} ${durationMs}ms requestId=${requestId}`,
+            JSON.stringify({
+              level: 'error',
+              type: 'http',
+              method: request.method,
+              url: safeUrl,
+              statusCode: status,
+              durationMs,
+              requestId,
+              message: redactString(
+                error instanceof Error ? error.message : 'Request failed',
+              ),
+            }),
           );
         },
       }),

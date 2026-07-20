@@ -89,7 +89,8 @@ Shared API envelopes (Micro Phase 002): `@luxaria/shared-types` exports `ApiResp
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/health` | Health + MongoDB status |
+| GET | `/api/v1/health` | Health checks (DB, Redis, memory, delivery summary) |
+| GET | `/api/v1/health/operations` | Operational health + alert config (`audit.view`) |
 | GET | `/api/v1/version` | App name, version, environment |
 | GET | `/api/docs` | Swagger UI (development) |
 
@@ -107,6 +108,8 @@ Standard success envelope:
 Environment templates: [`apps/backend/.env.example`](apps/backend/.env.example), plus `.env.development`, `.env.test`, `.env.production`.
 
 MongoDB Atlas setup: [`apps/backend/docs/MONGODB_ATLAS.md`](apps/backend/docs/MONGODB_ATLAS.md).
+
+Observability (Micro Phase 140): [`apps/backend/docs/OBSERVABILITY_API.md`](apps/backend/docs/OBSERVABILITY_API.md) — structured log redaction, error tracking hook, operational alerts.
 
 ## Phase status
 

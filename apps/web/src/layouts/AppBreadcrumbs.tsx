@@ -7,6 +7,8 @@ const LABELS: Record<string, string> = {
   projects: 'Projects',
   settings: 'Settings',
   forbidden: 'Access denied',
+  administration: 'Administration',
+  'system-health': 'System Health',
 };
 
 export function AppBreadcrumbs() {

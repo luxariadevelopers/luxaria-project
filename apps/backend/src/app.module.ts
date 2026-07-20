@@ -77,6 +77,7 @@ import { RbacModule } from './modules/rbac/rbac.module';
 import { UsersModule } from './modules/users/users.module';
 import { VersionModule } from './modules/version/version.module';
 import { SharedModule } from './shared/shared.module';
+import { ObservabilityModule } from './common/observability/observability.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { SharedModule } from './shared/shared.module';
       validate: validateEnvironment,
     }),
     SharedModule,
+    ObservabilityModule,
     DatabaseModule,
     NumberingModule,
     // AuthModule registers APP_GUARDs (JWT → throttle → permissions → project access).

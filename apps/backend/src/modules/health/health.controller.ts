@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { HealthService } from './health.service';
 
 @ApiTags('Health')
@@ -13,10 +14,26 @@ export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Application health check' })
   @ApiOkResponse({ description: 'Health status wrapped in standard API response' })
-  getHealth() {
+  async getHealth() {
     return createSuccessResponse(
-      this.healthService.getHealth(),
+      await this.healthService.getHealth(),
       'Health check successful',
+    );
+  }
+
+  @Get('operations')
+  @ApiBearerAuth()
+  @RequirePermissions('audit.view')
+  @ApiOperation({
+    summary: 'Operational health, alert config, and delivery visibility',
+  })
+  @ApiOkResponse({
+    description: 'Operations health wrapped in standard API response',
+  })
+  async getOperationsHealth() {
+    return createSuccessResponse(
+      await this.healthService.getOperationsHealth(),
+      'Operations health retrieved successfully',
     );
   }
 }

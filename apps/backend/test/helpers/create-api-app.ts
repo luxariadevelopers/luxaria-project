@@ -4,6 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from '../../src/common/filters/http-exception.filter';
+import { ErrorTrackingService } from '../../src/common/observability/error-tracking.service';
 import { ResponseInterceptor } from '../../src/common/interceptors/response.interceptor';
 
 type CreateApiAppOptions = {
@@ -35,7 +36,12 @@ export async function createApiApp(
       transform: true,
     }),
   );
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(
+    new AllExceptionsFilter({
+      captureException: () => undefined,
+      isEnabled: () => false,
+    } as ErrorTrackingService),
+  );
   app.useGlobalInterceptors(new ResponseInterceptor());
 
   if (options.beforeInit) {

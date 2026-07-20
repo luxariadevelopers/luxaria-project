@@ -10,6 +10,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { ErrorTrackingService } from './common/observability/error-tracking.service';
 import type { AppConfig } from './config/configuration';
 
 async function bootstrap() {
@@ -88,7 +89,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter(app.get(ErrorTrackingService)));
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new ResponseInterceptor(),

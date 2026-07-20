@@ -9,6 +9,7 @@ import { ForbiddenPage } from '@/pages/ForbiddenPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { SystemHealthPage } from '@/pages/SystemHealthPage';
 import { UsersPage } from '@/pages/UsersPage';
 
 export function AppRouter() {
@@ -30,6 +31,9 @@ export function AppRouter() {
             </Route>
             <Route element={<PermissionGuard anyOf={['dpr.view']} />}>
               <Route path="daily-progress-reports" element={<DprPage />} />
+            </Route>
+            <Route element={<PermissionGuard anyOf={['audit.view']} />}>
+              <Route path="administration/system-health" element={<SystemHealthPage />} />
             </Route>
             <Route path="settings" element={<SettingsPage />} />
             <Route path="forbidden" element={<ForbiddenPage />} />

@@ -94,6 +94,16 @@ export type AppConfig = {
   vendorInvoiceFreightTolerancePercent: number;
   vendorInvoiceDiscountTolerancePercent: number;
   vendorInvoiceTotalTolerancePercent: number;
+  /** Enable outbound error tracking hook (requires DSN). */
+  errorTrackingEnabled: boolean;
+  /** Error tracking ingest endpoint (never logged in full). */
+  errorTrackingDsn: string | null;
+  /** Optional webhook for operational alerts (never logged in full). */
+  opsAlertWebhookUrl: string | null;
+  /** Failed notification deliveries in 24h before health is degraded. */
+  alertDeliveryFailureThreshold24h: number;
+  alertDatabaseDownEnabled: boolean;
+  alertRedisDownEnabled: boolean;
 };
 
 export default (): AppConfig => {
@@ -235,5 +245,19 @@ export default (): AppConfig => {
     vendorInvoiceTotalTolerancePercent: Number(
       process.env.VENDOR_INVOICE_TOTAL_TOLERANCE_PERCENT ?? 0,
     ),
+    errorTrackingEnabled:
+      String(process.env.ERROR_TRACKING_ENABLED ?? 'false').toLowerCase() ===
+      'true',
+    errorTrackingDsn: process.env.ERROR_TRACKING_DSN?.trim() || null,
+    opsAlertWebhookUrl: process.env.OPS_ALERT_WEBHOOK_URL?.trim() || null,
+    alertDeliveryFailureThreshold24h: Number(
+      process.env.ALERT_DELIVERY_FAILURE_THRESHOLD_24H ?? 10,
+    ),
+    alertDatabaseDownEnabled:
+      String(process.env.ALERT_DATABASE_DOWN_ENABLED ?? 'true').toLowerCase() !==
+      'false',
+    alertRedisDownEnabled:
+      String(process.env.ALERT_REDIS_DOWN_ENABLED ?? 'true').toLowerCase() !==
+      'false',
   };
 };
