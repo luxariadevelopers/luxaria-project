@@ -5,6 +5,8 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import {
   Box,
   Divider,
@@ -17,6 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import { INVESTOR_PORTAL_VIEW } from '@/investor-portal/permissions';
 
 export const DRAWER_WIDTH = 260;
 
@@ -46,6 +49,18 @@ const NAV_ITEMS: NavItem[] = [
     to: '/daily-progress-reports',
     icon: <AssignmentOutlinedIcon />,
     permission: 'dpr.view',
+  },
+  {
+    label: 'Investor documents',
+    to: '/investor/documents',
+    icon: <DescriptionOutlinedIcon />,
+    permission: INVESTOR_PORTAL_VIEW,
+  },
+  {
+    label: 'Investor statements',
+    to: '/investor/statements',
+    icon: <ReceiptLongOutlinedIcon />,
+    permission: INVESTOR_PORTAL_VIEW,
   },
   {
     label: 'Settings',

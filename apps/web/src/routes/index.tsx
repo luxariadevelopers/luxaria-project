@@ -10,6 +10,11 @@ import { LoginPage } from '@/pages/LoginPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { UsersPage } from '@/pages/UsersPage';
+import {
+  InvestorDocumentsPage,
+  InvestorStatementsPage,
+} from '@/investor-portal';
+import { INVESTOR_PORTAL_VIEW } from '@/investor-portal/permissions';
 
 export function AppRouter() {
   return (
@@ -30,6 +35,10 @@ export function AppRouter() {
             </Route>
             <Route element={<PermissionGuard anyOf={['dpr.view']} />}>
               <Route path="daily-progress-reports" element={<DprPage />} />
+            </Route>
+            <Route element={<PermissionGuard anyOf={[INVESTOR_PORTAL_VIEW]} />}>
+              <Route path="investor/documents" element={<InvestorDocumentsPage />} />
+              <Route path="investor/statements" element={<InvestorStatementsPage />} />
             </Route>
             <Route path="settings" element={<SettingsPage />} />
             <Route path="forbidden" element={<ForbiddenPage />} />
