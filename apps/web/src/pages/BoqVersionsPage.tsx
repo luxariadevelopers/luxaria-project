@@ -235,7 +235,7 @@ export function BoqVersionsPage() {
       )}
 
       {versionsQuery.isLoading && (
-        <Stack alignItems="center" py={4}>
+        <Stack sx={{ alignItems: 'center', py: 4 }}>
           <CircularProgress size={32} />
         </Stack>
       )}
@@ -270,7 +270,7 @@ export function BoqVersionsPage() {
 
       {compareFromId && compareToId && (
         <Stack spacing={1}>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Typography variant="subtitle1">Comparison</Typography>
             <Button
               size="small"

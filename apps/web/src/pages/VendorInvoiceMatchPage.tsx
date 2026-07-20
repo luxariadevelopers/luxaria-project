@@ -84,6 +84,7 @@ export function VendorInvoiceMatchPage() {
     }
     return (
       <RetryPanel
+        error={detail.error}
         title="Could not load invoice"
         message={getErrorMessage(detail.error)}
         onRetry={() => void detail.refetch()}
@@ -134,7 +135,7 @@ export function VendorInvoiceMatchPage() {
 
       <ToleranceIndicators invoice={invoice} />
 
-      <Stack direction="row" spacing={1} flexWrap="wrap">
+      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
         {actions.has('match') ? (
           <Button
             variant="contained"

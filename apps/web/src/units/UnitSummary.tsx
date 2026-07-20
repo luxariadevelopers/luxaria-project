@@ -16,7 +16,7 @@ type Props = {
 export function UnitSummary({ unit }: Props) {
   return (
     <Stack spacing={2} data-testid="unit-summary">
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <Typography variant="h5">
           {unit.block}-{unit.unitNumber}
         </Typography>

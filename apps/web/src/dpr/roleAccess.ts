@@ -8,14 +8,19 @@ export type DprCapabilities = {
   canView: boolean;
   canCreate: boolean;
   canReview: boolean;
+  canReopen: boolean;
+  canRegeneratePdf: boolean;
 };
 
 export function resolveDprCapabilities(
   hasPermission: (code: string) => boolean,
 ): DprCapabilities {
+  const canReview = hasPermission('dpr.review');
   return {
     canView: hasPermission('dpr.view'),
     canCreate: hasPermission('dpr.create'),
-    canReview: hasPermission('dpr.review'),
+    canReview,
+    canReopen: canReview,
+    canRegeneratePdf: canReview,
   };
 }

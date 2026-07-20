@@ -117,7 +117,11 @@ export function BillAllocationEditor({
               />
             )}
           />
-          <Typography variant="caption" color="text.secondary" display="block">
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block' }}
+          >
             Bill withholdings — retention {formatInr(row.billRetention)} ·
             advance {formatInr(row.billAdvanceRecovery)} · TDS{' '}
             {formatInr(row.billTds)}

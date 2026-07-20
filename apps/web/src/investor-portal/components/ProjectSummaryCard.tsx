@@ -20,9 +20,11 @@ export function ProjectSummaryCard({ project }: ProjectSummaryCardProps) {
       <Stack spacing={1.5}>
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
-          gap={1}
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            gap: 1,
+          }}
         >
           <Box>
             <Typography variant="h6">
@@ -35,7 +37,12 @@ export function ProjectSummaryCard({ project }: ProjectSummaryCardProps) {
           <Chip size="small" label={formatPercent(project.physicalProgressPercent)} />
         </Stack>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap">
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          useFlexGap
+          sx={{ flexWrap: 'wrap' }}
+        >
           <Typography variant="body2">
             Commitment: <strong>{formatInr(project.commitmentAmount)}</strong>
           </Typography>

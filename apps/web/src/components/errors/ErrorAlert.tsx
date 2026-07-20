@@ -7,6 +7,8 @@ type Props = {
   error: unknown;
   /** Override title from normalised error. */
   title?: string;
+  /** Override message from normalised error. */
+  message?: string;
   showRequestId?: boolean;
   showDetails?: boolean;
 };
@@ -15,6 +17,7 @@ type Props = {
 export function ErrorAlert({
   error,
   title,
+  message,
   showRequestId = true,
   showDetails = true,
 }: Props) {
@@ -27,7 +30,7 @@ export function ErrorAlert({
   return (
     <Alert severity={severity} variant="outlined">
       <AlertTitle>{title ?? appError.title}</AlertTitle>
-      <Typography variant="body2">{appError.message}</Typography>
+      <Typography variant="body2">{message ?? appError.message}</Typography>
       {showDetails ? <FieldErrorSummary error={appError} /> : null}
       {showRequestId && appError.requestId ? (
         <Typography

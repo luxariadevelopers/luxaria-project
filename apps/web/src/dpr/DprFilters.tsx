@@ -48,7 +48,7 @@ export function DprFilters({ value, onChange }: Props) {
         size="small"
         label="From date"
         type="date"
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
         value={value.fromDate}
         onChange={(e) => onChange({ ...value, fromDate: e.target.value })}
       />
@@ -56,7 +56,7 @@ export function DprFilters({ value, onChange }: Props) {
         size="small"
         label="To date"
         type="date"
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
         value={value.toDate}
         onChange={(e) => onChange({ ...value, toDate: e.target.value })}
       />

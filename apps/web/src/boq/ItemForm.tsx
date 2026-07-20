@@ -232,7 +232,9 @@ export function ItemForm({
                 onBlur={field.onBlur}
                 error={Boolean(fieldState.error)}
                 helperText={fieldState.error?.message}
-                inputProps={{ min: 0, step: 'any' }}
+                slotProps={{
+                  htmlInput: { min: 0, step: 'any' },
+                }}
               />
             )}
           />

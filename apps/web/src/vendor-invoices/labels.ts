@@ -1,6 +1,4 @@
 import {
-  VendorInvoiceMatchingStatus,
-  VendorInvoiceStatus,
   vendorInvoiceMatchingStatusCatalog,
   vendorInvoiceStatusCatalog,
 } from '@/status';
@@ -10,19 +8,11 @@ import {
 } from './types';
 
 export function invoiceStatusLabel(status: string): string {
-  return (
-    vendorInvoiceStatusCatalog.labels[
-      status as VendorInvoiceStatus
-    ] ?? status
-  );
+  return vendorInvoiceStatusCatalog.label(status, status);
 }
 
 export function matchingStatusLabel(status: string): string {
-  return (
-    vendorInvoiceMatchingStatusCatalog.labels[
-      status as VendorInvoiceMatchingStatus
-    ] ?? status
-  );
+  return vendorInvoiceMatchingStatusCatalog.label(status, status);
 }
 
 const VARIANCE_TYPE_LABELS: Record<VendorInvoiceVarianceType, string> = {

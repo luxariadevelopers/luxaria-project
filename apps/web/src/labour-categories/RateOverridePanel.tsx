@@ -68,6 +68,7 @@ export function RateOverridePanel({
   if (ratesQuery.error) {
     return (
       <RetryPanel
+        error={ratesQuery.error}
         title="Could not load rate overrides"
         message={getErrorMessage(ratesQuery.error)}
         onRetry={() => void ratesQuery.refetch()}
@@ -77,7 +78,7 @@ export function RateOverridePanel({
 
   if (ratesQuery.isLoading) {
     return (
-      <Stack alignItems="center" py={3}>
+      <Stack sx={{ alignItems: 'center', py: 3 }}>
         <CircularProgress size={28} />
       </Stack>
     );
@@ -126,7 +127,7 @@ export function RateOverridePanel({
           size="small"
           type="date"
           label="As of"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           value={asOf}
           onChange={(e) => setAsOf(e.target.value)}
         />

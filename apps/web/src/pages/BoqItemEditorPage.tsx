@@ -141,7 +141,7 @@ export function BoqItemEditorPage() {
 
   if (!isCreate && itemQuery.isLoading) {
     return (
-      <Stack alignItems="center" py={6}>
+      <Stack sx={{ alignItems: 'center', py: 6 }}>
         <CircularProgress size={32} />
       </Stack>
     );
@@ -242,7 +242,7 @@ export function BoqItemEditorPage() {
       )}
 
       {item && (
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <BoqItemStatusChip status={item.status} />
           <Typography variant="body2" color="text.secondary">
             Version id: {item.versionId}

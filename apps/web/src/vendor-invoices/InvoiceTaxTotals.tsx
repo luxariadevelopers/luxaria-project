@@ -69,13 +69,13 @@ function Row({
       <Typography
         variant="body2"
         color={emphasize ? 'text.primary' : 'text.secondary'}
-        fontWeight={emphasize ? 600 : 400}
+        sx={{ fontWeight: emphasize ? 600 : 400 }}
       >
         {label}
       </Typography>
       <Typography
         variant="body2"
-        fontWeight={emphasize ? 600 : 400}
+        sx={{ fontWeight: emphasize ? 600 : 400 }}
         data-testid={`invoice-total-${label.toLowerCase().replace(/\s+/g, '-')}`}
       >
         {formatInr(value)}

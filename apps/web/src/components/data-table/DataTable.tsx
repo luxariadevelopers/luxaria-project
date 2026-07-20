@@ -122,7 +122,10 @@ export function DataTable<R extends GridValidRowModel>({
       return col;
     });
 
-    if (!rowActions?.length) {
+    if (
+      !rowActions ||
+      (typeof rowActions !== 'function' && rowActions.length === 0)
+    ) {
       return base;
     }
 
@@ -135,9 +138,13 @@ export function DataTable<R extends GridValidRowModel>({
       disableColumnMenu: true,
       align: 'center',
       headerAlign: 'center',
-      renderCell: (params) => (
-        <RowActionsMenu row={params.row} actions={rowActions} />
-      ),
+      renderCell: (params) => {
+        const actions =
+          typeof rowActions === 'function'
+            ? rowActions(params.row)
+            : rowActions;
+        return <RowActionsMenu row={params.row} actions={actions} />;
+      },
     };
     return [...base, actionsCol];
   }, [columns, rowActions, allowedSortKeys]);
@@ -245,7 +252,7 @@ export function DataTable<R extends GridValidRowModel>({
           ) : null}
           {showExport ? (
             <ExportButton
-              rows={rows}
+              rows={[...rows]}
               columns={gridColumns}
               fileName={exportFileName}
               permission={exportPermission}

@@ -39,7 +39,7 @@ export function LinkedBookingPanel({
 
   if (loading) {
     return (
-      <Stack alignItems="center" py={3}>
+      <Stack sx={{ alignItems: 'center', py: 3 }}>
         <CircularProgress size={28} />
       </Stack>
     );

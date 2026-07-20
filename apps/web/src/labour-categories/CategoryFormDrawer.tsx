@@ -141,7 +141,7 @@ export function CategoryFormDrawer({ open, onClose, category }: Props) {
           label="Default daily rate"
           type="number"
           required
-          inputProps={{ min: 0, step: '0.01' }}
+          slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
           {...form.register('defaultDailyRate')}
           error={Boolean(form.formState.errors.defaultDailyRate)}
           helperText={form.formState.errors.defaultDailyRate?.message}
@@ -150,7 +150,7 @@ export function CategoryFormDrawer({ open, onClose, category }: Props) {
           label="Overtime rate"
           type="number"
           required
-          inputProps={{ min: 0, step: '0.01' }}
+          slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
           {...form.register('overtimeRate')}
           error={Boolean(form.formState.errors.overtimeRate)}
           helperText={form.formState.errors.overtimeRate?.message}
@@ -162,7 +162,11 @@ export function CategoryFormDrawer({ open, onClose, category }: Props) {
           {...form.register('notes')}
         />
 
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ justifyContent: 'flex-end' }}
+        >
           <Button onClick={onClose} disabled={busy}>
             Cancel
           </Button>

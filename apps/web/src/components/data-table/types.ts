@@ -19,7 +19,7 @@ export type DataTableRowAction<R extends GridValidRowModel> = {
 
 export type DataTableProps<R extends GridValidRowModel> = {
   title?: string;
-  rows: R[];
+  rows: readonly R[];
   columns: GridColDef<R>[];
   loading?: boolean;
   /** When set, shows RetryPanel instead of the grid. */
@@ -79,7 +79,9 @@ export type DataTableProps<R extends GridValidRowModel> = {
   rowSelectionModel?: GridRowSelectionModel;
   onRowSelectionModelChange?: DataGridProps<R>['onRowSelectionModelChange'];
 
-  rowActions?: DataTableRowAction<R>[];
+  rowActions?:
+    | readonly DataTableRowAction<R>[]
+    | ((row: R) => readonly DataTableRowAction<R>[]);
   toolbarActions?: ReactNode;
 
   showExport?: boolean;

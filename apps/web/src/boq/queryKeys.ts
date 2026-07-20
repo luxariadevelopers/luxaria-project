@@ -22,6 +22,4 @@ export const boqKeys = {
       fromVersionId,
       toVersionId,
     ] as const,
-  totals: (projectId: string) =>
-    [...boqKeys.all, 'totals', projectId] as const,
 };

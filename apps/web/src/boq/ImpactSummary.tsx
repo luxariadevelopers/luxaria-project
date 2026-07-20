@@ -24,7 +24,11 @@ export function ImpactSummary({ comparison }: Props) {
       <Typography variant="body2" color="text.secondary">
         Comparing v{fromVersion.versionNumber} → v{toVersion.versionNumber}
       </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap">
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ flexWrap: 'wrap' }}
+      >
         <Typography variant="body2">
           Added: <strong>{summary.addedCount}</strong>
         </Typography>

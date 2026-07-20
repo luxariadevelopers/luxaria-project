@@ -126,6 +126,7 @@ export function LabourCategoriesPage() {
 
       {list.error && !isForbiddenError(list.error) ? (
         <RetryPanel
+          error={list.error}
           title="Could not load labour categories"
           message={getErrorMessage(list.error)}
           onRetry={() => void list.refetch()}

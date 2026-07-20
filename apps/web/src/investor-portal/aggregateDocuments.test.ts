@@ -31,6 +31,31 @@ const detail: InvestorPortalProjectDetail = {
     projectStage: 'construction',
     status: 'active',
   },
+  investment: {
+    participantId: 'participant-1',
+    commitmentAmount: 5_000_000,
+    amountContributed: 2_000_000,
+    pendingContribution: 3_000_000,
+    approvedProfitSharePercentage: 25,
+    lossSharePercentage: 0,
+    instrumentType: 'equity',
+  },
+  progress: {
+    physicalProgressPercent: 30,
+    plannedQuantity: 100,
+    measuredQuantity: 30,
+  },
+  budget: {
+    approvedBudget: 10_000_000,
+    revisedBudget: 10_000_000,
+    fundsUtilised: 3_000_000,
+    utilisationPercent: 30,
+  },
+  profit: {
+    allocatedAmount: 100_000,
+    distributedProfit: 40_000,
+    undistributedProfit: 60_000,
+  },
   agreements: [
     {
       id: 'agr-1',
@@ -68,6 +93,12 @@ const detail: InvestorPortalProjectDetail = {
       publishedAt: '2026-07-11T00:00:00.000Z',
     },
   ],
+  restrictions: {
+    otherInvestorsVisible: false,
+    companyFinancialsVisible: false,
+    vendorPersonalDataVisible: false,
+    customerPersonalDataVisible: false,
+  },
 };
 
 describe('aggregateInvestorDocuments', () => {

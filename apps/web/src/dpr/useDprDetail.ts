@@ -5,12 +5,12 @@ import {
   reopenDailyProgressReport,
   reviewDailyProgressReport,
 } from './api';
-import { dprQueryKeys } from './queryKeys';
+import { dprKeys } from './queryKeys';
 import type { ReopenDprInput, ReviewDprInput } from './types';
 
 export function useDprDetail(id: string | undefined, enabled: boolean) {
   return useQuery({
-    queryKey: dprQueryKeys.detail(id ?? ''),
+    queryKey: dprKeys.detail(id ?? ''),
     queryFn: () => fetchDailyProgressReport(id!),
     enabled: Boolean(id) && enabled,
     retry: false,
@@ -24,9 +24,9 @@ export function useReviewDpr() {
       reviewDailyProgressReport(id, input),
     onSuccess: (data) => {
       void queryClient.invalidateQueries({
-        queryKey: dprQueryKeys.detail(data.id),
+        queryKey: dprKeys.detail(data.id),
       });
-      void queryClient.invalidateQueries({ queryKey: ['daily-progress-reports'] });
+      void queryClient.invalidateQueries({ queryKey: dprKeys.all });
     },
   });
 }
@@ -38,9 +38,9 @@ export function useReopenDpr() {
       reopenDailyProgressReport(id, input),
     onSuccess: (data) => {
       void queryClient.invalidateQueries({
-        queryKey: dprQueryKeys.detail(data.id),
+        queryKey: dprKeys.detail(data.id),
       });
-      void queryClient.invalidateQueries({ queryKey: ['daily-progress-reports'] });
+      void queryClient.invalidateQueries({ queryKey: dprKeys.all });
     },
   });
 }
@@ -51,7 +51,7 @@ export function useRegenerateDprPdf() {
     mutationFn: (id: string) => regenerateDprPdf(id),
     onSuccess: (data) => {
       void queryClient.invalidateQueries({
-        queryKey: dprQueryKeys.detail(data.id),
+        queryKey: dprKeys.detail(data.id),
       });
     },
   });

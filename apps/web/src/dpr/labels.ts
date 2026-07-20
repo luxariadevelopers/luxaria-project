@@ -1,5 +1,8 @@
-import type { DprDayCompliance } from './types';
-import { DprStatus, DprWeather } from './types';
+import type {
+  DprDayCompliance,
+  DprIssueSeverity as DprIssueSeverityType,
+} from './types';
+import { DprIssueSeverity, DprStatus, DprWeather } from './types';
 
 export function dprStatusLabel(status: string): string {
   switch (status) {
@@ -36,6 +39,23 @@ export function dprWeatherLabel(weather: string): string {
       return 'Other';
     default:
       return weather;
+  }
+}
+
+export function dprIssueSeverityLabel(
+  severity: DprIssueSeverityType,
+): string {
+  switch (severity) {
+    case DprIssueSeverity.Low:
+      return 'Low';
+    case DprIssueSeverity.Medium:
+      return 'Medium';
+    case DprIssueSeverity.High:
+      return 'High';
+    case DprIssueSeverity.Critical:
+      return 'Critical';
+    default:
+      return severity;
   }
 }
 

@@ -7,7 +7,7 @@ import type { DataTableRowAction } from './types';
 
 type Props<R extends GridValidRowModel> = {
   row: R;
-  actions: DataTableRowAction<R>[];
+  actions: readonly DataTableRowAction<R>[];
 };
 
 export function RowActionsMenu<R extends GridValidRowModel>({

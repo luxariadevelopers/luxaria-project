@@ -7,7 +7,6 @@ import {
   Divider,
   Drawer,
   IconButton,
-  MenuItem,
   Stack,
   Typography,
 } from '@mui/material';
@@ -124,7 +123,9 @@ export function AgreementFormDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 560, md: 720 } } }}
+      slotProps={{
+        paper: { sx: { width: { xs: '100%', sm: 560, md: 720 } } },
+      }}
     >
       <Box
         component="form"
@@ -167,7 +168,10 @@ export function AgreementFormDrawer({
                 spacing={1.5}
                 sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}
               >
-                <Stack direction="row" justifyContent="space-between">
+                <Stack
+                  direction="row"
+                  sx={{ justifyContent: 'space-between' }}
+                >
                   <Typography variant="subtitle2">Line {index + 1}</Typography>
                   {!readOnly && boqFields.fields.length > 1 ? (
                     <IconButton
@@ -242,7 +246,7 @@ export function AgreementFormDrawer({
                 key={field.id}
                 direction={{ xs: 'column', sm: 'row' }}
                 spacing={1.5}
-                alignItems="flex-start"
+                sx={{ alignItems: 'flex-start' }}
               >
                 <FormTextField
                   name={`skillMix.${index}.skill`}
@@ -355,7 +359,11 @@ export function AgreementFormDrawer({
 
         <Divider sx={{ my: 3 }} />
 
-        <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ justifyContent: 'flex-end' }}
+        >
           <Button onClick={onClose}>Cancel</Button>
           {!readOnly ? (
             <Button

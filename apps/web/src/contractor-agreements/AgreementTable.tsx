@@ -197,7 +197,9 @@ export function AgreementTable({
       toolbarActions={toolbarActions}
       getRowId={(row) => row.id}
       rowActions={rowActions}
-      onRowClick={onOpenDetail}
+      onRowClick={
+        onOpenDetail ? (params) => onOpenDetail(params.row) : undefined
+      }
       height={520}
       data-testid="agreement-table"
     />

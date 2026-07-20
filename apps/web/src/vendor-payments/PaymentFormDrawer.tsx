@@ -222,7 +222,9 @@ export function PaymentFormDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 560, md: 640 } } }}
+      slotProps={{
+        paper: { sx: { width: { xs: '100%', sm: 560, md: 640 } } },
+      }}
     >
       <Box
         component="form"
@@ -397,8 +399,10 @@ export function PaymentFormDrawer({
                         onChange={(e) =>
                           field.onChange(Number(e.target.value))
                         }
-                        inputProps={{
-                          'data-testid': `allocation-amount-${row.invoiceId}`,
+                        slotProps={{
+                          htmlInput: {
+                            'data-testid': `allocation-amount-${row.invoiceId}`,
+                          },
                         }}
                       />
                     )}

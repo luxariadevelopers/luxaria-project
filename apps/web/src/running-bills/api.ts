@@ -342,7 +342,7 @@ export async function fetchContractorOptions(
   search = '',
 ): Promise<ContractorOption[]> {
   const rows = await searchContractors({
-    search: search.trim() || undefined,
+    search: search.trim(),
     limit: 50,
   });
   return rows.map((row) => ({

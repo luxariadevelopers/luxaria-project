@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
-import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack } from '@mui/material';
 import { DataTable } from '@/components/DataTable';
 import { formatDate } from '@/material-coefficients/formatDate';
 import { boqUnitLabel } from './labels';

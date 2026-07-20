@@ -55,9 +55,41 @@ export type InvestorPortalProjectDetail = {
     projectStage: string;
     status: string;
   };
+  /** The linked investor's participation only; no co-investor data. */
+  investment: {
+    participantId: string;
+    commitmentAmount: number;
+    amountContributed: number;
+    pendingContribution: number;
+    approvedProfitSharePercentage: number;
+    lossSharePercentage: number;
+    instrumentType: string;
+  };
+  progress: {
+    physicalProgressPercent: number;
+    plannedQuantity: number;
+    measuredQuantity: number;
+  };
+  budget: {
+    approvedBudget: number;
+    revisedBudget: number;
+    fundsUtilised: number;
+    utilisationPercent: number;
+  };
+  profit: {
+    allocatedAmount: number;
+    distributedProfit: number;
+    undistributedProfit: number;
+  };
   reports: InvestorPortalReport[];
   agreements: InvestorPortalAgreement[];
   receipts: InvestorPortalReceipt[];
+  restrictions: {
+    otherInvestorsVisible: false;
+    companyFinancialsVisible: false;
+    vendorPersonalDataVisible: false;
+    customerPersonalDataVisible: false;
+  };
 };
 
 export type InvestorDocumentKind = 'agreement' | 'report';

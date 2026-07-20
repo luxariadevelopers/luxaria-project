@@ -338,7 +338,9 @@ export function InvoiceFormDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 560, md: 640 } } }}
+      slotProps={{
+        paper: { sx: { width: { xs: '100%', sm: 560, md: 640 } } },
+      }}
     >
       <Box
         component="form"
@@ -539,7 +541,7 @@ export function InvoiceFormDrawer({
                       p: 1.5,
                     }}
                   >
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {item?.materialLabel ?? field.materialLabel}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -665,7 +667,7 @@ export function InvoiceFormDrawer({
               disabled={readOnly}
             />
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <FormTextField
               name="totalAmount"
               control={control}

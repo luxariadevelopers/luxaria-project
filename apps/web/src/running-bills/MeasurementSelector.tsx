@@ -75,8 +75,10 @@ export function MeasurementSelector({
                   <Checkbox
                     checked={isSelected}
                     onChange={(e) => toggle(m.id, e.target.checked)}
-                    inputProps={{
-                      'aria-label': `Select ${m.measurementNumber}`,
+                    slotProps={{
+                      input: {
+                        'aria-label': `Select ${m.measurementNumber}`,
+                      },
                     }}
                     data-testid={`measurement-check-${m.id}`}
                   />

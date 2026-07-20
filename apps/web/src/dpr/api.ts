@@ -1,9 +1,11 @@
-import { apiGet } from '@/api/client';
+import { apiGet, apiPost } from '@/api/client';
 import type {
   ListDailyProgressReportsQuery,
   PaginatedDailyProgressReports,
   PublicDailyProgressReport,
   PublicMissingDprAlert,
+  ReopenDprInput,
+  ReviewDprInput,
 } from './types';
 
 function toIso(value: unknown): string | null {
@@ -21,17 +23,88 @@ function normaliseDpr(row: PublicDailyProgressReport): PublicDailyProgressReport
     projectId: String(row.projectId),
     reportDate: toIso(row.reportDate) ?? String(row.reportDate),
     weatherNotes: row.weatherNotes ?? null,
+    staffPresent: (row.staffPresent ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      name: entry.name,
+      role: entry.role ?? null,
+      present: entry.present !== false,
+    })),
     labourCount: Number(row.labourCount ?? 0),
     skilledLabourCount: Number(row.skilledLabourCount ?? 0),
     unskilledLabourCount: Number(row.unskilledLabourCount ?? 0),
     workPerformed: row.workPerformed ?? null,
+    boqQuantities: (row.boqQuantities ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      boqItemId: String(entry.boqItemId),
+      boqCode: entry.boqCode ?? null,
+      description: entry.description ?? null,
+      unit: entry.unit ?? null,
+      quantityCompleted: Number(entry.quantityCompleted ?? 0),
+      notes: entry.notes ?? null,
+    })),
+    materialsReceived: (row.materialsReceived ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      materialId:
+        entry.materialId == null ? null : String(entry.materialId),
+      materialName: entry.materialName,
+      quantity: Number(entry.quantity ?? 0),
+      unit: entry.unit ?? null,
+      reference: entry.reference ?? null,
+    })),
+    materialsIssued: (row.materialsIssued ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      materialId:
+        entry.materialId == null ? null : String(entry.materialId),
+      materialName: entry.materialName,
+      quantity: Number(entry.quantity ?? 0),
+      unit: entry.unit ?? null,
+      reference: entry.reference ?? null,
+    })),
+    equipmentUsed: (row.equipmentUsed ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      name: entry.name,
+      hours: Number(entry.hours ?? 0),
+      notes: entry.notes ?? null,
+    })),
+    delays: (row.delays ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      reason: entry.reason,
+      hoursLost: Number(entry.hoursLost ?? 0),
+      notes: entry.notes ?? null,
+    })),
+    safetyIssues: (row.safetyIssues ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      description: entry.description,
+      severity: entry.severity,
+      actionTaken: entry.actionTaken ?? null,
+    })),
+    qualityIssues: (row.qualityIssues ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      description: entry.description,
+      severity: entry.severity,
+      actionTaken: entry.actionTaken ?? null,
+    })),
+    decisionsRequired: (row.decisionsRequired ?? []).map((entry) => ({
+      id: String(entry.id ?? ''),
+      description: entry.description,
+      owner: entry.owner ?? null,
+      dueDate: toIso(entry.dueDate),
+    })),
+    tomorrowPlan: row.tomorrowPlan ?? null,
     photoDocumentIds: (row.photoDocumentIds ?? []).map(String),
     videoDocumentIds: (row.videoDocumentIds ?? []).map(String),
     siteCashBalance: Number(row.siteCashBalance ?? 0),
+    siteCashAccountId:
+      row.siteCashAccountId == null ? null : String(row.siteCashAccountId),
     pdfDocumentId: row.pdfDocumentId == null ? null : String(row.pdfDocumentId),
+    clientDeviceId: row.clientDeviceId ?? null,
+    offlineCapturedAt: toIso(row.offlineCapturedAt),
+    submittedBy: row.submittedBy == null ? null : String(row.submittedBy),
     submittedAt: toIso(row.submittedAt),
+    reviewedBy: row.reviewedBy == null ? null : String(row.reviewedBy),
     reviewedAt: toIso(row.reviewedAt),
     reviewNotes: row.reviewNotes ?? null,
+    reopenedBy: row.reopenedBy == null ? null : String(row.reopenedBy),
     reopenedAt: toIso(row.reopenedAt),
     reopenReason: row.reopenReason ?? null,
     createdAt: row.createdAt ? (toIso(row.createdAt) ?? undefined) : undefined,
@@ -104,6 +177,62 @@ export async function fetchMissingDprAlerts(
     { projectId },
   );
   return (res.data ?? []).map(normaliseMissingAlert);
+}
+
+/** `GET /daily-progress-reports/:id` — `dpr.view` */
+export async function fetchDailyProgressReport(
+  id: string,
+): Promise<PublicDailyProgressReport> {
+  const res = await apiGet<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Daily progress report unavailable');
+  }
+  return normaliseDpr(res.data);
+}
+
+/** `POST /daily-progress-reports/:id/review` — `dpr.review` */
+export async function reviewDailyProgressReport(
+  id: string,
+  input: ReviewDprInput,
+): Promise<PublicDailyProgressReport> {
+  const res = await apiPost<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}/review`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to review daily progress report');
+  }
+  return normaliseDpr(res.data);
+}
+
+/** `POST /daily-progress-reports/:id/reopen` — `dpr.review` */
+export async function reopenDailyProgressReport(
+  id: string,
+  input: ReopenDprInput,
+): Promise<PublicDailyProgressReport> {
+  const res = await apiPost<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}/reopen`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to reopen daily progress report');
+  }
+  return normaliseDpr(res.data);
+}
+
+/** `POST /daily-progress-reports/:id/regenerate-pdf` — `dpr.review` */
+export async function regenerateDprPdf(
+  id: string,
+): Promise<PublicDailyProgressReport> {
+  const res = await apiPost<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}/regenerate-pdf`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to regenerate DPR PDF');
+  }
+  return normaliseDpr(res.data);
 }
 
 export function mediaCount(row: PublicDailyProgressReport): number {

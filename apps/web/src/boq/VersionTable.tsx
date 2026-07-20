@@ -105,8 +105,7 @@ export function VersionTable({
                 <Stack
                   direction="row"
                   spacing={0.5}
-                  justifyContent="flex-end"
-                  flexWrap="wrap"
+                  sx={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}
                 >
                   {actions.map((action) => (
                     <Button

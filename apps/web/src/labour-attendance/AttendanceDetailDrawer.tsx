@@ -52,13 +52,14 @@ export function AttendanceDetailDrawer({
         data-testid="attendance-detail-drawer"
       >
         {detail.isLoading ? (
-          <Stack alignItems="center" py={4}>
+          <Stack sx={{ alignItems: 'center', py: 4 }}>
             <CircularProgress size={28} />
           </Stack>
         ) : null}
 
         {detail.error ? (
           <RetryPanel
+            error={detail.error}
             title="Could not load attendance"
             message={getErrorMessage(detail.error)}
             onRetry={() => void detail.refetch()}

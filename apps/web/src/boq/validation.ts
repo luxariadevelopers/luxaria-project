@@ -10,8 +10,7 @@ import { BoqItemStatus, BoqUnit, BoqVersionType } from './types';
 
 const optionalIsoDate = z
   .union([z.string().min(1), z.literal(''), z.null()])
-  .optional()
-  .transform((v) => (v === '' || v === undefined ? null : v));
+  .transform((v) => (v === '' ? null : v));
 
 export const boqItemFormSchema = z
   .object({

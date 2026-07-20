@@ -20,7 +20,10 @@ export function MetricCard({ title, value, subtitle, icon }: MetricCardProps) {
         gap: 1,
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+      >
         <Typography variant="overline" color="text.secondary">
           {title}
         </Typography>

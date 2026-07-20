@@ -274,8 +274,7 @@ export function IssueForm({
 
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
+            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
           >
             <Typography variant="subtitle2">Items</Typography>
             <Button
@@ -314,7 +313,9 @@ export function IssueForm({
               label="Search materials"
               value={materialSearch}
               onChange={(e) => setMaterialSearch(e.target.value)}
-              inputProps={{ 'data-testid': 'material-search' }}
+              slotProps={{
+                htmlInput: { 'data-testid': 'material-search' },
+              }}
             />
           )}
 
@@ -331,7 +332,10 @@ export function IssueForm({
                   p: 1.5,
                 }}
               >
-                <Stack direction="row" justifyContent="space-between">
+                <Stack
+                  direction="row"
+                  sx={{ justifyContent: 'space-between' }}
+                >
                   <Typography variant="caption">Line {index + 1}</Typography>
                   <IconButton
                     size="small"

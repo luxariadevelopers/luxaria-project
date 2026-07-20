@@ -6,7 +6,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
   Stack,
 } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,7 +20,7 @@ import {
 } from './bookedRestrictions';
 import { unitStatusLabel } from './labels';
 import { allowedNextStatuses } from './statusTransitions';
-import type { LinkedBooking, PublicUnit, UnitStatus } from './types';
+import { UnitStatus, type LinkedBooking, type PublicUnit } from './types';
 import { useChangeUnitStatus } from './useUnits';
 import {
   assertUnitStatusTransition,
@@ -64,7 +63,7 @@ export function UnitStatusDialog({
 
   const form = useForm<ChangeUnitStatusFormValues>({
     resolver: zodResolver(changeUnitStatusSchema),
-    defaultValues: { status: undefined as unknown as UnitStatus, notes: '' },
+    defaultValues: { status: UnitStatus.Available, notes: '' },
   });
 
   useEffect(() => {
@@ -129,13 +128,15 @@ export function UnitStatusDialog({
               spacing={1.5}
               onSubmit={(e) => void onSubmit(e)}
             >
-              <FormSelect name="status" control={form.control} label="Next status">
-                {nextOptions.map((status) => (
-                  <MenuItem key={status} value={status}>
-                    {unitStatusLabel(status)}
-                  </MenuItem>
-                ))}
-              </FormSelect>
+              <FormSelect
+                name="status"
+                control={form.control}
+                label="Next status"
+                options={nextOptions.map((status) => ({
+                  value: status,
+                  label: unitStatusLabel(status),
+                }))}
+              />
               <FormTextField
                 name="notes"
                 control={form.control}

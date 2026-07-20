@@ -268,7 +268,11 @@ export function UnitFormDrawer({
               multiline
               minRows={2}
             />
-            <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ justifyContent: 'flex-end' }}
+            >
               <Button onClick={onClose} disabled={busy}>
                 Cancel
               </Button>
@@ -370,7 +374,11 @@ export function UnitFormDrawer({
               multiline
               minRows={2}
             />
-            <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ justifyContent: 'flex-end' }}
+            >
               <Button onClick={onClose} disabled={busy}>
                 Cancel
               </Button>

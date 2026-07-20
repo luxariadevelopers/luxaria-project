@@ -13,6 +13,11 @@ import { formatDate, formatQuantity } from '@/format';
 import { dprIssueSeverityLabel } from './labels';
 import type { PublicDailyProgressReport } from './types';
 
+function formatDprQuantity(value: number, unit: string | null): string {
+  const quantity = formatQuantity(value);
+  return unit ? `${quantity} ${unit.replaceAll('_', ' ')}` : quantity;
+}
+
 function EmptyRow({ colSpan, message }: { colSpan: number; message: string }) {
   return (
     <TableRow>
@@ -106,7 +111,7 @@ export function DprWorkSection({
                     <TableCell>{row.boqCode ?? '—'}</TableCell>
                     <TableCell>{row.description ?? '—'}</TableCell>
                     <TableCell align="right">
-                      {formatQuantity(row.quantityCompleted, row.unit)}
+                      {formatDprQuantity(row.quantityCompleted, row.unit)}
                     </TableCell>
                     <TableCell>{row.notes ?? '—'}</TableCell>
                   </TableRow>
@@ -209,7 +214,7 @@ export function DprMaterialsSection({
                       <TableRow key={row.id || `${row.materialName}-${kind}`}>
                         <TableCell>{row.materialName}</TableCell>
                         <TableCell align="right">
-                          {formatQuantity(row.quantity, row.unit)}
+                          {formatDprQuantity(row.quantity, row.unit)}
                         </TableCell>
                         <TableCell>{row.reference ?? '—'}</TableCell>
                       </TableRow>
