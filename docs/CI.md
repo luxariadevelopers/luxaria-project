@@ -4,7 +4,7 @@
 
 | Workflow | File | Purpose |
 |----------|------|---------|
-| **PR Validation** | `.github/workflows/pr-validation.yml` | Typecheck, lint, unit/integration/API tests, backend/web builds, security audit, Docker builds |
+| **PR Validation** | `.github/workflows/pr-validation.yml` | Typecheck, lint, unit/integration/API tests, backend/web builds, **Playwright E2E**, security audit, Docker builds |
 | **Security** | `.github/workflows/security.yml` | Prod dependency audit + security Jest (also weekly) |
 | **Docker** | `.github/workflows/docker.yml` | Image builds on `main`/`develop` + manual |
 | **Deploy** | `.github/workflows/deploy.yml` | Environment-specific deploy **placeholder** |
@@ -18,7 +18,7 @@ Shared setup: `.github/actions/setup-pnpm` (pnpm 9.15.9, Node 20, `cache: pnpm`,
 3. Require the check named **`PR gate`** (job from PR Validation).
 4. Optionally require **Dependency audit** / **Backend security tests** from the Security workflow.
 
-`PR gate` fails if any of typecheck, lint, unit, integration, api, build-backend, build-web, security-audit, or docker-build did not succeed.
+`PR gate` fails if any of typecheck, lint, unit, integration, api, build-backend, build-web, **playwright-e2e**, security-audit, or docker-build did not succeed.
 
 ## Caching
 

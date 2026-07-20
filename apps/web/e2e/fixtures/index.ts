@@ -1,5 +1,5 @@
 import { test as base, type APIRequestContext } from '@playwright/test';
-import { createApiClient, type E2eApiClient } from './api-client';
+import { createApiClient, E2eApiClient } from './api-client';
 import { readRuntimeState } from './seed-data';
 import { e2eEnv, isLiveApi, type E2eRuntimeState } from './test-env';
 
@@ -9,17 +9,17 @@ type E2eFixtures = {
 };
 
 export const test = base.extend<E2eFixtures>({
-  e2eState: async (_fixtures, provide) => {
+  e2eState: async ({}, use) => {
     if (!isLiveApi()) {
-      await provide({ liveApi: false });
+      await use({ liveApi: false });
       return;
     }
 
     const state = (await readRuntimeState()) ?? { liveApi: true };
-    await provide(state);
+    await use(state);
   },
 
-  adminApi: async ({ request, e2eState }, provide) => {
+  adminApi: async ({ request, e2eState }, use) => {
     test.skip(!isLiveApi(), 'Requires live API (E2E_LIVE_API or CI)');
 
     const api = await createApiClient(request);
@@ -27,7 +27,7 @@ export const test = base.extend<E2eFixtures>({
       e2eEnv.admin.identifier,
       e2eEnv.admin.password,
     );
-    await provide(api.withToken(session.accessToken));
+    await use(api.withToken(session.accessToken));
 
     void e2eState;
   },
