@@ -270,5 +270,15 @@ export default (): AppConfig => {
     alertRedisDownEnabled:
       String(process.env.ALERT_REDIS_DOWN_ENABLED ?? 'true').toLowerCase() !==
       'false',
+    smtpHost: process.env.SMTP_HOST?.trim() || null,
+    smtpPort: Number(process.env.SMTP_PORT ?? 587),
+    smtpSecure:
+      String(process.env.SMTP_SECURE ?? 'false').toLowerCase() === 'true',
+    smtpUser: process.env.SMTP_USER?.trim() || null,
+    smtpPass: process.env.SMTP_PASS?.trim() || null,
+    emailFrom: process.env.EMAIL_FROM?.trim() || null,
+    pushEnabled:
+      String(process.env.PUSH_ENABLED ?? 'false').toLowerCase() === 'true',
+    expoAccessToken: process.env.EXPO_ACCESS_TOKEN?.trim() || null,
   };
 };

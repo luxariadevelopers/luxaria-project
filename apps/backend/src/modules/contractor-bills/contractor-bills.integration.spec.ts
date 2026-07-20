@@ -167,9 +167,9 @@ describe('ContractorBillsService AP journal integration', () => {
       isCurrent: true, isLocked: false,
     });
     const accounts = await accountModel.create([
-      account('CB-WIP', 'WIP', AccountType.Asset, AccountCategory.WorkInProgress),
-      account('CB-CP', 'Contractor Payable', AccountType.Liability, AccountCategory.ContractorPayable, true),
-      account('CB-RP', 'Retention Payable', AccountType.Liability, AccountCategory.RetentionPayable, true),
+      account('CB-WIP', 'WIP', AccountType.Asset, AccountCategory.WorkInProgress, false, true),
+      account('CB-CP', 'Contractor Payable', AccountType.Liability, AccountCategory.ContractorPayable, true, true),
+      account('CB-RP', 'Retention Payable', AccountType.Liability, AccountCategory.RetentionPayable, true, true),
       account('CB-TDS', 'TDS Payable', AccountType.Liability, AccountCategory.TdsPayable),
       account('CB-OI', 'Other Income', AccountType.Income, AccountCategory.OtherIncome),
     ]);
@@ -195,7 +195,7 @@ describe('ContractorBillsService AP journal integration', () => {
       agreedRatesTotal: 100000, agreedQuantity: 100, manpowerCommitment: 1, skillMix: [],
       startDate: new Date('2026-04-01'), endDate: new Date('2026-12-31'),
       billingCycle: ContractorAgreementBillingCycle.Monthly, advance: { amount: 50000, terms: null },
-      recoveryPlan: { method: 'percent', percentPerBill: 20, notes: null }, retentionPercentage: 5,
+      recoveryPlan: { method: 'percent_per_bill', percentPerBill: 20, notes: null }, retentionPercentage: 5,
       status: ContractorAgreementStatus.Active,
     }]);
     agreementId = String(agreement._id);
