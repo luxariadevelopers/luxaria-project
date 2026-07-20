@@ -50,6 +50,7 @@ import { JournalService } from '../journal/journal.service';
 import {
   JournalEntry,
   JournalEntrySchema,
+  JournalPartyType,
   JournalStatus,
 } from '../journal/schemas/journal-entry.schema';
 import { NumberingService } from '../numbering/numbering.service';
@@ -126,11 +127,33 @@ describe('ContractorBillsService AP journal integration', () => {
     const journal = new JournalService(
       journalModel, numbering, financialYears, new ChartOfAccountsService(accountModel),
       databaseService, idempotency, audit,
+      {
+        assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+        assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+        assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+        mergeAuthorisedProjectFilter: jest
+          .fn()
+          .mockImplementation(async (_a, f) => f),
+        findOneForActor: jest.fn(),
+        buildScopedIdFilter: jest.fn(),
+        authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+      } as never,
     );
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
     service = new ContractorBillsService(
       billModel, agreementModel, measurementModel, projectModel, contractorModel,
       accountModel, journalModel, numbering, journal, financialYears, idempotency,
-      databaseService, audit,
+      databaseService, audit, mockProjectScope,
     );
   }, 120_000);
 
@@ -152,7 +175,7 @@ describe('ContractorBillsService AP journal integration', () => {
       connection.model(FinancialYear.name).deleteMany({}).setOptions({ withDeleted: true }),
       connection.model(Counter.name).deleteMany({}),
       connection.model(IdempotencyKey.name).deleteMany({}),
-      connection.model(AuditLog.name).deleteMany({}),
+      connection.model(AuditLog.name).collection.deleteMany({}),
     ]);
     actorId = new Types.ObjectId().toHexString();
     engineerId = new Types.ObjectId().toHexString();
@@ -171,7 +194,11 @@ describe('ContractorBillsService AP journal integration', () => {
       account('CB-CP', 'Contractor Payable', AccountType.Liability, AccountCategory.ContractorPayable, true, true),
       account('CB-RP', 'Retention Payable', AccountType.Liability, AccountCategory.RetentionPayable, true, true),
       account('CB-TDS', 'TDS Payable', AccountType.Liability, AccountCategory.TdsPayable),
-      account('CB-OI', 'Other Income', AccountType.Income, AccountCategory.OtherIncome),
+      account('CB-CA', 'Contractor Advance', AccountType.Asset, AccountCategory.ContractorAdvance, true, true),
+      account('CB-MR', 'Material Recovery', AccountType.Income, AccountCategory.MaterialRecovery, true, true),
+      account('CB-PR', 'Penalty Recovery', AccountType.Income, AccountCategory.PenaltyRecovery, true, true),
+      account('CB-OD', 'Other Contractor Deduction', AccountType.Income, AccountCategory.OtherContractorDeduction, false, true),
+      account('CB-BANK', 'Bank', AccountType.Asset, AccountCategory.Bank),
     ]);
     accountIds = Object.fromEntries(accounts.map((row) => [row.accountCategory, String(row._id)]));
 
@@ -189,6 +216,39 @@ describe('ContractorBillsService AP journal integration', () => {
     }]);
     contractorId = String(contractor._id);
     const boqItemId = new Types.ObjectId();
+    const advanceJournalId = new Types.ObjectId();
+    await journalModel.create({
+      _id: advanceJournalId,
+      journalNumber: 'JE-CB-ADV-001',
+      journalDate: new Date('2026-05-01'),
+      financialYearId: (await connection.model(FinancialYear.name).findOne().lean())!._id,
+      projectId: project._id,
+      sourceModule: 'contractor_agreement',
+      sourceEntityType: 'contractor_agreement',
+      sourceEntityId: 'pending',
+      postingPurpose: 'advance_disbursement',
+      narration: 'Mobilisation advance',
+      status: JournalStatus.Posted,
+      totalDebit: 50000,
+      totalCredit: 50000,
+      lines: [
+        {
+          accountId: new Types.ObjectId(accountIds[AccountCategory.ContractorAdvance]),
+          debit: 50000,
+          credit: 0,
+          projectId: project._id,
+          partyType: JournalPartyType.Contractor,
+          partyId: contractor._id,
+        },
+        {
+          accountId: new Types.ObjectId(accountIds[AccountCategory.Bank]),
+          debit: 0,
+          credit: 50000,
+          projectId: project._id,
+        },
+      ],
+      createdBy: new Types.ObjectId(actorId),
+    });
     const [agreement] = await agreementModel.create([{
       agreementNumber: 'CB-AGREEMENT', version: 1, contractorId: contractor._id, projectId: project._id,
       workScope: 'Civil works', boqItems: [{ boqItemId, boqCode: 'RCC-001', description: 'RCC', unit: BoqUnit.CubicMetre, agreedQuantity: 100, agreedRate: 1000, agreedValue: 100000 }],
@@ -197,8 +257,14 @@ describe('ContractorBillsService AP journal integration', () => {
       billingCycle: ContractorAgreementBillingCycle.Monthly, advance: { amount: 50000, terms: null },
       recoveryPlan: { method: 'percent_per_bill', percentPerBill: 20, notes: null }, retentionPercentage: 5,
       status: ContractorAgreementStatus.Active,
+      advanceDisbursementJournalId: advanceJournalId,
+      advanceDisbursedAt: new Date('2026-05-01'),
     }]);
     agreementId = String(agreement._id);
+    await journalModel.updateOne(
+      { _id: advanceJournalId },
+      { $set: { sourceEntityId: agreementId } },
+    );
     const [measurement] = await measurementModel.create([{
       measurementNumber: 'CB-WM-001', projectId: project._id, contractorId: contractor._id,
       boqItemId, boqCode: 'RCC-001', location: 'Block A', measurementDate: new Date('2026-07-15'),
@@ -224,15 +290,34 @@ describe('ContractorBillsService AP journal integration', () => {
     expect(String(payable?.partyId)).toBe(contractorId);
   });
 
-  it('posts all deductions as balanced AP journal credit lines', async () => {
+  it('posts all deductions as separate balanced AP journal credit lines', async () => {
     const posted = await createAndApprove({ tds: 200, materialRecovery: 150, penalty: 100, otherDeductions: 50 });
     const journal = await journalModel.findById(posted.data!.journalEntryId).lean();
     expect(journal?.totalDebit).toBe(10000);
     expect(journal?.totalCredit).toBe(10000);
+    expect(journal?.postingPurpose).toBe('ap_recognition');
     expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.RetentionPayable])?.credit).toBe(500);
     expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.TdsPayable])?.credit).toBe(200);
-    expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.OtherIncome])?.credit).toBe(2300);
+    expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.ContractorAdvance])?.credit).toBe(2000);
+    expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.MaterialRecovery])?.credit).toBe(150);
+    expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.PenaltyRecovery])?.credit).toBe(100);
+    expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.OtherContractorDeduction])?.credit).toBe(50);
     expect(journal?.lines.find((line) => String(line.accountId) === accountIds[AccountCategory.ContractorPayable])?.credit).toBe(7000);
+    expect(journal?.lines.some((line) => String(line.accountId) === accountIds[AccountCategory.OtherIncome])).toBe(false);
+  });
+
+  it('rejects advance recovery without disbursed advance balance', async () => {
+    await agreementModel.updateOne(
+      { _id: agreementId },
+      { $unset: { advanceDisbursementJournalId: 1, advanceDisbursedAt: 1 } },
+    );
+    const approved = await createAndApprove({ post: false });
+    await expect(service.post(approved.data!.id, actorId)).rejects.toThrow(
+      /has not been disbursed/i,
+    );
+    expect((await billModel.findById(approved.data!.id).lean())?.status).toBe(
+      ContractorBillStatus.DirectorApproved,
+    );
   });
 
   it('rejects posting without Contractor Payable mapping and preserves approval', async () => {
@@ -240,7 +325,9 @@ describe('ContractorBillsService AP journal integration', () => {
     await accountModel.deleteOne({ _id: accountIds[AccountCategory.ContractorPayable] });
     await expect(service.post(approved.data!.id, actorId)).rejects.toThrow(/contractor_payable/i);
     expect((await billModel.findById(approved.data!.id).lean())?.status).toBe(ContractorBillStatus.DirectorApproved);
-    expect(await journalModel.countDocuments({})).toBe(0);
+    expect(
+      await journalModel.countDocuments({ sourceModule: 'contractor_bill' }),
+    ).toBe(0);
   });
 
   it('does not duplicate journals under concurrent post attempts', async () => {

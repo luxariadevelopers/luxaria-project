@@ -147,14 +147,6 @@ describe('ContractorPaymentsService', () => {
       data: { id: new Types.ObjectId().toHexString() },
     });
 
-    const billsService = new ContractorBillsService(
-      billModel,
-      {} as never,
-      {} as never,
-      {} as never,
-      contractorModel,
-      new NumberingService(counterModel),
-    );
     const mockProjectScope = {
       assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
       assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
@@ -167,6 +159,22 @@ describe('ContractorPaymentsService', () => {
       authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
     } as never;
 
+    const billsService = new ContractorBillsService(
+      billModel,
+      {} as never,
+      {} as never,
+      {} as never,
+      contractorModel,
+      accountModel,
+      {} as never,
+      new NumberingService(counterModel),
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockProjectScope,
+    );
 
     service = new ContractorPaymentsService(
       paymentModel,
@@ -177,7 +185,7 @@ describe('ContractorPaymentsService', () => {
       billsService,
       new NumberingService(counterModel),
       { create: journalCreate } as unknown as JournalService,
-      mockProjectScope
+      mockProjectScope,
     );
   }, 120_000);
 
