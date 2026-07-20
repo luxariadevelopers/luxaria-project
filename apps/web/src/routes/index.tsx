@@ -3,6 +3,7 @@ import { PermissionGuard } from '@/auth/PermissionGuard';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AppLayout } from '@/layouts/AppLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
+import { CollectionsPage } from '@/pages/CollectionsPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { DprPage } from '@/pages/DprPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
@@ -30,6 +31,9 @@ export function AppRouter() {
             </Route>
             <Route element={<PermissionGuard anyOf={['dpr.view']} />}>
               <Route path="daily-progress-reports" element={<DprPage />} />
+            </Route>
+            <Route element={<PermissionGuard anyOf={['collection.view']} />}>
+              <Route path="sales/collections" element={<CollectionsPage />} />
             </Route>
             <Route path="settings" element={<SettingsPage />} />
             <Route path="forbidden" element={<ForbiddenPage />} />

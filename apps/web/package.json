@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
-    "test": "pnpm run test:e2e",
+    "test": "pnpm run test:unit && pnpm run test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install chromium"
@@ -43,6 +45,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
     "typescript": "6.0.3",
-    "vite": "^6.2.2"
+    "vite": "^6.2.2",
+    "vitest": "^3.2.4"
   }
 }

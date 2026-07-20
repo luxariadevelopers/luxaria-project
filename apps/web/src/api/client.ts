@@ -113,6 +113,17 @@ export function isForbiddenError(error: unknown): boolean {
   );
 }
 
+/** True when the backend rejected the call for a conflict (409), e.g. duplicate txn ref. */
+export function isConflictError(error: unknown): boolean {
+  if (!axios.isAxiosError<ApiError>(error)) {
+    return false;
+  }
+  return (
+    error.response?.status === 409 ||
+    error.response?.data?.errorCode === ERROR_CODES.CONFLICT
+  );
+}
+
 export async function apiGet<T>(url: string, params?: Record<string, unknown>) {
   const { data } = await apiClient.get<ApiResponse<T>>(url, { params });
   return data;

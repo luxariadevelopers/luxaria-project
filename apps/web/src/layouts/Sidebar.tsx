@@ -5,6 +5,7 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import {
   Box,
   Divider,
@@ -13,6 +14,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   Toolbar,
   Typography,
 } from '@mui/material';
@@ -25,6 +27,7 @@ type NavItem = {
   to: string;
   icon: ReactNode;
   permission?: string;
+  group?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -46,6 +49,13 @@ const NAV_ITEMS: NavItem[] = [
     to: '/daily-progress-reports',
     icon: <AssignmentOutlinedIcon />,
     permission: 'dpr.view',
+  },
+  {
+    label: 'Collections',
+    to: '/sales/collections',
+    icon: <PaymentsOutlinedIcon />,
+    permission: 'collection.view',
+    group: 'Sales',
   },
   {
     label: 'Settings',
@@ -97,27 +107,47 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       </Toolbar>
       <Divider />
       <List sx={{ px: 1.5, py: 2, flex: 1 }}>
-        {items.map((item) => (
-          <ListItemButton
-            key={item.to}
-            component={NavLink}
-            to={item.to}
-            end={item.to === '/'}
-            onClick={onClose}
-            sx={{
-              borderRadius: 2,
-              mb: 0.5,
-              '&.active': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '& .MuiListItemIcon-root': { color: 'inherit' },
-              },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
+        {items.map((item, index) => {
+          const prev = items[index - 1];
+          const showGroup =
+            Boolean(item.group) && item.group !== prev?.group;
+          return (
+            <Box key={item.to}>
+              {showGroup ? (
+                <ListSubheader
+                  disableSticky
+                  sx={{
+                    bgcolor: 'transparent',
+                    lineHeight: 2.2,
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    px: 1,
+                  }}
+                >
+                  {item.group}
+                </ListSubheader>
+              ) : null}
+              <ListItemButton
+                component={NavLink}
+                to={item.to}
+                end={item.to === '/'}
+                onClick={onClose}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  '&.active': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '& .MuiListItemIcon-root': { color: 'inherit' },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            </Box>
+          );
+        })}
       </List>
     </Box>
   );

@@ -5,6 +5,8 @@ const LABELS: Record<string, string> = {
   '': 'Dashboard',
   users: 'Users',
   projects: 'Projects',
+  sales: 'Sales',
+  collections: 'Collections',
   settings: 'Settings',
   forbidden: 'Access denied',
 };
