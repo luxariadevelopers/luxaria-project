@@ -1,4 +1,4 @@
-import { isoDateOnlySchema } from '@luxaria/shared-validation';
+import { isoDateOnlySchema } from '@/validation';
 import {
   FINANCE_DASHBOARD_MAX_HORIZON_DAYS,
 } from './constants';

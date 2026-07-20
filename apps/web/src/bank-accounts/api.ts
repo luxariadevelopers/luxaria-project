@@ -238,6 +238,6 @@ export async function fetchBankLedgerAccountOptions(): Promise<
   return fetchAccounts({
     accountCategory: AccountCategory.Bank,
     status: AccountStatus.Active,
-    limit: 200,
+    limit: 100,
   });
 }

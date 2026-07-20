@@ -36,7 +36,7 @@ export function LedgerAccountSelector<T extends FieldValues>({
       fetchAccounts({
         accountType: AccountType.Expense,
         status: AccountStatus.Active,
-        limit: 200,
+        limit: 100,
       }),
     enabled: canViewAccounts,
     staleTime: 60_000,

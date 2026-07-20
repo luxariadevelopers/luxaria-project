@@ -4,7 +4,14 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client", "vitest/globals"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@luxaria/shared-format": [
+        "../../packages/shared-format/src/index.ts"
+      ],
+      "@luxaria/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@luxaria/shared-validation": [
+        "../../packages/shared-validation/src/index.ts"
+      ]
     }
   },
   "include": ["src"],

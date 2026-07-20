@@ -8,22 +8,35 @@ const apiProxyTarget =
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+    alias: [
+      // Trailing slash so `@` does not swallow `@luxaria/*` package imports.
+      {
+        find: '@/',
+        replacement: `${path.resolve(__dirname, './src')}/`,
+      },
       // Vite serves workspace packages from source (dist is CommonJS for Nest).
-      '@luxaria/shared-types': path.resolve(
-        __dirname,
-        '../../packages/shared-types/src/index.ts',
-      ),
-      '@luxaria/shared-format': path.resolve(
-        __dirname,
-        '../../packages/shared-format/src/index.ts',
-      ),
-      '@luxaria/shared-validation': path.resolve(
-        __dirname,
-        '../../packages/shared-validation/src/index.ts',
-      ),
-    },
+      {
+        find: '@luxaria/shared-types',
+        replacement: path.resolve(
+          __dirname,
+          '../../packages/shared-types/src/index.ts',
+        ),
+      },
+      {
+        find: '@luxaria/shared-format',
+        replacement: path.resolve(
+          __dirname,
+          '../../packages/shared-format/src/index.ts',
+        ),
+      },
+      {
+        find: '@luxaria/shared-validation',
+        replacement: path.resolve(
+          __dirname,
+          '../../packages/shared-validation/src/index.ts',
+        ),
+      },
+    ],
   },
   optimizeDeps: {
     exclude: [

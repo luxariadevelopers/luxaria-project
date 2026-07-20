@@ -99,6 +99,8 @@ services:
       - ./apps/web/tsconfig.app.json:/app/apps/web/tsconfig.app.json:ro
       - ./apps/web/tsconfig.node.json:/app/apps/web/tsconfig.node.json:ro
       - ./packages/shared-types/src:/app/packages/shared-types/src:ro
+      - ./packages/shared-format/src:/app/packages/shared-format/src:ro
+      - ./packages/shared-validation/src:/app/packages/shared-validation/src:ro
     depends_on:
       backend:
         condition: service_healthy

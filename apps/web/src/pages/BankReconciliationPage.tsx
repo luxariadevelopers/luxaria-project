@@ -45,7 +45,7 @@ export function BankReconciliationPage() {
     canView,
   );
   const banks = useBankAccountsList(
-    { status: BankAccountStatus.Active, limit: 200 },
+    { status: BankAccountStatus.Active, limit: 100 },
     canView && (caps.canManage || canPickBanks),
   );
 

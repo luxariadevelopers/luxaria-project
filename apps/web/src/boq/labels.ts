@@ -68,14 +68,9 @@ export function boqVersionTypeLabel(type: BoqVersionTypeT): string {
   return VERSION_TYPE_LABELS[type] ?? type;
 }
 
-export function formatBoqVersionLabel(version: PublicBoqVersion): string {
-  return `v${version.versionNumber} · ${boqVersionTypeLabel(version.versionType)}`;
-}
-
-export function formatBoqVersionLabel(version: {
-  versionNumber: number;
-  versionType: BoqVersionTypeT;
-}): string {
+export function formatBoqVersionLabel(
+  version: Pick<PublicBoqVersion, 'versionNumber' | 'versionType'>,
+): string {
   return `v${version.versionNumber} · ${boqVersionTypeLabel(version.versionType)}`;
 }
 
@@ -87,15 +82,6 @@ export const BOQ_UNIT_OPTIONS = Object.values(BoqUnit).map((value) => ({
 export const BOQ_ITEM_STATUS_OPTIONS = Object.values(BoqItemStatus).map(
   (value) => ({ value, label: boqItemStatusLabel(value) }),
 );
-
-export const BOQ_VERSION_TYPE_OPTIONS = Object.values(BoqVersionType).map(
-  (value) => ({ value, label: boqVersionTypeLabel(value) }),
-);
-
-export const BOQ_UNIT_OPTIONS = Object.values(BoqUnit).map((value) => ({
-  value,
-  label: boqUnitLabel(value),
-}));
 
 export const BOQ_VERSION_TYPE_OPTIONS = Object.values(BoqVersionType).map(
   (value) => ({ value, label: boqVersionTypeLabel(value) }),
