@@ -31,6 +31,7 @@ export type NavGroupId =
   | 'contractors'
   | 'capital-investment'
   | 'accounting'
+  | 'reports'
   | 'petty-cash'
   | 'inventory'
   | 'sales'
@@ -81,6 +82,7 @@ export const NAV_GROUP_META: readonly NavGroupMeta[] = [
   { id: 'contractors', label: 'Contractors' },
   { id: 'capital-investment', label: 'Capital & Investment' },
   { id: 'accounting', label: 'Accounting' },
+  { id: 'reports', label: 'Accounting reports' },
   { id: 'petty-cash', label: 'Petty Cash' },
   { id: 'inventory', label: 'Inventory' },
   { id: 'sales', label: 'Sales' },
@@ -1098,6 +1100,30 @@ const APP_ROUTES = [
     anyOf: ['boq.view'],
     projectScope: 'required',
     breadcrumbSegment: 'items',
+  },
+  {
+    id: 'cash-book',
+    path: '/reports/accounting/cash-book',
+    title: 'Cash Book',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'reports',
+    icon: 'reports',
+    anyOf: ['report.view'],
+    projectScope: 'none',
+    breadcrumbSegment: 'cash-book',
+  },
+  {
+    id: 'bank-book',
+    path: '/reports/accounting/bank-book',
+    title: 'Bank Book',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'reports',
+    icon: 'reports',
+    anyOf: ['report.view'],
+    projectScope: 'none',
+    breadcrumbSegment: 'bank-book',
   },
   {
     id: 'users',
