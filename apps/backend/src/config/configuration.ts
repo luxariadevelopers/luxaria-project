@@ -94,6 +94,15 @@ export type AppConfig = {
   vendorInvoiceFreightTolerancePercent: number;
   vendorInvoiceDiscountTolerancePercent: number;
   vendorInvoiceTotalTolerancePercent: number;
+  /** SMTP host — when unset, email channel runs in stub mode (local/dev). */
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  /** Use TLS (typical for port 465). Defaults from port when unset. */
+  smtpSecure: boolean;
+  /** From address for outbound notification emails. */
+  emailFrom: string;
 };
 
 export default (): AppConfig => {
@@ -235,5 +244,13 @@ export default (): AppConfig => {
     vendorInvoiceTotalTolerancePercent: Number(
       process.env.VENDOR_INVOICE_TOTAL_TOLERANCE_PERCENT ?? 0,
     ),
+    smtpHost: process.env.SMTP_HOST?.trim() ?? '',
+    smtpPort: Number(process.env.SMTP_PORT ?? 587),
+    smtpUser: process.env.SMTP_USER?.trim() ?? '',
+    smtpPass: process.env.SMTP_PASS ?? '',
+    smtpSecure:
+      String(process.env.SMTP_SECURE ?? '').toLowerCase() === 'true' ||
+      Number(process.env.SMTP_PORT ?? 587) === 465,
+    emailFrom: process.env.EMAIL_FROM?.trim() ?? '',
   };
 };
