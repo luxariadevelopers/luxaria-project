@@ -1,6 +1,10 @@
-import { Stack, Typography } from '@mui/material';
+import { Alert, Button, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { useAuth } from '@/auth/AuthContext';
 import { DataTable } from '@/components/DataTable';
+import { useProject } from '@/context/ProjectContext';
+import type { QuickSearchHit } from '@/quick-search';
 
 type PlaceholderProject = {
   id: string;
@@ -25,12 +29,50 @@ const columns: GridColDef<PlaceholderProject>[] = [
 ];
 
 export function ProjectsPage() {
+  const { hasPermission } = useAuth();
+  const { selectedProject, selectedProjectId } = useProject();
+  const location = useLocation();
+  const hit = (location.state as { quickSearchHit?: QuickSearchHit } | null)
+    ?.quickSearchHit;
+  const canOpenDashboard =
+    hasPermission('dashboard.view') && Boolean(selectedProjectId);
+  const canOpenParticipants =
+    hasPermission('project_participant.view') && Boolean(selectedProjectId);
+
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Projects</Typography>
       <Typography color="text.secondary">
         Placeholder page. Project management UI will be implemented later.
+        Quick search (⌘K) can activate a permitted project in the header.
       </Typography>
+      {hit?.sourceId === 'projects' || selectedProject ? (
+        <Alert severity="info" variant="outlined">
+          Active project:{' '}
+          {hit?.sourceId === 'projects'
+            ? `${hit.title} (${hit.subtitle})`
+            : `${selectedProject?.projectName ?? selectedProjectId} (${selectedProject?.projectCode ?? '—'})`}
+        </Alert>
+      ) : null}
+      {canOpenDashboard ? (
+        <Button
+          component={RouterLink}
+          to={`/projects/${selectedProjectId}/dashboard`}
+          variant="outlined"
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          Open project dashboard
+        </Button>
+      ) : null}
+      {canOpenParticipants ? (
+        <Button
+          component={RouterLink}
+          to={`/projects/${selectedProjectId}/participants`}
+          variant="outlined"
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          Open participants
+        </Button>
+      ) : null}
       <DataTable
         title="Projects"
         rows={PLACEHOLDER_ROWS}

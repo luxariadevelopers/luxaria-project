@@ -6,7 +6,6 @@ export function SettingsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Settings</Typography>
       <Paper variant="outlined" sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
           Profile

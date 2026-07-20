@@ -50,9 +50,4 @@ export type UserAccess = {
   bypassPermissions: boolean;
 };
 
-export type ProjectOption = {
-  id: string;
-  projectCode: string;
-  projectName: string;
-  status?: string;
-};
+export type { ProjectAccessScope, ProjectOption } from '@luxaria/shared-types';

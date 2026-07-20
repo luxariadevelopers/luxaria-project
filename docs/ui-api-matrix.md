@@ -66,7 +66,7 @@ Every backend module must appear below with route/method/permission/response-sha
 | `customer-receipts` | 7 | POST, GET, PATCH | `collection.create`, `collection.view`, `collection.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/customer-receipts/customer-receipts.controller.ts` |
 | `customers` | 10 | POST, GET, PATCH | `customer.manage`, `customer.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/customers/customers.controller.ts` |
 | `daily-director-digest` | 4 | GET, POST | `director_digest.view`, `director_digest.send` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/daily-director-digest/daily-director-digest.controller.ts` |
-| `daily-progress-reports` | 11 | POST, GET, PATCH | `dpr.create`, `dpr.view`, `dpr.review` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`DPR_API.md`](../apps/backend/docs/DPR_API.md) | `apps/backend/src/modules/daily-progress-reports/dpr.controller.ts` |
+| `daily-progress-reports` | 11 | POST, GET, PATCH | `dpr.create`, `dpr.view`, `dpr.review` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`DPR_API.md`](../apps/backend/docs/DPR_API.md); Web Phase 082 (list) | `apps/backend/src/modules/daily-progress-reports/dpr.controller.ts` |
 | `director-command-centre` | 1 | GET | `dashboard.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/director-command-centre/director-command-centre.controller.ts` |
 | `directors` | 12 | POST, GET, PATCH | `director.create`, `director.view`, `director.update`, `director.upload_document`, `shareholding.view`, `shareholding.propose`, … (+1) | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`DIRECTORS_API.md`](../apps/backend/docs/DIRECTORS_API.md) | `apps/backend/src/modules/directors/directors.controller.ts` |
 | `documents` | 7 | POST, GET | `document.upload`, `document.download`, `document.replace`, `document.archive`, `document.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`DOCUMENTS_S3_API.md`](../apps/backend/docs/DOCUMENTS_S3_API.md) | `apps/backend/src/modules/documents/documents.controller.ts` |
@@ -122,10 +122,10 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Shell / auth / layout | Present | Login, JWT refresh, permission guard, project selector |
-| Routes | Partial | `/login`, `/`, `/users`, `/projects`, `/daily-progress-reports`, `/settings`, `/forbidden` |
+| Routes | Partial | Includes `/project-control/dpr` (Phase 082), legacy redirect `/daily-progress-reports`, registry shell |
 | Users page | Placeholder | Guarded by `user.view`; **does not call** `/users` API yet |
 | Projects page | Shell | Lists via project context `/projects` |
-| DPR page | Partial | `GET /daily-progress-reports` |
+| DPR list (Phase 082) | Present | `GET /daily-progress-reports`, `GET /daily-progress-reports/missing-alerts` — `apps/web/src/dpr` |
 | Dashboard / Settings | Shell | Minimal UI |
 | Domain modules (finance, procurement, sales, …) | Missing | No pages/clients yet |
 | Investor portal UI | Missing | Backend `investor-portal` exists |
@@ -137,7 +137,8 @@ Every backend module must appear below with route/method/permission/response-sha
 | POST | `/auth/login` | `apps/web/src/api/auth.ts` |
 | POST | `/auth/logout` | `apps/web/src/api/auth.ts` |
 | GET | `/auth/me` | `apps/web/src/api/auth.ts` |
-| GET | `/daily-progress-reports` | `apps/web/src/pages/DprPage.tsx` |
+| GET | `/daily-progress-reports` | `apps/web/src/dpr/api.ts` |
+| GET | `/daily-progress-reports/missing-alerts` | `apps/web/src/dpr/api.ts` |
 | GET | `/projects` | `apps/web/src/context/ProjectContext.tsx` |
 | GET | `/rbac/me/permissions` | `apps/web/src/api/auth.ts` |
 
@@ -248,6 +249,16 @@ _None detected._
 - Hiding a button is not sufficient; keep route/action guards and handle backend `403`.
 - Never edit posted journals, stock ledgers, approved vouchers or approved versions in the UI.
 - Prefer backend-authoritative financial totals.
+
+#### Daily progress list (Phase 082)
+
+| Piece | Location | Notes |
+|---|---|---|
+| APIs | `GET /daily-progress-reports?projectId&status&fromDate&toDate&page&limit`, `GET /daily-progress-reports/missing-alerts?projectId=` | Nest `daily-progress-reports` |
+| Permissions | List + missing alerts **`dpr.view`** | Create/review not wired on list (Phase 083+) |
+| UI | `apps/web/src/dpr` + `/project-control/dpr` | DPRTable (status chips, media count), MissingDayIndicators (missing + awaiting cut-off), filters |
+| Nav | Project Control → Daily progress | Legacy `/daily-progress-reports` redirects; detail stub `/project-control/dpr/:id` (Phase 083) |
+| States | page | Loading / empty / error retry / permission-denied / project required |
 
 ## Regeneration
 

@@ -1,10 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Container, Typography } from '@mui/material';
 
 type Props = {
   children: ReactNode;
@@ -12,25 +7,27 @@ type Props = {
 
 type State = {
   hasError: boolean;
-  message: string;
 };
 
+/**
+ * Global render-error boundary. Shows a safe generic message only —
+ * never stack traces or tokens from the thrown value.
+ */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, message: '' };
+  state: State = { hasError: false };
 
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      message: error.message || 'An unexpected error occurred',
-    };
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // Log full detail for developers; UI stays generic.
     console.error('Luxaria ErrorBoundary', error, info);
   }
 
+
   private handleReset = () => {
-    this.setState({ hasError: false, message: '' });
+    this.setState({ hasError: false });
     window.location.assign('/');
   };
 
@@ -51,7 +48,8 @@ export class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 3 }}>
-              {this.state.message}
+              An unexpected error occurred. You can return to the dashboard and
+              try again.
             </Typography>
             <Button variant="contained" onClick={this.handleReset}>
               Return to dashboard
