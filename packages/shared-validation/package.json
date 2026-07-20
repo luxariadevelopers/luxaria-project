@@ -24,6 +24,6 @@
     "@luxaria/eslint-config": "workspace:*",
     "@luxaria/tsconfig": "workspace:*",
     "eslint": "^9.22.0",
-    "typescript": "^5.8.2"
+    "typescript": "6.0.3"
   }
 }
