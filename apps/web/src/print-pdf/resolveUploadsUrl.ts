@@ -1,10 +1,7 @@
 /**
  * Resolve a backend-relative filesystem path (`uploads/…`) to a browser URL.
- *
- * Path-based PDFs (PO / customer receipt export) are written under `uploads/`
- * by Nest; there is no authenticated download route for those files.
- * Deployments that reverse-proxy `/uploads` (or set `VITE_UPLOADS_BASE_URL`)
- * can open the file; otherwise open will fail at the network layer.
+ * Nest writes customer-receipt PDFs under `uploads/`; deployments may
+ * reverse-proxy `/uploads` or set `VITE_UPLOADS_BASE_URL`.
  */
 export function resolveUploadsUrl(relativePath: string): string {
   const cleaned = relativePath.replace(/^\//, '');

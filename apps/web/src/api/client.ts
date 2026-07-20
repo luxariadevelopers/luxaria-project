@@ -1,4 +1,8 @@
-import { type ApiError, type ApiResponse } from '@luxaria/shared-types';
+import {
+  ERROR_CODES,
+  type ApiError,
+  type ApiResponse,
+} from '@luxaria/shared-types';
 import axios, {
   type AxiosError,
   type AxiosInstance,
@@ -6,16 +10,6 @@ import axios, {
 } from 'axios';
 import { tokenStorage } from '@/auth/tokenStorage';
 import type { RefreshResponse } from './types';
-
-export {
-  getErrorMessage,
-  isConflictError,
-  isForbiddenError,
-  isRetryableError,
-  isUnauthorizedError,
-  toAppError,
-} from './errors';
-
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -98,8 +92,39 @@ apiClient.interceptors.response.use(
   },
 );
 
-export async function apiGet<T>(url: string, params?: Record<string, unknown>) {
+export function getErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (axios.isAxiosError<ApiError>(error)) {
+    return error.response?.data?.message || error.message || fallback;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
+}
 
+/** True when the backend rejected the call for permission / project access (403). */
+export function isForbiddenError(error: unknown): boolean {
+  if (!axios.isAxiosError<ApiError>(error)) {
+    return false;
+  }
+  return (
+    error.response?.status === 403 ||
+    error.response?.data?.errorCode === ERROR_CODES.FORBIDDEN
+  );
+}
+
+/** True when the backend rejected the call for a conflict (409), e.g. duplicate txn ref. */
+export function isConflictError(error: unknown): boolean {
+  if (!axios.isAxiosError<ApiError>(error)) {
+    return false;
+  }
+  return (
+    error.response?.status === 409 ||
+    error.response?.data?.errorCode === ERROR_CODES.CONFLICT
+  );
+}
+
+export async function apiGet<T>(url: string, params?: Record<string, unknown>) {
   const { data } = await apiClient.get<ApiResponse<T>>(url, { params });
   return data;
 }

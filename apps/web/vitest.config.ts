@@ -11,20 +11,11 @@ export default defineConfig({
         __dirname,
         '../../packages/shared-types/src/index.ts',
       ),
-      '@luxaria/shared-format': path.resolve(
-        __dirname,
-        '../../packages/shared-format/src/index.ts',
-      ),
-      '@luxaria/shared-validation': path.resolve(
-        __dirname,
-        '../../packages/shared-validation/src/index.ts',
-      ),
     },
   },
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     css: false,
   },
