@@ -284,9 +284,17 @@ function account(
   accountType: AccountType,
   accountCategory: AccountCategory,
   requiresParty = false,
+  requiresProject = false,
 ) {
   return {
-    accountCode, accountName, accountType, accountCategory, level: 1,
-    allowManualPosting: true, status: AccountStatus.Active, requiresParty,
+    accountCode,
+    accountName,
+    accountType,
+    accountCategory,
+    level: 1,
+    allowManualPosting: true,
+    status: AccountStatus.Active,
+    requiresParty,
+    requiresProject,
   };
 }
