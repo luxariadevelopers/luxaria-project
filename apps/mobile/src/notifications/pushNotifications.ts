@@ -9,8 +9,8 @@ export type PushRegistrationResult = {
 };
 
 /**
- * Placeholder push registration.
- * Wires permission + Expo push token fetch; backend device registration comes later.
+ * Local push permission + Expo token fetch.
+ * Nest has no device/push-token registration endpoint yet — token is not posted to the API.
  */
 export async function registerForPushNotificationsAsync(): Promise<PushRegistrationResult> {
   if (!Device.isDevice) {
@@ -49,7 +49,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
       status: 'placeholder',
       expoPushToken: token.data,
       message:
-        'Push token obtained locally. Server registration is not implemented yet.',
+        'Push token obtained locally. No Nest push-token registration API is available yet.',
     };
   } catch {
     return {

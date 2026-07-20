@@ -1,7 +1,7 @@
 import type { PaginationMeta } from '@luxaria/shared-types';
-import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from './client';
+import { apiGet, apiPatch, apiPost } from './client';
 
-/** Public inbox item from backend `toPublicNotification`. */
+/** Mirrors Nest `toPublicNotification` inbox payload. */
 export type InboxNotification = {
   id: string;
   eventType: string;
@@ -17,119 +17,55 @@ export type InboxNotification = {
   createdAt: string | null;
 };
 
-export type ListNotificationsQuery = {
+export type ListNotificationsParams = {
   unreadOnly?: boolean;
   eventType?: string;
   page?: number;
   limit?: number;
 };
 
-export type NotificationsListResult = {
+export type ListNotificationsResult = {
   items: InboxNotification[];
   meta: PaginationMeta | null;
 };
 
-export type MarkAllReadResult = {
-  modifiedCount: number;
-};
-
-export type NotificationChannelPreference = {
-  channel: 'in_app' | 'push' | 'email' | 'whatsapp';
-  enabled: boolean;
-};
-
-export type NotificationEventPreference = {
-  eventType: string;
-  enabled: boolean;
-  channels?: NotificationChannelPreference[];
-};
-
-export type NotificationPreferences = {
-  userId: string;
-  muted: boolean;
-  events: NotificationEventPreference[];
-};
-
-export type PushDeviceTokenRecord = {
-  id: string;
-  userId: string;
-  token: string;
-  platform: 'ios' | 'android';
-  deviceName: string | null;
-  invalidatedAt: string | null;
-  lastUsedAt: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-};
-
 export async function listNotifications(
-  query: ListNotificationsQuery = {},
-): Promise<NotificationsListResult> {
-  const res = await apiGet<InboxNotification[]>('/notifications', {
-    ...query,
-  });
+  params?: ListNotificationsParams,
+): Promise<ListNotificationsResult> {
+  const response = await apiGet<InboxNotification[]>('/notifications', params);
   return {
-    items: res.data ?? [],
-    meta: res.meta
-      ? {
-          page: Number(res.meta.page ?? query.page ?? 1),
-          limit: Number(res.meta.limit ?? query.limit ?? 20),
-          total: Number(res.meta.total ?? 0),
-          totalPages: Number(res.meta.totalPages ?? 0),
-          hasNextPage: Boolean(res.meta.hasNextPage),
-          hasPrevPage: Boolean(res.meta.hasPrevPage),
-        }
-      : null,
+    items: response.data ?? [],
+    meta: (response.meta as PaginationMeta | undefined) ?? null,
   };
-}
-
-/** No dedicated count endpoint — use unread list `meta.total`. */
-export async function fetchUnreadNotificationCount(): Promise<number> {
-  const result = await listNotifications({
-    unreadOnly: true,
-    page: 1,
-    limit: 1,
-  });
-  return result.meta?.total ?? 0;
 }
 
 export async function markNotificationRead(
   id: string,
-): Promise<InboxNotification | null> {
-  const res = await apiPatch<InboxNotification>(`/notifications/${id}/read`);
-  return res.data ?? null;
+): Promise<InboxNotification> {
+  const response = await apiPatch<InboxNotification>(
+    `/notifications/${id}/read`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Could not mark notification read');
+  }
+  return response.data;
 }
 
-export async function markAllNotificationsRead(): Promise<number> {
-  const res = await apiPost<MarkAllReadResult>('/notifications/read-all');
-  return res.data?.modifiedCount ?? 0;
+export async function markAllNotificationsRead(): Promise<{
+  modifiedCount: number;
+}> {
+  const response = await apiPost<{ modifiedCount: number }>(
+    '/notifications/read-all',
+  );
+  return response.data ?? { modifiedCount: 0 };
 }
 
-export async function fetchNotificationPreferences() {
-  return apiGet<NotificationPreferences>('/notifications/preferences');
-}
-
-export async function updateNotificationPreferences(body: {
-  muted?: boolean;
-  events?: NotificationEventPreference[];
-}) {
-  return apiPut<NotificationPreferences>('/notifications/preferences', body);
-}
-
-export async function registerPushToken(body: {
-  token: string;
-  platform: 'ios' | 'android';
-  deviceName?: string;
-}) {
-  return apiPost<PushDeviceTokenRecord>('/notifications/push-tokens', body);
-}
-
-export async function unregisterPushToken(token: string) {
-  return apiDelete<{ removed: boolean }>('/notifications/push-tokens', {
-    data: { token },
+/** Unread total from inbox meta (`unreadOnly=true`, limit 1). */
+export async function fetchUnreadNotificationCount(): Promise<number> {
+  const { meta } = await listNotifications({
+    unreadOnly: true,
+    page: 1,
+    limit: 1,
   });
-}
-
-export async function fetchMyPushTokens() {
-  return apiGet<PushDeviceTokenRecord[]>('/notifications/push-tokens/mine');
+  return meta?.total ?? 0;
 }

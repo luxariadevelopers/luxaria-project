@@ -1,17 +1,38 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {
+  useNavigation,
+  type CompositeNavigationProp,
+} from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { registerForPushNotificationsAsync } from '@/notifications/pushNotifications';
+import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
 import {
   requestCameraPermission,
   requestLocationPermission,
 } from '@/utils/permissions';
 import { colors } from '@/theme/colors';
 
+type ProfileNavigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Profile'>,
+  NativeStackNavigationProp<AppStackParamList>
+>;
+
 export function ProfileScreen() {
-  const { user, access, logout } = useAuth();
+  const { user, access, logout, hasPermission } = useAuth();
+  const navigation = useNavigation<ProfileNavigation>();
   const [busy, setBusy] = useState(false);
+  const canViewNotifications = hasPermission('notification.view');
 
   const runPermission = async (
     label: string,
@@ -42,6 +63,19 @@ export function ProfileScreen() {
           {access?.roleCodes?.join(', ') || '—'}
         </Text>
       </View>
+
+      <Text style={styles.section}>Notifications</Text>
+      <Pressable
+        style={[styles.action, !canViewNotifications && styles.disabled]}
+        disabled={!canViewNotifications}
+        onPress={() => navigation.navigate('Notifications')}
+      >
+        <Text style={styles.actionText}>
+          {canViewNotifications
+            ? 'Open notifications'
+            : 'Notifications (needs notification.view)'}
+        </Text>
+      </Pressable>
 
       <Text style={styles.section}>Device permissions</Text>
       <Pressable

@@ -9,12 +9,11 @@ import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
-import { WorkMeasurementFormScreen } from '@/screens/WorkMeasurementFormScreen';
-import { WorkMeasurementListScreen } from '@/screens/WorkMeasurementListScreen';
 import { colors } from '@/theme/colors';
 import type {
   AppStackParamList,
@@ -141,14 +140,9 @@ function AppNavigator() {
         options={{ title: 'Daily Progress Report' }}
       />
       <AppStack.Screen
-        name="WorkMeasurementList"
-        component={WorkMeasurementListScreen}
-        options={{ title: 'Work Measurement' }}
-      />
-      <AppStack.Screen
-        name="WorkMeasurementForm"
-        component={WorkMeasurementFormScreen}
-        options={{ title: 'New measurement' }}
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
       />
     </AppStack.Navigator>
   );

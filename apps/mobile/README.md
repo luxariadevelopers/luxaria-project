@@ -30,7 +30,14 @@ Pending Sync screen shows errors and Retry. Expense capture will enqueue into th
 - Projects (+ project selection flow)
 - Pending Sync
 - Profile (permissions + push placeholder)
-- Stock Count (list + count entry with photos; offline draft + create/submit sync)
+- Notifications (Profile → Notifications; inbox + actionable deep links)
+
+## Notifications (Phase 130)
+
+- APIs: `GET /notifications`, `PATCH /notifications/:id/read`, `POST /notifications/read-all` (`notification.view`)
+- Deep links validate route + permission (+ project access) before navigation
+- Supported entity types on mobile: `daily_progress_report`, `goods_receipt`, `purchase_order`, `project` (plus `missing_dpr` event fallback)
+- Push: local Expo token only — Nest has no device/push-token registration endpoint yet
 
 ## API
 
