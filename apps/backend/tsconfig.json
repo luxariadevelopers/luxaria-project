@@ -1,10 +1,31 @@
 {
-  "extends": "@luxaria/tsconfig/nestjs.json",
   "compilerOptions": {
+    "target": "ES2021",
+    "lib": ["ES2021"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "./dist",
     "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "incremental": true,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "test"]
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }
