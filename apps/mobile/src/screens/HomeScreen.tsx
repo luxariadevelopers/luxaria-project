@@ -9,7 +9,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
-import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
 import { colors } from '@/theme/colors';
@@ -20,14 +19,11 @@ type HomeNavigation = CompositeNavigationProp<
 >;
 
 export function HomeScreen() {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
   const { activeCount } = useOfflineSync();
   const navigation = useNavigation<HomeNavigation>();
-  const canOpenLabourVoucher =
-    hasPermission(LABOUR_VOUCHER_PERMISSIONS.view) ||
-    hasPermission(LABOUR_VOUCHER_PERMISSIONS.createOrSubmit);
 
   return (
     <Screen
@@ -74,19 +70,17 @@ export function HomeScreen() {
         <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
       </Pressable>
 
-      {canOpenLabourVoucher ? (
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('LabourVoucherHistory')}
-        >
-          <Text style={styles.secondaryButtonText}>Labour Voucher</Text>
-        </Pressable>
-      ) : null}
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => navigation.navigate('WorkMeasurementList')}
+      >
+        <Text style={styles.secondaryButtonText}>Work Measurement</Text>
+      </Pressable>
 
       <Text style={styles.note}>
         GRN capture requires photos and GPS, then queues offline for sync
-        (media first, then submit). Labour vouchers create and submit signed
-        daily wage payments online.
+        (media first, then submit). Work measurements capture BOQ quantities
+        with evidence for later engineer verification.
       </Text>
     </Screen>
   );
