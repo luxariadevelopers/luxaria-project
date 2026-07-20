@@ -12,6 +12,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 !.env.docker.example
 # Shared non-secret local defaults (placeholder values only — never put real keys here)
 !.env.development
@@ -63,4 +64,6 @@ apps/web/dist/
 **/test-results/
 **/playwright-report/
 **/blob-report/
+apps/web/e2e/.auth/
+apps/web/e2e/.e2e/
 .playwright/

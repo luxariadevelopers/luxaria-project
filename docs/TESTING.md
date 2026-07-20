@@ -39,9 +39,30 @@ pnpm --filter @luxaria/backend test:security     # security-focused suite
 ### Web (`@luxaria/web`)
 
 ```bash
-pnpm --filter @luxaria/web test:e2e              # Playwright
+pnpm --filter @luxaria/web test:e2e              # Playwright (shell smoke; live specs skip without API)
+pnpm --filter @luxaria/web test:e2e:live         # Playwright with E2E_LIVE_API=true
 pnpm --filter @luxaria/web test:e2e:ui           # Playwright UI mode
+pnpm --filter @luxaria/web test:e2e:install      # Install Chromium for CI/local
 ```
+
+Copy `apps/web/.env.e2e.example` for local live runs. Credentials are **test-only** — never point at production Mongo or real user accounts.
+
+#### Playwright layout (`apps/web/e2e/`)
+
+| Path | Purpose |
+|------|---------|
+| `fixtures/test-env.ts` | `E2E_*` env readers + runtime paths |
+| `fixtures/api-client.ts` | Authenticated API helper (`request` context) |
+| `fixtures/seed-data.ts` | Bootstrap admin, limited user, project (global setup) |
+| `fixtures/auth.ts` | UI login + storage-state writers |
+| `fixtures/index.ts` | Extended `test` fixture (`adminApi`, `e2eState`) |
+| `pages/*.page.ts` | Page objects (login, dashboard, forbidden) |
+| `global-setup.ts` | API seed before tests when `E2E_LIVE_API` or CI |
+| `auth.setup.ts` | Browser storage states for admin / limited users |
+| `smoke.spec.ts` | Unauthenticated shell smoke |
+| `*.smoke.spec.ts` | Live API smokes (login, RBAC, project selector, approvals API) |
+
+Live smokes require Nest on `:9000` (Vite proxies `/api` via `VITE_PROXY_TARGET`). CI starts Mongo + backend automatically; locally use Docker Compose or a test Mongo URI.
 
 ### Mobile (`@luxaria/mobile`)
 
@@ -82,8 +103,9 @@ See [CI.md](./CI.md). Pull requests are gated by **PR Validation** (`.github/wor
 3. Integration tests
 4. API / e2e tests
 5. Build backend / build web
-6. Security audit (+ `security.yml`)
-7. Docker image builds
+6. Playwright E2E (web + ephemeral Mongo + API seed)
+7. Security audit (+ `security.yml`)
+8. Docker image builds
 
 Require the **PR gate** status check in branch protection to block merges on failure.
 
@@ -93,4 +115,4 @@ Require the **PR gate** status check in branch protection to block merges on fai
 2. Use `*.integration.spec.ts` when a replica set / multi-doc transaction is required.
 3. Put HTTP contract tests under `apps/backend/test/*.e2e-spec.ts`.
 4. Do not hit real AWS / production Mongo from CI.
-5. Keep Playwright smoke tests independent of seeded auth until a CI seed user exists.
+5. Web Playwright live smokes use dedicated `E2E_*` credentials against test Mongo only (see `apps/web/.env.e2e.example`).
