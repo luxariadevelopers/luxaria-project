@@ -122,13 +122,13 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Shell / auth / layout | Present | Login, JWT refresh, permission guard, project selector |
-| Routes | Partial | `/login`, `/`, `/users`, `/projects`, `/daily-progress-reports`, `/settings`, `/forbidden`, `/investor/login`, `/investor/dashboard` |
+| Routes | Partial | `/login`, `/`, `/users`, `/projects`, `/daily-progress-reports`, `/settings`, `/forbidden`, `/investor/dashboard`, `/investor/projects/:projectId` |
 | Users page | Placeholder | Guarded by `user.view`; **does not call** `/users` API yet |
 | Projects page | Shell | Lists via project context `/projects` |
 | DPR page | Partial | `GET /daily-progress-reports` |
 | Dashboard / Settings | Shell | Minimal UI |
 | Domain modules (finance, procurement, sales, …) | Missing | No pages/clients yet |
-| Investor portal UI | **Phase 132 shell** | `/investor/*` isolated layout; `GET /investor-portal/me`, `GET /investor-portal/projects`; permission `investor_portal.view`; see `apps/web/src/investor-portal/` |
+| Investor portal UI | **Phase 133** | `/investor/dashboard`, `/investor/projects/:id`; `investor_portal.view`; uses `GET /investor-portal/me`, `/projects`, `/projects/:projectId` only (never staff `/investors`) |
 
 **Web API calls found:**
 
@@ -138,18 +138,18 @@ Every backend module must appear below with route/method/permission/response-sha
 | POST | `/auth/logout` | `apps/web/src/api/auth.ts` |
 | GET | `/auth/me` | `apps/web/src/api/auth.ts` |
 | GET | `/daily-progress-reports` | `apps/web/src/pages/DprPage.tsx` |
-| GET | `/projects` | `apps/web/src/context/ProjectContext.tsx` |
-| GET | `/rbac/me/permissions` | `apps/web/src/api/auth.ts` |
 | GET | `/investor-portal/me` | `apps/web/src/investor-portal/api.ts` |
 | GET | `/investor-portal/projects` | `apps/web/src/investor-portal/api.ts` |
+| GET | `/investor-portal/projects/:projectId` | `apps/web/src/investor-portal/api.ts` |
+| GET | `/projects` | `apps/web/src/context/ProjectContext.tsx` |
+| GET | `/rbac/me/permissions` | `apps/web/src/api/auth.ts` |
 
 ### Mobile site app (`apps/mobile`)
 
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, ConflictDetail, GRN, DPR |
-| Sync conflict centre (Phase 131) | Present | Local queue filters, conflict detail, retry, confirmed discard, open record; owner + project guards |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
@@ -164,11 +164,8 @@ Every backend module must appear below with route/method/permission/response-sha
 | GET | `/auth/me` | `apps/mobile/src/api/auth.ts` |
 | POST? | `/daily-progress-reports` | `apps/mobile/src/features/dpr/buildDprOfflineEnqueue.ts` |
 | POST? | `/goods-receipts` | `apps/mobile/src/features/grn/buildGrnOfflineEnqueue.ts` |
-| POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` (demo enqueue) |
-| local | Offline SQLite queue | `apps/mobile/src/offline/*`, UI `PendingSync` / `ConflictDetail` / `src/sync-centre` |
+| POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` |
 | GET | `/projects` | `apps/mobile/src/context/ProjectContext.tsx` |
-| POST | `/documents/presign-upload` | `apps/mobile/src/offline/transport.ts` |
-| POST | `/documents/:id/confirm-upload` | `apps/mobile/src/offline/transport.ts` |
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/rbac/me/permissions` | `apps/mobile/src/api/auth.ts` |

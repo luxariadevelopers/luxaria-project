@@ -1,15 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { PermissionGuard } from '@/auth/PermissionGuard';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
-import {
-  InternalAppGuard,
-  InvestorAuthLayout,
-  InvestorDashboardPage,
-  InvestorLayout,
-  InvestorLoginPage,
-  InvestorPortalForbiddenStandalone,
-  InvestorPortalGuard,
-} from '@/investor-portal';
+import { InvestorPortalGuard } from '@/investor-portal/guards/InvestorPortalGuard';
+import { InvestorLayout } from '@/investor-portal/layouts/InvestorLayout';
+import { InvestorDashboardPage } from '@/investor-portal/pages/InvestorDashboardPage';
+import { InvestorProjectDetailPage } from '@/investor-portal/pages/InvestorProjectDetailPage';
 import { AppLayout } from '@/layouts/AppLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -28,37 +23,34 @@ export function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
         </Route>
 
-        <Route path="/investor/login" element={<InvestorAuthLayout />}>
-          <Route index element={<InvestorLoginPage />} />
-        </Route>
-
-        <Route path="/investor/forbidden" element={<InvestorPortalForbiddenStandalone />} />
-
-        <Route element={<ProtectedRoute loginPath="/investor/login" />}>
+        <Route element={<ProtectedRoute />}>
           <Route element={<InvestorPortalGuard />}>
-            <Route path="/investor" element={<InvestorLayout />}>
-              <Route index element={<Navigate to="/investor/dashboard" replace />} />
-              <Route path="dashboard" element={<InvestorDashboardPage />} />
+            <Route element={<InvestorLayout />}>
+              <Route
+                path="/investor"
+                element={<Navigate to="/investor/dashboard" replace />}
+              />
+              <Route path="/investor/dashboard" element={<InvestorDashboardPage />} />
+              <Route
+                path="/investor/projects/:projectId"
+                element={<InvestorProjectDetailPage />}
+              />
             </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute />}>
-          <Route element={<InternalAppGuard />}>
-            <Route element={<AppLayout />}>
-              <Route index element={<DashboardPage />} />
-              <Route element={<PermissionGuard anyOf={['user.view']} />}>
-                <Route path="users" element={<UsersPage />} />
-              </Route>
-              <Route element={<PermissionGuard anyOf={['project.view']} />}>
-                <Route path="projects" element={<ProjectsPage />} />
-              </Route>
-              <Route element={<PermissionGuard anyOf={['dpr.view']} />}>
-                <Route path="daily-progress-reports" element={<DprPage />} />
-              </Route>
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="forbidden" element={<ForbiddenPage />} />
+          <Route element={<AppLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route element={<PermissionGuard anyOf={['user.view']} />}>
+              <Route path="users" element={<UsersPage />} />
             </Route>
+            <Route element={<PermissionGuard anyOf={['project.view']} />}>
+              <Route path="projects" element={<ProjectsPage />} />
+            </Route>
+            <Route element={<PermissionGuard anyOf={['dpr.view']} />}>
+              <Route path="daily-progress-reports" element={<DprPage />} />
+            </Route>
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="forbidden" element={<ForbiddenPage />} />
           </Route>
         </Route>
 
