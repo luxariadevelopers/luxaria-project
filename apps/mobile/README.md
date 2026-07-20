@@ -30,6 +30,7 @@ Pending Sync screen shows errors and Retry. Expense capture will enqueue into th
 - Projects (+ project selection flow)
 - Pending Sync
 - Profile (permissions + push placeholder)
+- Stock Count (list + count entry with photos; offline draft + create/submit sync)
 
 ## API
 

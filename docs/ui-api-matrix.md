@@ -146,9 +146,10 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR, Stock Count list/entry |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
+| Stock count offline | **Phase 127** | List + entry; create then submit via sync transport; draft persistence |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
 | Broader site workflows | Missing | Stock issue, attendance, petty cash UI, etc. |
 
@@ -166,6 +167,12 @@ Every backend module must appear below with route/method/permission/response-sha
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/rbac/me/permissions` | `apps/mobile/src/api/auth.ts` |
+| GET | `/stock-counts` | `apps/mobile/src/stock-count/api.ts` |
+| GET | `/stock-counts/:id` | `apps/mobile/src/stock-count/api.ts` |
+| POST | `/stock-counts` | `apps/mobile/src/stock-count/api.ts` + offline enqueue |
+| POST | `/stock-counts/:id/submit` | Offline transport follow-up after create |
+| GET | `/stock-reorder/forecast` | `apps/mobile/src/stock-count/api.ts` (seed lines) |
+| GET | `/stock-ledger/balance` | `apps/mobile/src/stock-count/api.ts` |
 
 ### Shared packages
 

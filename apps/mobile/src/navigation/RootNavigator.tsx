@@ -13,6 +13,8 @@ import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
+import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
+import { StockCountListScreen } from '@/screens/StockCountListScreen';
 import { colors } from '@/theme/colors';
 import type {
   AppStackParamList,
@@ -137,6 +139,16 @@ function AppNavigator() {
         name="DailyProgressReport"
         component={DailyProgressReportScreen}
         options={{ title: 'Daily Progress Report' }}
+      />
+      <AppStack.Screen
+        name="StockCountList"
+        component={StockCountListScreen}
+        options={{ title: 'Stock Count' }}
+      />
+      <AppStack.Screen
+        name="StockCountEntry"
+        component={StockCountEntryScreen}
+        options={{ title: 'Count entry' }}
       />
     </AppStack.Navigator>
   );

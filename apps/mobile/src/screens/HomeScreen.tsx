@@ -70,9 +70,16 @@ export function HomeScreen() {
         <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
       </Pressable>
 
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => navigation.navigate('StockCountList')}
+      >
+        <Text style={styles.secondaryButtonText}>Stock Count</Text>
+      </Pressable>
+
       <Text style={styles.note}>
-        GRN capture requires photos and GPS, then queues offline for sync
-        (media first, then submit).
+        GRN and stock counts queue offline for sync (media first, then submit).
+        Stock Count: Home › Stock Count.
       </Text>
     </Screen>
   );
