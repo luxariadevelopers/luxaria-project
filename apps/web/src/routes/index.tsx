@@ -82,6 +82,8 @@ import { StockBalancesPage } from '@/pages/StockBalancesPage';
 import { StockCountDetailPage } from '@/pages/StockCountDetailPage';
 import { StockCountsPage } from '@/pages/StockCountsPage';
 import { StockLedgerPage } from '@/pages/StockLedgerPage';
+import { CashBookPage } from '@/pages/CashBookPage';
+import { BankBookPage } from '@/pages/BankBookPage';
 import { QualityInspectionDetailPage } from '@/pages/QualityInspectionDetailPage';
 import { QualityInspectionsPage } from '@/pages/QualityInspectionsPage';
 import { MaterialIssueDetailPage } from '@/pages/MaterialIssueDetailPage';
@@ -161,6 +163,8 @@ const APP_ROUTE_ELEMENTS = {
   'petty-cash-fund-transfers': <PettyCashTransfersPage />,
   'stock-balances': <StockBalancesPage />,
   'stock-ledger': <StockLedgerPage />,
+  'cash-book': <CashBookPage />,
+  'bank-book': <BankBookPage />,
   'stock-counts': <StockCountsPage />,
   'stock-count-detail': <StockCountDetailPage />,
   grns: <GrnsPage />,
@@ -520,6 +524,20 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/inventory/stock-ledger')}
                 element={APP_ROUTE_ELEMENTS['stock-ledger']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="cash-book" />}>
+              <Route
+                path={toRelativeAppPath('/reports/accounting/cash-book')}
+                element={APP_ROUTE_ELEMENTS['cash-book']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="bank-book" />}>
+              <Route
+                path={toRelativeAppPath('/reports/accounting/bank-book')}
+                element={APP_ROUTE_ELEMENTS['bank-book']}
               />
             </Route>
 

@@ -65,6 +65,8 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(ids).not.toContain('approvals');
     expect(ids).not.toContain('director-command-centre');
     expect(ids).not.toContain('finance-dashboard');
+    expect(ids).not.toContain('cash-book');
+    expect(ids).not.toContain('bank-book');
 
     expect(canEnterRoute(requireRouteById('projects'), ctx)).toBe(true);
     expect(canEnterRoute(requireRouteById('daily-progress'), ctx)).toBe(true);
@@ -98,6 +100,8 @@ describe('representative role visibility (nav + guard same source)', () => {
         'dashboard',
         'director-command-centre',
         'finance-dashboard',
+        'cash-book',
+        'bank-book',
         'site-operations-dashboard',
         'notifications',
         'approvals',
@@ -1012,6 +1016,7 @@ describe('filterNavGroups', () => {
     expect(groupIds).not.toContain('administration');
     expect(groupIds).not.toContain('capital-investment');
     expect(groupIds).not.toContain('accounting');
+    expect(groupIds).not.toContain('reports');
     expect(groupIds).not.toContain('petty-cash');
     expect(groupIds).not.toContain('inventory');
     expect(groupIds).not.toContain('projects-site');
@@ -1113,6 +1118,8 @@ describe('getPageTitle', () => {
     expect(getPageTitle('/procurement/quotations')).toBe('Quotations');
     expect(getPageTitle('/inventory/stock-balances')).toBe('Stock Balances');
     expect(getPageTitle('/inventory/stock-ledger')).toBe('Stock Ledger');
+    expect(getPageTitle('/reports/accounting/cash-book')).toBe('Cash Book');
+    expect(getPageTitle('/reports/accounting/bank-book')).toBe('Bank Book');
     expect(getPageTitle('/inventory/stock-counts')).toBe('Stock Counts');
     expect(
       getPageTitle('/inventory/stock-counts/507f1f77bcf86cd799439011'),
@@ -1294,5 +1301,41 @@ describe('pathMatchesPattern / param routes', () => {
         '/procurement/purchase-orders/507f1f77bcf86cd799439011',
       )?.id,
     ).toBe('purchase-order-detail');
+  });
+});
+
+describe('cash / bank book routes (phase 109)', () => {
+  it('registers cash and bank book under Accounting reports nav', () => {
+    const cash = requireRouteById('cash-book');
+    const bank = requireRouteById('bank-book');
+    expect(cash.path).toBe('/reports/accounting/cash-book');
+    expect(bank.path).toBe('/reports/accounting/bank-book');
+    expect(cash.groupId).toBe('reports');
+    expect(bank.groupId).toBe('reports');
+    expect(cash.anyOf).toEqual(['report.view']);
+    expect(bank.anyOf).toEqual(['report.view']);
+    expect(cash.projectScope).toBe('none');
+    expect(bank.projectScope).toBe('none');
+  });
+
+  it('shows books for report.view and hides without it', () => {
+    const withPerm = {
+      accessLoaded: true,
+      bypassPermissions: false,
+      permissions: ['report.view'] as const,
+    };
+    const without = {
+      accessLoaded: true,
+      bypassPermissions: false,
+      permissions: ['project.view'] as const,
+    };
+    expect(visibleIds(withPerm)).toEqual(
+      expect.arrayContaining(['cash-book', 'bank-book']),
+    );
+    expect(canEnterRoute(requireRouteById('cash-book'), withPerm)).toBe(true);
+    expect(canEnterRoute(requireRouteById('bank-book'), withPerm)).toBe(true);
+    expect(visibleIds(without)).not.toContain('cash-book');
+    expect(visibleIds(without)).not.toContain('bank-book');
+    expect(canEnterRoute(requireRouteById('cash-book'), without)).toBe(false);
   });
 });

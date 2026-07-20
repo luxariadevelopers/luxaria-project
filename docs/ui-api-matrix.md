@@ -45,7 +45,7 @@ Every backend module must appear below with route/method/permission/response-sha
 | Module | Routes | Methods | Permissions (sample / note) | Response shape | API doc | Controllers |
 |---|---:|---|---|---|---|---|
 | `accounting-period-closure` | 11 | POST, GET | `period_closure.manage`, `period_closure.view`, `period_closure.reopen`, `period_closure.approve_reopen` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/accounting-period-closure/accounting-period-closure.controller.ts` |
-| `accounting-reports` | 3 | GET | `report.view`, `report.export` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/accounting-reports/accounting-reports.controller.ts` |
+| `accounting-reports` | 3 | GET | `report.view`, `report.export` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing**; Web Phase 109 cash/bank books | `apps/backend/src/modules/accounting-reports/accounting-reports.controller.ts` |
 | `approvals` | 12 | PUT, GET, POST | `approval.configure`, `approval.act`, `approval.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`APPROVALS_API.md`](../apps/backend/docs/APPROVALS_API.md) | `apps/backend/src/modules/approvals/approvals.controller.ts` |
 | `audit-log` | 2 | GET | `audit.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`AUDIT_LOG_API.md`](../apps/backend/docs/AUDIT_LOG_API.md) | `apps/backend/src/modules/audit-log/audit-log.controller.ts` |
 | `auth` | 8 | POST, GET | Public and/or authenticated routes; see route inventory for per-route RequirePermissions | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`AUTH_API.md`](../apps/backend/docs/AUTH_API.md) | `apps/backend/src/modules/auth/auth.controller.ts` |
@@ -118,6 +118,9 @@ Every backend module must appear below with route/method/permission/response-sha
 ## Frontend capability map (current)
 
 ### Web portal (`apps/web`)
+
+**Phase 109 (cash / bank book):** `/reports/accounting/cash-book`, `/reports/accounting/bank-book` → `GET /accounting-reports/cash-book|bank-book` (`report.view`); export via `GET /accounting-reports/:type/export` (`report.export`). Nav group **Accounting reports**.
+
 
 | Area | Status | Notes |
 |---|---|---|
