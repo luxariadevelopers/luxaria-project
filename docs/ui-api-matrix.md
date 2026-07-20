@@ -122,13 +122,13 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Shell / auth / layout | Present | Login, JWT refresh, permission guard, project selector |
-| Routes | Partial | `/login`, `/`, `/users`, `/projects`, `/daily-progress-reports`, `/settings`, `/forbidden` |
+| Routes | Partial | `/login`, `/`, `/users`, `/projects`, `/daily-progress-reports`, `/settings`, `/forbidden`, `/investor/dashboard`, `/investor/projects/:projectId` |
 | Users page | Placeholder | Guarded by `user.view`; **does not call** `/users` API yet |
 | Projects page | Shell | Lists via project context `/projects` |
 | DPR page | Partial | `GET /daily-progress-reports` |
 | Dashboard / Settings | Shell | Minimal UI |
 | Domain modules (finance, procurement, sales, …) | Missing | No pages/clients yet |
-| Investor portal UI | Missing | Backend `investor-portal` exists |
+| Investor portal UI | **Phase 133** | `/investor/dashboard`, `/investor/projects/:id`; `investor_portal.view`; uses `GET /investor-portal/me`, `/projects`, `/projects/:projectId` only (never staff `/investors`) |
 
 **Web API calls found:**
 
@@ -138,6 +138,9 @@ Every backend module must appear below with route/method/permission/response-sha
 | POST | `/auth/logout` | `apps/web/src/api/auth.ts` |
 | GET | `/auth/me` | `apps/web/src/api/auth.ts` |
 | GET | `/daily-progress-reports` | `apps/web/src/pages/DprPage.tsx` |
+| GET | `/investor-portal/me` | `apps/web/src/investor-portal/api.ts` |
+| GET | `/investor-portal/projects` | `apps/web/src/investor-portal/api.ts` |
+| GET | `/investor-portal/projects/:projectId` | `apps/web/src/investor-portal/api.ts` |
 | GET | `/projects` | `apps/web/src/context/ProjectContext.tsx` |
 | GET | `/rbac/me/permissions` | `apps/web/src/api/auth.ts` |
 

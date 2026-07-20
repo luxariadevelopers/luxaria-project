@@ -1,6 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { PermissionGuard } from '@/auth/PermissionGuard';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
+import { InvestorPortalGuard } from '@/investor-portal/guards/InvestorPortalGuard';
+import { InvestorLayout } from '@/investor-portal/layouts/InvestorLayout';
+import { InvestorDashboardPage } from '@/investor-portal/pages/InvestorDashboardPage';
+import { InvestorProjectDetailPage } from '@/investor-portal/pages/InvestorProjectDetailPage';
 import { AppLayout } from '@/layouts/AppLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -20,6 +24,20 @@ export function AppRouter() {
         </Route>
 
         <Route element={<ProtectedRoute />}>
+          <Route element={<InvestorPortalGuard />}>
+            <Route element={<InvestorLayout />}>
+              <Route
+                path="/investor"
+                element={<Navigate to="/investor/dashboard" replace />}
+              />
+              <Route path="/investor/dashboard" element={<InvestorDashboardPage />} />
+              <Route
+                path="/investor/projects/:projectId"
+                element={<InvestorProjectDetailPage />}
+              />
+            </Route>
+          </Route>
+
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route element={<PermissionGuard anyOf={['user.view']} />}>
