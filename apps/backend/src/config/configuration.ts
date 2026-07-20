@@ -104,6 +104,17 @@ export type AppConfig = {
   alertDeliveryFailureThreshold24h: number;
   alertDatabaseDownEnabled: boolean;
   alertRedisDownEnabled: boolean;
+  /** SMTP host for outbound email (empty = stub / disabled). */
+  smtpHost: string | null;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  smtpPass: string | null;
+  /** From address required with smtpHost for live email. */
+  emailFrom: string | null;
+  /** Expo push delivery toggle. */
+  pushEnabled: boolean;
+  expoAccessToken: string | null;
 };
 
 export default (): AppConfig => {

@@ -10,6 +10,10 @@ const PROJECT_SCOPED_COLLECTIONS = [
   'goods_receipts',
   'vendor_invoices',
   'vendor_payments',
+  'contractor_bills',
+  'contractor_payments',
+  'work_measurements',
+  'contractor_agreements',
   'petty_cash_requirements',
   'petty_cash_expense_drafts',
   'petty_cash_fund_transfers',
@@ -18,6 +22,11 @@ const PROJECT_SCOPED_COLLECTIONS = [
   'payment_schedules',
   'payment_demands',
   'customer_receipts',
+  'contribution_receipts',
+  'contribution_commitments',
+  'project_participants',
+  'project_contribution_balances',
+  'participant_contribution_balances',
   'cash_accounts',
   'approval_requests',
   'approval_histories',
@@ -46,6 +55,9 @@ export async function cleanupGoldenPathProjectData(
     { $set: { status: 'available', bookingRefId: null } },
   );
   await connection.collection('counters').deleteMany({
-    key: { $regex: /^GP-|PCR-|PR-|PO-|GRN-|VI-|VP-|CR-|SEV-|BK-/ },
+    key: {
+      $regex:
+        /^GP-|PCR-|PR-|PO-|GRN-|VI-|VP-|CR-|SEV-|BK-|CTR-|COM-|JE-|CB-|CP-/,
+    },
   });
 }
