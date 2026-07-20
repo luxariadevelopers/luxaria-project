@@ -20,6 +20,7 @@ import {
 import { FinancialYearService } from '../financial-year/financial-year.service';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { ProjectCommitmentsService } from '../project-commitments/project-commitments.service';
 import {
   CommitmentStatus,
@@ -68,6 +69,7 @@ export class ContributionReceiptsService {
     private readonly commitmentsService: ProjectCommitmentsService,
     private readonly pdfService: ContributionReceiptPdfService,
     private readonly financialYearService: FinancialYearService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(
@@ -76,6 +78,12 @@ export class ContributionReceiptsService {
     actorId: string,
     idempotencyKey?: string | null,
   ) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'create',
+      { resourceType: 'contribution-receipt' },
+    );
     await this.requireProject(projectId);
     const requestHash = this.idempotencyService.hashRequest({
       projectId,
@@ -174,7 +182,7 @@ export class ContributionReceiptsService {
   }
 
   async submit(projectId: string, id: string, actorId: string) {
-    const row = await this.requireReceipt(projectId, id);
+    const row = await this.requireReceipt(projectId, id, actorId, 'update');
     if (row.status !== ContributionReceiptStatus.Draft) {
       throw new BadRequestException('Only draft receipts can be submitted');
     }
@@ -190,7 +198,7 @@ export class ContributionReceiptsService {
   }
 
   async verify(projectId: string, id: string, actorId: string) {
-    const row = await this.requireReceipt(projectId, id);
+    const row = await this.requireReceipt(projectId, id, actorId, 'update');
     if (row.status !== ContributionReceiptStatus.Submitted) {
       throw new BadRequestException('Only submitted receipts can be verified');
     }
@@ -211,7 +219,7 @@ export class ContributionReceiptsService {
   }
 
   async post(projectId: string, id: string, actorId: string) {
-    const row = await this.requireReceipt(projectId, id);
+    const row = await this.requireReceipt(projectId, id, actorId, 'update');
     if (row.status !== ContributionReceiptStatus.Verified) {
       throw new BadRequestException('Only verified receipts can be posted');
     }
@@ -278,7 +286,7 @@ export class ContributionReceiptsService {
     dto: CancelContributionReceiptDto,
     actorId: string,
   ) {
-    const row = await this.requireReceipt(projectId, id);
+    const row = await this.requireReceipt(projectId, id, actorId, 'update');
     if (
       row.status !== ContributionReceiptStatus.Draft &&
       row.status !== ContributionReceiptStatus.Submitted &&
@@ -306,7 +314,7 @@ export class ContributionReceiptsService {
     filePath: string,
     actorId: string,
   ) {
-    const row = await this.requireReceipt(projectId, id);
+    const row = await this.requireReceipt(projectId, id, actorId, 'update');
     if (row.status === ContributionReceiptStatus.Cancelled) {
       throw new BadRequestException('Cannot attach document to cancelled receipt');
     }
@@ -319,8 +327,8 @@ export class ContributionReceiptsService {
     );
   }
 
-  async getById(projectId: string, id: string) {
-    const row = await this.requireReceipt(projectId, id);
+  async getById(projectId: string, id: string, actorId: string) {
+    const row = await this.requireReceipt(projectId, id, actorId, 'read');
     return createSuccessResponse(
       toPublicReceipt(row),
       'Contribution receipt fetched',
@@ -337,9 +345,16 @@ export class ContributionReceiptsService {
       status?: ContributionReceiptStatus;
       sortOrder?: 'asc' | 'desc';
     },
+    actorId: string,
   ) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'contribution-receipt' },
+    );
     await this.requireProject(projectId);
-    const filter: FilterQuery<ContributionReceipt> = {
+    let filter: FilterQuery<ContributionReceipt> = {
       projectId: new Types.ObjectId(projectId),
     };
     if (query.participantId) {
@@ -349,6 +364,11 @@ export class ContributionReceiptsService {
       filter.commitmentId = new Types.ObjectId(query.commitmentId);
     }
     if (query.status) filter.status = query.status;
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -547,7 +567,12 @@ export class ContributionReceiptsService {
     return commitment;
   }
 
-  private async requireReceipt(projectId: string, id: string) {
+  private async requireReceipt(
+    projectId: string,
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     await this.requireProject(projectId);
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid receipt id');
@@ -555,6 +580,14 @@ export class ContributionReceiptsService {
     const row = await this.receiptModel.findById(id).exec();
     if (!row || String(row.projectId) !== projectId) {
       throw new NotFoundException('Contribution receipt not found');
+    }
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        projectId,
+        action,
+        { resourceType: 'contribution-receipt', resourceId: id },
+      );
     }
     return row;
   }

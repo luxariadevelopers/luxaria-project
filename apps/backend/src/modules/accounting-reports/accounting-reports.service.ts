@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { FilterQuery, Model, PipelineStage } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   Account,
   AccountCategory,
@@ -110,6 +111,7 @@ export class AccountingReportsService {
     @InjectModel(Customer.name) private readonly customerModel: Model<Customer>,
     @InjectModel(Director.name) private readonly directorModel: Model<Director>,
     @InjectModel(Investor.name) private readonly investorModel: Model<Investor>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   listReports() {
@@ -127,11 +129,12 @@ export class AccountingReportsService {
   async getReport(
     reportType: AccountingReportType,
     query: AccountingReportsQueryDto,
+    actorId: string,
   ) {
     if (!ALL_ACCOUNTING_REPORTS.includes(reportType)) {
       throw new BadRequestException(`Unknown report type: ${reportType}`);
     }
-    const scope = await this.resolveScope(query);
+    const scope = await this.resolveScope(query, actorId);
     const payload = await this.buildReport(reportType, scope);
     return createSuccessResponse(payload, ACCOUNTING_REPORT_LABELS[reportType]);
   }
@@ -186,6 +189,7 @@ export class AccountingReportsService {
 
   private async resolveScope(
     query: AccountingReportsQueryDto,
+    actorId: string,
   ): Promise<ReportScope> {
     let from: Date | null = query.from ? new Date(query.from) : null;
     let to: Date | null = query.to ? new Date(query.to) : null;
@@ -227,6 +231,12 @@ export class AccountingReportsService {
         .lean()
         .exec();
       if (!project) throw new NotFoundException('Project not found');
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'accounting-report' },
+      );
       projectId = project._id as Types.ObjectId;
       projectCode = project.projectCode ?? null;
       projectName = project.projectName ?? null;

@@ -5,12 +5,14 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { DailyDirectorDigestScheduler } from './daily-director-digest.scheduler';
 import { DailyDirectorDigestService } from './daily-director-digest.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import {
   PreviewDigestQueryDto,
   RunDigestDto,
   SendDigestDto,
 } from './dto/digest.dto';
 
+@GlobalScope()
 @ApiTags('Director Digest')
 @ApiBearerAuth()
 @Controller('director-digest')

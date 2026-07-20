@@ -51,6 +51,14 @@ export class User {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Project' }], default: [] })
   assignedProjects!: Types.ObjectId[];
 
+  /**
+   * Tenant/company membership (R-003B).
+   * Null = inherit primary company (single-tenant default).
+   * When set, all project access is restricted to this company.
+   */
+  @Prop({ type: Types.ObjectId, ref: 'Company', default: null, index: true })
+  companyId!: Types.ObjectId | null;
+
   /** Role ObjectIds — validated against active roles in RBAC module. */
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Role' }], default: [] })
   roleIds!: Types.ObjectId[];

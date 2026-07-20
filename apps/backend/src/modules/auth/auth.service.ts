@@ -336,6 +336,7 @@ export class AuthService {
     email: string | null;
     mobile: string | null;
     status: string;
+    companyId?: { toString(): string } | null;
   }): AuthUser {
     return {
       id: String(user._id),
@@ -344,6 +345,7 @@ export class AuthService {
       email: user.email,
       mobile: user.mobile,
       status: user.status,
+      companyId: user.companyId ? String(user.companyId) : null,
     };
   }
 

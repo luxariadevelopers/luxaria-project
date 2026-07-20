@@ -11,6 +11,8 @@ import type { FilterQuery, Model, SortOrder } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
+import { Company } from '../company/schemas/company.schema';
+import { Project } from '../projects/schemas/project.schema';
 import { PermissionsService } from '../rbac/permissions.service';
 import { User } from '../users/schemas/user.schema';
 import type { CreateProjectAssignmentDto } from './dto/create-project-assignment.dto';
@@ -38,6 +40,18 @@ export type AuditAccessContext = {
   ip?: string | null;
 };
 
+/** Canonical access decision input (R-003). */
+export type AssertCanAccessProjectInput = {
+  actor: { id: string } | string;
+  projectId: string;
+  action?: ProjectAccessOperation | string;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  /** Optional expected company for cross-check against Project.companyId. */
+  companyId?: string | null;
+  audit?: AuditAccessContext;
+};
+
 @Injectable()
 export class ProjectAccessService {
   private readonly logger = new Logger(ProjectAccessService.name);
@@ -48,6 +62,8 @@ export class ProjectAccessService {
     @InjectModel(UnauthorizedProjectAccess.name)
     private readonly unauthorizedModel: Model<UnauthorizedProjectAccess>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Project.name) private readonly projectModel: Model<Project>,
+    @InjectModel(Company.name) private readonly companyModel: Model<Company>,
     private readonly permissionsService: PermissionsService,
   ) {}
 
@@ -160,26 +176,206 @@ export class ProjectAccessService {
     };
   }
 
+  /**
+   * Canonical project-access assertion.
+   * Overloads preserve legacy `(userId, projectId, operation, audit)` callers.
+   */
+  async assertCanAccessProject(
+    input: AssertCanAccessProjectInput,
+  ): Promise<ProjectAccessDecision>;
   async assertCanAccessProject(
     userId: string,
     projectId: string,
-    operation: ProjectAccessOperation = 'read',
+    operation?: ProjectAccessOperation | string,
+    audit?: AuditAccessContext,
+  ): Promise<ProjectAccessDecision>;
+  async assertCanAccessProject(
+    inputOrUserId: AssertCanAccessProjectInput | string,
+    projectId?: string,
+    operation: ProjectAccessOperation | string = 'read',
     audit?: AuditAccessContext,
   ): Promise<ProjectAccessDecision> {
-    const decision = await this.resolveAccess(userId, projectId);
+    const input: AssertCanAccessProjectInput =
+      typeof inputOrUserId === 'string'
+        ? {
+            actor: inputOrUserId,
+            projectId: projectId!,
+            action: operation,
+            audit,
+          }
+        : inputOrUserId;
+
+    const userId =
+      typeof input.actor === 'string' ? input.actor : input.actor.id;
+    const action = input.action ?? 'read';
+
+    // Tenant boundary: project must belong to the actor's company.
+    const companyDecision = await this.assertProjectCompanyBoundary(
+      userId,
+      input.projectId,
+      input.companyId,
+    );
+    if (!companyDecision.allowed) {
+      await this.recordUnauthorizedAttempt({
+        userId,
+        projectId: input.projectId,
+        operation: action,
+        reason: [
+          companyDecision.reason,
+          input.resourceType ? `resourceType=${input.resourceType}` : null,
+          input.resourceId ? `resourceId=${input.resourceId}` : null,
+        ]
+          .filter(Boolean)
+          .join('; '),
+        ...input.audit,
+      });
+      throw new ForbiddenException('Access denied');
+    }
+
+    const decision = await this.resolveAccess(userId, input.projectId);
+
     if (!decision.allowed) {
       await this.recordUnauthorizedAttempt({
         userId,
-        projectId,
-        operation,
-        reason: decision.reason,
-        ...audit,
+        projectId: input.projectId,
+        operation: action,
+        reason: [
+          decision.reason,
+          input.resourceType ? `resourceType=${input.resourceType}` : null,
+          input.resourceId ? `resourceId=${input.resourceId}` : null,
+        ]
+          .filter(Boolean)
+          .join('; '),
+        ...input.audit,
       });
-      throw new ForbiddenException(
-        `Project access denied for ${operation}: ${decision.reason}`,
-      );
+      throw new ForbiddenException('Access denied');
     }
+
     return decision;
+  }
+
+  /**
+   * Resolve actor company (user.companyId or primary) and ensure the project
+   * belongs to that company. Super Admin bypass still cannot cross companies
+   * unless the project has no companyId (legacy single-tenant rows).
+   */
+  async resolveActorCompanyId(userId: string): Promise<string | null> {
+    if (!Types.ObjectId.isValid(userId)) {
+      return null;
+    }
+    const user = await this.userModel
+      .findById(userId)
+      .select('companyId')
+      .lean()
+      .exec();
+    if (user?.companyId) {
+      return String(user.companyId);
+    }
+    const primary = await this.companyModel
+      .findOne({ isPrimary: true })
+      .select('_id')
+      .lean()
+      .exec();
+    return primary ? String(primary._id) : null;
+  }
+
+  async assertProjectCompanyBoundary(
+    userId: string,
+    projectId: string,
+    expectedCompanyId?: string | null,
+  ): Promise<ProjectAccessDecision> {
+    if (!Types.ObjectId.isValid(projectId)) {
+      return {
+        allowed: false,
+        reason: 'Invalid project id',
+        globalAccess: false,
+        bypassPermissions: false,
+      };
+    }
+
+    const project = await this.projectModel
+      .findById(projectId)
+      .select('_id companyId')
+      .lean()
+      .exec();
+    if (!project) {
+      return {
+        allowed: false,
+        reason: 'Project not found',
+        globalAccess: false,
+        bypassPermissions: false,
+      };
+    }
+
+    const actorCompanyId =
+      expectedCompanyId ?? (await this.resolveActorCompanyId(userId));
+    if (!actorCompanyId) {
+      return {
+        allowed: false,
+        reason: 'Actor company not resolved',
+        globalAccess: false,
+        bypassPermissions: false,
+      };
+    }
+
+    // Legacy rows with null companyId are treated as primary-company owned.
+    const projectCompanyId = project.companyId
+      ? String(project.companyId)
+      : actorCompanyId;
+
+    if (projectCompanyId !== actorCompanyId) {
+      return {
+        allowed: false,
+        reason: 'Project belongs to a different company',
+        globalAccess: false,
+        bypassPermissions: false,
+      };
+    }
+
+    return {
+      allowed: true,
+      reason: 'Company boundary satisfied',
+      globalAccess: false,
+      bypassPermissions: false,
+    };
+  }
+
+  /**
+   * Assert every projectId in a list (reports / multi-project exports).
+   */
+  async assertCanAccessProjects(
+    userId: string,
+    projectIds: string[],
+    operation: ProjectAccessOperation | string = 'read',
+    audit?: AuditAccessContext,
+  ): Promise<void> {
+    const unique = [...new Set(projectIds.filter(Boolean))];
+    for (const projectId of unique) {
+      await this.assertCanAccessProject(userId, projectId, operation, audit);
+    }
+  }
+
+  /**
+   * Mongo filter fragment for authorised projects.
+   * Callers with globalAccess receive `{}` (no project restriction).
+   * Callers with no projects receive an impossible match.
+   */
+  async buildAuthorisedProjectFilter(
+    userId: string,
+    field = 'projectId',
+  ): Promise<FilterQuery<Record<string, unknown>>> {
+    const access = await this.listAccessibleProjectIds(userId);
+    if (access.globalAccess) {
+      return {};
+    }
+    if (access.projectIds.length === 0) {
+      return { [field]: { $in: [] } };
+    }
+    return {
+      [field]: {
+        $in: access.projectIds.map((id) => new Types.ObjectId(id)),
+      },
+    };
   }
 
   async hasGlobalAccess(userId: string, at: Date = new Date()): Promise<boolean> {

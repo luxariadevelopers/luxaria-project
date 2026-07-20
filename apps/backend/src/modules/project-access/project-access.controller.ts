@@ -7,11 +7,13 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { SkipPermissions } from '../rbac/decorators/skip-permissions.decorator';
 import { RequireProjectAccess } from './decorators/require-project-access.decorator';
+import { GlobalScope } from './decorators/route-scope.decorator';
 import { CreateProjectAssignmentDto } from './dto/create-project-assignment.dto';
 import { ListProjectAssignmentsQueryDto } from './dto/list-project-assignments-query.dto';
 import { UpdateProjectAssignmentDto } from './dto/update-project-assignment.dto';
 import { ProjectAccessService } from './project-access.service';
 
+@GlobalScope()
 @ApiTags('Project Access')
 @ApiBearerAuth()
 @Controller('project-access')

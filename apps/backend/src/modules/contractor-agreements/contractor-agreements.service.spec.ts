@@ -100,19 +100,40 @@ describe('ContractorAgreementsService', () => {
         return undefined;
       }),
     } as unknown as ConfigService<never, true>;
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new ContractorAgreementsService(
       agreementModel,
       alertModel,
       contractorModel,
       projectModel,
+      {} as never,
+      {} as never,
       new NumberingService(counterModel),
       {
         create: approvalsCreate,
         approve: approvalsApprove,
         reject: approvalsReject,
       } as unknown as ApprovalsService,
+      { create: jest.fn() } as never,
+      { assertPostingAllowed: jest.fn().mockResolvedValue({}) } as never,
+      {
+        withTransaction: async <T>(work: (session: null) => Promise<T>) =>
+          work(null),
+      } as never,
       configService,
+      mockProjectScope
     );
   }, 60_000);
 

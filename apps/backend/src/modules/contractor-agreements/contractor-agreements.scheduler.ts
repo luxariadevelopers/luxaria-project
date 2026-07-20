@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import { ContractorAgreementsService } from './contractor-agreements.service';
 
 @Injectable()
@@ -28,7 +29,14 @@ export class ContractorAgreementsScheduler {
     ) {
       return;
     }
-    this.logger.log('Scheduled contractor-agreement expiry evaluation starting');
+    const system = createSystemContext({
+      jobName: 'contractor-agreement-expiry-evaluate',
+      reason:
+        'Raise contractor agreement expiry alerts; iterates all active projects/companies explicitly in service',
+    });
+    this.logger.log(
+      `Scheduled contractor-agreement expiry evaluation starting system=${system.jobName}`,
+    );
     const result = await this.agreementsService.evaluateExpiryAlerts();
     this.logger.log(
       `Agreement expiry evaluation done: created=${result.data?.created ?? 0} expiredMarked=${result.data?.expiredMarked ?? 0}`,

@@ -14,7 +14,9 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { PERMISSIONS } from './permissions.catalog';
 import { PermissionsService } from './permissions.service';
 import { RolesService } from './roles.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('RBAC')
 @ApiBearerAuth()
 @Controller('rbac')

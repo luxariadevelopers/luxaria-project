@@ -18,6 +18,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { DprService } from './dpr.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   CreateDailyProgressReportDto,
   ListDailyProgressReportsQueryDto,
@@ -26,6 +27,11 @@ import {
   UpdateDailyProgressReportDto,
 } from './dto/dpr.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'dpr', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Daily Progress Reports')
 @ApiBearerAuth()
 @Controller('daily-progress-reports')

@@ -19,7 +19,13 @@ import {
   UpdateMaterialConsumptionReportDto,
 } from './dto/material-consumption.dto';
 import { MaterialConsumptionService } from './material-consumption.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'material-consumption', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Material Consumption')
 @ApiBearerAuth()
 @Controller('material-consumption-reports')

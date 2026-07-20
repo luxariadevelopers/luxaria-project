@@ -23,7 +23,13 @@ import {
   UpdateUnitDto,
 } from './dto/unit.dto';
 import { UnitsService } from './units.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'unit', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Units')
 @ApiBearerAuth()
 @Controller('units')

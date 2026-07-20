@@ -24,6 +24,7 @@ import type { Account } from '../chart-of-accounts/schemas/account.schema';
 import { FinancialYearService } from '../financial-year/financial-year.service';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import type {
   CancelJournalDto,
   CreateJournalDto,
@@ -58,19 +59,27 @@ export class JournalService {
     private readonly databaseService: DatabaseService,
     private readonly idempotencyService: IdempotencyService,
     private readonly auditLogService: AuditLogService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(
     dto: CreateJournalDto,
     actorId: string,
     idempotencyKey?: string | null,
+    session?: ClientSession | null,
   ) {
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'journal' },
+    );
     const requestHash = this.idempotencyService.hashRequest({
       ...dto,
       actorId,
     });
 
-    if (idempotencyKey) {
+    if (idempotencyKey && !session) {
       const begin = await this.idempotencyService.begin({
         key: idempotencyKey,
         scope: JOURNAL_ENTRY_IDEMPOTENCY_SCOPE,
@@ -92,11 +101,25 @@ export class JournalService {
       const fy = await this.resolveFinancialYearForDate(journalDate);
 
       if (idempotencyKey) {
-        const dup = await this.journalModel
-          .findOne({ idempotencyKey: idempotencyKey.trim() })
-          .lean()
-          .exec();
+        const dupQuery = this.journalModel.findOne({
+          idempotencyKey: idempotencyKey.trim(),
+        });
+        if (session) dupQuery.session(session);
+        const dup = await dupQuery.lean().exec();
         if (dup) {
+          if (
+            session &&
+            (dup.status === JournalStatus.Posted ||
+              dup.status === JournalStatus.Draft)
+          ) {
+            if (dup.status === JournalStatus.Draft && dto.post) {
+              return this.post(String(dup._id), actorId, session);
+            }
+            return createSuccessResponse(
+              toPublicJournal(dup as Parameters<typeof toPublicJournal>[0]),
+              'Journal entry already exists for idempotency key',
+            );
+          }
           throw new ConflictException(
             'A journal with this idempotency key already exists',
           );
@@ -110,9 +133,10 @@ export class JournalService {
           projectId: dto.projectId ?? undefined,
           projectScoped: Boolean(dto.projectId),
         },
+        session ?? undefined,
       );
 
-      const row = await this.journalModel.create({
+      const payload = {
         journalNumber,
         journalDate,
         financialYearId: new Types.ObjectId(fy.id),
@@ -121,6 +145,7 @@ export class JournalService {
         sourceEntityType:
           dto.sourceEntityType?.trim().toLowerCase() ?? 'manual_journal',
         sourceEntityId: dto.sourceEntityId ?? null,
+        postingPurpose: dto.postingPurpose?.trim().toLowerCase() || null,
         narration: dto.narration.trim(),
         status: JournalStatus.Draft,
         totalDebit,
@@ -132,7 +157,13 @@ export class JournalService {
         idempotencyKey: idempotencyKey?.trim() ?? null,
         lines: this.toEmbeddedLines(lines),
         createdBy: new Types.ObjectId(actorId),
-      });
+      };
+
+      const row = session
+        ? (
+            await this.journalModel.create([payload], { session })
+          )[0]
+        : await this.journalModel.create(payload);
 
       let response = createSuccessResponse(
         toPublicJournal(row),
@@ -140,10 +171,10 @@ export class JournalService {
       );
 
       if (dto.post) {
-        response = await this.post(String(row._id), actorId);
+        response = await this.post(String(row._id), actorId, session);
       }
 
-      if (idempotencyKey) {
+      if (idempotencyKey && !session) {
         await this.idempotencyService.complete(
           idempotencyKey,
           JOURNAL_ENTRY_IDEMPOTENCY_SCOPE,
@@ -153,7 +184,7 @@ export class JournalService {
 
       return response;
     } catch (error) {
-      if (idempotencyKey) {
+      if (idempotencyKey && !session) {
         await this.idempotencyService.fail(
           idempotencyKey,
           JOURNAL_ENTRY_IDEMPOTENCY_SCOPE,
@@ -164,7 +195,7 @@ export class JournalService {
   }
 
   async update(id: string, dto: UpdateJournalDto, actorId: string) {
-    const row = await this.requireJournal(id);
+    const row = await this.requireJournal(id, null, actorId, 'update');
     this.assertMutable(row);
 
     if (dto.narration !== undefined) {
@@ -200,7 +231,7 @@ export class JournalService {
   }
 
   async submitForApproval(id: string, actorId: string) {
-    const row = await this.requireJournal(id);
+    const row = await this.requireJournal(id, null, actorId, 'update');
     if (row.status !== JournalStatus.Draft) {
       throw new BadRequestException(
         'Only draft journals can be submitted for approval',
@@ -230,9 +261,19 @@ export class JournalService {
     );
   }
 
-  async post(id: string, actorId: string) {
-    return this.databaseService.withTransaction(async (session) => {
-      const row = await this.requireJournal(id, session);
+  async post(
+    id: string,
+    actorId: string,
+    session?: ClientSession | null,
+  ) {
+    const run = async (txnSession: ClientSession) => {
+      const row = await this.requireJournal(id, txnSession, actorId, 'update');
+      if (row.status === JournalStatus.Posted) {
+        return createSuccessResponse(
+          toPublicJournal(row),
+          'Journal entry already posted',
+        );
+      }
       if (
         row.status !== JournalStatus.Draft &&
         row.status !== JournalStatus.PendingApproval
@@ -259,7 +300,7 @@ export class JournalService {
       row.postedAt = now;
       row.postedBy = new Types.ObjectId(actorId);
       row.set('updatedBy', new Types.ObjectId(actorId));
-      await row.save({ session });
+      await row.save({ session: txnSession });
 
       const accountIds = [
         ...new Set(normalized.map((l) => l.accountId)),
@@ -268,7 +309,7 @@ export class JournalService {
         await this.chartOfAccountsService.incrementPostingCount(
           accountId,
           1,
-          session,
+          txnSession,
         );
       }
 
@@ -284,12 +325,19 @@ export class JournalService {
       });
 
       return createSuccessResponse(publicRow, 'Journal entry posted');
-    });
+    };
+
+    if (session) {
+      return run(session);
+    }
+    return this.databaseService.withTransaction(async (txnSession) =>
+      run(txnSession),
+    );
   }
 
   async reverse(id: string, actorId: string, dto: ReverseJournalDto = {}) {
     return this.databaseService.withTransaction(async (session) => {
-      const original = await this.requireJournal(id, session);
+      const original = await this.requireJournal(id, session, actorId, 'update');
       if (
         original.status === JournalStatus.Reversed ||
         original.reversedBy
@@ -397,7 +445,7 @@ export class JournalService {
   }
 
   async cancel(id: string, actorId: string, dto: CancelJournalDto = {}) {
-    const row = await this.requireJournal(id);
+    const row = await this.requireJournal(id, null, actorId, 'update');
     if (
       row.status !== JournalStatus.Draft &&
       row.status !== JournalStatus.PendingApproval
@@ -418,18 +466,24 @@ export class JournalService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireJournal(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireJournal(id, null, actorId, 'read');
     return createSuccessResponse(toPublicJournal(row));
   }
 
-  async list(query: ListJournalsQueryDto) {
+  async list(query: ListJournalsQueryDto, actorId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<JournalEntry> = {};
+    let filter: FilterQuery<JournalEntry> = {};
 
     if (query.status) filter.status = query.status;
     if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'journal' },
+      );
       filter.projectId = new Types.ObjectId(query.projectId);
     }
     if (query.financialYearId) {
@@ -449,6 +503,11 @@ export class JournalService {
         (filter.journalDate as Record<string, Date>).$lte = new Date(query.to);
       }
     }
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const sort: Record<string, SortOrder> = { journalDate: -1, createdAt: -1 };
     const [rows, total] = await Promise.all([
@@ -575,7 +634,12 @@ export class JournalService {
     }));
   }
 
-  private async requireJournal(id: string, session?: ClientSession | null) {
+  private async requireJournal(
+    id: string,
+    session?: ClientSession | null,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Journal entry not found');
     }
@@ -584,6 +648,14 @@ export class JournalService {
     const row = await q.exec();
     if (!row) {
       throw new NotFoundException('Journal entry not found');
+    }
+    if (actorId) {
+      await this.projectScope.assertOptionalProjectAccess(
+        actorId,
+        row.projectId ? String(row.projectId) : null,
+        action,
+        { resourceType: 'journal', resourceId: id },
+      );
     }
     return row;
   }

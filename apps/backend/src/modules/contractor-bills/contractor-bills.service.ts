@@ -42,6 +42,7 @@ import {
 } from '../journal/schemas/journal-entry.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   Project,
   ProjectStatus,
@@ -81,6 +82,7 @@ import {
 
 const JOURNAL_SOURCE_MODULE = 'contractor_bill';
 const JOURNAL_SOURCE_ENTITY_TYPE = 'contractor_bill';
+const JOURNAL_POSTING_PURPOSE = 'ap_recognition';
 
 @Injectable()
 export class ContractorBillsService {
@@ -105,9 +107,16 @@ export class ContractorBillsService {
     private readonly idempotencyService: IdempotencyService,
     private readonly databaseService: DatabaseService,
     private readonly auditLogService: AuditLogService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateContractorBillDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'contractor-bill' },
+    );
     await this.requireProject(dto.projectId);
     await this.requireContractor(dto.contractorId);
     const agreement = await this.requireAgreement(dto.agreementId);
@@ -182,7 +191,7 @@ export class ContractorBillsService {
   }
 
   async update(id: string, dto: UpdateContractorBillDto, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     this.assertEditable(row);
 
     const agreement = await this.requireAgreement(String(row.agreementId));
@@ -266,7 +275,7 @@ export class ContractorBillsService {
   }
 
   async submitClaim(id: string, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.Claimed, [
       ContractorBillStatus.Draft,
       ContractorBillStatus.Rejected,
@@ -289,7 +298,7 @@ export class ContractorBillsService {
   }
 
   async engineerVerify(id: string, dto: WorkflowNoteDto, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(
       row.status,
       ContractorBillStatus.EngineerVerified,
@@ -315,7 +324,7 @@ export class ContractorBillsService {
   }
 
   async pmCertify(id: string, dto: WorkflowNoteDto, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.PmCertified, [
       ContractorBillStatus.EngineerVerified,
     ]);
@@ -334,7 +343,7 @@ export class ContractorBillsService {
   }
 
   async financeVerify(id: string, dto: WorkflowNoteDto, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.FinanceVerified, [
       ContractorBillStatus.PmCertified,
     ]);
@@ -353,7 +362,7 @@ export class ContractorBillsService {
   }
 
   async directorApprove(id: string, dto: WorkflowNoteDto, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.DirectorApproved, [
       ContractorBillStatus.FinanceVerified,
     ]);
@@ -372,7 +381,7 @@ export class ContractorBillsService {
   }
 
   async post(id: string, actorId: string) {
-    const existing = await this.requireBill(id);
+    const existing = await this.requireBill(id, actorId, 'update');
     if (
       existing.status === ContractorBillStatus.Posted &&
       existing.journalEntryId
@@ -426,69 +435,28 @@ export class ContractorBillsService {
   }
 
   private async executePost(id: string, actorId: string) {
-    const row = await this.requireBill(id);
+    const existing = await this.requireBill(id, actorId, 'update');
 
     if (
-      (row.status === ContractorBillStatus.Posted ||
-        row.status === ContractorBillStatus.Paid) &&
-      row.journalEntryId
+      (existing.status === ContractorBillStatus.Posted ||
+        existing.status === ContractorBillStatus.Paid) &&
+      existing.journalEntryId
     ) {
       return createSuccessResponse(
-        toPublicContractorBill(row),
+        toPublicContractorBill(existing),
         'Running bill already posted',
       );
     }
 
-    assertTransition(row.status, ContractorBillStatus.Posted, [
+    assertTransition(existing.status, ContractorBillStatus.Posted, [
       ContractorBillStatus.DirectorApproved,
     ]);
 
-    this.assertPostableAmounts(row);
+    const previousStatus = existing.status;
 
-    const project = await this.requireProject(String(row.projectId));
-    await this.requireContractor(String(row.contractorId));
-    await this.requireAgreement(String(row.agreementId));
-
-    const journalDate = row.directorApprovedAt ?? row.billingPeriod.to;
-    await this.financialYearService.assertPostingAllowed(
-      journalDate,
-      project.companyId ? String(project.companyId) : undefined,
+    const posted = await this.databaseService.withTransaction(async (session) =>
+      this.postBillInTransaction(id, actorId, session),
     );
-
-    // Re-validate authoritative arithmetic from persisted bill fields.
-    const amounts = computeBillAmounts({
-      currentCertifiedValue: row.currentCertifiedValue,
-      advanceRecovery: row.advanceRecovery,
-      materialRecovery: row.materialRecovery,
-      retention: row.retention,
-      tds: row.tds,
-      penalty: row.penalty,
-      otherDeductions: row.otherDeductions,
-    });
-    if (Math.abs(amounts.netPayable - row.netPayable) > 0.005) {
-      throw new BadRequestException(
-        'Bill netPayable does not match certified gross and deductions',
-      );
-    }
-    if (
-      Math.abs(
-        roundMoney(row.previousCertifiedValue + row.currentCertifiedValue) -
-          row.cumulativeValue,
-      ) > 0.005
-    ) {
-      throw new BadRequestException(
-        'Bill cumulativeValue does not equal previous + current certified value',
-      );
-    }
-
-    const previousStatus = row.status;
-    const journalId = await this.createOrReuseApJournal(row, actorId, amounts);
-
-    const posted = await this.finalizePostedBill({
-      billId: String(row._id),
-      actorId,
-      journalId,
-    });
 
     await this.auditLogService.record({
       userId: actorId,
@@ -524,6 +492,95 @@ export class ContractorBillsService {
     );
   }
 
+  private async postBillInTransaction(
+    id: string,
+    actorId: string,
+    session: ClientSession,
+  ): Promise<ContractorBillDocument> {
+    const lockedQuery = this.billModel.findById(id).session(session);
+    const row = await lockedQuery.exec();
+    if (!row) {
+      throw new NotFoundException('Contractor bill not found');
+    }
+
+    if (
+      (row.status === ContractorBillStatus.Posted ||
+        row.status === ContractorBillStatus.Paid) &&
+      row.journalEntryId
+    ) {
+      return row;
+    }
+
+    if (row.status !== ContractorBillStatus.DirectorApproved) {
+      throw new ConflictException(
+        'Contractor bill is no longer in a postable state',
+      );
+    }
+
+    this.assertPostableAmounts(row);
+
+    const project = await this.requireProject(String(row.projectId));
+    await this.requireContractor(String(row.contractorId));
+    const agreement = await this.requireAgreement(String(row.agreementId));
+
+    const journalDate = row.directorApprovedAt ?? row.billingPeriod.to;
+    await this.financialYearService.assertPostingAllowed(
+      journalDate,
+      project.companyId ? String(project.companyId) : undefined,
+    );
+
+    const amounts = computeBillAmounts({
+      currentCertifiedValue: row.currentCertifiedValue,
+      advanceRecovery: row.advanceRecovery,
+      materialRecovery: row.materialRecovery,
+      retention: row.retention,
+      tds: row.tds,
+      penalty: row.penalty,
+      otherDeductions: row.otherDeductions,
+    });
+    if (Math.abs(amounts.netPayable - row.netPayable) > 0.005) {
+      throw new BadRequestException(
+        'Bill netPayable does not match certified gross and deductions',
+      );
+    }
+    if (
+      Math.abs(
+        roundMoney(row.previousCertifiedValue + row.currentCertifiedValue) -
+          row.cumulativeValue,
+      ) > 0.005
+    ) {
+      throw new BadRequestException(
+        'Bill cumulativeValue does not equal previous + current certified value',
+      );
+    }
+
+    await this.assertAdvanceRecoverySupported(row, agreement, amounts, session);
+
+    const journalId = await this.createOrReuseApJournal(
+      row,
+      actorId,
+      amounts,
+      session,
+    );
+
+    if (
+      row.journalEntryId &&
+      String(row.journalEntryId) !== journalId
+    ) {
+      throw new ConflictException(
+        'Contractor bill already linked to a different journal',
+      );
+    }
+
+    row.journalEntryId = new Types.ObjectId(journalId);
+    row.status = ContractorBillStatus.Posted;
+    row.postedBy = new Types.ObjectId(actorId);
+    row.postedAt = new Date();
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save({ session });
+    return row;
+  }
+
   private assertPostableAmounts(row: ContractorBillDocument) {
     if (!row.measurements?.length) {
       throw new BadRequestException('Bill must include measurements');
@@ -554,23 +611,32 @@ export class ContractorBillsService {
     row: ContractorBillDocument,
     actorId: string,
     amounts: ReturnType<typeof computeBillAmounts>,
+    session: ClientSession,
   ): Promise<string> {
     const billId = String(row._id);
-    const existing = await this.journalModel
+    const existingQuery = this.journalModel
       .findOne({
         sourceModule: JOURNAL_SOURCE_MODULE,
         sourceEntityType: JOURNAL_SOURCE_ENTITY_TYPE,
         sourceEntityId: billId,
-        status: { $in: [JournalStatus.Posted, JournalStatus.Draft] },
+        postingPurpose: JOURNAL_POSTING_PURPOSE,
+        status: {
+          $in: [
+            JournalStatus.Posted,
+            JournalStatus.Draft,
+            JournalStatus.PendingApproval,
+          ],
+        },
       })
-      .lean()
-      .exec();
+      .session(session);
+    const existing = await existingQuery.exec();
 
     if (existing) {
-      if (existing.status === JournalStatus.Draft) {
+      if (existing.status !== JournalStatus.Posted) {
         const posted = await this.journalService.post(
           String(existing._id),
           actorId,
+          session,
         );
         const postedId = posted.data?.id;
         if (!postedId) {
@@ -593,19 +659,14 @@ export class ContractorBillsService {
     const tdsPayable = await this.requireAccountByCategory(
       AccountCategory.TdsPayable,
     );
-    const otherIncome = await this.requireAccountByCategory(
-      AccountCategory.OtherIncome,
-    );
 
     const projectId = String(row.projectId);
     const contractorId = String(row.contractorId);
-    const journalDate = (
-      row.directorApprovedAt ?? row.billingPeriod.to
-    )
+    const journalDate = (row.directorApprovedAt ?? row.billingPeriod.to)
       .toISOString()
       .slice(0, 10);
 
-    const lines: Array<{
+    type Line = {
       accountId: string;
       debit: number;
       credit: number;
@@ -613,7 +674,9 @@ export class ContractorBillsService {
       description: string;
       partyType?: JournalPartyType;
       partyId?: string;
-    }> = [
+    };
+
+    const lines: Line[] = [
       {
         accountId: String(wip._id),
         debit: amounts.currentCertifiedValue,
@@ -643,20 +706,58 @@ export class ContractorBillsService {
         description: `TDS deducted ${row.billNumber}`,
       });
     }
-
-    const otherCredits = roundMoney(
-      amounts.advanceRecovery +
-        amounts.materialRecovery +
-        amounts.penalty +
-        amounts.otherDeductions,
-    );
-    if (otherCredits > 0) {
+    if (amounts.advanceRecovery > 0) {
+      const contractorAdvance = await this.requireAccountByCategory(
+        AccountCategory.ContractorAdvance,
+      );
       lines.push({
-        accountId: String(otherIncome._id),
+        accountId: String(contractorAdvance._id),
         debit: 0,
-        credit: otherCredits,
+        credit: amounts.advanceRecovery,
         projectId,
-        description: `Advance/material/penalty/other recoveries ${row.billNumber}`,
+        description: `Mobilisation advance recovery ${row.billNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: contractorId,
+      });
+    }
+    if (amounts.materialRecovery > 0) {
+      const materialRecovery = await this.requireAccountByCategory(
+        AccountCategory.MaterialRecovery,
+      );
+      lines.push({
+        accountId: String(materialRecovery._id),
+        debit: 0,
+        credit: amounts.materialRecovery,
+        projectId,
+        description: `Material recovery ${row.billNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: contractorId,
+      });
+    }
+    if (amounts.penalty > 0) {
+      const penaltyRecovery = await this.requireAccountByCategory(
+        AccountCategory.PenaltyRecovery,
+      );
+      lines.push({
+        accountId: String(penaltyRecovery._id),
+        debit: 0,
+        credit: amounts.penalty,
+        projectId,
+        description: `Penalty recovery ${row.billNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: contractorId,
+      });
+    }
+    if (amounts.otherDeductions > 0) {
+      const otherDeduction = await this.requireAccountByCategory(
+        AccountCategory.OtherContractorDeduction,
+      );
+      lines.push({
+        accountId: String(otherDeduction._id),
+        debit: 0,
+        credit: amounts.otherDeductions,
+        projectId,
+        description: `Other contractor deduction ${row.billNumber}`,
       });
     }
 
@@ -678,80 +779,175 @@ export class ContractorBillsService {
       );
     }
 
-    const journal = await this.journalService.create(
-      {
-        journalDate,
-        projectId,
-        sourceModule: JOURNAL_SOURCE_MODULE,
-        sourceEntityType: JOURNAL_SOURCE_ENTITY_TYPE,
-        sourceEntityId: billId,
-        narration:
-          `Contractor running bill ${row.billNumber} (RA-${row.raNumber})`.slice(
-            0,
-            500,
-          ),
-        lines,
-        post: true,
-      },
-      actorId,
-      `contractor-bill-journal:${billId}`,
-    );
+    try {
+      const journal = await this.journalService.create(
+        {
+          journalDate,
+          projectId,
+          sourceModule: JOURNAL_SOURCE_MODULE,
+          sourceEntityType: JOURNAL_SOURCE_ENTITY_TYPE,
+          sourceEntityId: billId,
+          postingPurpose: JOURNAL_POSTING_PURPOSE,
+          narration:
+            `Contractor running bill ${row.billNumber} (RA-${row.raNumber})`.slice(
+              0,
+              500,
+            ),
+          lines,
+          post: true,
+        },
+        actorId,
+        `contractor-bill-journal:${billId}`,
+        session,
+      );
 
-    const journalId = journal.data?.id;
-    if (!journalId) {
-      throw new BadRequestException('Journal entry creation failed');
+      const journalId = journal.data?.id;
+      if (!journalId) {
+        throw new BadRequestException('Journal entry creation failed');
+      }
+      return journalId;
+    } catch (error) {
+      if (!(error instanceof ConflictException)) {
+        throw error;
+      }
+      const raced = await this.journalModel
+        .findOne({
+          sourceModule: JOURNAL_SOURCE_MODULE,
+          sourceEntityType: JOURNAL_SOURCE_ENTITY_TYPE,
+          sourceEntityId: billId,
+          postingPurpose: JOURNAL_POSTING_PURPOSE,
+        })
+        .session(session)
+        .exec();
+      if (!raced) {
+        throw error;
+      }
+      if (raced.status !== JournalStatus.Posted) {
+        const posted = await this.journalService.post(
+          String(raced._id),
+          actorId,
+          session,
+        );
+        const postedId = posted.data?.id;
+        if (!postedId) {
+          throw new BadRequestException('Journal entry posting failed');
+        }
+        return postedId;
+      }
+      return String(raced._id);
     }
-    return journalId;
   }
 
-  private async finalizePostedBill(input: {
-    billId: string;
-    actorId: string;
-    journalId: string;
-  }): Promise<ContractorBillDocument> {
-    const finalize = async (session: ClientSession | null) => {
-      const query = this.billModel.findById(input.billId);
-      if (session) query.session(session);
-      const locked = await query.exec();
-      if (!locked) {
-        throw new NotFoundException('Contractor bill not found');
-      }
+  private async assertAdvanceRecoverySupported(
+    row: ContractorBillDocument,
+    agreement: ContractorAgreement,
+    amounts: ReturnType<typeof computeBillAmounts>,
+    session: ClientSession,
+  ) {
+    if (amounts.advanceRecovery <= 0) {
+      return;
+    }
 
-      if (
-        (locked.status === ContractorBillStatus.Posted ||
-          locked.status === ContractorBillStatus.Paid) &&
-        locked.journalEntryId
-      ) {
-        return locked;
-      }
+    const advanceAmount = roundMoney(agreement.advance?.amount ?? 0);
+    if (advanceAmount <= 0) {
+      throw new BadRequestException(
+        'Cannot recover mobilisation advance: agreement has no advance amount',
+      );
+    }
 
-      if (locked.status !== ContractorBillStatus.DirectorApproved) {
-        throw new ConflictException(
-          'Contractor bill is no longer in a postable state',
-        );
-      }
+    if (!agreement.advanceDisbursementJournalId) {
+      throw new BadRequestException(
+        'Cannot recover mobilisation advance: advance has not been disbursed in the ledger',
+      );
+    }
 
-      if (
-        locked.journalEntryId &&
-        String(locked.journalEntryId) !== input.journalId
-      ) {
-        throw new ConflictException(
-          'Contractor bill already linked to a different journal',
-        );
-      }
-
-      locked.journalEntryId = new Types.ObjectId(input.journalId);
-      locked.status = ContractorBillStatus.Posted;
-      locked.postedBy = new Types.ObjectId(input.actorId);
-      locked.postedAt = new Date();
-      locked.set('updatedBy', new Types.ObjectId(input.actorId));
-      await locked.save(session ? { session } : undefined);
-      return locked;
-    };
-
-    return this.databaseService.withTransaction(async (session) =>
-      finalize(session),
+    const priorRecovered = await this.sumPriorAdvanceRecovery(
+      String(row.agreementId),
+      String(row._id),
+      session,
     );
+    const agreementRemaining = roundMoney(
+      Math.max(0, advanceAmount - priorRecovered),
+    );
+    if (amounts.advanceRecovery - agreementRemaining > 0.005) {
+      throw new BadRequestException(
+        `advanceRecovery ${amounts.advanceRecovery} exceeds remaining agreement advance ${agreementRemaining}`,
+      );
+    }
+
+    const contractorAdvance = await this.requireAccountByCategory(
+      AccountCategory.ContractorAdvance,
+    );
+    const glOutstanding = await this.getContractorAdvanceGlBalance({
+      accountId: String(contractorAdvance._id),
+      contractorId: String(row.contractorId),
+      projectId: String(row.projectId),
+      session,
+    });
+    if (amounts.advanceRecovery - glOutstanding > 0.005) {
+      throw new BadRequestException(
+        `advanceRecovery ${amounts.advanceRecovery} exceeds outstanding contractor advance asset ${glOutstanding}`,
+      );
+    }
+  }
+
+  private async sumPriorAdvanceRecovery(
+    agreementId: string,
+    excludeBillId: string,
+    session: ClientSession,
+  ): Promise<number> {
+    const prior = await this.billModel
+      .find({
+        agreementId: new Types.ObjectId(agreementId),
+        _id: { $ne: new Types.ObjectId(excludeBillId) },
+        status: {
+          $in: [ContractorBillStatus.Posted, ContractorBillStatus.Paid],
+        },
+        isDeleted: { $ne: true },
+      })
+      .session(session)
+      .select({ advanceRecovery: 1 })
+      .lean()
+      .exec();
+    return roundMoney(
+      prior.reduce((sum, bill) => sum + (bill.advanceRecovery ?? 0), 0),
+    );
+  }
+
+  private async getContractorAdvanceGlBalance(input: {
+    accountId: string;
+    contractorId: string;
+    projectId: string;
+    session: ClientSession;
+  }): Promise<number> {
+    const rows = await this.journalModel
+      .aggregate<{ balance: number }>([
+        {
+          $match: {
+            status: JournalStatus.Posted,
+            isDeleted: { $ne: true },
+          },
+        },
+        { $unwind: '$lines' },
+        {
+          $match: {
+            'lines.accountId': new Types.ObjectId(input.accountId),
+            'lines.partyId': new Types.ObjectId(input.contractorId),
+            'lines.projectId': new Types.ObjectId(input.projectId),
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            balance: {
+              $sum: { $subtract: ['$lines.debit', '$lines.credit'] },
+            },
+          },
+        },
+      ])
+      .session(input.session)
+      .exec();
+    return roundMoney(Math.max(0, rows[0]?.balance ?? 0));
   }
 
   private async requireAccountByCategory(category: AccountCategory) {
@@ -771,7 +967,7 @@ export class ContractorBillsService {
   }
 
   async markPaid(id: string, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.Paid, [
       ContractorBillStatus.Posted,
     ]);
@@ -807,7 +1003,7 @@ export class ContractorBillsService {
     amount: number,
     actorId: string,
   ) {
-    const row = await this.requireBill(billId);
+    const row = await this.requireBill(billId, actorId, 'update');
     if (
       row.status !== ContractorBillStatus.Posted &&
       row.status !== ContractorBillStatus.Paid
@@ -849,7 +1045,7 @@ export class ContractorBillsService {
   }
 
   async reject(id: string, dto: RejectContractorBillDto, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     const rejectable = [
       ContractorBillStatus.Claimed,
       ContractorBillStatus.EngineerVerified,
@@ -872,7 +1068,7 @@ export class ContractorBillsService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireBill(id);
+    const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.Cancelled, [
       ContractorBillStatus.Draft,
       ContractorBillStatus.Rejected,
@@ -888,18 +1084,26 @@ export class ContractorBillsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireBill(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireBill(id, actorId, 'read');
     return createSuccessResponse(
       toPublicContractorBill(row),
       'Contractor running bill retrieved',
     );
   }
 
-  async list(query: ListContractorBillsQueryDto) {
+  async list(query: ListContractorBillsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'contractor-bill' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<ContractorBill> = {};
+    let filter: FilterQuery<ContractorBill> = {};
 
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
@@ -914,6 +1118,11 @@ export class ContractorBillsService {
 
     const sortField = query.sortBy ?? 'createdAt';
     const sortOrder: SortOrder = query.sortOrder === 'asc' ? 1 : -1;
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const [rows, total] = await Promise.all([
       this.billModel
@@ -1173,12 +1382,25 @@ export class ContractorBillsService {
     }
   }
 
-  private async requireBill(id: string) {
+  private async requireBill(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Contractor bill not found');
     }
     const row = await this.billModel.findById(id).exec();
     if (!row) throw new NotFoundException('Contractor bill not found');
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'contractor-bill', resourceId: id },
+      );
+    }
     return row;
   }
 

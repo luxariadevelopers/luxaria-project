@@ -31,6 +31,7 @@ import { JournalPartyType } from '../journal/schemas/journal-entry.schema';
 import { JournalService } from '../journal/journal.service';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import type {
   ContractorPaymentAllocationDto,
   CreateContractorPaymentDto,
@@ -77,9 +78,16 @@ export class ContractorPaymentsService {
     private readonly contractorBillsService: ContractorBillsService,
     private readonly numberingService: NumberingService,
     private readonly journalService: JournalService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateContractorPaymentDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'contractor-payment' },
+    );
     const built = await this.buildPayload(dto);
     const paymentNumber = await this.numberingService.nextCode(
       NumberEntityType.CONTRACTOR_PAYMENT,
@@ -119,7 +127,7 @@ export class ContractorPaymentsService {
   }
 
   async update(id: string, dto: UpdateContractorPaymentDto, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== ContractorPaymentStatus.Draft) {
       throw new BadRequestException(
         'Only draft contractor payments can be updated',
@@ -179,7 +187,7 @@ export class ContractorPaymentsService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== ContractorPaymentStatus.Draft) {
       throw new BadRequestException('Only draft payments can be submitted');
     }
@@ -198,7 +206,7 @@ export class ContractorPaymentsService {
   }
 
   async approve(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== ContractorPaymentStatus.Approval) {
       throw new BadRequestException(
         'Only payments in approval can be approved',
@@ -219,7 +227,7 @@ export class ContractorPaymentsService {
   }
 
   async release(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== ContractorPaymentStatus.Released) {
       throw new BadRequestException(
         'Only released payments can record bank release',
@@ -251,7 +259,7 @@ export class ContractorPaymentsService {
   }
 
   async verify(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== ContractorPaymentStatus.Released) {
       throw new BadRequestException('Only released payments can be verified');
     }
@@ -279,7 +287,7 @@ export class ContractorPaymentsService {
    * Journal: Dr Contractor Payable / Cr TDS / Cr Retention / Cr Other Income (penalty+advance) / Cr Bank.
    */
   async post(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== ContractorPaymentStatus.Verified) {
       throw new BadRequestException('Only verified payments can be posted');
     }
@@ -312,7 +320,7 @@ export class ContractorPaymentsService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     const cancellable = [
       ContractorPaymentStatus.Draft,
       ContractorPaymentStatus.Approval,
@@ -335,18 +343,26 @@ export class ContractorPaymentsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requirePayment(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requirePayment(id, actorId, 'read');
     return createSuccessResponse(
       toPublicContractorPayment(row),
       'Contractor payment retrieved',
     );
   }
 
-  async list(query: ListContractorPaymentsQueryDto) {
+  async list(query: ListContractorPaymentsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'contractor-payment' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<ContractorPayment> = {};
+    let filter: FilterQuery<ContractorPayment> = {};
 
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
@@ -363,7 +379,12 @@ export class ContractorPaymentsService {
     }
 
     const sort: Record<string, SortOrder> = { paymentDate: -1, createdAt: -1 };
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.paymentModel
         .find(filter)
         .sort(sort)
@@ -397,18 +418,11 @@ export class ContractorPaymentsService {
     );
 
     const amount = roundMoney(dto.amount);
-    const tds = roundMoney(dto.tds ?? 0);
-    const retention = roundMoney(dto.retention ?? 0);
-    const advanceRecovery = roundMoney(dto.advanceRecovery ?? 0);
-    const penalty = roundMoney(dto.penalty ?? 0);
+    let tds = roundMoney(dto.tds ?? 0);
+    let retention = roundMoney(dto.retention ?? 0);
+    let advanceRecovery = roundMoney(dto.advanceRecovery ?? 0);
+    let penalty = roundMoney(dto.penalty ?? 0);
     assertAllocationsBalance({ amount, allocations: dto.allocations });
-    const bankAmount = computeBankAmount({
-      amount,
-      tds,
-      retention,
-      advanceRecovery,
-      penalty,
-    });
 
     const paymentDate = this.parseDate(dto.paymentDate, 'paymentDate');
     const allocations = await this.buildAllocations(
@@ -417,6 +431,30 @@ export class ContractorPaymentsService {
       dto.projectId,
       excludePaymentId,
     );
+
+    // Bill-linked payments settle Contractor Payable net of bill deductions.
+    // Re-applying TDS/retention/advance/penalty would double-withhold.
+    if (allocations.length > 0) {
+      const repeated =
+        tds > 0 || retention > 0 || advanceRecovery > 0 || penalty > 0;
+      if (repeated) {
+        throw new BadRequestException(
+          'Payment allocations to posted bills cannot include TDS, retention, advance recovery, or penalty; those were recognised on the running bill',
+        );
+      }
+      tds = 0;
+      retention = 0;
+      advanceRecovery = 0;
+      penalty = 0;
+    }
+
+    const bankAmount = computeBankAmount({
+      amount,
+      tds,
+      retention,
+      advanceRecovery,
+      penalty,
+    });
 
     return {
       contractorId: dto.contractorId,
@@ -533,15 +571,6 @@ export class ContractorPaymentsService {
     const contractorPayable = await this.requireAccountByCategory(
       AccountCategory.ContractorPayable,
     );
-    const tdsPayable = await this.requireAccountByCategory(
-      AccountCategory.TdsPayable,
-    );
-    const retentionPayable = await this.requireAccountByCategory(
-      AccountCategory.RetentionPayable,
-    );
-    const otherIncome = await this.requireAccountByCategory(
-      AccountCategory.OtherIncome,
-    );
     const bank = await this.requireActiveBank(
       String(row.bankAccountId),
       String(row.projectId),
@@ -568,7 +597,11 @@ export class ContractorPaymentsService {
       },
     ];
 
+    // On-account (non-bill) withholdings only — bill-linked payments reject these earlier.
     if (row.tds > 0) {
+      const tdsPayable = await this.requireAccountByCategory(
+        AccountCategory.TdsPayable,
+      );
       lines.push({
         accountId: String(tdsPayable._id),
         debit: 0,
@@ -578,6 +611,9 @@ export class ContractorPaymentsService {
       });
     }
     if (row.retention > 0) {
+      const retentionPayable = await this.requireAccountByCategory(
+        AccountCategory.RetentionPayable,
+      );
       lines.push({
         accountId: String(retentionPayable._id),
         debit: 0,
@@ -586,14 +622,32 @@ export class ContractorPaymentsService {
         description: `Retention withheld ${row.paymentNumber}`,
       });
     }
-    const otherCredits = roundMoney(row.advanceRecovery + row.penalty);
-    if (otherCredits > 0) {
+    if (row.advanceRecovery > 0) {
+      const contractorAdvance = await this.requireAccountByCategory(
+        AccountCategory.ContractorAdvance,
+      );
       lines.push({
-        accountId: String(otherIncome._id),
+        accountId: String(contractorAdvance._id),
         debit: 0,
-        credit: otherCredits,
+        credit: row.advanceRecovery,
         projectId,
-        description: `Advance recovery / penalty ${row.paymentNumber}`,
+        description: `Advance recovery ${row.paymentNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: String(row.contractorId),
+      });
+    }
+    if (row.penalty > 0) {
+      const penaltyRecovery = await this.requireAccountByCategory(
+        AccountCategory.PenaltyRecovery,
+      );
+      lines.push({
+        accountId: String(penaltyRecovery._id),
+        debit: 0,
+        credit: row.penalty,
+        projectId,
+        description: `Penalty recovery ${row.paymentNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: String(row.contractorId),
       });
     }
     if (row.bankAmount > 0) {
@@ -739,12 +793,23 @@ export class ContractorPaymentsService {
 
   private async requirePayment(
     id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
   ): Promise<ContractorPaymentDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid contractor payment id');
     }
     const row = await this.paymentModel.findById(id).exec();
     if (!row) throw new NotFoundException('Contractor payment not found');
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'contractor-payment', resourceId: id },
+      );
+    }
     return row;
   }
 

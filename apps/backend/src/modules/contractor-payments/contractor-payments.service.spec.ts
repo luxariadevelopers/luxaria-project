@@ -155,6 +155,18 @@ describe('ContractorPaymentsService', () => {
       contractorModel,
       new NumberingService(counterModel),
     );
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new ContractorPaymentsService(
       paymentModel,
@@ -165,6 +177,7 @@ describe('ContractorPaymentsService', () => {
       billsService,
       new NumberingService(counterModel),
       { create: journalCreate } as unknown as JournalService,
+      mockProjectScope
     );
   }, 120_000);
 
@@ -283,7 +296,7 @@ describe('ContractorPaymentsService', () => {
     });
   });
 
-  it('supports multi-bill allocation, partial pay, withholdings, and journal post', async () => {
+  it('supports multi-bill allocation and journal post without re-withholding', async () => {
     const created = await service.create(
       {
         contractorId,
@@ -297,17 +310,13 @@ describe('ContractorPaymentsService', () => {
         paymentMode: ContractorPaymentMode.Neft,
         bankAccountId,
         transactionReference: 'UTR-CP-001',
-        tds: 200,
-        retention: 300,
-        advanceRecovery: 500,
-        penalty: 100,
         paymentProof: 'proof-doc-1',
       },
       actorId,
     );
 
     expect(created.data!.paymentNumber).toMatch(/^CP-/);
-    expect(created.data!.bankAmount).toBe(5900);
+    expect(created.data!.bankAmount).toBe(7000);
     expect(created.data!.status).toBe(ContractorPaymentStatus.Draft);
 
     await runToVerified(created.data!.id);
@@ -324,7 +333,7 @@ describe('ContractorPaymentsService', () => {
     );
     const bankCredit = journalDto.lines.find(
       (line: { accountId: string; credit: number }) =>
-        line.accountId === bankLedgerId && line.credit === 5900,
+        line.accountId === bankLedgerId && line.credit === 7000,
     );
     expect(debitLine).toBeTruthy();
     expect(bankCredit).toBeTruthy();
@@ -335,6 +344,26 @@ describe('ContractorPaymentsService', () => {
     expect(billA!.status).toBe(ContractorBillStatus.Posted);
     expect(billB!.paidAmount).toBe(3000);
     expect(billB!.status).toBe(ContractorBillStatus.Paid);
+  });
+
+  it('rejects bill-linked payment that re-applies bill deductions', async () => {
+    await expect(
+      service.create(
+        {
+          contractorId,
+          projectId,
+          allocations: [{ billId: billAId, amount: 1000 }],
+          paymentDate: '2026-07-20',
+          amount: 1000,
+          paymentMode: ContractorPaymentMode.Neft,
+          bankAccountId,
+          transactionReference: 'UTR-CP-DEDUP',
+          tds: 50,
+          paymentProof: 'proof-doc-1',
+        },
+        actorId,
+      ),
+    ).rejects.toThrow(/cannot include TDS/);
   });
 
   it('rejects over-allocation against remaining payable', async () => {

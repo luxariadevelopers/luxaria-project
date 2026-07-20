@@ -25,6 +25,7 @@ import {
 import { StockTransactionType } from '../material-master/schemas/material-stock-transaction.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   PurchaseOrder,
   PurchaseOrderStatus,
@@ -66,6 +67,7 @@ export class GoodsReceiptsService {
     private readonly purchaseOrdersService: PurchaseOrdersService,
     private readonly idempotencyService: IdempotencyService,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(
@@ -73,6 +75,12 @@ export class GoodsReceiptsService {
     actorId: string,
     idempotencyKey?: string | null,
   ) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'goods-receipt' },
+    );
     const requestHash = this.idempotencyService.hashRequest({
       ...dto,
       actorId,
@@ -199,7 +207,7 @@ export class GoodsReceiptsService {
   }
 
   async update(id: string, dto: UpdateGoodsReceiptDto, actorId: string) {
-    const row = await this.requireGrn(id);
+    const row = await this.requireGrn(id, actorId, 'update');
     if (row.status !== GoodsReceiptStatus.Draft) {
       throw new BadRequestException('Only draft GRNs can be updated');
     }
@@ -248,16 +256,24 @@ export class GoodsReceiptsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireGrn(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireGrn(id, actorId, 'read');
     return createSuccessResponse(
       toPublicGoodsReceipt(row),
       'Goods receipt fetched',
     );
   }
 
-  async list(query: ListGoodsReceiptsQueryDto) {
-    const filter: FilterQuery<GoodsReceipt> = {};
+  async list(query: ListGoodsReceiptsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'goods-receipt' },
+      );
+    }
+    let filter: FilterQuery<GoodsReceipt> = {};
     if (query.projectId) filter.projectId = new Types.ObjectId(query.projectId);
     if (query.purchaseOrderId) {
       filter.purchaseOrderId = new Types.ObjectId(query.purchaseOrderId);
@@ -271,6 +287,11 @@ export class GoodsReceiptsService {
         { deliveryChallanNumber: { $regex: search, $options: 'i' } },
       ];
     }
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -294,7 +315,7 @@ export class GoodsReceiptsService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requireGrn(id);
+    const row = await this.requireGrn(id, actorId, 'update');
     if (row.status !== GoodsReceiptStatus.Draft) {
       throw new BadRequestException('Only draft GRNs can be submitted');
     }
@@ -313,7 +334,7 @@ export class GoodsReceiptsService {
   }
 
   async startQualityCheck(id: string, actorId: string) {
-    const row = await this.requireGrn(id);
+    const row = await this.requireGrn(id, actorId, 'update');
     if (row.status !== GoodsReceiptStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted GRNs can enter quality check',
@@ -355,7 +376,7 @@ export class GoodsReceiptsService {
     },
     actorId: string,
   ) {
-    const row = await this.requireGrn(id);
+    const row = await this.requireGrn(id, actorId, 'update');
     if (
       row.status !== GoodsReceiptStatus.QualityCheck &&
       row.status !== GoodsReceiptStatus.Submitted
@@ -442,7 +463,7 @@ export class GoodsReceiptsService {
    * Post GRN: increase stock for accepted qty only; update PO received balance.
    */
   async post(id: string, actorId: string, idempotencyKey?: string | null) {
-    const row = await this.requireGrn(id);
+    const row = await this.requireGrn(id, actorId, 'approve');
     const postKey =
       idempotencyKey?.trim() || `grn-post:${String(row._id)}`;
 
@@ -545,7 +566,7 @@ export class GoodsReceiptsService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireGrn(id);
+    const row = await this.requireGrn(id, actorId, 'update');
     if (
       row.status === GoodsReceiptStatus.Posted ||
       row.status === GoodsReceiptStatus.Cancelled
@@ -648,12 +669,24 @@ export class GoodsReceiptsService {
     return date;
   }
 
-  private async requireGrn(id: string) {
+  private async requireGrn(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid goods receipt id');
     }
     const row = await this.grnModel.findById(id).exec();
     if (!row) throw new NotFoundException('Goods receipt not found');
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'goods-receipt', resourceId: id },
+      );
+    }
     return row;
   }
 

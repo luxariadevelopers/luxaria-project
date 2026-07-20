@@ -5,6 +5,7 @@ import { ModuleRef } from '@nestjs/core';
 import { Cron } from '@nestjs/schedule';
 import type { Queue } from 'bullmq';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import {
   STOCK_REORDER_JOB_EVALUATE,
   STOCK_REORDER_QUEUE,
@@ -34,7 +35,14 @@ export class StockReorderScheduler {
       return;
     }
 
-    this.logger.log('Scheduled stock reorder evaluation starting');
+    const system = createSystemContext({
+      jobName: 'stock-reorder-evaluate',
+      reason:
+        'Evaluate stock reorder thresholds; iterates all active projects/companies explicitly in service',
+    });
+    this.logger.log(
+      `Scheduled stock reorder evaluation starting system=${system.jobName}`,
+    );
     await this.enqueueOrRun({});
   }
 

@@ -69,6 +69,7 @@ describe('AccountingReportsService', () => {
 
   let fyId: string;
   let projectId: string;
+  let actorId: string;
   let bankId: string;
   let cashId: string;
   let expenseId: string;
@@ -145,6 +146,17 @@ describe('AccountingReportsService', () => {
       customerModel,
       directorModel,
       investorModel,
+      {
+        assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+        assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+        assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+        mergeAuthorisedProjectFilter: jest
+          .fn()
+          .mockImplementation(async (_a, f) => f),
+        findOneForActor: jest.fn(),
+        buildScopedIdFilter: jest.fn(),
+        authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+      } as never,
     );
     exportService = new AccountingReportsExportService(service);
   }, 60_000);
@@ -184,6 +196,7 @@ describe('AccountingReportsService', () => {
       },
     });
     projectId = String(project._id);
+    actorId = new Types.ObjectId().toHexString();
 
     const [bank, cash, expense, income, vendorPayable, customerAdvance] =
       await connection.model(Account.name).create([
@@ -465,7 +478,7 @@ describe('AccountingReportsService', () => {
     const result = await service.getReport(AccountingReportType.TrialBalance, {
       financialYearId: fyId,
       projectId,
-    });
+    }, actorId);
     const data = result.data!;
     expect(data.meta.reconciled).toBe(true);
     expect(data.totals!.periodDebit).toBe(data.totals!.periodCredit);
@@ -481,6 +494,7 @@ describe('AccountingReportsService', () => {
     const result = await service.getReport(
       AccountingReportType.JournalRegister,
       { financialYearId: fyId, projectId },
+      actorId,
     );
     const data = result.data!;
     expect(data.meta.reconciled).toBe(true);
@@ -496,7 +510,7 @@ describe('AccountingReportsService', () => {
       projectId,
       from: '2026-04-01',
       to: '2027-03-31',
-    });
+    }, actorId);
     const data = result.data!;
     expect(data.meta.reconciled).toBe(true);
     expect(data.totals!.openingBalance).toBe(100_000);
@@ -514,7 +528,7 @@ describe('AccountingReportsService', () => {
       financialYearId: fyId,
       projectId,
       partyId: String(vendorId),
-    });
+    }, actorId);
     const data = result.data!;
     const rows = data.rows as Array<{ partyId: string; partyName: string | null }>;
     expect(rows.length).toBeGreaterThan(0);
@@ -526,6 +540,7 @@ describe('AccountingReportsService', () => {
     const pnl = await service.getReport(
       AccountingReportType.ProjectProfitAndLoss,
       { financialYearId: fyId, projectId },
+      actorId,
     );
     expect(pnl.data!.totals!.income).toBe(10_000);
     expect(pnl.data!.totals!.expense).toBe(20_000);
@@ -534,6 +549,7 @@ describe('AccountingReportsService', () => {
     const cost = await service.getReport(
       AccountingReportType.ProjectCostSheet,
       { financialYearId: fyId, projectId },
+      actorId,
     );
     expect(cost.data!.totals!.cost).toBe(20_000);
   });
@@ -542,6 +558,7 @@ describe('AccountingReportsService', () => {
     const ap = await service.getReport(
       AccountingReportType.AccountsPayableAgeing,
       { projectId, to: '2026-07-20' },
+      actorId,
     );
     expect(ap.data!.meta.reconciled).toBe(true);
     expect(ap.data!.totals!.total).toBe(8_000);
@@ -549,6 +566,7 @@ describe('AccountingReportsService', () => {
     const ar = await service.getReport(
       AccountingReportType.AccountsReceivableAgeing,
       { projectId, to: '2026-07-20' },
+      actorId,
     );
     expect(ar.data!.meta.reconciled).toBe(true);
     expect(ar.data!.totals!.total).toBe(20_000);
@@ -563,6 +581,7 @@ describe('AccountingReportsService', () => {
         from: '2026-04-01',
         to: '2027-03-31',
       },
+      actorId,
     );
     expect(fund.data!.meta.reconciled).toBe(true);
     expect(fund.data!.totals!.opening).toBe(100_000);
@@ -571,7 +590,7 @@ describe('AccountingReportsService', () => {
     const cf = await service.getReport(AccountingReportType.CashFlow, {
       financialYearId: fyId,
       projectId,
-    });
+    }, actorId);
     expect(cf.data!.totals!.bookNetMovement).toBeDefined();
   });
 

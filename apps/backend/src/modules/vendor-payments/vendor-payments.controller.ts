@@ -17,7 +17,13 @@ import {
   UpdateVendorPaymentDto,
 } from './dto/vendor-payment.dto';
 import { VendorPaymentsService } from './vendor-payments.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'vendor-payment', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Vendor Payments')
 @ApiBearerAuth()
 @Controller('vendor-payments')
@@ -37,15 +43,18 @@ export class VendorPaymentsController {
   @Get()
   @RequirePermissions('payment.view')
   @ApiOperation({ summary: 'List vendor payments' })
-  list(@Query() query: ListVendorPaymentsQueryDto) {
-    return this.vendorPaymentsService.list(query);
+  list(
+    @Query() query: ListVendorPaymentsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.vendorPaymentsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('payment.view')
   @ApiOperation({ summary: 'Get vendor payment' })
-  getById(@Param('id') id: string) {
-    return this.vendorPaymentsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.vendorPaymentsService.getById(id, actor.id);
   }
 
   @Patch(':id')

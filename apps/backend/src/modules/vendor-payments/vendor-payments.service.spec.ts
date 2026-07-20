@@ -146,6 +146,18 @@ describe('VendorPaymentsService', () => {
       get: jest.fn().mockReturnValue(0),
     } as unknown as ConfigService<never, true>;
 
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
     const vendorInvoicesService = new VendorInvoicesService(
       invoiceModel,
       {} as never,
@@ -156,8 +168,8 @@ describe('VendorPaymentsService', () => {
       new NumberingService(counterModel),
       { create: journalCreate } as unknown as JournalService,
       configService,
+      mockProjectScope,
     );
-
     service = new VendorPaymentsService(
       paymentModel,
       invoiceModel,
@@ -167,6 +179,7 @@ describe('VendorPaymentsService', () => {
       vendorInvoicesService,
       new NumberingService(counterModel),
       { create: journalCreate } as unknown as JournalService,
+      mockProjectScope,
     );
   }, 120_000);
 

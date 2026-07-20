@@ -11,6 +11,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { BookingCancellationsService } from './booking-cancellations.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   AddCancellationDocumentDto,
   ApproveBookingCancellationDto,
@@ -21,6 +22,11 @@ import {
   ReviewBookingCancellationDto,
 } from './dto/booking-cancellation.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'booking-cancellation', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Booking Cancellations')
 @ApiBearerAuth()
 @Controller('booking-cancellations')

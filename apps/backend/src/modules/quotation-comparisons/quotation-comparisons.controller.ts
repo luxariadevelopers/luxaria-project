@@ -16,7 +16,13 @@ import {
   RecommendQuotationComparisonDto,
 } from './dto/quotation-comparison.dto';
 import { QuotationComparisonsService } from './quotation-comparisons.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'quotation-comparison', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Quotation Comparisons')
 @ApiBearerAuth()
 @Controller('quotation-comparisons')

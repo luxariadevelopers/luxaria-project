@@ -115,6 +115,12 @@ export type AppConfig = {
   /** Expo push delivery toggle. */
   pushEnabled: boolean;
   expoAccessToken: string | null;
+  /**
+   * R-003 project isolation enforcement.
+   * `enforce` (default) — fail closed. `observe` — log denials but allow
+   * (temporary staging only; never permits cross-company bypass).
+   */
+  projectAccessEnforcement: 'enforce' | 'observe';
 };
 
 export default (): AppConfig => {
@@ -280,5 +286,11 @@ export default (): AppConfig => {
     pushEnabled:
       String(process.env.PUSH_ENABLED ?? 'false').toLowerCase() === 'true',
     expoAccessToken: process.env.EXPO_ACCESS_TOKEN?.trim() || null,
+    projectAccessEnforcement:
+      String(process.env.PROJECT_ACCESS_ENFORCEMENT ?? 'enforce')
+        .trim()
+        .toLowerCase() === 'observe'
+        ? 'observe'
+        : 'enforce',
   };
 };

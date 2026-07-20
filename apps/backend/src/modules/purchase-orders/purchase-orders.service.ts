@@ -19,6 +19,7 @@ import {
 } from '../material-master/schemas/material.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
 import {
   PurchaseRequest,
@@ -82,9 +83,16 @@ export class PurchaseOrdersService {
     private readonly approvalsService: ApprovalsService,
     private readonly pdfService: PurchaseOrderPdfService,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreatePurchaseOrderDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'purchase-order' },
+    );
     const pr = await this.requireEligiblePurchaseRequest(dto.purchaseRequestId);
     if (String(pr.projectId) !== dto.projectId) {
       throw new BadRequestException(
@@ -182,7 +190,7 @@ export class PurchaseOrdersService {
   }
 
   async update(id: string, dto: UpdatePurchaseOrderDto, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'update');
     this.assertDraftEditable(row);
 
     if (dto.orderDate !== undefined) {
@@ -232,16 +240,16 @@ export class PurchaseOrdersService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requirePo(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requirePo(id, actorId, 'read');
     return createSuccessResponse(
       toPublicPurchaseOrder(row),
       'Purchase order fetched',
     );
   }
 
-  async getBalance(id: string) {
-    const row = await this.requirePo(id);
+  async getBalance(id: string, actorId: string) {
+    const row = await this.requirePo(id, actorId, 'read');
     const publicPo = toPublicPurchaseOrder(row);
     return createSuccessResponse(
       {
@@ -263,8 +271,16 @@ export class PurchaseOrdersService {
     );
   }
 
-  async list(query: ListPurchaseOrdersQueryDto) {
-    const filter: FilterQuery<PurchaseOrder> = {};
+  async list(query: ListPurchaseOrdersQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'purchase-order' },
+      );
+    }
+    let filter: FilterQuery<PurchaseOrder> = {};
     if (query.projectId) filter.projectId = new Types.ObjectId(query.projectId);
     if (query.purchaseRequestId) {
       filter.purchaseRequestId = new Types.ObjectId(query.purchaseRequestId);
@@ -277,6 +293,11 @@ export class PurchaseOrdersService {
         $options: 'i',
       };
     }
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -300,7 +321,7 @@ export class PurchaseOrdersService {
   }
 
   async submitForApproval(id: string, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'update');
     if (
       row.status !== PurchaseOrderStatus.Draft &&
       row.status !== PurchaseOrderStatus.Rejected
@@ -338,7 +359,7 @@ export class PurchaseOrdersService {
   }
 
   async approve(id: string, dto: ApprovePurchaseOrderDto, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'approve');
     if (row.status !== PurchaseOrderStatus.PendingApproval) {
       throw new BadRequestException(
         'Only POs pending approval can be approved',
@@ -374,7 +395,7 @@ export class PurchaseOrdersService {
   }
 
   async reject(id: string, dto: RejectPurchaseOrderDto, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'approve');
     if (row.status !== PurchaseOrderStatus.PendingApproval) {
       throw new BadRequestException('Only pending-approval POs can be rejected');
     }
@@ -400,7 +421,7 @@ export class PurchaseOrdersService {
    * and marks the previous revision superseded.
    */
   async revise(id: string, dto: RevisePurchaseOrderDto, actorId: string) {
-    const previous = await this.requirePo(id);
+    const previous = await this.requirePo(id, actorId, 'update');
     if (previous.status !== PurchaseOrderStatus.Issued) {
       throw new BadRequestException(
         'Only issued POs can be revised (versioning required after approval)',
@@ -496,7 +517,7 @@ export class PurchaseOrdersService {
     dto: ReceivePurchaseOrderDto,
     actorId: string,
   ) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'update');
     if (
       row.status !== PurchaseOrderStatus.Issued &&
       row.status !== PurchaseOrderStatus.PartiallyReceived
@@ -546,7 +567,7 @@ export class PurchaseOrdersService {
   }
 
   async close(id: string, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'update');
     if (
       row.status !== PurchaseOrderStatus.FullyReceived &&
       row.status !== PurchaseOrderStatus.PartiallyReceived &&
@@ -566,7 +587,7 @@ export class PurchaseOrdersService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'update');
     if (
       row.status === PurchaseOrderStatus.Closed ||
       row.status === PurchaseOrderStatus.Cancelled ||
@@ -593,7 +614,7 @@ export class PurchaseOrdersService {
   }
 
   async exportPdf(id: string, actorId: string) {
-    const row = await this.requirePo(id);
+    const row = await this.requirePo(id, actorId, 'read');
     const pdfPath = await this.pdfService.generate(toPublicPurchaseOrder(row));
     row.pdfPath = pdfPath;
     row.pdfGeneratedAt = new Date();
@@ -700,12 +721,24 @@ export class PurchaseOrdersService {
     return date;
   }
 
-  private async requirePo(id: string) {
+  private async requirePo(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid purchase order id');
     }
     const row = await this.poModel.findById(id).exec();
     if (!row) throw new NotFoundException('Purchase order not found');
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'purchase-order', resourceId: id },
+      );
+    }
     return row;
   }
 

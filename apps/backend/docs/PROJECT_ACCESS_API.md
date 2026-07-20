@@ -4,14 +4,24 @@ Base path: `/api/v1/project-access`
 Auth: Bearer access token required  
 Swagger tag: **Project Access**
 
-## Rules
+## Rules (R-003)
 
-1. Users may access a project only via an **effective assignment**, unless they have Super Admin RBAC bypass.
-2. **Directors are not hard-coded** for all-project access. Grant `globalAccess: true` on an assignment record.
-3. Investors, site engineers, and purchase users receive **selected `projectId` assignments** (participate / assigned sites / selected projects).
-4. Effective window: `status=active` AND `accessStartDate <= now` AND (`accessEndDate` null OR `>= now`).
-5. Denied attempts are written to `unauthorized_project_access_attempts`.
-6. `User.assignedProjects` is a denormalized cache of effective non-global project ids.
+1. Project isolation is **default-deny** for authenticated business routes.
+2. Every handler must declare a scope: `@ProjectScoped` / `@GlobalScope` / `@InvestorScoped` / `@Public` / `@SystemInternal` / `@WebhookRoute`.
+3. Users may access a project only via an **effective assignment**, unless they have Super Admin RBAC bypass or an effective `globalAccess` assignment.
+4. **Directors are not hard-coded** for all-project access. Grant `globalAccess: true` on an assignment record.
+5. Investors use **participation** checks on `@InvestorScoped` routes (not staff assignments alone).
+6. Effective window: `status=active` AND `accessStartDate <= now` AND (`accessEndDate` null OR `>= now`).
+7. Denied attempts are written to `unauthorized_project_access_attempts`.
+8. `User.assignedProjects` is a denormalized cache of effective non-global project ids.
+9. Client header `X-Project-Id` is a resolution source and is cross-checked against path/query/body/resource ownership — it never overrides resource ownership.
+
+## Enforcement mode
+
+| Env | Behaviour |
+| --- | --- |
+| `PROJECT_ACCESS_ENFORCEMENT=enforce` (default) | Fail closed |
+| `PROJECT_ACCESS_ENFORCEMENT=observe` | Log + audit, allow (staging temporary only) |
 
 ## Assignment fields
 
@@ -23,6 +33,26 @@ Swagger tag: **Project Access**
 | `accessStartDate` | Inclusive start |
 | `accessEndDate` | Inclusive end; null = open-ended |
 | `status` | `active` \| `inactive` \| `expired` |
+
+## Decorators
+
+```ts
+@ProjectScoped({
+  mode: 'single' | 'filter',
+  operation: 'read' | 'create' | 'update' | 'approve',
+  resource: { resourceType: 'purchase-order', idParam: 'id' },
+})
+
+@GlobalScope()
+@InvestorScoped({ mode: 'filter' })
+@Public()
+```
+
+Legacy:
+
+```ts
+@RequireProjectAccess({ source: 'params', key: 'projectId', operation: 'read' })
+```
 
 ## Endpoints
 
@@ -42,39 +72,10 @@ Swagger tag: **Project Access**
 
 `POST /users/:id/projects` also creates/updates assignment records.
 
-## Guard / decorator
+## Static safety
 
-```ts
-@RequireProjectAccess({
-  source: 'params', // or body | query
-  key: 'projectId',
-  operation: 'read' | 'create' | 'update' | 'approve',
-})
+```bash
+node scripts/r003-scan-route-scopes.mjs
 ```
 
-Apply on project-scoped create / read / update / approval routes in future modules. Global `ProjectAccessGuard` enforces the decorator when present.
-
-## Example — Director all-project access
-
-```json
-POST /api/v1/project-access/assignments
-{
-  "userId": "<directorUserId>",
-  "globalAccess": true,
-  "accessStartDate": "2026-04-01",
-  "accessEndDate": null,
-  "notes": "Board oversight FY26"
-}
-```
-
-## Example — Site engineer assigned sites
-
-```json
-{
-  "userId": "<engineerUserId>",
-  "projectId": "<projectId>",
-  "globalAccess": false,
-  "accessStartDate": "2026-01-15",
-  "accessEndDate": "2026-12-31"
-}
-```
+Fails when any authenticated handler lacks scope classification.

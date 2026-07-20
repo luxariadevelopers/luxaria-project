@@ -11,6 +11,7 @@ import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   extensionForMime,
   isAllowedMimeType,
@@ -34,9 +35,16 @@ export class DocumentsService {
     private readonly documentModel: Model<StoredDocument>,
     private readonly numberingService: NumberingService,
     private readonly s3Storage: S3StorageService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async createPresignedUpload(dto: PresignUploadDto, actorId: string) {
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'document' },
+    );
     this.assertMimeAndSize(dto.mimeType, dto.size);
 
     const mimeType = dto.mimeType.toLowerCase().trim();
@@ -119,6 +127,12 @@ export class DocumentsService {
     actorId: string,
   ) {
     const doc = await this.requireDocument(documentId);
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      doc.projectId ? String(doc.projectId) : null,
+      'update',
+      { resourceType: 'document', resourceId: documentId },
+    );
     if (doc.status !== DocumentStatus.PendingUpload) {
       throw new BadRequestException(
         'Only pending_upload documents can be confirmed',
@@ -195,8 +209,14 @@ export class DocumentsService {
     );
   }
 
-  async createPresignedDownload(documentId: string) {
+  async createPresignedDownload(documentId: string, actorId: string) {
     const doc = await this.requireDocument(documentId);
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      doc.projectId ? String(doc.projectId) : null,
+      'read',
+      { resourceType: 'document', resourceId: documentId },
+    );
     if (
       doc.status !== DocumentStatus.Active &&
       doc.status !== DocumentStatus.Replaced
@@ -242,6 +262,12 @@ export class DocumentsService {
     actorId: string,
   ) {
     const current = await this.requireDocument(documentId);
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      current.projectId ? String(current.projectId) : null,
+      'update',
+      { resourceType: 'document', resourceId: documentId },
+    );
     if (current.status !== DocumentStatus.Active) {
       throw new BadRequestException('Only active documents can be replaced');
     }
@@ -310,6 +336,12 @@ export class DocumentsService {
 
   async archiveDocument(documentId: string, actorId: string) {
     const doc = await this.requireDocument(documentId);
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      doc.projectId ? String(doc.projectId) : null,
+      'update',
+      { resourceType: 'document', resourceId: documentId },
+    );
     if (
       doc.status !== DocumentStatus.Active &&
       doc.status !== DocumentStatus.PendingUpload
@@ -327,21 +359,33 @@ export class DocumentsService {
     );
   }
 
-  async listEntityDocuments(query: {
-    entityType: string;
-    entityId: string;
-    module?: string;
-    projectId?: string;
-    status?: DocumentStatus;
-    page?: number;
-    limit?: number;
-    sortOrder?: 'asc' | 'desc';
-  }) {
+  async listEntityDocuments(
+    query: {
+      entityType: string;
+      entityId: string;
+      module?: string;
+      projectId?: string;
+      status?: DocumentStatus;
+      page?: number;
+      limit?: number;
+      sortOrder?: 'asc' | 'desc';
+    },
+    actorId: string,
+  ) {
     if (!Types.ObjectId.isValid(query.entityId)) {
       throw new BadRequestException('Invalid entityId');
     }
 
-    const filter: FilterQuery<StoredDocument> = {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'document' },
+      );
+    }
+
+    let filter: FilterQuery<StoredDocument> = {
       entityType: query.entityType.toLowerCase(),
       entityId: new Types.ObjectId(query.entityId),
     };
@@ -356,6 +400,11 @@ export class DocumentsService {
         $in: [DocumentStatus.Active, DocumentStatus.PendingUpload],
       };
     }
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -378,8 +427,14 @@ export class DocumentsService {
     );
   }
 
-  async getById(documentId: string) {
+  async getById(documentId: string, actorId: string) {
     const doc = await this.requireDocument(documentId);
+    await this.projectScope.assertOptionalProjectAccess(
+      actorId,
+      doc.projectId ? String(doc.projectId) : null,
+      'read',
+      { resourceType: 'document', resourceId: documentId },
+    );
     return createSuccessResponse(
       toPublicDocument(doc),
       'Document fetched',

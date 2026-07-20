@@ -12,10 +12,12 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { ContractorAgreementsService } from './contractor-agreements.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   AmendContractorAgreementDto,
   ApproveContractorAgreementDto,
   CreateContractorAgreementDto,
+  DisburseMobilisationAdvanceDto,
   ListContractorAgreementsQueryDto,
   ListExpiryAlertsQueryDto,
   RejectContractorAgreementDto,
@@ -23,6 +25,11 @@ import {
   UpdateContractorAgreementDto,
 } from './dto/contractor-agreement.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'contractor-agreement', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Contractor Agreements')
 @ApiBearerAuth()
 @Controller('contractor-agreements')
@@ -44,8 +51,11 @@ export class ContractorAgreementsController {
   @Get()
   @RequirePermissions('contractor_agreement.view')
   @ApiOperation({ summary: 'List contractor agreements' })
-  list(@Query() query: ListContractorAgreementsQueryDto) {
-    return this.agreementsService.list(query);
+  list(
+    @Query() query: ListContractorAgreementsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.agreementsService.list(query, actor.id);
   }
 
   @Get('expiry-alerts')
@@ -85,8 +95,8 @@ export class ContractorAgreementsController {
   @Get(':id')
   @RequirePermissions('contractor_agreement.view')
   @ApiOperation({ summary: 'Get contractor agreement' })
-  getById(@Param('id') id: string) {
-    return this.agreementsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.agreementsService.getById(id, actor.id);
   }
 
   @Patch(':id')
@@ -151,5 +161,19 @@ export class ContractorAgreementsController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.agreementsService.terminate(id, dto, actor.id);
+  }
+
+  @Post(':id/disburse-advance')
+  @RequirePermissions('contractor_agreement.manage')
+  @ApiOperation({
+    summary:
+      'Disburse mobilisation advance (Dr Contractor Advance / Cr Bank) for an active agreement',
+  })
+  disburseAdvance(
+    @Param('id') id: string,
+    @Body() dto: DisburseMobilisationAdvanceDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.agreementsService.disburseMobilisationAdvance(id, dto, actor.id);
   }
 }

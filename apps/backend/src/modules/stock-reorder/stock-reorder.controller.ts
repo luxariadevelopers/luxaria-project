@@ -9,7 +9,12 @@ import {
 import { StockReorderScheduler } from './stock-reorder.scheduler';
 import { StockReorderService } from './stock-reorder.service';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  operation: 'read',
+})
 @ApiTags('Stock Reorder')
 @ApiBearerAuth()
 @Controller('stock-reorder')

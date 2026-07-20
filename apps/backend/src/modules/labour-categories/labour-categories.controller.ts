@@ -21,7 +21,9 @@ import {
   UpdateLabourCategoryRateDto,
 } from './dto/labour-category.dto';
 import { LabourCategoriesService } from './labour-categories.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Labour Categories')
 @ApiBearerAuth()
 @Controller('labour-categories')

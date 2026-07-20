@@ -15,6 +15,7 @@ import {
 import { MaterialStockTransaction } from '../material-master/schemas/material-stock-transaction.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
 import type {
   ApprovePurchaseRequestDto,
@@ -52,9 +53,16 @@ export class PurchaseRequestsService {
     private readonly stockTxnModel: Model<MaterialStockTransaction>,
     @InjectModel(Project.name) private readonly projectModel: Model<Project>,
     private readonly numberingService: NumberingService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreatePurchaseRequestDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'purchase-request' },
+    );
     await this.requireProject(dto.projectId);
     const requiredByDate = this.assertRequiredByDate(dto.requiredByDate);
     const built = await this.buildItems(dto.items, dto.projectId);
@@ -89,7 +97,7 @@ export class PurchaseRequestsService {
   }
 
   async update(id: string, dto: UpdatePurchaseRequestDto, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     this.assertEditable(row);
 
     if (dto.projectId && dto.projectId !== String(row.projectId)) {
@@ -123,16 +131,24 @@ export class PurchaseRequestsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireRequest(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireRequest(id, actorId, 'read');
     return createSuccessResponse(
       toPublicPurchaseRequest(row),
       'Purchase request fetched',
     );
   }
 
-  async list(query: ListPurchaseRequestsQueryDto) {
-    const filter: FilterQuery<PurchaseRequest> = {};
+  async list(query: ListPurchaseRequestsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'purchase-request' },
+      );
+    }
+    let filter: FilterQuery<PurchaseRequest> = {};
     if (query.projectId) filter.projectId = new Types.ObjectId(query.projectId);
     if (query.status) filter.status = query.status;
     if (query.priority) filter.priority = query.priority;
@@ -146,6 +162,11 @@ export class PurchaseRequestsService {
         { justification: { $regex: search, $options: 'i' } },
       ];
     }
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -169,7 +190,7 @@ export class PurchaseRequestsService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (
       row.status !== PurchaseRequestStatus.Draft &&
       row.status !== PurchaseRequestStatus.Returned
@@ -200,7 +221,7 @@ export class PurchaseRequestsService {
   }
 
   async review(id: string, dto: ReviewPurchaseRequestDto, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (row.status !== PurchaseRequestStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted requests can be marked reviewed',
@@ -225,7 +246,7 @@ export class PurchaseRequestsService {
    * Header becomes Approved when at least one line has approvedQuantity > 0.
    */
   async approve(id: string, dto: ApprovePurchaseRequestDto, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (row.status !== PurchaseRequestStatus.Reviewed) {
       throw new BadRequestException(
         'Approval required after review — only reviewed requests can be approved',
@@ -301,7 +322,7 @@ export class PurchaseRequestsService {
   }
 
   async reject(id: string, dto: RejectPurchaseRequestDto, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (
       row.status !== PurchaseRequestStatus.Submitted &&
       row.status !== PurchaseRequestStatus.Reviewed
@@ -334,7 +355,7 @@ export class PurchaseRequestsService {
     dto: ReturnPurchaseRequestDto,
     actorId: string,
   ) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (
       row.status !== PurchaseRequestStatus.Submitted &&
       row.status !== PurchaseRequestStatus.Reviewed
@@ -358,7 +379,7 @@ export class PurchaseRequestsService {
   }
 
   async startSourcing(id: string, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (row.status !== PurchaseRequestStatus.Approved) {
       throw new BadRequestException(
         'Only approved requests can move to sourcing',
@@ -375,7 +396,7 @@ export class PurchaseRequestsService {
   }
 
   async close(id: string, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (
       row.status !== PurchaseRequestStatus.Sourcing &&
       row.status !== PurchaseRequestStatus.Approved
@@ -395,7 +416,7 @@ export class PurchaseRequestsService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireRequest(id);
+    const row = await this.requireRequest(id, actorId, 'update');
     if (
       row.status === PurchaseRequestStatus.Closed ||
       row.status === PurchaseRequestStatus.Cancelled
@@ -627,13 +648,26 @@ export class PurchaseRequestsService {
     return date;
   }
 
-  private async requireRequest(id: string) {
+  private async requireRequest(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid purchase request id');
     }
     const row = await this.requestModel.findById(id).exec();
     if (!row) {
       throw new NotFoundException('Purchase request not found');
+    }
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'purchase-request', resourceId: id },
+      );
     }
     return row;
   }

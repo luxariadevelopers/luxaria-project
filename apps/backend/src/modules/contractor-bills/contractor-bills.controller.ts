@@ -23,7 +23,13 @@ import {
   WorkflowNoteDto,
 } from './dto/contractor-bill.dto';
 import { ContractorBillsService } from './contractor-bills.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'contractor-bill', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Contractor Running Bills')
 @ApiBearerAuth()
 @Controller('contractor-bills')
@@ -43,15 +49,18 @@ export class ContractorBillsController {
   @Get()
   @RequirePermissions('running_bill.view')
   @ApiOperation({ summary: 'List contractor running bills' })
-  list(@Query() query: ListContractorBillsQueryDto) {
-    return this.billsService.list(query);
+  list(
+    @Query() query: ListContractorBillsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.billsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('running_bill.view')
   @ApiOperation({ summary: 'Get contractor running bill by id' })
-  getById(@Param('id') id: string) {
-    return this.billsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.billsService.getById(id, actor.id);
   }
 
   @Patch(':id')

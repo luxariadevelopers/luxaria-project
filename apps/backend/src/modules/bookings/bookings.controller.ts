@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { BookingsService } from './bookings.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   ApproveBookingDiscountDto,
   CancelBookingDto,
@@ -22,6 +23,11 @@ import {
   UpdateBookingDto,
 } from './dto/booking.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'booking', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Bookings')
 @ApiBearerAuth()
 @Controller('bookings')
@@ -38,8 +44,11 @@ export class BookingsController {
   @Get()
   @RequirePermissions('booking.view')
   @ApiOperation({ summary: 'List / search bookings' })
-  list(@Query() query: ListBookingsQueryDto) {
-    return this.bookingsService.list(query);
+  list(
+    @Query() query: ListBookingsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.bookingsService.list(query, actor.id);
   }
 
   @Post('jobs/expire-holds')
@@ -52,8 +61,8 @@ export class BookingsController {
   @Get(':id')
   @RequirePermissions('booking.view')
   @ApiOperation({ summary: 'Get booking by id' })
-  getById(@Param('id') id: string) {
-    return this.bookingsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.bookingsService.getById(id, actor.id);
   }
 
   @Patch(':id')

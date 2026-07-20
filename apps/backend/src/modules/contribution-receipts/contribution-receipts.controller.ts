@@ -32,6 +32,7 @@ import {
   CreateContributionReceiptDto,
 } from './dto/create-contribution-receipt.dto';
 import { ContributionReceiptStatus } from './schemas/contribution-receipt.schema';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
 const DOC_UPLOAD_DIR = join(process.cwd(), 'uploads', 'contribution-receipts');
 
@@ -42,6 +43,11 @@ type UploadedDoc = {
   size: number;
 };
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'contribution-receipt', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Contribution Receipts')
 @ApiBearerAuth()
 @Controller('projects/:projectId/contribution-receipts')
@@ -76,8 +82,9 @@ export class ContributionReceiptsController {
       commitmentId?: string;
       status?: ContributionReceiptStatus;
     },
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.service.list(projectId, query);
+    return this.service.list(projectId, query, actor.id);
   }
 
   @Get('balances')
@@ -96,8 +103,9 @@ export class ContributionReceiptsController {
   getById(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.service.getById(projectId, id);
+    return this.service.getById(projectId, id, actor.id);
   }
 
   @Post(':id/submit')

@@ -27,6 +27,7 @@ import { JournalService } from '../journal/journal.service';
 import { JournalPartyType } from '../journal/schemas/journal-entry.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   PaymentDemand,
   PaymentDemandStatus,
@@ -90,10 +91,17 @@ export class CustomerReceiptsService {
     private readonly numberingService: NumberingService,
     private readonly journalService: JournalService,
     private readonly pdfService: CustomerReceiptPdfService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateCustomerReceiptDto, actorId: string) {
     const booking = await this.requireEligibleBooking(dto.bookingId);
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      String(booking.projectId),
+      'create',
+      { resourceType: 'customer-receipt' },
+    );
     await this.requireCustomer(dto.customerId);
     if (String(booking.customerId) !== dto.customerId) {
       throw new BadRequestException(
@@ -184,7 +192,7 @@ export class CustomerReceiptsService {
   }
 
   async update(id: string, dto: UpdateCustomerReceiptDto, actorId: string) {
-    const row = await this.requireReceipt(id);
+    const row = await this.requireReceipt(id, actorId, 'update');
     if (row.status !== CustomerReceiptStatus.Draft) {
       throw new BadRequestException('Only draft receipts can be updated');
     }
@@ -283,7 +291,7 @@ export class CustomerReceiptsService {
   }
 
   async post(id: string, actorId: string) {
-    const row = await this.requireReceipt(id);
+    const row = await this.requireReceipt(id, actorId, 'update');
     if (row.status !== CustomerReceiptStatus.Draft) {
       throw new BadRequestException('Only draft receipts can be posted');
     }
@@ -331,7 +339,7 @@ export class CustomerReceiptsService {
   }
 
   async cancel(id: string, dto: CancelCustomerReceiptDto, actorId: string) {
-    const row = await this.requireReceipt(id);
+    const row = await this.requireReceipt(id, actorId, 'update');
     if (row.status !== CustomerReceiptStatus.Draft) {
       throw new BadRequestException(
         'Only draft receipts can be cancelled (posted receipts require reversal)',
@@ -349,18 +357,26 @@ export class CustomerReceiptsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireReceipt(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireReceipt(id, actorId, 'read');
     return createSuccessResponse(
       toPublicCustomerReceipt(row),
       'Customer receipt retrieved',
     );
   }
 
-  async list(query: ListCustomerReceiptsQueryDto) {
+  async list(query: ListCustomerReceiptsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'customer-receipt' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<CustomerReceipt> = {};
+    let filter: FilterQuery<CustomerReceipt> = {};
 
     if (query.status) filter.status = query.status;
     if (query.sourceType) filter.sourceType = query.sourceType;
@@ -382,7 +398,12 @@ export class CustomerReceiptsService {
     }
 
     const sortOrder: SortOrder = query.sortOrder === 'asc' ? 1 : -1;
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.receiptModel
         .find(filter)
         .sort({ receiptDate: sortOrder })
@@ -400,7 +421,7 @@ export class CustomerReceiptsService {
   }
 
   async regeneratePdf(id: string, actorId: string) {
-    const row = await this.requireReceipt(id);
+    const row = await this.requireReceipt(id, actorId, 'update');
     if (row.status !== CustomerReceiptStatus.Posted) {
       throw new BadRequestException(
         'PDF can be regenerated for posted receipts only',
@@ -713,12 +734,25 @@ export class CustomerReceiptsService {
     return date;
   }
 
-  private async requireReceipt(id: string) {
+  private async requireReceipt(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Customer receipt not found');
     }
     const row = await this.receiptModel.findById(id).exec();
     if (!row) throw new NotFoundException('Customer receipt not found');
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'customer-receipt', resourceId: id },
+      );
+    }
     return row;
   }
 

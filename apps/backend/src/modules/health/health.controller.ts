@@ -2,9 +2,11 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { HealthService } from './health.service';
 
+@GlobalScope()
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {

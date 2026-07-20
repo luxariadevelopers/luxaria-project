@@ -16,7 +16,9 @@ import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { MaterialsService } from './materials.service';
 import { MaterialStatus, MaterialUnit } from './schemas/material.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Materials')
 @ApiBearerAuth()
 @Controller('materials')

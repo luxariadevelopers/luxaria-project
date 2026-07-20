@@ -21,7 +21,9 @@ import {
 } from './dto/expense-category.dto';
 import { ExpenseCategoriesService } from './expense-categories.service';
 import { ExpenseCategoryStatus } from './schemas/expense-category.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Expense Categories')
 @ApiBearerAuth()
 @Controller('expense-categories')

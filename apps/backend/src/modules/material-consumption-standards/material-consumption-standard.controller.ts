@@ -24,7 +24,12 @@ import {
   UpdateMaterialConsumptionStandardDto,
 } from './dto/material-consumption-standard.dto';
 import { MaterialConsumptionStandardService } from './material-consumption-standard.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  operation: 'read',
+})
 @ApiTags('Material Consumption Standards')
 @ApiBearerAuth()
 @Controller('material-consumption-standards')

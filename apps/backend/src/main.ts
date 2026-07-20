@@ -73,6 +73,7 @@ async function bootstrap() {
       'X-Request-Id',
       'X-Device-Id',
       'Idempotency-Key',
+      'X-Project-Id',
     ],
     exposedHeaders: ['X-Request-Id'],
     maxAge: 600,

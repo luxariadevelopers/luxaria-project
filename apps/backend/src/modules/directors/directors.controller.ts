@@ -35,6 +35,7 @@ import { ShareholdingService } from './shareholding.service';
 import { DirectorDocumentCategory } from './schemas/director-document.schema';
 import { DirectorStatus } from './schemas/director.schema';
 import { ShareholdingChangeStatus } from './schemas/shareholding-change-request.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
 const DOC_UPLOAD_DIR = join(process.cwd(), 'uploads', 'directors');
 
@@ -45,6 +46,7 @@ type UploadedDoc = {
   size: number;
 };
 
+@GlobalScope()
 @ApiTags('Directors & Shareholding')
 @ApiBearerAuth()
 @Controller()

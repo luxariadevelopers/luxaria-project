@@ -16,4 +16,7 @@ module.exports = {
   testEnvironment: 'node',
   testTimeout: 180_000,
   displayName: 'backend-e2e',
+  moduleNameMapper: {
+    '^expo-server-sdk$': '<rootDir>/test/mocks/expo-server-sdk.ts',
+  },
 };

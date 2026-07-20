@@ -26,6 +26,10 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequireProjectAccess } from '../project-access/decorators/require-project-access.decorator';
+import {
+  GlobalScope,
+  ProjectScoped,
+} from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AssignDirectorsDto } from './dto/assign-directors.dto';
@@ -49,6 +53,11 @@ type UploadedDoc = {
   size: number;
 };
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'project', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Projects')
 @ApiBearerAuth()
 @Controller('projects')
@@ -59,6 +68,7 @@ export class ProjectsController {
   ) {}
 
   @Post()
+  @GlobalScope()
   @RequirePermissions('project.create')
   @ApiOperation({ summary: 'Create project' })
   create(@Body() dto: CreateProjectDto, @CurrentUser() actor: AuthUser) {
@@ -66,6 +76,7 @@ export class ProjectsController {
   }
 
   @Get()
+  @ProjectScoped({ mode: 'filter', operation: 'read', required: false })
   @RequirePermissions('project.view')
   @ApiOperation({ summary: 'List and filter projects (scoped by project access)' })
   list(@Query() query: ListProjectsQueryDto, @CurrentUser() actor: AuthUser) {

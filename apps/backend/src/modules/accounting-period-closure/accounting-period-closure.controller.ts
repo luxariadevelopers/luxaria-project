@@ -4,6 +4,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AccountingPeriodClosureService } from './accounting-period-closure.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import {
   ApprovePeriodReopenDto,
   CreateAccountingPeriodDto,
@@ -12,6 +13,7 @@ import {
   RequestPeriodReopenDto,
 } from './dto/accounting-period-closure.dto';
 
+@GlobalScope()
 @ApiTags('Accounting Period Closure')
 @ApiBearerAuth()
 @Controller('accounting-period-closure')

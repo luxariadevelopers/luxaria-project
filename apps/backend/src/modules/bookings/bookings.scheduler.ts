@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import { BookingsService } from './bookings.service';
 
 @Injectable()
@@ -25,7 +26,13 @@ export class BookingsScheduler {
     ) {
       return;
     }
-    this.logger.log('Scheduled booking hold expiry starting');
+    const system = createSystemContext({
+      jobName: 'booking-hold-expiry',
+      reason: 'Expire timed-out booking holds across authorised projects',
+    });
+    this.logger.log(
+      `Scheduled booking hold expiry starting system=${system.jobName}`,
+    );
     const result = await this.bookingsService.expireHolds();
     this.logger.log(
       `Booking hold expiry done: expired=${result.data?.expired ?? 0}`,

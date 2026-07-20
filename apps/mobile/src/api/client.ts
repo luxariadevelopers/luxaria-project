@@ -54,9 +54,19 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  const projectId = tokenStorage.getSelectedProjectId();
-  if (projectId) {
-    config.headers['X-Project-Id'] = projectId;
+  // Preserve an explicit per-request project (offline sync uses txn.projectId).
+  // Never overwrite a queued operation's project with the UI selection.
+  const existingHeader = config.headers['X-Project-Id'];
+  const hasExplicitProject =
+    typeof existingHeader === 'string'
+      ? existingHeader.trim().length > 0
+      : Array.isArray(existingHeader) &&
+        existingHeader.some((v) => String(v).trim().length > 0);
+  if (!hasExplicitProject) {
+    const projectId = tokenStorage.getSelectedProjectId();
+    if (projectId) {
+      config.headers['X-Project-Id'] = projectId;
+    }
   }
   return config;
 });

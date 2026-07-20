@@ -10,7 +10,12 @@ import {
 } from './dto/finance-dashboard-query.dto';
 import { FinanceDashboardExportService } from './finance-dashboard-export.service';
 import { FinanceDashboardService } from './finance-dashboard.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  operation: 'read',
+})
 @ApiTags('Finance Dashboard')
 @ApiBearerAuth()
 @Controller('finance-dashboard')

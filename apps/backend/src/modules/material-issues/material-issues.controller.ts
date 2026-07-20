@@ -19,7 +19,13 @@ import {
   UpdateMaterialIssueDto,
 } from './dto/material-issue.dto';
 import { MaterialIssuesService } from './material-issues.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'material-issue', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Material Issues')
 @ApiBearerAuth()
 @Controller('material-issues')
@@ -39,15 +45,18 @@ export class MaterialIssuesController {
   @Get()
   @RequirePermissions('stock.view')
   @ApiOperation({ summary: 'List material issues' })
-  list(@Query() query: ListMaterialIssuesQueryDto) {
-    return this.materialIssuesService.list(query);
+  list(
+    @Query() query: ListMaterialIssuesQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.materialIssuesService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('stock.view')
   @ApiOperation({ summary: 'Get material issue' })
-  getById(@Param('id') id: string) {
-    return this.materialIssuesService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.materialIssuesService.getById(id, actor.id);
   }
 
   @Patch(':id')

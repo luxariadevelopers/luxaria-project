@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -28,7 +29,8 @@ import { Booking, BookingSchema } from './schemas/booking.schema';
       { name: Role.name, schema: RoleSchema },
     ]),
     UnitsModule,
-    ApprovalsModule,
+    ApprovalsModule,    ProjectAccessModule,
+
     RbacModule,
   ],
   controllers: [BookingsController],

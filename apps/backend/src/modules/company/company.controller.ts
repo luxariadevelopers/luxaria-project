@@ -35,6 +35,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 import { UpdateStatutoryDto } from './dto/update-statutory.dto';
 import { CompanyAddressType } from './schemas/company-address-history.schema';
 import { CompanyCapitalType } from './schemas/company-capital-history.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
 const LOGO_UPLOAD_DIR = join(process.cwd(), 'uploads', 'company');
 
@@ -44,6 +45,7 @@ type UploadedLogo = {
   mimetype: string;
 };
 
+@GlobalScope()
 @ApiTags('Company')
 @ApiBearerAuth()
 @Controller('companies')

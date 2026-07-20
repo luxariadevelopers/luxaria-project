@@ -23,7 +23,13 @@ import {
   VerifyWorkMeasurementDto,
 } from './dto/work-measurement.dto';
 import { WorkMeasurementService } from './work-measurement.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'work-measurement', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Work Measurements')
 @ApiBearerAuth()
 @Controller('work-measurements')
@@ -45,15 +51,18 @@ export class WorkMeasurementController {
   @Get()
   @RequirePermissions('measurement.view')
   @ApiOperation({ summary: 'List work measurements' })
-  list(@Query() query: ListWorkMeasurementsQueryDto) {
-    return this.service.list(query);
+  list(
+    @Query() query: ListWorkMeasurementsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.service.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('measurement.view')
   @ApiOperation({ summary: 'Get work measurement by id' })
-  getById(@Param('id') id: string) {
-    return this.service.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.service.getById(id, actor.id);
   }
 
   @Patch(':id')

@@ -24,7 +24,13 @@ import {
   UpdateGoodsReceiptDto,
 } from './dto/goods-receipt.dto';
 import { GoodsReceiptsService } from './goods-receipts.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'goods-receipt', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Goods Receipts')
 @ApiBearerAuth()
 @Controller('goods-receipts')
@@ -52,15 +58,18 @@ export class GoodsReceiptsController {
   @Get()
   @RequirePermissions('grn.create')
   @ApiOperation({ summary: 'List goods receipts' })
-  list(@Query() query: ListGoodsReceiptsQueryDto) {
-    return this.goodsReceiptsService.list(query);
+  list(
+    @Query() query: ListGoodsReceiptsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.goodsReceiptsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('grn.create')
   @ApiOperation({ summary: 'Get goods receipt' })
-  getById(@Param('id') id: string) {
-    return this.goodsReceiptsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.goodsReceiptsService.getById(id, actor.id);
   }
 
   @Patch(':id')

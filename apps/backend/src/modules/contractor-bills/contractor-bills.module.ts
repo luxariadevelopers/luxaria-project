@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Account,
@@ -45,6 +46,7 @@ import {
     RbacModule,
     JournalModule,
     FinancialYearModule,
+    ProjectAccessModule,
   ],
   controllers: [ContractorBillsController],
   providers: [ContractorBillsService],

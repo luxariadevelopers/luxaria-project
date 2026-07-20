@@ -21,7 +21,13 @@ import {
   RevisePaymentScheduleDto,
 } from './dto/payment-schedule.dto';
 import { PaymentSchedulesService } from './payment-schedules.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'payment-schedule', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Payment Schedules')
 @ApiBearerAuth()
 @Controller('payment-schedules')

@@ -3,7 +3,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AuditLogService } from './audit-log.service';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Audit Log')
 @ApiBearerAuth()
 @Controller('audit-logs')

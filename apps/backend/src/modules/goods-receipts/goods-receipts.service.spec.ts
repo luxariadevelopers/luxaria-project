@@ -146,6 +146,18 @@ describe('GoodsReceiptsService', () => {
       get: jest.fn().mockReturnValue(5),
     } as unknown as ConfigService<never, true>;
 
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a: string, f: unknown) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
     service = new GoodsReceiptsService(
       grnModel,
       poModel,
@@ -155,6 +167,7 @@ describe('GoodsReceiptsService', () => {
       { recordReceipt } as never,
       new IdempotencyService(idempotencyModel),
       configService,
+      mockProjectScope,
     );
   }, 60_000);
 

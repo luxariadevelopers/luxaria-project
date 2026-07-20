@@ -25,6 +25,7 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { BankStatementLineStatus } from './bank-reconciliation.constants';
 import { BankReconciliationService } from './bank-reconciliation.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import {
   AutoMatchDto,
   CreateReconciliationSessionDto,
@@ -34,6 +35,7 @@ import {
   UpdateColumnMappingDto,
 } from './dto/bank-reconciliation.dto';
 
+@GlobalScope()
 @ApiTags('Bank Reconciliation')
 @ApiBearerAuth()
 @Controller('bank-reconciliation')

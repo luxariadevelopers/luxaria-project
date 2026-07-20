@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { BoqExcelService } from './boq-excel.service';
 import { BoqController } from './boq.controller';
@@ -27,6 +28,7 @@ import {
       { name: BoqVersion.name, schema: BoqVersionSchema },
       { name: Project.name, schema: ProjectSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [BoqController],
   providers: [BoqService, BoqExcelService],

@@ -10,6 +10,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { DocumentsService } from './documents.service';
 import {
@@ -18,6 +19,11 @@ import {
 } from './dto/presign-upload.dto';
 import { DocumentStatus } from './schemas/document.schema';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'document', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Documents (S3)')
 @ApiBearerAuth()
 @Controller('documents')
@@ -52,8 +58,8 @@ export class DocumentsController {
   @Get(':id/download-url')
   @RequirePermissions('document.download')
   @ApiOperation({ summary: 'Generate private S3 presigned download URL' })
-  downloadUrl(@Param('id') id: string) {
-    return this.documentsService.createPresignedDownload(id);
+  downloadUrl(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.documentsService.createPresignedDownload(id, actor.id);
   }
 
   @Post(':id/replace')
@@ -88,14 +94,15 @@ export class DocumentsController {
       projectId?: string;
       status?: DocumentStatus;
     },
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.documentsService.listEntityDocuments(query);
+    return this.documentsService.listEntityDocuments(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('document.view')
   @ApiOperation({ summary: 'View document metadata' })
-  getById(@Param('id') id: string) {
-    return this.documentsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.documentsService.getById(id, actor.id);
   }
 }

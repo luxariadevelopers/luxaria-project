@@ -25,6 +25,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { BoqService } from './boq.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   CreateBoqBlockDto,
   CreateBoqFloorDto,
@@ -51,6 +52,11 @@ type UploadedExcel = {
   originalname?: string;
 };
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'boq', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('BOQ')
 @ApiBearerAuth()
 @Controller('boq')
@@ -73,8 +79,11 @@ export class BoqController {
   @Get('projects/:projectId/blocks')
   @RequirePermissions('boq.view')
   @ApiOperation({ summary: 'List blocks for a project' })
-  listBlocks(@Param('projectId') projectId: string) {
-    return this.boqService.listBlocks(projectId);
+  listBlocks(
+    @Param('projectId') projectId: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.boqService.listBlocks(projectId, actor.id);
   }
 
   @Patch('blocks/:id')
@@ -151,8 +160,11 @@ export class BoqController {
   @ApiOperation({
     summary: 'Full Project → Block → Floor → Work Category → Item tree',
   })
-  getHierarchy(@Param('projectId') projectId: string) {
-    return this.boqService.getHierarchy(projectId);
+  getHierarchy(
+    @Param('projectId') projectId: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.boqService.getHierarchy(projectId, actor.id);
   }
 
 
@@ -174,15 +186,21 @@ export class BoqController {
   @Get('projects/:projectId/versions')
   @RequirePermissions('boq.view')
   @ApiOperation({ summary: 'List BOQ versions for a project' })
-  listVersions(@Param('projectId') projectId: string) {
-    return this.boqService.listVersions(projectId);
+  listVersions(
+    @Param('projectId') projectId: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.boqService.listVersions(projectId, actor.id);
   }
 
   @Get('projects/:projectId/versions/active')
   @RequirePermissions('boq.view')
   @ApiOperation({ summary: 'Get the single active BOQ version' })
-  getActiveVersion(@Param('projectId') projectId: string) {
-    return this.boqService.getActiveVersion(projectId);
+  getActiveVersion(
+    @Param('projectId') projectId: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.boqService.getActiveVersion(projectId, actor.id);
   }
 
   @Get('projects/:projectId/versions/compare')
@@ -191,19 +209,21 @@ export class BoqController {
   compareVersions(
     @Param('projectId') projectId: string,
     @Query() query: CompareBoqVersionsQueryDto,
+    @CurrentUser() actor: AuthUser,
   ) {
     return this.boqService.compareVersions(
       projectId,
       query.fromVersionId,
       query.toVersionId,
+      actor.id,
     );
   }
 
   @Get('versions/:id')
   @RequirePermissions('boq.view')
   @ApiOperation({ summary: 'Get BOQ version' })
-  getVersion(@Param('id') id: string) {
-    return this.boqService.getVersion(id);
+  getVersion(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.boqService.getVersion(id, actor.id);
   }
 
   @Patch('versions/:id')
@@ -281,15 +301,16 @@ export class BoqController {
   listItems(
     @Param('projectId') projectId: string,
     @Query() query: ListBoqItemsQueryDto,
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.boqService.listItems(projectId, query);
+    return this.boqService.listItems(projectId, query, actor.id);
   }
 
   @Get('items/:id')
   @RequirePermissions('boq.view')
   @ApiOperation({ summary: 'Get BOQ item' })
-  getItem(@Param('id') id: string) {
-    return this.boqService.getItem(id);
+  getItem(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.boqService.getItem(id, actor.id);
   }
 
   @Patch('items/:id')

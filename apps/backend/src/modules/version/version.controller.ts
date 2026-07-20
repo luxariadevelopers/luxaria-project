@@ -4,7 +4,9 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import type { AppConfig } from '../../config/configuration';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Version')
 @Controller('version')
 export class VersionController {

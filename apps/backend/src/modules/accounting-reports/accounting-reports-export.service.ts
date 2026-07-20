@@ -15,8 +15,13 @@ export class AccountingReportsExportService {
     reportType: AccountingReportType,
     query: AccountingReportsQueryDto,
     format: AccountingExportFormat,
+    actorId: string,
   ): Promise<{ filename: string; contentType: string; buffer: Buffer }> {
-    const result = await this.reportsService.getReport(reportType, query);
+    const result = await this.reportsService.getReport(
+      reportType,
+      query,
+      actorId,
+    );
     const payload = result.data as AccountingReportPayload;
     const stamp = new Date().toISOString().slice(0, 10);
     const baseName = `accounting-${reportType}-${stamp}`;

@@ -16,6 +16,7 @@ import {
 } from '../boq/schemas/boq.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
 import {
   CreateWorkMeasurementDto,
@@ -58,9 +59,16 @@ export class WorkMeasurementService {
     @InjectModel(BoqVersion.name)
     private readonly boqVersionModel: Model<BoqVersion>,
     private readonly numberingService: NumberingService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateWorkMeasurementDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'work-measurement' },
+    );
     await this.requireProject(dto.projectId);
     const boq = await this.requireMeasurableBoqItem(
       dto.boqItemId,
@@ -134,7 +142,7 @@ export class WorkMeasurementService {
   }
 
   async update(id: string, dto: UpdateWorkMeasurementDto, actorId: string) {
-    const row = await this.requireMeasurement(id);
+    const row = await this.requireMeasurement(id, actorId, 'update');
     if (
       row.status !== WorkMeasurementStatus.Draft &&
       row.status !== WorkMeasurementStatus.Rejected
@@ -228,7 +236,7 @@ export class WorkMeasurementService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requireMeasurement(id);
+    const row = await this.requireMeasurement(id, actorId, 'update');
     if (
       row.status !== WorkMeasurementStatus.Draft &&
       row.status !== WorkMeasurementStatus.Rejected
@@ -267,7 +275,7 @@ export class WorkMeasurementService {
     dto: VerifyWorkMeasurementDto,
     actorId: string,
   ) {
-    const row = await this.requireMeasurement(id);
+    const row = await this.requireMeasurement(id, actorId, 'update');
     if (row.status !== WorkMeasurementStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted measurements can be verified',
@@ -297,7 +305,7 @@ export class WorkMeasurementService {
   }
 
   async reject(id: string, dto: RejectWorkMeasurementDto, actorId: string) {
-    const row = await this.requireMeasurement(id);
+    const row = await this.requireMeasurement(id, actorId, 'update');
     if (row.status !== WorkMeasurementStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted measurements can be rejected',
@@ -325,7 +333,7 @@ export class WorkMeasurementService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireMeasurement(id);
+    const row = await this.requireMeasurement(id, actorId, 'update');
     if (
       row.status !== WorkMeasurementStatus.Draft &&
       row.status !== WorkMeasurementStatus.Rejected
@@ -343,16 +351,24 @@ export class WorkMeasurementService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireMeasurement(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireMeasurement(id, actorId, 'read');
     return createSuccessResponse(
       toPublicWorkMeasurement(row),
       'Work measurement retrieved',
     );
   }
 
-  async list(query: ListWorkMeasurementsQueryDto) {
-    const filter: Record<string, unknown> = {};
+  async list(query: ListWorkMeasurementsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'work-measurement' },
+      );
+    }
+    let filter: Record<string, unknown> = {};
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
     }
@@ -379,6 +395,11 @@ export class WorkMeasurementService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const [rows, total] = await Promise.all([
       this.measurementModel
@@ -524,13 +545,26 @@ export class WorkMeasurementService {
     return item;
   }
 
-  private async requireMeasurement(id: string): Promise<WorkMeasurementDocument> {
+  private async requireMeasurement(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ): Promise<WorkMeasurementDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid measurement id');
     }
     const row = await this.measurementModel.findById(id).exec();
     if (!row) {
       throw new NotFoundException('Work measurement not found');
+    }
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'work-measurement', resourceId: id },
+      );
     }
     return row;
   }

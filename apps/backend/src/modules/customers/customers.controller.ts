@@ -35,6 +35,7 @@ import { VerifyCustomerKycDto } from './dto/verify-kyc.dto';
 import { CustomersService } from './customers.service';
 import { assertAllowedCustomerDocumentMime } from './customers.validation';
 import { CustomerDocumentCategory } from './schemas/customer-document.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import {
   CustomerFundingType,
   CustomerKycStatus,
@@ -51,6 +52,7 @@ type UploadedDoc = {
   size: number;
 };
 
+@GlobalScope()
 @ApiTags('Customers')
 @ApiBearerAuth()
 @Controller('customers')

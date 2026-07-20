@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MaterialMasterModule } from '../material-master/material-master.module';
 import {
@@ -26,7 +27,8 @@ import {
       },
       { name: Project.name, schema: ProjectSchema },
     ]),
-    MaterialMasterModule,
+    MaterialMasterModule,    ProjectAccessModule,
+
     RbacModule,
   ],
   controllers: [PurchaseRequestsController],

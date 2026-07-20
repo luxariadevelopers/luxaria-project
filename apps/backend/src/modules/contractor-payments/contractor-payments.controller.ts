@@ -21,7 +21,13 @@ import {
   UpdateContractorPaymentDto,
 } from './dto/contractor-payment.dto';
 import { ContractorPaymentsService } from './contractor-payments.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'contractor-payment', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Contractor Payments')
 @ApiBearerAuth()
 @Controller('contractor-payments')
@@ -43,15 +49,18 @@ export class ContractorPaymentsController {
   @Get()
   @RequirePermissions('payment.view')
   @ApiOperation({ summary: 'List contractor payments' })
-  list(@Query() query: ListContractorPaymentsQueryDto) {
-    return this.paymentsService.list(query);
+  list(
+    @Query() query: ListContractorPaymentsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.paymentsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('payment.view')
   @ApiOperation({ summary: 'Get contractor payment by id' })
-  getById(@Param('id') id: string) {
-    return this.paymentsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.paymentsService.getById(id, actor.id);
   }
 
   @Patch(':id')

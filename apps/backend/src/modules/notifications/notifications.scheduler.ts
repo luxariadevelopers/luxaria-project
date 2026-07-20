@@ -5,6 +5,7 @@ import { ModuleRef } from '@nestjs/core';
 import { Cron } from '@nestjs/schedule';
 import type { Queue } from 'bullmq';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import {
   NOTIFICATION_JOB_PROCESS_SCHEDULED,
   NOTIFICATIONS_QUEUE,
@@ -26,7 +27,14 @@ export class NotificationsScheduler {
     name: 'notifications-process-scheduled',
   })
   async handleScheduledCron(): Promise<void> {
-    this.logger.debug('Scheduled notification sweep starting');
+    const system = createSystemContext({
+      jobName: 'notifications-process-scheduled',
+      reason:
+        'Process due scheduled notifications; iterates all active projects/companies explicitly in service',
+    });
+    this.logger.log(
+      `Scheduled notification sweep starting system=${system.jobName}`,
+    );
     await this.enqueueOrProcessScheduled();
   }
 

@@ -28,8 +28,10 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import type { AuthUser } from './types/auth-user.type';
 
+@GlobalScope()
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {

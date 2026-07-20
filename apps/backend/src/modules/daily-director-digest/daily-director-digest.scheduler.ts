@@ -5,6 +5,7 @@ import { ModuleRef } from '@nestjs/core';
 import { Cron } from '@nestjs/schedule';
 import type { Queue } from 'bullmq';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import {
   DIRECTOR_DIGEST_JOB_RUN,
   DIRECTOR_DIGEST_QUEUE,
@@ -32,7 +33,14 @@ export class DailyDirectorDigestScheduler {
       return;
     }
 
-    this.logger.log('Scheduled daily director digest starting');
+    const system = createSystemContext({
+      jobName: 'director-digest-run',
+      reason:
+        'Send daily director digest emails; iterates all active projects/companies explicitly in service',
+    });
+    this.logger.log(
+      `Scheduled daily director digest starting system=${system.jobName}`,
+    );
     await this.enqueueOrRun({});
   }
 

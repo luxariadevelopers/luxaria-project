@@ -20,7 +20,9 @@ import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { RemoveProjectsDto } from './dto/remove-projects.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')

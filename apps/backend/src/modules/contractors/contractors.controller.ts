@@ -38,6 +38,7 @@ import {
   ContractorVerificationStatus,
 } from './schemas/contractor.schema';
 import { ContractorsService } from './contractors.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
 const DOC_UPLOAD_DIR = join(process.cwd(), 'uploads', 'contractors');
 
@@ -48,6 +49,7 @@ type UploadedDoc = {
   size: number;
 };
 
+@GlobalScope()
 @ApiTags('Contractors')
 @ApiBearerAuth()
 @Controller('contractors')

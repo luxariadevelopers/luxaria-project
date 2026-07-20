@@ -21,7 +21,13 @@ import {
   UpdatePurchaseRequestDto,
 } from './dto/purchase-request.dto';
 import { PurchaseRequestsService } from './purchase-requests.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'purchase-request', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Purchase Requests')
 @ApiBearerAuth()
 @Controller('purchase-requests')
@@ -38,15 +44,18 @@ export class PurchaseRequestsController {
   @Get()
   @RequirePermissions('purchase.view')
   @ApiOperation({ summary: 'List / search purchase requests' })
-  list(@Query() query: ListPurchaseRequestsQueryDto) {
-    return this.purchaseRequestsService.list(query);
+  list(
+    @Query() query: ListPurchaseRequestsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.purchaseRequestsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('purchase.view')
   @ApiOperation({ summary: 'Get purchase request' })
-  getById(@Param('id') id: string) {
-    return this.purchaseRequestsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.purchaseRequestsService.getById(id, actor.id);
   }
 
   @Patch(':id')

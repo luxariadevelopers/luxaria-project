@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { Material, MaterialSchema } from '../material-master/schemas/material.schema';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import {
   PurchaseRequest,
@@ -36,6 +37,7 @@ import {
     ]),
     ApprovalsModule,
     RbacModule,
+    ProjectAccessModule,
   ],
   controllers: [PurchaseOrdersController],
   providers: [

@@ -198,6 +198,17 @@ describe('ProjectDashboardService', () => {
         PurchaseRequest.name,
         PurchaseRequestSchema,
       ) as Model<PurchaseRequest>,
+      {
+        assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+        assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+        assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+        mergeAuthorisedProjectFilter: jest
+          .fn()
+          .mockImplementation(async (_a, f) => f),
+        findOneForActor: jest.fn(),
+        buildScopedIdFilter: jest.fn(),
+        authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+      } as never,
     );
   });
 

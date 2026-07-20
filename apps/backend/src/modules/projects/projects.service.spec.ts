@@ -85,6 +85,8 @@ describe('ProjectsService', () => {
       assignmentModel,
       unauthorizedModel,
       userModel,
+      projectModel,
+      companyModel,
       permissionsService as never,
     );
 

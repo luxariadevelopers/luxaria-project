@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Material,
@@ -19,6 +20,7 @@ import {
       { name: Material.name, schema: MaterialSchema },
     ]),
     StockLedgerModule,
+    ProjectAccessModule,
   ],
   controllers: [MaterialIssuesController],
   providers: [MaterialIssuesService],

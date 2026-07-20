@@ -10,7 +10,12 @@ import {
   ReverseStockLedgerEntryDto,
 } from './dto/stock-ledger.dto';
 import { StockLedgerService } from './stock-ledger.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  operation: 'read',
+})
 @ApiTags('Stock Ledger')
 @ApiBearerAuth()
 @Controller('stock-ledger')

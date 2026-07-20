@@ -18,7 +18,13 @@ import {
   UpdateStockCountDto,
 } from './dto/stock-count.dto';
 import { StockCountsService } from './stock-counts.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'stock-count', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Stock Counts')
 @ApiBearerAuth()
 @Controller('stock-counts')
@@ -38,15 +44,18 @@ export class StockCountsController {
   @Get()
   @RequirePermissions('stock.view')
   @ApiOperation({ summary: 'List stock counts' })
-  list(@Query() query: ListStockCountsQueryDto) {
-    return this.stockCountsService.list(query);
+  list(
+    @Query() query: ListStockCountsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.stockCountsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('stock.view')
   @ApiOperation({ summary: 'Get stock count' })
-  getById(@Param('id') id: string) {
-    return this.stockCountsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.stockCountsService.getById(id, actor.id);
   }
 
   @Patch(':id')

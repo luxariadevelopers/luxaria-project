@@ -21,7 +21,13 @@ import {
   UpdatePurchaseOrderDto,
 } from './dto/purchase-order.dto';
 import { PurchaseOrdersService } from './purchase-orders.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'purchase-order', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Purchase Orders')
 @ApiBearerAuth()
 @Controller('purchase-orders')
@@ -38,22 +44,25 @@ export class PurchaseOrdersController {
   @Get()
   @RequirePermissions('purchase.view')
   @ApiOperation({ summary: 'List / search purchase orders' })
-  list(@Query() query: ListPurchaseOrdersQueryDto) {
-    return this.purchaseOrdersService.list(query);
+  list(
+    @Query() query: ListPurchaseOrdersQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.purchaseOrdersService.list(query, actor.id);
   }
 
   @Get(':id/balance')
   @RequirePermissions('purchase.view')
   @ApiOperation({ summary: 'Get purchase order open balance' })
-  getBalance(@Param('id') id: string) {
-    return this.purchaseOrdersService.getBalance(id);
+  getBalance(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.purchaseOrdersService.getBalance(id, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('purchase.view')
   @ApiOperation({ summary: 'Get purchase order' })
-  getById(@Param('id') id: string) {
-    return this.purchaseOrdersService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.purchaseOrdersService.getById(id, actor.id);
   }
 
   @Patch(':id')

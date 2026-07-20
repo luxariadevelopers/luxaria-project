@@ -20,7 +20,13 @@ import {
   UpdatePettyCashRequirementDto,
 } from './dto/petty-cash-requirement.dto';
 import { PettyCashRequirementsService } from './petty-cash-requirements.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'petty-cash-requirement', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Petty Cash Requirements')
 @ApiBearerAuth()
 @Controller('petty-cash-requirements')

@@ -30,6 +30,7 @@ import { UpdateInvestorDto } from './dto/update-investor.dto';
 import { VerifyKycDto } from './dto/verify-kyc.dto';
 import { InvestorsService } from './investors.service';
 import { InvestorDocumentCategory } from './schemas/investor-document.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import {
   InvestorKycStatus,
   InvestorStatus,
@@ -45,6 +46,7 @@ type UploadedDoc = {
   size: number;
 };
 
+@GlobalScope()
 @ApiTags('Investors')
 @ApiBearerAuth()
 @Controller('investors')

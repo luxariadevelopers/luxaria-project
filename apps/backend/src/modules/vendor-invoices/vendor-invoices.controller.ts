@@ -19,7 +19,13 @@ import {
   UpdateVendorInvoiceDto,
 } from './dto/vendor-invoice.dto';
 import { VendorInvoicesService } from './vendor-invoices.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'vendor-invoice', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Vendor Invoices')
 @ApiBearerAuth()
 @Controller('vendor-invoices')
@@ -39,15 +45,18 @@ export class VendorInvoicesController {
   @Get()
   @RequirePermissions('vendor_invoice.view')
   @ApiOperation({ summary: 'List vendor invoices' })
-  list(@Query() query: ListVendorInvoicesQueryDto) {
-    return this.vendorInvoicesService.list(query);
+  list(
+    @Query() query: ListVendorInvoicesQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.vendorInvoicesService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('vendor_invoice.view')
   @ApiOperation({ summary: 'Get vendor invoice' })
-  getById(@Param('id') id: string) {
-    return this.vendorInvoicesService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.vendorInvoicesService.getById(id, actor.id);
   }
 
   @Patch(':id')

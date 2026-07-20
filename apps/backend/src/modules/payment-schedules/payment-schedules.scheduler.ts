@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import { PaymentSchedulesService } from './payment-schedules.service';
 
 @Injectable()
@@ -27,7 +28,14 @@ export class PaymentSchedulesScheduler {
     ) {
       return;
     }
-    this.logger.log('Scheduled payment-schedule overdue evaluation starting');
+    const system = createSystemContext({
+      jobName: 'payment-schedule-mark-overdue',
+      reason:
+        'Mark overdue payment schedule lines; iterates all active projects/companies explicitly in service',
+    });
+    this.logger.log(
+      `Scheduled payment-schedule overdue evaluation starting system=${system.jobName}`,
+    );
     const result = await this.paymentSchedulesService.markOverdue();
     this.logger.log(
       `Overdue evaluation done: marked=${result.data?.marked ?? 0}`,

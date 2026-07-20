@@ -7,6 +7,7 @@ import {
   PurchaseOrder,
   PurchaseOrderSchema,
 } from '../purchase-orders/schemas/purchase-order.schema';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { GoodsReceiptsController } from './goods-receipts.controller';
 import { GoodsReceiptsService } from './goods-receipts.service';
@@ -24,6 +25,7 @@ import {
     ]),
     MaterialMasterModule,
     PurchaseOrdersModule,
+    ProjectAccessModule,
     RbacModule,
   ],
   controllers: [GoodsReceiptsController],

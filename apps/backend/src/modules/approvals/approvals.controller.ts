@@ -20,7 +20,13 @@ import {
   UpsertApprovalWorkflowDto,
 } from './dto/approval.dto';
 import { ApprovalStatus } from './schemas/approval-request.schema';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'approval', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Approvals')
 @ApiBearerAuth()
 @Controller()

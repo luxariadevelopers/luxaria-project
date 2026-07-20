@@ -18,7 +18,13 @@ import {
   UpdateQualityInspectionDto,
 } from './dto/quality-inspection.dto';
 import { QualityInspectionsService } from './quality-inspections.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'quality-inspection', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Quality Inspections')
 @ApiBearerAuth()
 @Controller()

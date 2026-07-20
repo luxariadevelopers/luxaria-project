@@ -29,7 +29,9 @@ import { PushTokenService } from './push-token.service';
 import { ScheduledNotificationStatus } from './notifications.constants';
 import { NotificationsScheduler } from './notifications.scheduler';
 import { NotificationsService } from './notifications.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')

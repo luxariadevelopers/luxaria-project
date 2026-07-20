@@ -32,6 +32,7 @@ import {
   UpdateVendorQuotationDto,
 } from './dto/vendor-quotation.dto';
 import { VendorQuotationsService } from './vendor-quotations.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
 const DOC_UPLOAD_DIR = join(process.cwd(), 'uploads', 'vendor-quotations');
 
@@ -42,6 +43,11 @@ type UploadedDoc = {
   size: number;
 };
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'vendor-quotation', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Vendor Quotations')
 @ApiBearerAuth()
 @Controller('vendor-quotations')

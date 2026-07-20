@@ -11,6 +11,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CashAccountsService } from './cash-accounts.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   AssignCustodianDto,
   CashLedgerQueryDto,
@@ -21,6 +22,11 @@ import {
   ListCashAccountsQueryDto,
 } from './dto/cash-account.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'cash-account', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Cash Accounts')
 @ApiBearerAuth()
 @Controller('cash-accounts')

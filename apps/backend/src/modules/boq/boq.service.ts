@@ -11,6 +11,7 @@ import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
 import { BoqExcelService, type BoqExcelRow } from './boq-excel.service';
 import {
@@ -84,6 +85,7 @@ export class BoqService {
     private readonly projectModel: Model<Project>,
     private readonly numberingService: NumberingService,
     private readonly excelService: BoqExcelService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   // ── Hierarchy: Blocks ──────────────────────────────────────────────
@@ -93,6 +95,12 @@ export class BoqService {
     dto: CreateBoqBlockDto,
     actorId: string,
   ) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'create',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
     const blockCode = normalizeCode(dto.blockCode, 'blockCode');
     await this.assertUniqueBlockCode(projectId, blockCode);
@@ -110,7 +118,13 @@ export class BoqService {
     return createSuccessResponse(toPublicBoqBlock(row), 'BOQ block created');
   }
 
-  async listBlocks(projectId: string) {
+  async listBlocks(projectId: string, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
     const rows = await this.blockModel
       .find({ projectId: new Types.ObjectId(projectId) })
@@ -350,7 +364,13 @@ export class BoqService {
     );
   }
 
-  async listVersions(projectId: string) {
+  async listVersions(projectId: string, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
     const rows = await this.versionModel
       .find({ projectId: new Types.ObjectId(projectId) })
@@ -362,15 +382,21 @@ export class BoqService {
     );
   }
 
-  async getVersion(id: string) {
-    const row = await this.requireVersion(id);
+  async getVersion(id: string, actorId: string) {
+    const row = await this.requireVersion(id, actorId, 'read');
     return createSuccessResponse(
       toPublicBoqVersion(row),
       'BOQ version fetched successfully',
     );
   }
 
-  async getActiveVersion(projectId: string) {
+  async getActiveVersion(projectId: string, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
     const row = await this.versionModel
       .findOne({
@@ -388,7 +414,7 @@ export class BoqService {
   }
 
   async updateVersion(id: string, dto: UpdateBoqVersionDto, actorId: string) {
-    const row = await this.requireVersion(id);
+    const row = await this.requireVersion(id, actorId, 'update');
     assertBoqVersionEditable(row);
     if (dto.effectiveDate !== undefined) {
       row.effectiveDate = this.parseDate(dto.effectiveDate, 'effectiveDate');
@@ -406,7 +432,7 @@ export class BoqService {
 
   /** Draft → Pending approval (required for variations). */
   async submitVersion(id: string, actorId: string) {
-    const row = await this.requireVersion(id);
+    const row = await this.requireVersion(id, actorId, 'update');
     if (
       row.status !== BoqVersionStatus.Draft &&
       row.status !== BoqVersionStatus.Rejected
@@ -453,7 +479,7 @@ export class BoqService {
     dto: ApproveBoqVersionDto,
     actorId: string,
   ) {
-    const row = await this.requireVersion(id);
+    const row = await this.requireVersion(id, actorId, 'approve');
     if (row.status !== BoqVersionStatus.PendingApproval) {
       throw new BadRequestException(
         'Only pending-approval BOQ versions can be approved',
@@ -472,7 +498,7 @@ export class BoqService {
   }
 
   async rejectVersion(id: string, dto: RejectBoqVersionDto, actorId: string) {
-    const row = await this.requireVersion(id);
+    const row = await this.requireVersion(id, actorId, 'approve');
     if (row.status !== BoqVersionStatus.PendingApproval) {
       throw new BadRequestException(
         'Only pending-approval BOQ versions can be rejected',
@@ -498,7 +524,7 @@ export class BoqService {
     dto: ActivateBoqVersionDto,
     actorId: string,
   ) {
-    const row = await this.requireVersion(id);
+    const row = await this.requireVersion(id, actorId, 'approve');
     if (requiresApprovalToActivate(row.versionType)) {
       throw new BadRequestException(
         'Variation versions require approval before activation',
@@ -535,10 +561,17 @@ export class BoqService {
     projectId: string,
     fromVersionId: string,
     toVersionId: string,
+    actorId: string,
   ) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
-    const from = await this.requireVersion(fromVersionId);
-    const to = await this.requireVersion(toVersionId);
+    const from = await this.requireVersion(fromVersionId, actorId, 'read');
+    const to = await this.requireVersion(toVersionId, actorId, 'read');
     if (
       String(from.projectId) !== projectId ||
       String(to.projectId) !== projectId
@@ -723,8 +756,8 @@ export class BoqService {
   }
 
   async updateItem(id: string, dto: UpdateBoqItemDto, actorId: string) {
-    const row = await this.requireItem(id);
-    const version = await this.requireVersion(String(row.versionId));
+    const row = await this.requireItem(id, actorId, 'update');
+    const version = await this.requireVersion(String(row.versionId), actorId, 'update');
     assertBoqVersionEditable(version);
     if (row.status === BoqItemStatus.Cancelled) {
       throw new BadRequestException('Cancelled BOQ items cannot be updated');
@@ -769,15 +802,21 @@ export class BoqService {
     return createSuccessResponse(toPublicBoqItem(row), 'BOQ item updated');
   }
 
-  async getItem(id: string) {
-    const row = await this.requireItem(id);
+  async getItem(id: string, actorId: string) {
+    const row = await this.requireItem(id, actorId, 'read');
     return createSuccessResponse(
       toPublicBoqItem(row),
       'BOQ item fetched successfully',
     );
   }
 
-  async listItems(projectId: string, query: ListBoqItemsQueryDto) {
+  async listItems(projectId: string, query: ListBoqItemsQueryDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
     const version = query.versionId
       ? await this.requireVersion(query.versionId)
@@ -816,7 +855,13 @@ export class BoqService {
     );
   }
 
-  async getHierarchy(projectId: string) {
+  async getHierarchy(projectId: string, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'boq' },
+    );
     await this.requireProject(projectId);
     const pid = new Types.ObjectId(projectId);
     const version = await this.resolveDefaultVersion(projectId);
@@ -1309,12 +1354,24 @@ export class BoqService {
     return row;
   }
 
-  private async requireItem(id: string) {
+  private async requireItem(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid BOQ item id');
     }
     const row = await this.itemModel.findById(id).exec();
     if (!row) throw new NotFoundException('BOQ item not found');
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'boq', resourceId: id },
+      );
+    }
     return row;
   }
 
@@ -1593,12 +1650,24 @@ export class BoqService {
     return row;
   }
 
-  private async requireVersion(id: string) {
+  private async requireVersion(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid BOQ version id');
     }
     const row = await this.versionModel.findById(id).exec();
     if (!row) throw new NotFoundException('BOQ version not found');
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'boq', resourceId: id },
+      );
+    }
     return row;
   }
 

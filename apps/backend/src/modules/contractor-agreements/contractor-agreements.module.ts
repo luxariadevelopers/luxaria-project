@@ -1,12 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import {
+  Account,
+  AccountSchema,
+} from '../chart-of-accounts/schemas/account.schema';
+import {
+  CompanyBankAccount,
+  CompanyBankAccountSchema,
+} from '../company-bank-accounts/schemas/company-bank-account.schema';
+import {
   Contractor,
   ContractorSchema,
 } from '../contractors/schemas/contractor.schema';
+import { FinancialYearModule } from '../financial-year/financial-year.module';
+import { JournalModule } from '../journal/journal.module';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { RbacModule } from '../rbac/rbac.module';
 import { Role, RoleSchema } from '../rbac/schemas/role.schema';
@@ -34,8 +45,13 @@ import {
       { name: Contractor.name, schema: ContractorSchema },
       { name: Project.name, schema: ProjectSchema },
       { name: Role.name, schema: RoleSchema },
+      { name: CompanyBankAccount.name, schema: CompanyBankAccountSchema },
+      { name: Account.name, schema: AccountSchema },
     ]),
     ApprovalsModule,
+    JournalModule,
+    FinancialYearModule,    ProjectAccessModule,
+
     RbacModule,
   ],
   controllers: [ContractorAgreementsController],

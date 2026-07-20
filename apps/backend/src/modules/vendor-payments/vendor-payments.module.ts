@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Account,
@@ -33,6 +34,7 @@ import { VendorPaymentsService } from './vendor-payments.service';
     ]),
     VendorInvoicesModule,
     JournalModule,
+    ProjectAccessModule,
   ],
   controllers: [VendorPaymentsController],
   providers: [VendorPaymentsService],

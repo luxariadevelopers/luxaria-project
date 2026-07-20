@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { FilterQuery, Model } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   BoqItem,
   BoqVersion,
@@ -112,6 +113,7 @@ export class ConstructionReportsService {
     private readonly dprModel: Model<DailyProgressReport>,
     @InjectModel(DprMissingAlert.name)
     private readonly dprMissingModel: Model<DprMissingAlert>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   listReports() {
@@ -129,11 +131,12 @@ export class ConstructionReportsService {
   async getReport(
     reportType: ConstructionReportType,
     query: ConstructionReportsQueryDto,
+    actorId: string,
   ) {
     if (!ALL_CONSTRUCTION_REPORTS.includes(reportType)) {
       throw new BadRequestException(`Unknown report type: ${reportType}`);
     }
-    const scope = await this.resolveScope(query);
+    const scope = await this.resolveScope(query, actorId);
     const payload = await this.buildReport(reportType, scope);
     return createSuccessResponse(
       payload,
@@ -189,6 +192,7 @@ export class ConstructionReportsService {
 
   private async resolveScope(
     query: ConstructionReportsQueryDto,
+    actorId: string,
   ): Promise<ReportScope> {
     const from = query.from ? new Date(query.from) : null;
     const to = query.to ? new Date(query.to) : null;
@@ -215,6 +219,12 @@ export class ConstructionReportsService {
         .lean()
         .exec();
       if (!project) throw new NotFoundException('Project not found');
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'construction-report' },
+      );
       projectId = project._id as Types.ObjectId;
       projectCode = project.projectCode ?? null;
       projectName = project.projectName ?? null;

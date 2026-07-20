@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import type { Connection, Model } from 'mongoose';
+import type { ClientSession, Connection, Model } from 'mongoose';
 import { Types, connect, disconnect } from 'mongoose';
 import {
   IdempotencyKey,
@@ -86,7 +86,10 @@ describe('ContractorBillsService', () => {
   let payableId: string;
   let retentionId: string;
   let tdsId: string;
-  let otherIncomeId: string;
+  let advanceId: string;
+  let materialRecoveryId: string;
+  let penaltyRecoveryId: string;
+  let otherDeductionId: string;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -154,9 +157,28 @@ describe('ContractorBillsService', () => {
     };
     const databaseService = {
       withTransaction: async <T>(
-        work: (session: null) => Promise<T>,
-      ): Promise<T> => work(null),
+        work: (session: ClientSession) => Promise<T>,
+      ): Promise<T> => {
+        const session = await connection.startSession();
+        try {
+          return await work(session);
+        } finally {
+          await session.endSession();
+        }
+      },
     } as unknown as DatabaseService;
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new ContractorBillsService(
       billModel,
@@ -172,6 +194,7 @@ describe('ContractorBillsService', () => {
       new IdempotencyService(idempotencyModel),
       databaseService,
       auditLogService as unknown as AuditLogService,
+      mockProjectScope,
     );
   }, 120_000);
 
@@ -208,68 +231,113 @@ describe('ContractorBillsService', () => {
     financialYearService.assertPostingAllowed.mockResolvedValue({});
     auditLogService.record.mockResolvedValue({});
 
-    const [wip, payable, retention, tds, otherIncome] = await accountModel.create([
-      {
-        accountCode: '1150',
-        accountName: 'WIP',
-        accountType: AccountType.Asset,
-        accountCategory: AccountCategory.WorkInProgress,
-        level: 2,
-        allowManualPosting: true,
-        requiresProject: true,
-        status: AccountStatus.Active,
-      },
-      {
-        accountCode: '2120',
-        accountName: 'Contractor Payable',
-        accountType: AccountType.Liability,
-        accountCategory: AccountCategory.ContractorPayable,
-        level: 2,
-        allowManualPosting: true,
-        requiresProject: true,
-        requiresParty: true,
-        status: AccountStatus.Active,
-      },
-      {
-        accountCode: '2170',
-        accountName: 'Retention Payable',
-        accountType: AccountType.Liability,
-        accountCategory: AccountCategory.RetentionPayable,
-        level: 2,
-        allowManualPosting: true,
-        requiresProject: true,
-        requiresParty: true,
-        status: AccountStatus.Active,
-      },
-      {
-        accountCode: '2160',
-        accountName: 'TDS Payable',
-        accountType: AccountType.Liability,
-        accountCategory: AccountCategory.TdsPayable,
-        level: 2,
-        allowManualPosting: true,
-        status: AccountStatus.Active,
-      },
-      {
-        accountCode: '4200',
-        accountName: 'Other Income',
-        accountType: AccountType.Income,
-        accountCategory: AccountCategory.OtherIncome,
-        level: 2,
-        allowManualPosting: true,
-        status: AccountStatus.Active,
-      },
-    ]);
+    const [wip, payable, retention, tds, advance, material, penalty, otherDed] =
+      await accountModel.create([
+        {
+          accountCode: '1150',
+          accountName: 'WIP',
+          accountType: AccountType.Asset,
+          accountCategory: AccountCategory.WorkInProgress,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '2120',
+          accountName: 'Contractor Payable',
+          accountType: AccountType.Liability,
+          accountCategory: AccountCategory.ContractorPayable,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          requiresParty: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '2170',
+          accountName: 'Retention Payable',
+          accountType: AccountType.Liability,
+          accountCategory: AccountCategory.RetentionPayable,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          requiresParty: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '2160',
+          accountName: 'TDS Payable',
+          accountType: AccountType.Liability,
+          accountCategory: AccountCategory.TdsPayable,
+          level: 2,
+          allowManualPosting: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '1160',
+          accountName: 'Contractor Advance',
+          accountType: AccountType.Asset,
+          accountCategory: AccountCategory.ContractorAdvance,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          requiresParty: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '4210',
+          accountName: 'Material Recovery',
+          accountType: AccountType.Income,
+          accountCategory: AccountCategory.MaterialRecovery,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          requiresParty: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '4220',
+          accountName: 'Penalty Recovery',
+          accountType: AccountType.Income,
+          accountCategory: AccountCategory.PenaltyRecovery,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          requiresParty: true,
+          status: AccountStatus.Active,
+        },
+        {
+          accountCode: '4230',
+          accountName: 'Other Contractor Deduction',
+          accountType: AccountType.Income,
+          accountCategory: AccountCategory.OtherContractorDeduction,
+          level: 2,
+          allowManualPosting: true,
+          requiresProject: true,
+          status: AccountStatus.Active,
+        },
+      ]);
     wipId = String(wip._id);
     payableId = String(payable._id);
     retentionId = String(retention._id);
     tdsId = String(tds._id);
-    otherIncomeId = String(otherIncome._id);
+    advanceId = String(advance._id);
+    materialRecoveryId = String(material._id);
+    penaltyRecoveryId = String(penalty._id);
+    otherDeductionId = String(otherDed._id);
 
     journalService.create.mockImplementation(
       async (dto: {
         sourceEntityId?: string | null;
-        lines: Array<{ debit?: number; credit?: number; accountId: string }>;
+        postingPurpose?: string | null;
+        lines: Array<{
+          debit?: number;
+          credit?: number;
+          accountId: string;
+          partyId?: string;
+          projectId?: string;
+        }>;
       }) => {
         const journalId = new Types.ObjectId();
         const totalDebit = dto.lines.reduce((s, l) => s + (l.debit ?? 0), 0);
@@ -283,6 +351,7 @@ describe('ContractorBillsService', () => {
           sourceModule: 'contractor_bill',
           sourceEntityType: 'contractor_bill',
           sourceEntityId: dto.sourceEntityId ?? null,
+          postingPurpose: dto.postingPurpose ?? 'ap_recognition',
           narration: 'mock',
           status: JournalStatus.Posted,
           totalDebit,
@@ -291,6 +360,10 @@ describe('ContractorBillsService', () => {
             accountId: new Types.ObjectId(l.accountId),
             debit: l.debit ?? 0,
             credit: l.credit ?? 0,
+            projectId: l.projectId
+              ? new Types.ObjectId(l.projectId)
+              : new Types.ObjectId(projectId),
+            partyId: l.partyId ? new Types.ObjectId(l.partyId) : null,
           })),
           createdBy: new Types.ObjectId(actorId),
         });
@@ -368,6 +441,49 @@ describe('ContractorBillsService', () => {
       },
     ]);
     agreementId = String(agreement._id);
+
+    const advanceJournalId = new Types.ObjectId();
+    await journalModel.create({
+      _id: advanceJournalId,
+      journalNumber: `JE-ADV-${advanceJournalId.toHexString().slice(-6)}`,
+      journalDate: new Date('2026-06-01'),
+      financialYearId: new Types.ObjectId(),
+      projectId: new Types.ObjectId(projectId),
+      sourceModule: 'contractor_agreement',
+      sourceEntityType: 'contractor_agreement',
+      sourceEntityId: agreementId,
+      postingPurpose: 'advance_disbursement',
+      narration: 'Mobilisation advance',
+      status: JournalStatus.Posted,
+      totalDebit: 50000,
+      totalCredit: 50000,
+      lines: [
+        {
+          accountId: new Types.ObjectId(advanceId),
+          debit: 50000,
+          credit: 0,
+          projectId: new Types.ObjectId(projectId),
+          partyType: JournalPartyType.Contractor,
+          partyId: new Types.ObjectId(contractorId),
+        },
+        {
+          accountId: new Types.ObjectId(),
+          debit: 0,
+          credit: 50000,
+          projectId: new Types.ObjectId(projectId),
+        },
+      ],
+      createdBy: new Types.ObjectId(actorId),
+    });
+    await agreementModel.updateOne(
+      { _id: agreementId },
+      {
+        $set: {
+          advanceDisbursementJournalId: advanceJournalId,
+          advanceDisbursedAt: new Date('2026-06-01'),
+        },
+      },
+    );
 
     const [measurement] = await measurementModel.create([
       {
@@ -489,7 +605,10 @@ describe('ContractorBillsService', () => {
     expect(payableLine?.partyId).toBe(contractorId);
     expect(dto.lines.find((l: { accountId: string }) => l.accountId === retentionId)?.credit).toBe(500);
     expect(dto.lines.find((l: { accountId: string }) => l.accountId === tdsId)?.credit).toBe(200);
-    expect(dto.lines.find((l: { accountId: string }) => l.accountId === otherIncomeId)?.credit).toBe(2300);
+    expect(dto.lines.find((l: { accountId: string }) => l.accountId === advanceId)?.credit).toBe(2000);
+    expect(dto.lines.find((l: { accountId: string }) => l.accountId === materialRecoveryId)?.credit).toBe(150);
+    expect(dto.lines.find((l: { accountId: string }) => l.accountId === penaltyRecoveryId)?.credit).toBe(100);
+    expect(dto.lines.find((l: { accountId: string }) => l.accountId === otherDeductionId)?.credit).toBe(50);
 
     expect(auditLogService.record).toHaveBeenCalledWith(
       expect.objectContaining({

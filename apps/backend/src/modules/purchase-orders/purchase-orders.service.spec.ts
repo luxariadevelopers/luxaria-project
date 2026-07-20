@@ -148,6 +148,13 @@ describe('PurchaseOrdersService', () => {
       } as never,
       new PurchaseOrderPdfService(),
       configService as unknown as ConfigService<never, true>,
+      {
+        assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+        assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+        mergeAuthorisedProjectFilter: jest
+          .fn()
+          .mockImplementation(async (_actor: string, filter: unknown) => filter),
+      } as never,
     );
   }, 60_000);
 

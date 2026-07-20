@@ -28,6 +28,7 @@ import {
 } from '../material-master/schemas/material.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   PurchaseOrder,
   PurchaseOrderStatus,
@@ -98,9 +99,16 @@ export class VendorInvoicesService {
     private readonly numberingService: NumberingService,
     private readonly journalService: JournalService,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateVendorInvoiceDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'vendor-invoice' },
+    );
     const invoiceNumber = normalizeInvoiceNumber(dto.invoiceNumber);
     await this.assertUniqueInvoiceNumber(dto.vendorId, invoiceNumber);
 
@@ -186,7 +194,7 @@ export class VendorInvoicesService {
   }
 
   async update(id: string, dto: UpdateVendorInvoiceDto, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (row.status !== VendorInvoiceStatus.Draft) {
       throw new BadRequestException('Only draft vendor invoices can be updated');
     }
@@ -267,7 +275,7 @@ export class VendorInvoicesService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (row.status !== VendorInvoiceStatus.Draft) {
       throw new BadRequestException('Only draft invoices can be submitted');
     }
@@ -293,7 +301,7 @@ export class VendorInvoicesService {
   }
 
   async verify(id: string, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (row.status !== VendorInvoiceStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted invoices can move to verification',
@@ -316,7 +324,7 @@ export class VendorInvoicesService {
    * Three-way match: Purchase Order ↔ GRN accepted qty ↔ Vendor Invoice.
    */
   async match(id: string, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (
       row.status !== VendorInvoiceStatus.Verification &&
       !(
@@ -359,7 +367,7 @@ export class VendorInvoicesService {
     actorId: string,
     dto: RejectMatchingDto,
   ) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (row.status !== VendorInvoiceStatus.Matching) {
       throw new BadRequestException(
         'Only invoices in matching can be rejected',
@@ -388,7 +396,7 @@ export class VendorInvoicesService {
     actorId: string,
     dto: ApproveVendorInvoiceDto = {},
   ) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (row.status !== VendorInvoiceStatus.Matching) {
       throw new BadRequestException(
         'Only matched invoices can move to approval',
@@ -439,7 +447,7 @@ export class VendorInvoicesService {
   }
 
   async post(id: string, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     if (row.status !== VendorInvoiceStatus.Approval) {
       throw new BadRequestException('Only approved invoices can be posted');
     }
@@ -462,7 +470,7 @@ export class VendorInvoicesService {
   }
 
   async markPaid(id: string, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     assertInvoicePaymentAllowed({
       status: row.status,
       matchingStatus: row.matchingStatus,
@@ -547,7 +555,7 @@ export class VendorInvoicesService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireInvoice(id);
+    const row = await this.requireInvoice(id, actorId, 'update');
     const cancellable = [
       VendorInvoiceStatus.Draft,
       VendorInvoiceStatus.Submitted,
@@ -571,18 +579,26 @@ export class VendorInvoicesService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireInvoice(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireInvoice(id, actorId, 'read');
     return createSuccessResponse(
       toPublicVendorInvoice(row),
       'Vendor invoice fetched successfully',
     );
   }
 
-  async list(query: ListVendorInvoicesQueryDto) {
+  async list(query: ListVendorInvoicesQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'vendor-invoice' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<VendorInvoice> = {};
+    let filter: FilterQuery<VendorInvoice> = {};
 
     if (query.projectId) filter.projectId = new Types.ObjectId(query.projectId);
     if (query.vendorId) filter.vendorId = new Types.ObjectId(query.vendorId);
@@ -596,7 +612,12 @@ export class VendorInvoicesService {
     }
 
     const sort: Record<string, SortOrder> = { invoiceDate: -1, createdAt: -1 };
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.invoiceModel
         .find(filter)
         .sort(sort)
@@ -1058,12 +1079,25 @@ export class VendorInvoicesService {
     return account;
   }
 
-  private async requireInvoice(id: string): Promise<VendorInvoiceDocument> {
+  private async requireInvoice(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ): Promise<VendorInvoiceDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid vendor invoice id');
     }
     const row = await this.invoiceModel.findById(id).exec();
     if (!row) throw new NotFoundException('Vendor invoice not found');
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'vendor-invoice', resourceId: id },
+      );
+    }
     return row;
   }
 

@@ -25,7 +25,13 @@ import {
   UpdateJournalDto,
 } from './dto/journal.dto';
 import { JournalService } from './journal.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'journal', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Journal')
 @ApiBearerAuth()
 @Controller('journals')
@@ -51,15 +57,18 @@ export class JournalController {
   @Get()
   @RequirePermissions('journal.view')
   @ApiOperation({ summary: 'List journal entries' })
-  list(@Query() query: ListJournalsQueryDto) {
-    return this.journalService.list(query);
+  list(
+    @Query() query: ListJournalsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.journalService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('journal.view')
   @ApiOperation({ summary: 'Get journal entry' })
-  getById(@Param('id') id: string) {
-    return this.journalService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.journalService.getById(id, actor.id);
   }
 
   @Patch(':id')

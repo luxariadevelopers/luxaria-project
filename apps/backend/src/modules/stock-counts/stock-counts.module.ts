@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Account,
@@ -23,7 +24,8 @@ import { StockCountsService } from './stock-counts.service';
       { name: Account.name, schema: AccountSchema },
     ]),
     StockLedgerModule,
-    JournalModule,
+    JournalModule,    ProjectAccessModule,
+
     RbacModule,
   ],
   controllers: [StockCountsController],

@@ -23,6 +23,7 @@ import {
 } from '../material-master/schemas/material.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { PermissionsService } from '../rbac/permissions.service';
 import { StockTransactionType } from '../material-master/schemas/material-stock-transaction.schema';
 import { StockLedgerService } from '../stock-ledger/stock-ledger.service';
@@ -62,9 +63,16 @@ export class StockCountsService {
     private readonly journalService: JournalService,
     private readonly permissionsService: PermissionsService,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateStockCountDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'stock-count' },
+    );
     if (!Types.ObjectId.isValid(dto.projectId)) {
       throw new BadRequestException('Invalid projectId');
     }
@@ -110,7 +118,7 @@ export class StockCountsService {
   }
 
   async update(id: string, dto: UpdateStockCountDto, actorId: string) {
-    const row = await this.requireCount(id);
+    const row = await this.requireCount(id, actorId, 'update');
     if (row.status !== StockCountStatus.Draft) {
       throw new BadRequestException('Only draft stock counts can be updated');
     }
@@ -147,7 +155,7 @@ export class StockCountsService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requireCount(id);
+    const row = await this.requireCount(id, actorId, 'update');
     if (row.status !== StockCountStatus.Draft) {
       throw new BadRequestException('Only draft stock counts can be submitted');
     }
@@ -175,7 +183,7 @@ export class StockCountsService {
   }
 
   async review(id: string, actorId: string) {
-    const row = await this.requireCount(id);
+    const row = await this.requireCount(id, actorId, 'update');
     if (row.status !== StockCountStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted stock counts can be reviewed',
@@ -199,7 +207,7 @@ export class StockCountsService {
     actorId: string,
     _dto: ApproveStockCountDto = {},
   ) {
-    const row = await this.requireCount(id);
+    const row = await this.requireCount(id, actorId, 'update');
     if (row.status !== StockCountStatus.Reviewed) {
       throw new BadRequestException(
         'Only reviewed stock counts can be approved',
@@ -223,7 +231,7 @@ export class StockCountsService {
   }
 
   async post(id: string, actorId: string) {
-    const row = await this.requireCount(id);
+    const row = await this.requireCount(id, actorId, 'update');
     if (row.status !== StockCountStatus.Approved) {
       throw new BadRequestException(
         'Only approved stock counts can post adjustments',
@@ -280,7 +288,7 @@ export class StockCountsService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireCount(id);
+    const row = await this.requireCount(id, actorId, 'update');
     if (
       row.status === StockCountStatus.AdjustmentPosted ||
       row.status === StockCountStatus.Cancelled
@@ -300,18 +308,26 @@ export class StockCountsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireCount(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireCount(id, actorId, 'read');
     return createSuccessResponse(
       toPublicStockCount(row),
       'Stock count fetched successfully',
     );
   }
 
-  async list(query: ListStockCountsQueryDto) {
+  async list(query: ListStockCountsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'stock-count' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<StockCount> = {};
+    let filter: FilterQuery<StockCount> = {};
 
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
@@ -327,7 +343,12 @@ export class StockCountsService {
     }
 
     const sort: Record<string, SortOrder> = { countDate: -1, createdAt: -1 };
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.countModel
         .find(filter)
         .sort(sort)
@@ -555,6 +576,8 @@ export class StockCountsService {
 
   private async requireCount(
     id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
   ): Promise<HydratedDocument<StockCount>> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid stock count id');
@@ -562,6 +585,15 @@ export class StockCountsService {
     const row = await this.countModel.findById(id).exec();
     if (!row) {
       throw new NotFoundException('Stock count not found');
+    }
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'stock-count', resourceId: id },
+      );
     }
     return row;
   }

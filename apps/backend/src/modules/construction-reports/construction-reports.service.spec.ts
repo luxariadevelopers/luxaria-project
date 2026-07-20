@@ -84,6 +84,7 @@ describe('ConstructionReportsService', () => {
   let service: ConstructionReportsService;
   let exportService: ConstructionReportsExportService;
   let projectId: string;
+  let actorId: string;
   let boqItemId: Types.ObjectId;
   let contractorId: Types.ObjectId;
 
@@ -172,6 +173,17 @@ describe('ConstructionReportsService', () => {
       models.bill,
       models.dpr,
       models.dprMissing,
+      {
+        assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+        assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+        assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+        mergeAuthorisedProjectFilter: jest
+          .fn()
+          .mockImplementation(async (_a, f) => f),
+        findOneForActor: jest.fn(),
+        buildScopedIdFilter: jest.fn(),
+        authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+      } as never,
     );
     exportService = new ConstructionReportsExportService(service);
   }, 60_000);
@@ -203,6 +215,7 @@ describe('ConstructionReportsService', () => {
       },
     });
     projectId = String(project._id);
+    actorId = new Types.ObjectId().toHexString();
     const projectOid = project._id as Types.ObjectId;
 
     const version = await connection.model(BoqVersion.name).create({
@@ -338,6 +351,7 @@ describe('ConstructionReportsService', () => {
     const result = await service.getReport(
       ConstructionReportType.BoqBudgetVsActual,
       { projectId },
+      actorId,
     );
     const data = result.data!;
     expect(data.totals!.plannedValue).toBe(500_000);
@@ -353,6 +367,7 @@ describe('ConstructionReportsService', () => {
     const result = await service.getReport(
       ConstructionReportType.PlannedVsActualProgress,
       { projectId },
+      actorId,
     );
     expect(result.data!.totals!.progressPercent).toBe(40);
   });
@@ -360,12 +375,13 @@ describe('ConstructionReportsService', () => {
   it('builds stock balance and open purchase orders', async () => {
     const stock = await service.getReport(ConstructionReportType.StockBalance, {
       projectId,
-    });
+    }, actorId);
     expect(stock.data!.totals!.totalQuantity).toBe(250);
 
     const open = await service.getReport(
       ConstructionReportType.OpenPurchaseOrders,
       { projectId, to: '2026-07-20' },
+      actorId,
     );
     expect(open.data!.totals!.openBalance).toBe(40_000);
     expect(open.data!.totals!.overdueCount).toBe(1);
@@ -375,12 +391,14 @@ describe('ConstructionReportsService', () => {
     const labour = await service.getReport(
       ConstructionReportType.LabourAttendance,
       { projectId },
+      actorId,
     );
     expect(labour.data!.totals!.workerCount).toBe(22);
 
     const dpr = await service.getReport(
       ConstructionReportType.DailyProgressSummary,
       { projectId },
+      actorId,
     );
     expect(dpr.data!.totals!.delayHours).toBe(3);
   });
@@ -389,6 +407,7 @@ describe('ConstructionReportsService', () => {
     const delay = await service.getReport(
       ConstructionReportType.ProjectDelayReport,
       { projectId, to: '2026-07-20' },
+      actorId,
     );
     const row = (delay.data!.rows as Array<{ daysOverdue: number; delayed: boolean }>)[0];
     expect(row.daysOverdue).toBeGreaterThan(0);

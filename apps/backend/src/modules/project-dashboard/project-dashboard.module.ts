@@ -72,6 +72,7 @@ import {
   WorkMeasurement,
   WorkMeasurementSchema,
 } from '../work-measurements/schemas/work-measurement.schema';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { ProjectDashboardController } from './project-dashboard.controller';
 import { ProjectDashboardService } from './project-dashboard.service';
 
@@ -99,6 +100,7 @@ import { ProjectDashboardService } from './project-dashboard.service';
       { name: DprMissingAlert.name, schema: DprMissingAlertSchema },
       { name: PurchaseRequest.name, schema: PurchaseRequestSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [ProjectDashboardController],
   providers: [ProjectDashboardService],

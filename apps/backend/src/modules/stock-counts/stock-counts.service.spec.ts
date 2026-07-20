@@ -125,6 +125,18 @@ describe('StockCountsService', () => {
     journalCreate = jest.fn().mockResolvedValue({
       data: { id: new Types.ObjectId().toHexString() },
     });
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new StockCountsService(
       countModel,
@@ -135,6 +147,7 @@ describe('StockCountsService', () => {
       { create: journalCreate } as unknown as JournalService,
       permissions as unknown as PermissionsService,
       configService,
+      mockProjectScope
     );
   }, 120_000);
 

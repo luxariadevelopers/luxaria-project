@@ -11,14 +11,28 @@ import { Types } from 'mongoose';
 import type { AppConfig } from '../../config/configuration';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
+import { DatabaseService } from '../../database/services/database.service';
 import { ApprovalStatus } from '../approvals/schemas/approval-request.schema';
 import { ApprovalsService } from '../approvals/approvals.service';
+import {
+  Account,
+  AccountCategory,
+  AccountStatus,
+} from '../chart-of-accounts/schemas/account.schema';
+import {
+  BankAccountStatus,
+  CompanyBankAccount,
+} from '../company-bank-accounts/schemas/company-bank-account.schema';
 import {
   Contractor,
   ContractorStatus,
 } from '../contractors/schemas/contractor.schema';
+import { FinancialYearService } from '../financial-year/financial-year.service';
+import { JournalService } from '../journal/journal.service';
+import { JournalPartyType } from '../journal/schemas/journal-entry.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
 import {
   CONTRACTOR_AGREEMENT_APPROVAL_ENTITY,
@@ -43,6 +57,7 @@ import type {
   AmendContractorAgreementDto,
   ApproveContractorAgreementDto,
   CreateContractorAgreementDto,
+  DisburseMobilisationAdvanceDto,
   ListContractorAgreementsQueryDto,
   ListExpiryAlertsQueryDto,
   RejectContractorAgreementDto,
@@ -73,12 +88,26 @@ export class ContractorAgreementsService {
     private readonly contractorModel: Model<Contractor>,
     @InjectModel(Project.name)
     private readonly projectModel: Model<Project>,
+    @InjectModel(CompanyBankAccount.name)
+    private readonly bankModel: Model<CompanyBankAccount>,
+    @InjectModel(Account.name)
+    private readonly accountModel: Model<Account>,
     private readonly numberingService: NumberingService,
     private readonly approvalsService: ApprovalsService,
+    private readonly journalService: JournalService,
+    private readonly financialYearService: FinancialYearService,
+    private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateContractorAgreementDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'contractor-agreement' },
+    );
     await this.requireActiveContractor(dto.contractorId);
     await this.requireProject(dto.projectId);
 
@@ -150,7 +179,7 @@ export class ContractorAgreementsService {
     dto: UpdateContractorAgreementDto,
     actorId: string,
   ) {
-    const row = await this.requireAgreement(id);
+    const row = await this.requireAgreement(id, actorId, 'update');
     if (!EDITABLE.includes(row.status)) {
       throw new BadRequestException(
         'Only draft or rejected agreements can be updated',
@@ -184,7 +213,7 @@ export class ContractorAgreementsService {
     dto: AmendContractorAgreementDto,
     actorId: string,
   ) {
-    const current = await this.requireAgreement(id);
+    const current = await this.requireAgreement(id, actorId, 'update');
     if (current.status !== ContractorAgreementStatus.Active) {
       throw new BadRequestException(
         'Only active agreements can be amended; edit the draft instead',
@@ -306,7 +335,7 @@ export class ContractorAgreementsService {
   }
 
   async submitForApproval(id: string, actorId: string) {
-    const row = await this.requireAgreement(id);
+    const row = await this.requireAgreement(id, actorId, 'update');
     if (!EDITABLE.includes(row.status)) {
       throw new BadRequestException(
         'Only draft or rejected agreements can be submitted for approval',
@@ -347,7 +376,7 @@ export class ContractorAgreementsService {
     dto: ApproveContractorAgreementDto,
     actorId: string,
   ) {
-    const row = await this.requireAgreement(id);
+    const row = await this.requireAgreement(id, actorId, 'update');
     if (row.status !== ContractorAgreementStatus.PendingApproval) {
       throw new BadRequestException(
         'Only pending-approval agreements can be approved',
@@ -371,7 +400,7 @@ export class ContractorAgreementsService {
       await row.save();
     }
 
-    const fresh = await this.requireAgreement(id);
+    const fresh = await this.requireAgreement(id, actorId, 'update');
     return createSuccessResponse(
       toPublicContractorAgreement(fresh),
       fresh.status === ContractorAgreementStatus.Active
@@ -385,7 +414,7 @@ export class ContractorAgreementsService {
     dto: RejectContractorAgreementDto,
     actorId: string,
   ) {
-    const row = await this.requireAgreement(id);
+    const row = await this.requireAgreement(id, actorId, 'update');
     if (row.status !== ContractorAgreementStatus.PendingApproval) {
       throw new BadRequestException(
         'Only pending-approval agreements can be rejected',
@@ -420,7 +449,7 @@ export class ContractorAgreementsService {
     dto: TerminateContractorAgreementDto,
     actorId: string,
   ) {
-    const row = await this.requireAgreement(id);
+    const row = await this.requireAgreement(id, actorId, 'update');
     if (row.status !== ContractorAgreementStatus.Active) {
       throw new BadRequestException('Only active agreements can be terminated');
     }
@@ -438,8 +467,8 @@ export class ContractorAgreementsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireAgreement(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireAgreement(id, actorId, 'read');
     return createSuccessResponse(
       toPublicContractorAgreement(row),
       'Contractor agreement fetched',
@@ -468,8 +497,16 @@ export class ContractorAgreementsService {
     );
   }
 
-  async list(query: ListContractorAgreementsQueryDto) {
-    const filter: FilterQuery<ContractorAgreement> = {};
+  async list(query: ListContractorAgreementsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'contractor-agreement' },
+      );
+    }
+    let filter: FilterQuery<ContractorAgreement> = {};
     if (query.projectId) {
       if (!Types.ObjectId.isValid(query.projectId)) {
         throw new BadRequestException('Invalid projectId');
@@ -490,6 +527,11 @@ export class ContractorAgreementsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const sort: Record<string, SortOrder> = { createdAt: -1 };
+
+    filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
 
     const [items, total] = await Promise.all([
       this.agreementModel
@@ -645,6 +687,151 @@ export class ContractorAgreementsService {
     );
   }
 
+  async disburseMobilisationAdvance(
+    id: string,
+    dto: DisburseMobilisationAdvanceDto,
+    actorId: string,
+  ) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid agreement id');
+    }
+
+    const agreement = await this.agreementModel.findById(id).exec();
+    if (!agreement) {
+      throw new NotFoundException('Contractor agreement not found');
+    }
+    if (agreement.status !== ContractorAgreementStatus.Active) {
+      throw new BadRequestException(
+        'Only active agreements can disburse mobilisation advance',
+      );
+    }
+    const advanceAmount = Number(agreement.advance?.amount ?? 0);
+    if (!(advanceAmount > 0)) {
+      throw new BadRequestException('Agreement has no mobilisation advance amount');
+    }
+    if (agreement.advanceDisbursementJournalId) {
+      return createSuccessResponse(
+        toPublicContractorAgreement(agreement),
+        'Mobilisation advance already disbursed',
+      );
+    }
+
+    if (!Types.ObjectId.isValid(dto.bankAccountId)) {
+      throw new BadRequestException('Invalid bankAccountId');
+    }
+    const bank = await this.bankModel.findById(dto.bankAccountId).exec();
+    if (!bank) {
+      throw new NotFoundException('Bank account not found');
+    }
+    if (bank.status !== BankAccountStatus.Active) {
+      throw new BadRequestException('Bank account is not active');
+    }
+    if (
+      bank.projectId &&
+      String(bank.projectId) !== String(agreement.projectId)
+    ) {
+      throw new BadRequestException(
+        'Bank account is not available for this project',
+      );
+    }
+    if (!bank.ledgerAccountId) {
+      throw new BadRequestException(
+        'Bank account is missing ledgerAccountId for posting',
+      );
+    }
+
+    const contractorAdvance = await this.accountModel
+      .findOne({
+        accountCategory: AccountCategory.ContractorAdvance,
+        status: AccountStatus.Active,
+        allowManualPosting: true,
+      })
+      .exec();
+    if (!contractorAdvance) {
+      throw new BadRequestException(
+        'No active posting account found for category contractor_advance',
+      );
+    }
+
+    const paymentDate = new Date(dto.paymentDate);
+    if (Number.isNaN(paymentDate.getTime())) {
+      throw new BadRequestException('Invalid paymentDate');
+    }
+    await this.financialYearService.assertPostingAllowed(paymentDate);
+
+    const projectId = String(agreement.projectId);
+    const contractorId = String(agreement.contractorId);
+    const agreementId = String(agreement._id);
+
+    const posted = await this.databaseService.withTransaction(async (session) => {
+      const locked = await this.agreementModel
+        .findById(agreementId)
+        .session(session)
+        .exec();
+      if (!locked) {
+        throw new NotFoundException('Contractor agreement not found');
+      }
+      if (locked.advanceDisbursementJournalId) {
+        return locked;
+      }
+
+      const journal = await this.journalService.create(
+        {
+          journalDate: paymentDate.toISOString().slice(0, 10),
+          projectId,
+          sourceModule: 'contractor_agreement',
+          sourceEntityType: 'contractor_agreement',
+          sourceEntityId: agreementId,
+          postingPurpose: 'advance_disbursement',
+          narration:
+            `Mobilisation advance for agreement ${locked.agreementNumber}`.slice(
+              0,
+              500,
+            ),
+          lines: [
+            {
+              accountId: String(contractorAdvance._id),
+              debit: advanceAmount,
+              credit: 0,
+              projectId,
+              description: `Mobilisation advance disbursement ${locked.agreementNumber}`,
+              partyType: JournalPartyType.Contractor,
+              partyId: contractorId,
+            },
+            {
+              accountId: String(bank.ledgerAccountId),
+              debit: 0,
+              credit: advanceAmount,
+              projectId,
+              description: `Bank payment ${dto.transactionReference?.trim() || locked.agreementNumber}`,
+            },
+          ],
+          post: true,
+        },
+        actorId,
+        `contractor-advance-disburse:${agreementId}`,
+        session,
+      );
+
+      const journalId = journal.data?.id;
+      if (!journalId) {
+        throw new BadRequestException('Advance disbursement journal failed');
+      }
+
+      locked.advanceDisbursementJournalId = new Types.ObjectId(journalId);
+      locked.advanceDisbursedAt = new Date();
+      locked.advanceDisbursedBy = new Types.ObjectId(actorId);
+      locked.set('updatedBy', new Types.ObjectId(actorId));
+      await locked.save({ session });
+      return locked;
+    });
+
+    return createSuccessResponse(
+      toPublicContractorAgreement(posted),
+      'Mobilisation advance disbursed',
+    );
+  }
+
   private async activateApproved(
     row: HydratedDocument<ContractorAgreement>,
     actorId: string,
@@ -792,6 +979,8 @@ export class ContractorAgreementsService {
 
   private async requireAgreement(
     id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
   ): Promise<HydratedDocument<ContractorAgreement>> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid agreement id');
@@ -799,6 +988,15 @@ export class ContractorAgreementsService {
     const row = await this.agreementModel.findById(id).exec();
     if (!row) {
       throw new NotFoundException('Contractor agreement not found');
+    }
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'contractor-agreement', resourceId: id },
+      );
     }
     return row;
   }

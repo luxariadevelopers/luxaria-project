@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CustomerReceiptsService } from './customer-receipts.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   CancelCustomerReceiptDto,
   CreateCustomerReceiptDto,
@@ -19,6 +20,11 @@ import {
   UpdateCustomerReceiptDto,
 } from './dto/customer-receipt.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'customer-receipt', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Customer Receipts')
 @ApiBearerAuth()
 @Controller('customer-receipts')
@@ -40,15 +46,18 @@ export class CustomerReceiptsController {
   @Get()
   @RequirePermissions('collection.view')
   @ApiOperation({ summary: 'List customer receipts' })
-  list(@Query() query: ListCustomerReceiptsQueryDto) {
-    return this.customerReceiptsService.list(query);
+  list(
+    @Query() query: ListCustomerReceiptsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.customerReceiptsService.list(query, actor.id);
   }
 
   @Get(':id')
   @RequirePermissions('collection.view')
   @ApiOperation({ summary: 'Get customer receipt by id' })
-  getById(@Param('id') id: string) {
-    return this.customerReceiptsService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.customerReceiptsService.getById(id, actor.id);
   }
 
   @Patch(':id')

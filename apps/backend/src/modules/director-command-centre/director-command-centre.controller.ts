@@ -5,7 +5,9 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CommandCentreQueryDto } from './dto/command-centre-query.dto';
 import { DirectorCommandCentreService } from './director-command-centre.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Director Command Centre')
 @ApiBearerAuth()
 @Controller('director-command-centre')

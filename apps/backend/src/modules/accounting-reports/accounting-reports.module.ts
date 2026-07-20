@@ -42,6 +42,7 @@ import {
   VendorInvoiceSchema,
 } from '../vendor-invoices/schemas/vendor-invoice.schema';
 import { Vendor, VendorSchema } from '../vendors/schemas/vendor.schema';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { AccountingReportsExportService } from './accounting-reports-export.service';
 import { AccountingReportsController } from './accounting-reports.controller';
 import { AccountingReportsService } from './accounting-reports.service';
@@ -62,6 +63,7 @@ import { AccountingReportsService } from './accounting-reports.service';
       { name: Director.name, schema: DirectorSchema },
       { name: Investor.name, schema: InvestorSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [AccountingReportsController],
   providers: [AccountingReportsService, AccountingReportsExportService],

@@ -112,6 +112,18 @@ describe('BookingsService', () => {
         return map[key];
       },
     } as unknown as ConfigService<AppConfig, true>;
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new BookingsService(
       bookingModel,
@@ -123,6 +135,7 @@ describe('BookingsService', () => {
       approvalsService,
       pdfService,
       configService,
+      mockProjectScope
     );
   }, 120_000);
 

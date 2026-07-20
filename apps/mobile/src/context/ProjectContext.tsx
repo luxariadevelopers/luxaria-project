@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '@/api/client';
 import type { ProjectOption } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
@@ -26,6 +26,7 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, hasPermission, isBootstrapping } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -57,10 +58,35 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [projectsQuery.data],
   );
 
-  const setSelectedProjectId = useCallback(async (id: string | null) => {
-    await tokenStorage.setSelectedProjectId(id);
-    setSelectedId(id);
-  }, []);
+  // Clear stale selection that is no longer in the accessible list.
+  useEffect(() => {
+    if (!ready || projectsQuery.isLoading) return;
+    if (!selectedProjectId) return;
+    if (projects.some((p) => p.id === selectedProjectId)) return;
+    void tokenStorage.setSelectedProjectId(null);
+    setSelectedId(null);
+  }, [ready, projectsQuery.isLoading, projects, selectedProjectId]);
+
+  const setSelectedProjectId = useCallback(
+    async (id: string | null) => {
+      if (id && projects.length > 0 && !projects.some((p) => p.id === id)) {
+        return;
+      }
+      await tokenStorage.setSelectedProjectId(id);
+      setSelectedId(id);
+      await queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return !(
+            Array.isArray(key) &&
+            key[0] === 'projects' &&
+            key[1] === 'mobile'
+          );
+        },
+      });
+    },
+    [projects, queryClient],
+  );
 
   const selectedProject = useMemo(
     () => projects.find((p) => p.id === selectedProjectId) ?? null,

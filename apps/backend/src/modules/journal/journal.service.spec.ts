@@ -135,6 +135,13 @@ describe('JournalService', () => {
       databaseService,
       new IdempotencyService(idempotencyModel),
       new AuditLogService(auditModel),
+      {
+        assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+        assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+        mergeAuthorisedProjectFilter: jest
+          .fn()
+          .mockImplementation(async (_actor: string, filter: unknown) => filter),
+      } as never,
     );
   }, 60_000);
 

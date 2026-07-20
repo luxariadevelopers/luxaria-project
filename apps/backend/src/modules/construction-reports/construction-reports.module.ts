@@ -58,6 +58,7 @@ import {
   WorkMeasurement,
   WorkMeasurementSchema,
 } from '../work-measurements/schemas/work-measurement.schema';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { ConstructionReportsExportService } from './construction-reports-export.service';
 import { ConstructionReportsController } from './construction-reports.controller';
 import { ConstructionReportsService } from './construction-reports.service';
@@ -95,6 +96,7 @@ import { ConstructionReportsService } from './construction-reports.service';
       },
       { name: DprMissingAlert.name, schema: DprMissingAlertSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [ConstructionReportsController],
   providers: [ConstructionReportsService, ConstructionReportsExportService],

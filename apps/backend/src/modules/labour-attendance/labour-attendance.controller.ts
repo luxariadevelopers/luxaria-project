@@ -25,7 +25,13 @@ import {
   UpdateLabourAttendanceDto,
 } from './dto/labour-attendance.dto';
 import { LabourAttendanceService } from './labour-attendance.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'labour-attendance', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Labour Attendance')
 @ApiBearerAuth()
 @Controller('labour-attendance')

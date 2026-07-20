@@ -17,8 +17,13 @@ export class ConstructionReportsExportService {
     reportType: ConstructionReportType,
     query: ConstructionReportsQueryDto,
     format: ConstructionExportFormat,
+    actorId: string,
   ): Promise<{ filename: string; contentType: string; buffer: Buffer }> {
-    const result = await this.reportsService.getReport(reportType, query);
+    const result = await this.reportsService.getReport(
+      reportType,
+      query,
+      actorId,
+    );
     const payload = result.data as ConstructionReportPayload;
     const stamp = new Date().toISOString().slice(0, 10);
     const baseName = `construction-${reportType}-${stamp}`;

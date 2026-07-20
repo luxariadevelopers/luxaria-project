@@ -12,7 +12,9 @@ import { RequestUnlockDto } from './dto/request-unlock.dto';
 import { ValidateTransactionDateDto } from './dto/validate-transaction-date.dto';
 import { FinancialYearService } from './financial-year.service';
 import { UnlockRequestStatus } from './schemas/financial-year-unlock-request.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Financial Year')
 @ApiBearerAuth()
 @Controller('financial-years')

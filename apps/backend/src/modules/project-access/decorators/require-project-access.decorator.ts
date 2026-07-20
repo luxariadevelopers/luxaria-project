@@ -1,11 +1,15 @@
-import { SetMetadata } from '@nestjs/common';
+import { applyDecorators, SetMetadata } from '@nestjs/common';
 import type { ProjectAccessOperation } from '../schemas/unauthorized-project-access.schema';
+import {
+  ProjectScoped,
+  type ProjectIdSource,
+} from './route-scope.decorator';
 
 export const REQUIRE_PROJECT_ACCESS_KEY = 'requireProjectAccess';
 
 export type RequireProjectAccessOptions = {
   /** Request location of the project id */
-  source?: 'params' | 'body' | 'query';
+  source?: ProjectIdSource;
   /** Field name containing the project id (default: projectId) */
   key?: string;
   /** Operation recorded in audit + denial message */
@@ -18,13 +22,29 @@ export type RequireProjectAccessOptions = {
 };
 
 /**
- * Enforces project-level access for create / read / update / approve flows.
- * Deny unless the user has an effective assignment (or globalAccess / Super Admin bypass).
+ * Legacy decorator — also applies @ProjectScoped for R-003 default-deny.
+ * Prefer @ProjectScoped directly on new routes.
  */
-export const RequireProjectAccess = (options: RequireProjectAccessOptions = {}) =>
-  SetMetadata(REQUIRE_PROJECT_ACCESS_KEY, {
-    source: options.source ?? 'params',
-    key: options.key ?? 'projectId',
-    operation: options.operation ?? 'read',
-    required: options.required ?? true,
-  } satisfies Required<RequireProjectAccessOptions>);
+export const RequireProjectAccess = (
+  options: RequireProjectAccessOptions = {},
+) => {
+  const source = options.source ?? 'params';
+  const key = options.key ?? 'projectId';
+  const operation = options.operation ?? 'read';
+  const required = options.required ?? true;
+
+  return applyDecorators(
+    SetMetadata(REQUIRE_PROJECT_ACCESS_KEY, {
+      source,
+      key,
+      operation,
+      required,
+    } satisfies Required<RequireProjectAccessOptions>),
+    ProjectScoped({
+      operation,
+      required,
+      mode: 'single',
+      projectIdKeys: [{ source, key }],
+    }),
+  );
+};

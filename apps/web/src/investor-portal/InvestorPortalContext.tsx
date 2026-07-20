@@ -7,9 +7,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { isProjectAuthorised } from './access';
 import { fetchInvestorPortalMe, fetchInvestorPortalProjects } from './api';
 import { investorProjectStorage } from './investorProjectStorage';
 import type { InvestorPortalMe, InvestorPortalProjectSummary } from './types';
@@ -36,6 +37,7 @@ const InvestorPortalContext = createContext<InvestorPortalContextValue | null>(
 
 export function InvestorPortalProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectIdState] = useState<string | null>(
     () => investorProjectStorage.getSelectedProjectId(),
   );
@@ -76,10 +78,34 @@ export function InvestorPortalProvider({ children }: { children: ReactNode }) {
     investorProjectStorage.setSelectedProjectId(nextId);
   }, [projects, selectedProjectId]);
 
-  const setSelectedProjectId = useCallback((projectId: string | null) => {
-    setSelectedProjectIdState(projectId);
-    investorProjectStorage.setSelectedProjectId(projectId);
-  }, []);
+  const setSelectedProjectId = useCallback(
+    (projectId: string | null) => {
+      if (
+        projectId &&
+        projects.length > 0 &&
+        !isProjectAuthorised(
+          projectId,
+          projects.map((p) => p.projectId),
+        )
+      ) {
+        return;
+      }
+      setSelectedProjectIdState(projectId);
+      investorProjectStorage.setSelectedProjectId(projectId);
+      void queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === 'investor-portal' &&
+            key[1] !== 'me' &&
+            key[1] !== 'projects'
+          );
+        },
+      });
+    },
+    [projects, queryClient],
+  );
 
   const selectedProject = useMemo(
     () => projects.find((p: InvestorPortalProjectSummary) => p.projectId === selectedProjectId) ?? null,

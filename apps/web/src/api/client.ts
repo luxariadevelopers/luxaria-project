@@ -60,9 +60,13 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  const projectId = tokenStorage.getSelectedProjectId();
-  if (projectId) {
-    config.headers['X-Project-Id'] = projectId;
+  const url = config.url ?? '';
+  // Investor portal is path-scoped; do not send staff active-project header.
+  if (!url.includes('/investor-portal')) {
+    const projectId = tokenStorage.getSelectedProjectId();
+    if (projectId) {
+      config.headers['X-Project-Id'] = projectId;
+    }
   }
   return config;
 });

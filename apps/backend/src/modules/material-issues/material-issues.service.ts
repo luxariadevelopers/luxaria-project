@@ -16,6 +16,7 @@ import {
 import { StockTransactionType } from '../material-master/schemas/material-stock-transaction.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { StockLedgerService } from '../stock-ledger/stock-ledger.service';
 import type {
   AttachMaterialIssueSignaturesDto,
@@ -51,9 +52,16 @@ export class MaterialIssuesService {
     private readonly materialModel: Model<Material>,
     private readonly numberingService: NumberingService,
     private readonly stockLedgerService: StockLedgerService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateMaterialIssueDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'material-issue' },
+    );
     if (!Types.ObjectId.isValid(dto.projectId)) {
       throw new BadRequestException('Invalid projectId');
     }
@@ -124,7 +132,7 @@ export class MaterialIssuesService {
   }
 
   async update(id: string, dto: UpdateMaterialIssueDto, actorId: string) {
-    const row = await this.requireIssue(id);
+    const row = await this.requireIssue(id, actorId, 'update');
     if (row.status !== MaterialIssueStatus.Draft) {
       throw new BadRequestException('Only draft material issues can be updated');
     }
@@ -187,7 +195,7 @@ export class MaterialIssuesService {
     dto: AttachMaterialIssueSignaturesDto,
     actorId: string,
   ) {
-    const row = await this.requireIssue(id);
+    const row = await this.requireIssue(id, actorId, 'update');
     if (
       row.status !== MaterialIssueStatus.Draft &&
       row.status !== MaterialIssueStatus.Submitted
@@ -230,7 +238,7 @@ export class MaterialIssuesService {
   }
 
   async submit(id: string, actorId: string) {
-    const row = await this.requireIssue(id);
+    const row = await this.requireIssue(id, actorId, 'update');
     if (row.status !== MaterialIssueStatus.Draft) {
       throw new BadRequestException(
         'Only draft material issues can be submitted',
@@ -261,7 +269,7 @@ export class MaterialIssuesService {
    * Confirmation posts MaterialIssue ledger rows and reduces stock.
    */
   async confirm(id: string, actorId: string) {
-    const row = await this.requireIssue(id);
+    const row = await this.requireIssue(id, actorId, 'update');
     if (row.status !== MaterialIssueStatus.Submitted) {
       throw new BadRequestException(
         'Only submitted material issues can be confirmed',
@@ -308,7 +316,7 @@ export class MaterialIssuesService {
     dto: CreateMaterialReturnDto,
     actorId: string,
   ) {
-    const row = await this.requireIssue(id);
+    const row = await this.requireIssue(id, actorId, 'update');
     if (row.status !== MaterialIssueStatus.Confirmed) {
       throw new BadRequestException(
         'Material returns are only allowed on confirmed issues',
@@ -416,7 +424,7 @@ export class MaterialIssuesService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requireIssue(id);
+    const row = await this.requireIssue(id, actorId, 'update');
     if (
       row.status !== MaterialIssueStatus.Draft &&
       row.status !== MaterialIssueStatus.Submitted
@@ -438,18 +446,26 @@ export class MaterialIssuesService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requireIssue(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireIssue(id, actorId, 'read');
     return createSuccessResponse(
       toPublicMaterialIssue(row),
       'Material issue fetched successfully',
     );
   }
 
-  async list(query: ListMaterialIssuesQueryDto) {
+  async list(query: ListMaterialIssuesQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'material-issue' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<MaterialIssue> = {};
+    let filter: FilterQuery<MaterialIssue> = {};
 
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
@@ -468,7 +484,12 @@ export class MaterialIssuesService {
     }
 
     const sort: Record<string, SortOrder> = { issueDate: -1, createdAt: -1 };
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.issueModel
         .find(filter)
         .sort(sort)
@@ -554,13 +575,26 @@ export class MaterialIssuesService {
     return material;
   }
 
-  private async requireIssue(id: string) {
+  private async requireIssue(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid material issue id');
     }
     const row = await this.issueModel.findById(id).exec();
     if (!row) {
       throw new NotFoundException('Material issue not found');
+    }
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'material-issue', resourceId: id },
+      );
     }
     return row;
   }

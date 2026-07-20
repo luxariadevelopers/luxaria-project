@@ -24,7 +24,12 @@ import {
   UpdatePettyCashFundTransferDto,
 } from './dto/petty-cash-fund-transfer.dto';
 import { PettyCashFundTransfersService } from './petty-cash-fund-transfers.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  operation: 'read',
+})
 @ApiTags('Petty Cash Fund Transfers')
 @ApiBearerAuth()
 @Controller('petty-cash-fund-transfers')

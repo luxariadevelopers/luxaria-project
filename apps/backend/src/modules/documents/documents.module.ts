@@ -2,6 +2,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { S3_CLIENT } from './documents.constants';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
@@ -16,6 +17,7 @@ import {
     MongooseModule.forFeature([
       { name: StoredDocument.name, schema: StoredDocumentSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [DocumentsController],
   providers: [

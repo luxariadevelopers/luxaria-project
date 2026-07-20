@@ -1,4 +1,5 @@
 import { apiGet, isForbiddenError } from '@/api/client';
+import { assertInvestorPortalApiPath } from './access';
 import {
   aggregateInvestorDocuments,
   aggregateInvestorStatements,
@@ -6,6 +7,7 @@ import {
 import type {
   AggregatedInvestorDocument,
   AggregatedInvestorStatement,
+  InvestorPortalMe,
   InvestorPortalProjectDetail,
   InvestorPortalProjectSummary,
 } from './types';
@@ -19,17 +21,33 @@ export class InvestorPortalAccessError extends Error {
   }
 }
 
+function portalGet<T>(path: string) {
+  assertInvestorPortalApiPath(path);
+  return apiGet<T>(path);
+}
+
+/** `GET /investor-portal/me` — `investor_portal.view` */
+export async function fetchInvestorPortalMe() {
+  return portalGet<InvestorPortalMe>('/investor-portal/me');
+}
+
 /** `GET /investor-portal/projects` — `investor_portal.view` */
 export async function fetchInvestorProjects() {
-  return apiGet<InvestorPortalProjectSummary[]>('/investor-portal/projects');
+  return portalGet<InvestorPortalProjectSummary[]>('/investor-portal/projects');
 }
+
+/** Alias used by portal context / pages. */
+export const fetchInvestorPortalProjects = fetchInvestorProjects;
 
 /** `GET /investor-portal/projects/:projectId` — `investor_portal.view` */
 export async function fetchInvestorProjectDetail(projectId: string) {
-  return apiGet<InvestorPortalProjectDetail>(
+  return portalGet<InvestorPortalProjectDetail>(
     `/investor-portal/projects/${projectId}`,
   );
 }
+
+/** Alias used by portal detail pages. */
+export const fetchInvestorPortalProject = fetchInvestorProjectDetail;
 
 async function loadAuthorisedProjectDetails(
   summaries: InvestorPortalProjectSummary[],

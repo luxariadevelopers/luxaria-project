@@ -79,6 +79,18 @@ describe('WorkMeasurementService', () => {
       boqVersionModel.syncIndexes(),
       counterModel.syncIndexes(),
     ]);
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new WorkMeasurementService(
       measurementModel,
@@ -86,6 +98,7 @@ describe('WorkMeasurementService', () => {
       boqItemModel,
       boqVersionModel,
       new NumberingService(counterModel),
+      mockProjectScope
     );
   }, 120_000);
 

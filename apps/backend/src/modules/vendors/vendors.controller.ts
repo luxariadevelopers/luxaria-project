@@ -37,6 +37,7 @@ import {
   VendorVerificationStatus,
 } from './schemas/vendor.schema';
 import { VendorsService } from './vendors.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
 const DOC_UPLOAD_DIR = join(process.cwd(), 'uploads', 'vendors');
 
@@ -47,6 +48,7 @@ type UploadedDoc = {
   size: number;
 };
 
+@GlobalScope()
 @ApiTags('Vendors')
 @ApiBearerAuth()
 @Controller('vendors')

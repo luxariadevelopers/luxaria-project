@@ -34,6 +34,7 @@ import { UpdateParticipantDto } from './dto/update-participant.dto';
 import { ProjectParticipantsService } from './project-participants.service';
 import { ParticipantDocumentCategory } from './schemas/project-participant-document.schema';
 import { ParticipantApprovalStatus } from './schemas/project-participant.schema';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
 const DOC_UPLOAD_DIR = join(process.cwd(), 'uploads', 'project-participants');
 
@@ -44,6 +45,11 @@ type UploadedDoc = {
   size: number;
 };
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'project-participant', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Project Participants')
 @ApiBearerAuth()
 @Controller('projects/:projectId/participants')

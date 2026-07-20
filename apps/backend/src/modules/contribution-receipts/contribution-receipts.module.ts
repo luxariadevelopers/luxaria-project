@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { FinancialYearModule } from '../financial-year/financial-year.module';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { ProjectCommitmentsModule } from '../project-commitments/project-commitments.module';
 import { ProjectParticipantsModule } from '../project-participants/project-participants.module';
 import { ProjectsModule } from '../projects/projects.module';
@@ -35,6 +36,7 @@ import {
     ProjectParticipantsModule,
     ProjectCommitmentsModule,
     FinancialYearModule,
+    ProjectAccessModule,
   ],
   controllers: [ContributionReceiptsController],
   providers: [ContributionReceiptsService, ContributionReceiptPdfService],

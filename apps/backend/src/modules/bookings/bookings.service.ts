@@ -17,6 +17,7 @@ import { ApprovalStatus } from '../approvals/schemas/approval-request.schema';
 import { Customer } from '../customers/schemas/customer.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   Project,
   ProjectStatus,
@@ -75,9 +76,16 @@ export class BookingsService {
     private readonly approvalsService: ApprovalsService,
     private readonly pdfService: BookingPdfService,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateBookingDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'booking' },
+    );
     await this.requireProject(dto.projectId);
     const customer = await this.requireCustomer(dto.customerId);
     const unit = await this.requireUnit(dto.unitId);
@@ -209,7 +217,7 @@ export class BookingsService {
   }
 
   async update(id: string, dto: UpdateBookingDto, actorId: string) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     if (
       row.status !== BookingStatus.Hold &&
       row.status !== BookingStatus.PendingApproval
@@ -288,15 +296,23 @@ export class BookingsService {
     return createSuccessResponse(toPublicBooking(row), 'Booking updated');
   }
 
-  async getById(id: string) {
-    const row = await this.requireBooking(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requireBooking(id, actorId, 'read');
     return createSuccessResponse(toPublicBooking(row), 'Booking retrieved');
   }
 
-  async list(query: ListBookingsQueryDto) {
+  async list(query: ListBookingsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'booking' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<Booking> = {};
+    let filter: FilterQuery<Booking> = {};
 
     if (query.status) filter.status = query.status;
     if (query.projectId) filter.projectId = new Types.ObjectId(query.projectId);
@@ -310,7 +326,12 @@ export class BookingsService {
     }
 
     const sortOrder: SortOrder = query.sortOrder === 'asc' ? 1 : -1;
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.bookingModel
         .find(filter)
         .sort({ createdAt: sortOrder })
@@ -332,7 +353,7 @@ export class BookingsService {
     dto: TransitionBookingDto,
     actorId: string,
   ) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     const next = dto.status;
 
     if (
@@ -388,7 +409,7 @@ export class BookingsService {
 
     if (next === BookingStatus.Booked && !row.pdfPath) {
       await this.generateBookingForm(String(row._id), actorId);
-      const refreshed = await this.requireBooking(id);
+      const refreshed = await this.requireBooking(id, actorId, 'update');
       return createSuccessResponse(
         toPublicBooking(refreshed),
         `Booking transitioned to ${next}`,
@@ -406,7 +427,7 @@ export class BookingsService {
     dto: ApproveBookingDiscountDto,
     actorId: string,
   ) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     if (row.status !== BookingStatus.PendingApproval) {
       throw new BadRequestException(
         'Only pending_approval bookings can have discounts approved',
@@ -453,7 +474,7 @@ export class BookingsService {
     dto: RejectBookingDiscountDto,
     actorId: string,
   ) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     if (row.status !== BookingStatus.PendingApproval) {
       throw new BadRequestException(
         'Only pending_approval bookings can have discounts rejected',
@@ -473,7 +494,7 @@ export class BookingsService {
   }
 
   async cancel(id: string, dto: CancelBookingDto, actorId: string) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     if (
       row.status === BookingStatus.Cancelled ||
       row.status === BookingStatus.Expired ||
@@ -506,7 +527,7 @@ export class BookingsService {
     reason: string | null,
     actorId: string,
   ) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     if (row.status === BookingStatus.Cancelled) {
       return createSuccessResponse(toPublicBooking(row), 'Booking already cancelled');
     }
@@ -536,7 +557,7 @@ export class BookingsService {
   }
 
   async generateBookingForm(id: string, actorId: string) {
-    const row = await this.requireBooking(id);
+    const row = await this.requireBooking(id, actorId, 'update');
     if (
       ![
         BookingStatus.Reserved,
@@ -719,12 +740,25 @@ export class BookingsService {
     }
   }
 
-  private async requireBooking(id: string) {
+  private async requireBooking(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Booking not found');
     }
     const row = await this.bookingModel.findById(id).exec();
     if (!row) throw new NotFoundException('Booking not found');
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'booking', resourceId: id },
+      );
+    }
     return row;
   }
 

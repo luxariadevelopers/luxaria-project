@@ -19,7 +19,13 @@ import {
 } from './dto/create-commitment.dto';
 import { ProjectCommitmentsService } from './project-commitments.service';
 import { CommitmentStatus } from './schemas/contribution-commitment.schema';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'project-commitment', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Project Contribution Commitments')
 @ApiBearerAuth()
 @Controller('projects/:projectId/commitments')

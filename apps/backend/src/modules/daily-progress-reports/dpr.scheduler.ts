@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import type { AppConfig } from '../../config/configuration';
+import { createSystemContext } from '../project-access/system-execution-context';
 import { DprService } from './dpr.service';
 
 @Injectable()
@@ -24,7 +25,14 @@ export class DprScheduler {
     if (!this.configService.get('dprMissingJobsEnabled', { infer: true })) {
       return;
     }
-    this.logger.log('Scheduled missing-DPR evaluation starting');
+    const system = createSystemContext({
+      jobName: 'dpr-missing-evaluate',
+      reason:
+        'Raise missing DPR alerts for construction projects; iterates all active projects/companies explicitly in service',
+    });
+    this.logger.log(
+      `Scheduled missing-DPR evaluation starting system=${system.jobName}`,
+    );
     const result = await this.dprService.evaluateMissingAlerts();
     this.logger.log(
       `Missing-DPR evaluation done: created=${result.data?.created ?? 0}`,

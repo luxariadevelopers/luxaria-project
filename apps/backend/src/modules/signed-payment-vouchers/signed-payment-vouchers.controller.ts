@@ -26,7 +26,13 @@ import {
   UpdateSignedPaymentVoucherDto,
 } from './dto/signed-payment-voucher.dto';
 import { SignedPaymentVouchersService } from './signed-payment-vouchers.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'signed-payment-voucher', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Signed Payment Vouchers')
 @ApiBearerAuth()
 @Controller('signed-payment-vouchers')

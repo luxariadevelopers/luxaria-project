@@ -97,7 +97,7 @@ export async function fetchBookAccountOptions(
   if (kind === 'bank-book') {
     const accounts = await fetchAccounts({
       page: 1,
-      limit: 200,
+      limit: 100,
       status: AccountStatus.Active,
       accountCategory: AccountCategory.Bank,
     });
@@ -107,13 +107,13 @@ export async function fetchBookAccountOptions(
   const [cash, petty] = await Promise.all([
     fetchAccounts({
       page: 1,
-      limit: 200,
+      limit: 100,
       status: AccountStatus.Active,
       accountCategory: CASH_CATEGORIES[0],
     }),
     fetchAccounts({
       page: 1,
-      limit: 200,
+      limit: 100,
       status: AccountStatus.Active,
       accountCategory: CASH_CATEGORIES[1],
     }),

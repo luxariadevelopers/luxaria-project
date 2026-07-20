@@ -1,3 +1,13 @@
+/** Linked investor profile — `GET /investor-portal/me`. */
+export type InvestorPortalMe = {
+  investorId: string;
+  investorCode: string;
+  legalName: string;
+  investorType: string;
+  status: string;
+  kycStatus: string;
+};
+
 export type InvestorPortalProjectSummary = {
   projectId: string;
   projectCode: string;

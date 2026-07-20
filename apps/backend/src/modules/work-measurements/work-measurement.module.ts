@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   BoqItem,
@@ -22,6 +23,7 @@ import {
       { name: BoqItem.name, schema: BoqItemSchema },
       { name: BoqVersion.name, schema: BoqVersionSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [WorkMeasurementController],
   providers: [WorkMeasurementService],

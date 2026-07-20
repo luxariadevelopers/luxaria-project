@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CompanyBankAccountsService } from './company-bank-accounts.service';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import {
   BankLedgerQueryDto,
   CreateCompanyBankAccountDto,
@@ -20,6 +21,7 @@ import {
   UpdateCompanyBankAccountDto,
 } from './dto/company-bank-account.dto';
 
+@GlobalScope()
 @ApiTags('Company Bank Accounts')
 @ApiBearerAuth()
 @Controller('company-bank-accounts')

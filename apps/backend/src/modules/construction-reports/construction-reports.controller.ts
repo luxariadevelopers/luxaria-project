@@ -1,15 +1,22 @@
 import { Controller, Get, Param, Query, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { ConstructionReportType } from './construction-reports.constants';
 import { ConstructionReportsExportService } from './construction-reports-export.service';
 import { ConstructionReportsService } from './construction-reports.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
   ConstructionReportExportQueryDto,
   ConstructionReportsQueryDto,
 } from './dto/construction-reports-query.dto';
 
+@ProjectScoped({
+  mode: 'filter',
+  operation: 'read',
+})
 @ApiTags('Construction Reports')
 @ApiBearerAuth()
 @Controller('construction-reports')
@@ -34,12 +41,14 @@ export class ConstructionReportsController {
   async export(
     @Param('reportType') reportType: ConstructionReportType,
     @Query() query: ConstructionReportExportQueryDto,
+    @CurrentUser() actor: AuthUser,
     @Res() res: Response,
   ) {
     const { filename, contentType, buffer } = await this.exportService.export(
       reportType,
       query,
       query.format ?? 'xlsx',
+      actor.id,
     );
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -55,7 +64,8 @@ export class ConstructionReportsController {
   getReport(
     @Param('reportType') reportType: ConstructionReportType,
     @Query() query: ConstructionReportsQueryDto,
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.reportsService.getReport(reportType, query);
+    return this.reportsService.getReport(reportType, query, actor.id);
   }
 }

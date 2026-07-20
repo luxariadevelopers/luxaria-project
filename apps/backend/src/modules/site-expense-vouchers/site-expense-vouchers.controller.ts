@@ -26,7 +26,13 @@ import {
   UpdateSiteExpenseVoucherDto,
 } from './dto/site-expense-voucher.dto';
 import { SiteExpenseVouchersService } from './site-expense-vouchers.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'site-expense-voucher', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Site Expense Vouchers')
 @ApiBearerAuth()
 @Controller('site-expense-vouchers')

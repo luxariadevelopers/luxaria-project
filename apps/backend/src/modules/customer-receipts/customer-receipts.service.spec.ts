@@ -130,6 +130,18 @@ describe('CustomerReceiptsService', () => {
         return { data: { id: new Types.ObjectId().toHexString() } };
       },
     } as unknown as JournalService;
+    const mockProjectScope = {
+      assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
+      assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
+      assertOwnedResource: jest.fn().mockResolvedValue(undefined),
+      mergeAuthorisedProjectFilter: jest
+        .fn()
+        .mockImplementation(async (_a, f) => f),
+      findOneForActor: jest.fn(),
+      buildScopedIdFilter: jest.fn(),
+      authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
+    } as never;
+
 
     service = new CustomerReceiptsService(
       receiptModel,
@@ -142,6 +154,7 @@ describe('CustomerReceiptsService', () => {
       new NumberingService(counterModel),
       journalService,
       new CustomerReceiptPdfService(),
+      mockProjectScope
     );
   }, 120_000);
 

@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { FilterQuery, Model, PipelineStage } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import {
   BoqVersion,
   BoqVersionStatus,
@@ -142,12 +143,24 @@ export class ProjectDashboardService {
     private readonly dprMissingModel: Model<DprMissingAlert>,
     @InjectModel(PurchaseRequest.name)
     private readonly purchaseRequestModel: Model<PurchaseRequest>,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
-  async getDashboard(projectId: string, query: ProjectDashboardQueryDto) {
+  async getDashboard(
+    projectId: string,
+    query: ProjectDashboardQueryDto,
+    actorId: string,
+  ) {
     if (!Types.ObjectId.isValid(projectId)) {
       throw new BadRequestException('Invalid projectId');
     }
+
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      projectId,
+      'read',
+      { resourceType: 'project-dashboard' },
+    );
 
     const project = await this.projectModel.findById(projectId).lean().exec();
     if (!project) {

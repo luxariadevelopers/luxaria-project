@@ -24,7 +24,13 @@ import {
   UpdateManpowerDailyPlanDto,
 } from './dto/manpower-planning.dto';
 import { ManpowerPlanningService } from './manpower-planning.service';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
+@ProjectScoped({
+  mode: 'filter',
+  resource: { resourceType: 'manpower-shortfall', idParam: 'id' },
+  operation: 'read',
+})
 @ApiTags('Manpower Planning')
 @ApiBearerAuth()
 @Controller('manpower-planning')

@@ -22,6 +22,7 @@ import { JournalPartyType } from '../journal/schemas/journal-entry.schema';
 import { JournalService } from '../journal/journal.service';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Vendor, VendorStatus } from '../vendors/schemas/vendor.schema';
 import { VendorInvoicesService } from '../vendor-invoices/vendor-invoices.service';
 import { VendorInvoice } from '../vendor-invoices/schemas/vendor-invoice.schema';
@@ -71,9 +72,16 @@ export class VendorPaymentsService {
     private readonly vendorInvoicesService: VendorInvoicesService,
     private readonly numberingService: NumberingService,
     private readonly journalService: JournalService,
+    private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
   async create(dto: CreateVendorPaymentDto, actorId: string) {
+    await this.projectScope.assertProjectAccess(
+      actorId,
+      dto.projectId,
+      'create',
+      { resourceType: 'vendor-payment' },
+    );
     const built = await this.buildPayload(dto);
     const paymentNumber = await this.numberingService.nextCode(
       NumberEntityType.VENDOR_PAYMENT,
@@ -112,7 +120,7 @@ export class VendorPaymentsService {
   }
 
   async update(id: string, dto: UpdateVendorPaymentDto, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== VendorPaymentStatus.Draft) {
       throw new BadRequestException('Only draft vendor payments can be updated');
     }
@@ -169,7 +177,7 @@ export class VendorPaymentsService {
 
   /** Draft → Approval */
   async submit(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== VendorPaymentStatus.Draft) {
       throw new BadRequestException('Only draft payments can be submitted');
     }
@@ -189,7 +197,7 @@ export class VendorPaymentsService {
 
   /** Approval → Released */
   async approve(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== VendorPaymentStatus.Approval) {
       throw new BadRequestException(
         'Only payments in approval can be approved',
@@ -214,7 +222,7 @@ export class VendorPaymentsService {
    * Requires transactionReference (already on document).
    */
   async release(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== VendorPaymentStatus.Released) {
       throw new BadRequestException(
         'Only released payments can record bank release',
@@ -242,7 +250,7 @@ export class VendorPaymentsService {
 
   /** Released → Verified */
   async verify(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== VendorPaymentStatus.Released) {
       throw new BadRequestException('Only released payments can be verified');
     }
@@ -276,7 +284,7 @@ export class VendorPaymentsService {
    * Allocations applied to invoice paidAmount.
    */
   async post(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     if (row.status !== VendorPaymentStatus.Verified) {
       throw new BadRequestException('Only verified payments can be posted');
     }
@@ -309,7 +317,7 @@ export class VendorPaymentsService {
   }
 
   async cancel(id: string, actorId: string) {
-    const row = await this.requirePayment(id);
+    const row = await this.requirePayment(id, actorId, 'update');
     const cancellable = [
       VendorPaymentStatus.Draft,
       VendorPaymentStatus.Approval,
@@ -332,18 +340,26 @@ export class VendorPaymentsService {
     );
   }
 
-  async getById(id: string) {
-    const row = await this.requirePayment(id);
+  async getById(id: string, actorId: string) {
+    const row = await this.requirePayment(id, actorId, 'read');
     return createSuccessResponse(
       toPublicVendorPayment(row),
       'Vendor payment fetched successfully',
     );
   }
 
-  async list(query: ListVendorPaymentsQueryDto) {
+  async list(query: ListVendorPaymentsQueryDto, actorId: string) {
+    if (query.projectId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        query.projectId,
+        'read',
+        { resourceType: 'vendor-payment' },
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: FilterQuery<VendorPayment> = {};
+    let filter: FilterQuery<VendorPayment> = {};
 
     if (query.projectId) filter.projectId = new Types.ObjectId(query.projectId);
     if (query.vendorId) filter.vendorId = new Types.ObjectId(query.vendorId);
@@ -356,7 +372,12 @@ export class VendorPaymentsService {
     }
 
     const sort: Record<string, SortOrder> = { paymentDate: -1, createdAt: -1 };
-    const [items, total] = await Promise.all([
+        filter = await this.projectScope.mergeAuthorisedProjectFilter(
+      actorId,
+      filter,
+    );
+
+const [items, total] = await Promise.all([
       this.paymentModel
         .find(filter)
         .sort(sort)
@@ -719,12 +740,25 @@ export class VendorPaymentsService {
     }
   }
 
-  private async requirePayment(id: string): Promise<VendorPaymentDocument> {
+  private async requirePayment(
+    id: string,
+    actorId?: string,
+    action: 'read' | 'update' | 'create' | 'approve' = 'read',
+  ): Promise<VendorPaymentDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid vendor payment id');
     }
     const row = await this.paymentModel.findById(id).exec();
     if (!row) throw new NotFoundException('Vendor payment not found');
+
+    if (actorId) {
+      await this.projectScope.assertProjectAccess(
+        actorId,
+        String(row.projectId),
+        action,
+        { resourceType: 'vendor-payment', resourceId: id },
+      );
+    }
     return row;
   }
 

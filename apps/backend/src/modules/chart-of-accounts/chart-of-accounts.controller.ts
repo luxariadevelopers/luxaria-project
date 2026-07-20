@@ -20,7 +20,9 @@ import {
   UpdateAccountDto,
 } from './dto/account.dto';
 import { AccountStatus } from './schemas/account.schema';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
+@GlobalScope()
 @ApiTags('Chart of Accounts')
 @ApiBearerAuth()
 @Controller('accounts')
