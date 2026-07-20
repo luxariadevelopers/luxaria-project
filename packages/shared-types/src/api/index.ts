@@ -6,6 +6,21 @@ export type {
 } from './error';
 export { ERROR_CODES } from './error';
 export type {
+  AppErrorInput,
+  AppErrorKind,
+  NormalizedAppError,
+} from './normalize-error';
+export {
+  buildFieldErrors,
+  getUserErrorMessage,
+  inferFieldFromDetailMessage,
+  isForbiddenErrorKind,
+  isUnauthorizedError,
+  normalizeAppError,
+  sanitizeErrorMessage,
+} from './normalize-error';
+
+export type {
   PaginationMeta,
   PaginationQuery,
   SortOrder,

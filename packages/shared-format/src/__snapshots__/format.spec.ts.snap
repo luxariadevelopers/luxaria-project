@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`@luxaria/shared-format date / time (Asia/Kolkata) matches date snapshot 1`] = `
+{
+  "date": "20 Jul 2026",
+  "dateTime": "20 Jul 2026, 6:00 am",
+  "iso": "2026-07-20",
+  "time": "6:00 am",
+}
+`;
+
+exports[`@luxaria/shared-format financial year matches FY snapshot 1`] = `
+{
+  "aug": "FY 2026-27",
+  "fromStart": "FY 2025-26",
+  "mar": "FY 2025-26",
+}
+`;
+
+exports[`@luxaria/shared-format formatInr matches INR snapshot 1`] = `
+{
+  "crore": "₹1,00,00,000.00",
+  "lakh": "₹1,00,000.00",
+  "negative": "-₹250.50",
+  "nullish": "—",
+  "zero": "₹0.00",
+}
+`;
