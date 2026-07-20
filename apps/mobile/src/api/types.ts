@@ -1,16 +1,22 @@
-export type ApiSuccessResponse<T> = {
-  success: true;
-  message: string;
-  data?: T;
-  meta?: Record<string, unknown>;
-};
-
-export type ApiErrorBody = {
-  success?: false;
-  message?: string;
-  error?: string;
-  statusCode?: number;
-};
+/**
+ * Mobile-local auth/domain types. Common API envelopes live in `@luxaria/shared-types`.
+ */
+export type {
+  ApiError,
+  ApiErrorBody,
+  ApiErrorDetail,
+  ApiResponse,
+  ApiResult,
+  ApiSuccessResponse,
+  AuditMeta,
+  ErrorCode,
+  PaginatedResponse,
+  PaginationMeta,
+  PaginationQuery,
+  SelectOption,
+  SortOrder,
+} from '@luxaria/shared-types';
+export { ERROR_CODES } from '@luxaria/shared-types';
 
 export type AuthUser = {
   id: string;

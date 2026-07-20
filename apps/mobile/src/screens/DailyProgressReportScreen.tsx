@@ -102,9 +102,16 @@ export function DailyProgressReportScreen({ navigation }: Props) {
   }
 
   return (
-    <Screen>
+    <Screen
+      title="Daily Progress Report"
+      subtitle={
+        selectedProject
+          ? `${selectedProject.projectCode} · ${selectedProject.projectName}`
+          : 'No project selected'
+      }
+      scroll={false}
+    >
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Daily Progress Report</Text>
         <Text style={styles.meta}>
           {selectedProject ? `${selectedProject.projectCode} · ${selectedProject.projectName}` : 'No project selected'}
         </Text>

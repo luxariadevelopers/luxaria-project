@@ -1,14 +1,15 @@
+import {
+  ERROR_CODES,
+  type ApiError,
+  type ApiResponse,
+} from '@luxaria/shared-types';
 import axios, {
   type AxiosError,
   type AxiosInstance,
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { tokenStorage } from '@/auth/tokenStorage';
-import type {
-  ApiErrorBody,
-  ApiSuccessResponse,
-  RefreshResponse,
-} from './types';
+import type { RefreshResponse } from './types';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -31,7 +32,7 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 
   try {
-    const { data } = await axios.post<ApiSuccessResponse<RefreshResponse>>(
+    const { data } = await axios.post<ApiResponse<RefreshResponse>>(
       `${baseURL}/auth/refresh`,
       { refreshToken },
       { headers: { 'Content-Type': 'application/json' } },
@@ -62,7 +63,7 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError<ApiErrorBody>) => {
+  async (error: AxiosError<ApiError>) => {
     const original = error.config as RetryConfig | undefined;
     const status = error.response?.status;
 
@@ -92,13 +93,8 @@ apiClient.interceptors.response.use(
 );
 
 export function getErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return (
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
-      fallback
-    );
+  if (axios.isAxiosError<ApiError>(error)) {
+    return error.response?.data?.message || error.message || fallback;
   }
   if (error instanceof Error) {
     return error.message;
@@ -106,22 +102,33 @@ export function getErrorMessage(error: unknown, fallback = 'Something went wrong
   return fallback;
 }
 
+/** True when the backend rejected the call for permission / project access (403). */
+export function isForbiddenError(error: unknown): boolean {
+  if (!axios.isAxiosError<ApiError>(error)) {
+    return false;
+  }
+  return (
+    error.response?.status === 403 ||
+    error.response?.data?.errorCode === ERROR_CODES.FORBIDDEN
+  );
+}
+
 export async function apiGet<T>(url: string, params?: Record<string, unknown>) {
-  const { data } = await apiClient.get<ApiSuccessResponse<T>>(url, { params });
+  const { data } = await apiClient.get<ApiResponse<T>>(url, { params });
   return data;
 }
 
 export async function apiPost<T>(url: string, body?: unknown) {
-  const { data } = await apiClient.post<ApiSuccessResponse<T>>(url, body);
+  const { data } = await apiClient.post<ApiResponse<T>>(url, body);
   return data;
 }
 
 export async function apiPatch<T>(url: string, body?: unknown) {
-  const { data } = await apiClient.patch<ApiSuccessResponse<T>>(url, body);
+  const { data } = await apiClient.patch<ApiResponse<T>>(url, body);
   return data;
 }
 
 export async function apiDelete<T>(url: string) {
-  const { data } = await apiClient.delete<ApiSuccessResponse<T>>(url);
+  const { data } = await apiClient.delete<ApiResponse<T>>(url);
   return data;
 }

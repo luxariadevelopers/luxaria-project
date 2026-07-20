@@ -1,3 +1,3 @@
 export { FormTextField } from './FormTextField';
-export { FormSelect } from './FormSelect';
+export { FormSelect, type SelectOption } from './FormSelect';
 export { FormCheckbox } from './FormCheckbox';

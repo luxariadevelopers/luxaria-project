@@ -13,9 +13,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.type-tests.json --noEmit",
     "lint": "eslint .",
-    "test": "node -e \"console.log('No tests in @luxaria/shared-types (Phase 1 placeholder)')\""
+    "test": "tsc -p tsconfig.type-tests.json --noEmit"
   },
   "devDependencies": {
     "@luxaria/eslint-config": "workspace:*",

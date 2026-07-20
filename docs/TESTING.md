@@ -66,6 +66,7 @@ pnpm --filter @luxaria/mobile test:offline       # offline sync suites only
 | Web e2e | `apps/web/e2e/**` |
 | Mobile components | `apps/mobile/src/**/__tests__/**/*.tsx` |
 | UI/API matrix coverage | `apps/backend/src/common/docs/ui-api-matrix.coverage.spec.ts` |
+| Shared API envelope type tests | `packages/shared-types/type-tests/api-contracts.type-test.ts` |
 
 ## Helpers
 

@@ -6,6 +6,7 @@ import {
   Select,
   type SelectProps,
 } from '@mui/material';
+import type { SelectOption } from '@luxaria/shared-types';
 import {
   Controller,
   type Control,
@@ -13,10 +14,7 @@ import {
   type FieldValues,
 } from 'react-hook-form';
 
-export type SelectOption = {
-  label: string;
-  value: string | number;
-};
+export type { SelectOption };
 
 type FormSelectProps<T extends FieldValues> = {
   name: FieldPath<T>;

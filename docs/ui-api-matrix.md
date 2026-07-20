@@ -171,8 +171,19 @@ Every backend module must appear below with route/method/permission/response-sha
 
 | Package | Status | Gap |
 |---|---|---|
-| `@luxaria/shared-types` | Placeholder | Only `AppName` / `HealthStatus` — domain DTOs not shared yet |
+| `@luxaria/shared-types` | **Phase 002** — common API envelopes | `ApiResponse`, `ApiError`, `PaginatedResponse`, `PaginationMeta` / `PaginationQuery`, `SelectOption`, `AuditMeta`, `ERROR_CODES`. Domain DTOs still local to apps. |
 | `@luxaria/shared-validation` | Placeholder | Only `healthStatusSchema` |
+
+#### Shared response envelope (source of truth)
+
+| Contract | Shape | Backend source |
+|---|---|---|
+| Success | `{ success: true, message, data?, meta? }` | `common/dto/api-response.dto.ts` |
+| Error | `{ success: false, errorCode, message, details[], requestId, timestamp }` | `common/dto/api-error.dto.ts` |
+| Pagination meta | `{ page, limit, total, totalPages, hasNextPage, hasPrevPage }` | `buildPaginationMeta` in `pagination-query.dto.ts` |
+| Audit meta | `createdAt/updatedAt?`, nullable `createdBy/updatedBy/deletedAt/deletedBy`, `isDeleted?` | `database/plugins/base-schema.plugin.ts` |
+
+Web and mobile API clients import these from `@luxaria/shared-types` (see `apps/web/src/api/client.ts`, `apps/mobile/src/api/client.ts`).
 
 ## Gaps and flags
 
@@ -227,7 +238,7 @@ _None detected._
 ### Client / contract mismatches
 
 - Web `UsersPage` is a placeholder and does not call `GET /users` despite route guard `user.view`.
-- Shared types/validation packages do not yet mirror backend DTOs — clients redefine local types (risk of drift).
+- Common response envelopes are shared (`@luxaria/shared-types`); domain DTOs are still local to web/mobile (risk of drift until later phases).
 - Most backend modules have **no** web/mobile query/mutation client yet (expected before UI phases).
 - OpenAPI examples: Swagger is generated from Nest decorators; many DTOs lack explicit `@ApiProperty` examples (flag for later docs polish — not blocking route inventory).
 

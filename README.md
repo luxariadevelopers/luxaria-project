@@ -83,6 +83,8 @@ CI/CD: [docs/CI.md](docs/CI.md) — require the **PR gate** status check before 
 
 UI ↔ API contracts (Micro Phase 001): [docs/ui-api-matrix.md](docs/ui-api-matrix.md) — regenerate with `node scripts/audit-api-contracts.mjs`.
 
+Shared API envelopes (Micro Phase 002): `@luxaria/shared-types` exports `ApiResponse`, `ApiError`, `PaginatedResponse`, `SelectOption`, `AuditMeta` — used by web and mobile clients.
+
 ### Backend foundation endpoints (Phase 2)
 
 | Method | Path | Description |
