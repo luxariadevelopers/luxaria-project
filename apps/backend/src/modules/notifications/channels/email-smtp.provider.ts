@@ -42,14 +42,21 @@ export class EmailSmtpProvider implements EmailTransport {
     }
 
     const from = this.configService.get('emailFrom', { infer: true });
+    if (!from) {
+      throw new Error('SMTP email provider is not configured');
+    }
     const transport = this.getTransporter();
-    const info = await transport.sendMail({
+    const info = (await transport.sendMail({
       from,
       to: input.to,
       subject: input.subject,
       text: input.text,
       html: input.html ?? undefined,
-    });
+    })) as {
+      messageId?: string;
+      accepted?: Array<string | { address?: string }>;
+      rejected?: Array<string | { address?: string }>;
+    };
 
     const messageId = String(info.messageId ?? '');
     const accepted = (info.accepted ?? []).map(String);
@@ -78,11 +85,11 @@ export class EmailSmtpProvider implements EmailTransport {
     const pass = this.configService.get('smtpPass', { infer: true });
 
     this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: user ? { user, pass } : undefined,
-    });
+      host: host ?? undefined,
+      port: Number(port),
+      secure: Boolean(secure),
+      auth: user ? { user, pass: pass ?? undefined } : undefined,
+    } as Parameters<typeof nodemailer.createTransport>[0]);
 
     return this.transporter;
   }

@@ -48,7 +48,7 @@ describe('HealthService', () => {
               };
               return values[key];
             }),
-            get: jest.fn((key: string) => null),
+            get: jest.fn((_key: string) => null),
           },
         },
         {

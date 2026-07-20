@@ -1,7 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
-import type { Model } from 'mongoose';
 import { Types } from 'mongoose';
 import type { AppConfig } from '../../../config/configuration';
 import { User, UserStatus } from '../../users/schemas/user.schema';
