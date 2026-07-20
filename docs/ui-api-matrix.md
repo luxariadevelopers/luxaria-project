@@ -85,7 +85,7 @@ Every backend module must appear below with route/method/permission/response-sha
 | `material-consumption-standards` | 9 | POST, GET, PATCH | `material_consumption.manage`, `material_consumption.view`, `material_consumption.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`MATERIAL_CONSUMPTION_STANDARDS_API.md`](../apps/backend/docs/MATERIAL_CONSUMPTION_STANDARDS_API.md) | `apps/backend/src/modules/material-consumption-standards/material-consumption-standard.controller.ts` |
 | `material-issues` | 9 | POST, GET, PATCH | `stock.issue`, `stock.view`, `stock.adjust` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`MATERIAL_ISSUES_API.md`](../apps/backend/docs/MATERIAL_ISSUES_API.md) | `apps/backend/src/modules/material-issues/material-issues.controller.ts` |
 | `material-master` | 5 | GET, POST, PATCH | `material.view`, `material.manage` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`MATERIALS_API.md`](../apps/backend/docs/MATERIALS_API.md) | `apps/backend/src/modules/material-master/materials.controller.ts` |
-| `notifications` | 13 | GET, PATCH, POST, PUT | `notification.view`, `notification.send`, `notification.manage` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/notifications/notifications.controller.ts` |
+| `notifications` | 13 | GET, PATCH, POST, PUT | `notification.view`, `notification.send`, `notification.manage` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **partial (mobile inbox Phase 130)** | Nest: `notifications.controller.ts`. Mobile: `apps/mobile/src/api/notifications.ts` + Notifications screen. Web inbox still missing. No Nest push-token registration API. |
 | `numbering` | 0 | — | Internal service (no HTTP controller); used by other modules | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | n/a | — |
 | `payment-schedules` | 11 | POST, GET | `collection.create`, `collection.view`, `collection.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/payment-schedules/payment-schedules.controller.ts` |
 | `petty-cash-fund-transfers` | 8 | POST, GET, PATCH | `petty_cash.fund`, `petty_cash.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`PETTY_CASH_FUND_TRANSFERS_API.md`](../apps/backend/docs/PETTY_CASH_FUND_TRANSFERS_API.md) | `apps/backend/src/modules/petty-cash-fund-transfers/petty-cash-fund-transfers.controller.ts` |
@@ -146,10 +146,11 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR, Notifications |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
+| Notifications inbox + deep links | **Phase 130** | Profile → Notifications; validates route + permission before open |
 | Broader site workflows | Missing | Stock issue, attendance, petty cash UI, etc. |
 
 **Mobile API / offline endpoints found:**
@@ -162,6 +163,9 @@ Every backend module must appear below with route/method/permission/response-sha
 | POST? | `/daily-progress-reports` | `apps/mobile/src/features/dpr/buildDprOfflineEnqueue.ts` |
 | POST? | `/goods-receipts` | `apps/mobile/src/features/grn/buildGrnOfflineEnqueue.ts` |
 | POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` |
+| GET | `/notifications` | `apps/mobile/src/api/notifications.ts` |
+| PATCH | `/notifications/:id/read` | `apps/mobile/src/api/notifications.ts` |
+| POST | `/notifications/read-all` | `apps/mobile/src/api/notifications.ts` |
 | GET | `/projects` | `apps/mobile/src/context/ProjectContext.tsx` |
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |

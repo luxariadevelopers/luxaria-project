@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getErrorMessage } from '@/api/client';
+import { getErrorMessage, isForbiddenError } from '@/api/client';
 import {
   getPurchaseOrder,
   type PurchaseOrderLine,
@@ -28,12 +28,14 @@ type Props = NativeStackScreenProps<AppStackParamList, 'GoodsReceipt'>;
 
 type LineState = PurchaseOrderLine & { receiveQty: string };
 
-export function GoodsReceiptScreen({ navigation }: Props) {
+export function GoodsReceiptScreen({ navigation, route }: Props) {
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
   const { enqueue } = useOfflineSync();
+  const deepLinkedPoId = route.params?.purchaseOrderId?.trim() ?? '';
+  const autoLoadedRef = useRef<string | null>(null);
 
-  const [poId, setPoId] = useState('');
+  const [poId, setPoId] = useState(deepLinkedPoId);
   const [poNumber, setPoNumber] = useState<string | undefined>();
   const [vendorId, setVendorId] = useState<string | undefined>();
   const [lines, setLines] = useState<LineState[]>([]);
@@ -46,8 +48,9 @@ export function GoodsReceiptScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadPo = useCallback(async () => {
-    if (!poId.trim()) {
+  const loadPo = useCallback(async (overrideId?: string) => {
+    const id = (overrideId ?? poId).trim();
+    if (!id) {
       Alert.alert('Purchase order', 'Enter a purchase order id');
       return;
     }
@@ -60,7 +63,7 @@ export function GoodsReceiptScreen({ navigation }: Props) {
     }
     setLoading(true);
     try {
-      const po = await getPurchaseOrder(poId.trim());
+      const po = await getPurchaseOrder(id);
       if (po.status !== 'issued' && po.status !== 'partially_received') {
         Alert.alert(
           'Purchase order',
@@ -68,6 +71,7 @@ export function GoodsReceiptScreen({ navigation }: Props) {
         );
         return;
       }
+      setPoId(id);
       setPoNumber(po.purchaseOrderNumber);
       setVendorId(po.vendorId);
       setLines(
@@ -77,11 +81,26 @@ export function GoodsReceiptScreen({ navigation }: Props) {
         })),
       );
     } catch (error) {
-      Alert.alert('Load failed', getErrorMessage(error, 'Could not load PO'));
+      if (isForbiddenError(error)) {
+        Alert.alert(
+          'Permission denied',
+          getErrorMessage(error, 'You cannot open this purchase order'),
+        );
+      } else {
+        Alert.alert('Load failed', getErrorMessage(error, 'Could not load PO'));
+      }
     } finally {
       setLoading(false);
     }
   }, [isOnline, poId]);
+
+  useEffect(() => {
+    if (!deepLinkedPoId || autoLoadedRef.current === deepLinkedPoId) {
+      return;
+    }
+    autoLoadedRef.current = deepLinkedPoId;
+    void loadPo(deepLinkedPoId);
+  }, [deepLinkedPoId, loadPo]);
 
   const capturePhoto = useCallback(async () => {
     try {
