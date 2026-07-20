@@ -273,3 +273,20 @@ export class ListExpiryAlertsQueryDto extends PaginationQueryDto {
   @IsOptional()
   unacknowledgedOnly?: boolean;
 }
+
+/** Post mobilisation advance: Dr Contractor Advance / Cr Bank. */
+export class DisburseMobilisationAdvanceDto {
+  @ApiProperty()
+  @IsMongoId()
+  bankAccountId!: string;
+
+  @ApiProperty({ example: '2026-07-01' })
+  @IsDateString()
+  paymentDate!: string;
+
+  @ApiPropertyOptional({ example: 'ADV-UTR-001' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  transactionReference?: string;
+}

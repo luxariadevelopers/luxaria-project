@@ -38,6 +38,9 @@ export type PublicContractorAgreement = {
   endDate: Date;
   billingCycle: ContractorAgreementBillingCycle;
   advance: { amount: number; terms: string | null };
+  advanceDisbursementJournalId: string | null;
+  advanceDisbursedAt: Date | null;
+  advanceDisbursedBy: string | null;
   recoveryPlan: {
     method: string | null;
     percentPerBill: number | null;
@@ -107,6 +110,9 @@ type AgreementLike = {
   endDate: Date;
   billingCycle: ContractorAgreementBillingCycle;
   advance?: { amount?: number; terms?: string | null };
+  advanceDisbursementJournalId?: Types.ObjectId | string | null;
+  advanceDisbursedAt?: Date | null;
+  advanceDisbursedBy?: Types.ObjectId | string | null;
   recoveryPlan?: {
     method?: string | null;
     percentPerBill?: number | null;
@@ -166,6 +172,9 @@ export function toPublicContractorAgreement(
       amount: row.advance?.amount ?? 0,
       terms: row.advance?.terms ?? null,
     },
+    advanceDisbursementJournalId: oid(row.advanceDisbursementJournalId),
+    advanceDisbursedAt: row.advanceDisbursedAt ?? null,
+    advanceDisbursedBy: oid(row.advanceDisbursedBy),
     recoveryPlan: {
       method: row.recoveryPlan?.method ?? null,
       percentPerBill: row.recoveryPlan?.percentPerBill ?? null,

@@ -29,6 +29,7 @@ export type PublicJournalEntry = {
   sourceModule: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
+  postingPurpose: string | null;
   narration: string;
   status: JournalStatus;
   totalDebit: number;
@@ -55,6 +56,7 @@ export function toPublicJournal(row: {
   sourceModule?: string | null;
   sourceEntityType?: string | null;
   sourceEntityId?: string | null;
+  postingPurpose?: string | null;
   narration: string;
   status: JournalStatus;
   totalDebit: number;
@@ -90,6 +92,7 @@ export function toPublicJournal(row: {
     sourceModule: row.sourceModule ?? null,
     sourceEntityType: row.sourceEntityType ?? null,
     sourceEntityId: row.sourceEntityId ?? null,
+    postingPurpose: row.postingPurpose ?? null,
     narration: row.narration,
     status: row.status,
     totalDebit: row.totalDebit,

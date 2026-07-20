@@ -106,6 +106,15 @@ export class CreateJournalDto {
   @IsString()
   sourceEntityId?: string | null;
 
+  @ApiPropertyOptional({
+    example: 'ap_recognition',
+    description:
+      'Posting purpose for unique source journals (e.g. ap_recognition, advance_disbursement)',
+  })
+  @IsOptional()
+  @IsString()
+  postingPurpose?: string | null;
+
   @ApiProperty({ example: 'Being transfer of funds to project bank' })
   @IsString()
   @IsNotEmpty()

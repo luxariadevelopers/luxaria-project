@@ -97,6 +97,13 @@ export class JournalEntry {
   @Prop({ type: String, default: null, index: true })
   sourceEntityId!: string | null;
 
+  /**
+   * Distinguishes posting intents for the same source entity
+   * (e.g. contractor_bill + ap_recognition). Required for unique source index.
+   */
+  @Prop({ type: String, trim: true, lowercase: true, default: null })
+  postingPurpose!: string | null;
+
   @Prop({ type: String, trim: true, required: true })
   narration!: string;
 
@@ -157,3 +164,29 @@ JournalEntrySchema.index({
   sourceEntityType: 1,
   sourceEntityId: 1,
 });
+/** One active posting journal per source + purpose (R-002A). */
+JournalEntrySchema.index(
+  {
+    sourceModule: 1,
+    sourceEntityType: 1,
+    sourceEntityId: 1,
+    postingPurpose: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceModule: { $type: 'string' },
+      sourceEntityType: { $type: 'string' },
+      sourceEntityId: { $type: 'string' },
+      postingPurpose: { $type: 'string' },
+      isDeleted: false,
+      status: {
+        $in: [
+          JournalStatus.Draft,
+          JournalStatus.PendingApproval,
+          JournalStatus.Posted,
+        ],
+      },
+    },
+  },
+);

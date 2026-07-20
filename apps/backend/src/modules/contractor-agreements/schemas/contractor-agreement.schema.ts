@@ -158,6 +158,16 @@ export class ContractorAgreement {
   @Prop({ type: AgreementAdvanceSchema, default: () => ({ amount: 0 }) })
   advance!: AgreementAdvance;
 
+  /** Posted journal that disbursed mobilisation advance (Dr Contractor Advance / Cr Bank). */
+  @Prop({ type: Types.ObjectId, ref: 'JournalEntry', default: null, index: true })
+  advanceDisbursementJournalId!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  advanceDisbursedAt!: Date | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  advanceDisbursedBy!: Types.ObjectId | null;
+
   @Prop({ type: AgreementRecoveryPlanSchema, default: () => ({}) })
   recoveryPlan!: AgreementRecoveryPlan;
 

@@ -21,10 +21,14 @@ export enum AccountCategory {
   DirectorAccount = 'director_account',
   InvestorAccount = 'investor_account',
   CustomerAdvance = 'customer_advance',
+  /** Mobilisation / contractor advances (asset); recovery credits this account */
+  ContractorAdvance = 'contractor_advance',
   VendorPayable = 'vendor_payable',
   ContractorPayable = 'contractor_payable',
   LabourPayable = 'labour_payable',
   MaterialPurchase = 'material_purchase',
+  /** RA bill recovery of company-issued / recharged materials (not Other Income) */
+  MaterialRecovery = 'material_recovery',
   WorkInProgress = 'work_in_progress',
   LandCost = 'land_cost',
   DirectExpense = 'direct_expense',
@@ -37,6 +41,10 @@ export enum AccountCategory {
   Interest = 'interest',
   Sales = 'sales',
   OtherIncome = 'other_income',
+  /** Contractor penalties recovered on RA bills */
+  PenaltyRecovery = 'penalty_recovery',
+  /** Legacy/typed other contractor bill deductions (explicit mapping required) */
+  OtherContractorDeduction = 'other_contractor_deduction',
   /** Structural / header nodes without a specialist category */
   Control = 'control',
 }
