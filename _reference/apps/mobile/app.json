@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Luxaria Site",
+    "slug": "luxaria-site",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/luxaria-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.luxaria.site"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "in.luxaria.site",
+      "versionCode": 1,
+      "usesCleartextTraffic": true
+    }
+  }
+}

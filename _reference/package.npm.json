@@ -1,0 +1,24 @@
+{
+  "name": "luxaria-developers",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @luxaria/api",
+    "dev:web": "npm run dev -w @luxaria/web",
+    "dev:mobile": "npm run start -w @luxaria/mobile",
+    "seed": "npm run seed -w @luxaria/api",
+    "setup:atlas": "npm run setup:atlas -w @luxaria/api",
+    "setup:s3": "npm run setup:s3 -w @luxaria/api",
+    "build": "npm run build -w @luxaria/shared && npm run build -w @luxaria/api && npm run build -w @luxaria/web"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3"
+  }
+}

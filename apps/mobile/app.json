@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Luxaria Site",
+    "slug": "luxaria-site",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B3A4B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.luxaria.site",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Luxaria Site needs camera access to capture site photos and documents.",
+        "NSPhotoLibraryUsageDescription": "Luxaria Site needs photo library access to attach site images.",
+        "NSLocationWhenInUseUsageDescription": "Luxaria Site needs your location to tag site expenses and verify site presence.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "package": "in.luxaria.site",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#1B3A4B",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Luxaria Site to use the camera for site photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Luxaria Site to use your location for site tagging."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Luxaria Site to access photos for attachments."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1B3A4B"
+        }
+      ],
+      "expo-sqlite"
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:9000/api/v1"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+coverage
+.expo
+_reference
+pnpm-lock.yaml
+*.tsbuildinfo

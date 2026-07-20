@@ -1,0 +1,133 @@
+name: luxaria
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '9017:27017'
+    volumes:
+      - luxaria_mongo:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '9018:6379'
+    volumes:
+      - luxaria_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 9000
+      APP_NAME: ${APP_NAME:-Luxaria Developers ERP API}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      MONGODB_URI: mongodb://mongo:27017/luxaria-erp
+      REDIS_ENABLED: 'true'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:9001,http://127.0.0.1:9001}
+      SWAGGER_ENABLED: 'true'
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-docker-dev-access-secret-change-me-32chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-docker-dev-refresh-secret-change-me-32chars}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-docker-dev-field-encryption-key-32chars!!}
+      AUTH_MAX_FAILED_ATTEMPTS: ${AUTH_MAX_FAILED_ATTEMPTS:-5}
+      AUTH_LOCK_MINUTES: ${AUTH_LOCK_MINUTES:-30}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
+      CHOKIDAR_USEPOLLING: 'true'
+      WATCHPACK_POLLING: 'true'
+    ports:
+      - '9000:9000'
+    volumes:
+      # Hot reload — source only; deps stay in the image (rebuild after package.json changes)
+      - ./apps/backend/src:/app/apps/backend/src
+      - ./apps/backend/nest-cli.json:/app/apps/backend/nest-cli.json:ro
+      - ./apps/backend/tsconfig.json:/app/apps/backend/tsconfig.json:ro
+      - ./apps/backend/tsconfig.build.json:/app/apps/backend/tsconfig.build.json:ro
+      - ./packages/shared-types/src:/app/packages/shared-types/src:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:9000/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 90s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+      VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:9000}
+      CHOKIDAR_USEPOLLING: 'true'
+      WATCHPACK_POLLING: 'true'
+    ports:
+      - '9001:9001'
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/index.html:/app/apps/web/index.html:ro
+      - ./apps/web/vite.config.ts:/app/apps/web/vite.config.ts:ro
+      - ./apps/web/tsconfig.json:/app/apps/web/tsconfig.json:ro
+      - ./apps/web/tsconfig.app.json:/app/apps/web/tsconfig.app.json:ro
+      - ./apps/web/tsconfig.node.json:/app/apps/web/tsconfig.node.json:ro
+      - ./packages/shared-types/src:/app/packages/shared-types/src:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:9001/']
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 60s
+
+  mongo-express:
+    profiles: ['tools']
+    image: mongo-express:1.0.2-20-alpine3.19
+    restart: unless-stopped
+    ports:
+      - '9019:8081'
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/
+      ME_CONFIG_BASICAUTH: ${ME_CONFIG_BASICAUTH:-false}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8081/']
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  luxaria_mongo:
+  luxaria_redis:

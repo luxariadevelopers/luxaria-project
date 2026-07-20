@@ -1,0 +1,24 @@
+{
+  "name": "@luxaria/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript configs for Luxaria Developers ERP",
+  "exports": {
+    "./base.json": "./base.json",
+    "./nestjs.json": "./nestjs.json",
+    "./react.json": "./react.json",
+    "./react-native.json": "./react-native.json"
+  },
+  "files": [
+    "base.json",
+    "nestjs.json",
+    "react.json",
+    "react-native.json"
+  ],
+  "scripts": {
+    "build": "node -e \"console.log('@luxaria/tsconfig has no build step')\"",
+    "lint": "node -e \"console.log('@luxaria/tsconfig lint skipped')\"",
+    "typecheck": "node -e \"console.log('@luxaria/tsconfig typecheck skipped')\"",
+    "test": "node -e \"console.log('No tests in @luxaria/tsconfig')\""
+  }
+}

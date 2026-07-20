@@ -1,0 +1,29 @@
+{
+  "name": "@luxaria/shared-validation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared Zod validation schemas for Luxaria Developers ERP",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "node -e \"console.log('No tests in @luxaria/shared-validation (Phase 1 placeholder)')\""
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@luxaria/eslint-config": "workspace:*",
+    "@luxaria/tsconfig": "workspace:*",
+    "eslint": "^9.22.0",
+    "typescript": "^5.8.2"
+  }
+}

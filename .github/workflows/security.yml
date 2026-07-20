@@ -1,0 +1,38 @@
+name: Security
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - name: Production dependency audit
+        run: pnpm audit --prod --audit-level=high
+      # Do not print lockfile contents that might embed private registry tokens.
+
+  backend-security-tests:
+    name: Backend security tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - name: Run security-focused Jest suites
+        run: pnpm --filter @luxaria/backend test:security
+        env:
+          NODE_ENV: test

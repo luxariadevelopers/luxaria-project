@@ -1,0 +1,31 @@
+{
+  "name": "@luxaria/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared ESLint configs for Luxaria Developers ERP",
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./nestjs": "./nestjs.js",
+    "./react": "./react.js",
+    "./react-native": "./react-native.js"
+  },
+  "scripts": {
+    "build": "node -e \"console.log('@luxaria/eslint-config has no build step')\"",
+    "lint": "node -e \"console.log('@luxaria/eslint-config lint skipped')\"",
+    "typecheck": "node -e \"console.log('@luxaria/eslint-config typecheck skipped')\"",
+    "test": "node -e \"console.log('No tests in @luxaria/eslint-config')\""
+  },
+  "dependencies": {
+    "@eslint/js": "^9.22.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.26.1"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+}

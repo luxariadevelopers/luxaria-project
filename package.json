@@ -1,0 +1,47 @@
+{
+  "name": "luxaria-developers-erp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Luxaria Developers Construction ERP monorepo",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm run --parallel dev:backend dev:web",
+    "dev:all": "bash scripts/dev-all.sh",
+    "dev:backend": "pnpm --filter @luxaria/backend dev",
+    "dev:web": "pnpm --filter @luxaria/web dev",
+    "dev:mobile": "pnpm --filter @luxaria/mobile start",
+    "dev:mongo": "docker compose up -d mongo",
+    "docker:infra": "docker compose up -d mongo redis",
+    "docker:up": "docker compose up -d --build",
+    "docker:up:env": "docker compose --env-file .env.docker up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:tools": "docker compose --profile tools up -d mongo-express",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
+
+    "build": "pnpm -r --filter \"./packages/*\" build && pnpm --filter @luxaria/backend build && pnpm --filter @luxaria/web build",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm --filter @luxaria/backend test:unit && pnpm --filter @luxaria/mobile test:unit",
+    "test:integration": "pnpm --filter @luxaria/backend test:integration",
+    "test:api": "pnpm --filter @luxaria/backend test:api",
+    "test:e2e": "pnpm --filter @luxaria/backend test:e2e && pnpm --filter @luxaria/web test:e2e",
+    "test:backend": "pnpm --filter @luxaria/backend test:all",
+    "test:mobile": "pnpm --filter @luxaria/mobile test",
+    "test:web": "pnpm --filter @luxaria/web test:e2e",
+    "test:ci": "pnpm run test:unit && pnpm run test:integration && pnpm run test:api && pnpm run test:mobile",
+    "typecheck": "pnpm -r typecheck",
+    "audit": "pnpm audit --prod",
+    "audit:all": "pnpm audit"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,97 @@
+# Deployment placeholder with environment-specific GitHub Environments.
+#
+# Setup (repo Settings → Environments):
+#   1. Create environments: staging, production
+#   2. Add environment secrets (never commit): DEPLOY_URL, DEPLOY_TOKEN, etc.
+#   3. For production: enable required reviewers
+#   4. Wire real deploy steps below (SSH, ECS, Kubernetes, Vercel, …)
+#
+# Secrets must only be referenced via ${{ secrets.* }} / ${{ vars.* }}.
+# Never echo secret values, dump env, or pass them to untrusted actions.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target deployment environment
+        type: choice
+        options:
+          - staging
+          - production
+        required: true
+        default: staging
+      ref:
+        description: Git ref to deploy (branch, tag, or SHA). Empty = current ref.
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  validate-ref:
+    name: Validate deploy request
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.meta.outputs.environment }}
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - name: Resolve metadata
+        id: meta
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment }}"
+          case "$ENV_NAME" in
+            staging|production) ;;
+            *)
+              echo "::error::Unsupported environment: $ENV_NAME"
+              exit 1
+              ;;
+          esac
+          echo "environment=$ENV_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "Deploy requested for environment=$ENV_NAME sha=${{ github.sha }}"
+
+  deploy:
+    name: Deploy (${{ needs.validate-ref.outputs.environment }})
+    needs: validate-ref
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.validate-ref.outputs.environment }}
+      # url: set when a real public URL exists (use vars, not secrets)
+      # url: ${{ vars.APP_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref != '' && github.event.inputs.ref || github.sha }}
+
+      - name: Deployment placeholder
+        env:
+          DEPLOY_ENV: ${{ needs.validate-ref.outputs.environment }}
+          DEPLOY_SHA: ${{ needs.validate-ref.outputs.sha }}
+          # Boolean flags only — never print secret values
+          HAS_DEPLOY_URL: ${{ secrets.DEPLOY_URL != '' }}
+          HAS_DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN != '' }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          set -euo pipefail
+          echo "Environment: $DEPLOY_ENV"
+          echo "Commit:      $DEPLOY_SHA"
+          echo "APP_URL var configured: ${APP_URL:+yes}"
+          echo "DEPLOY_URL secret present: $HAS_DEPLOY_URL"
+          echo "DEPLOY_TOKEN secret present: $HAS_DEPLOY_TOKEN"
+          echo "::notice title=Deploy placeholder::No release was published. Replace this step with your provider deploy."
+          # Example (do not enable until wired):
+          # curl -fsS -X POST \
+          #   -H "Authorization: Bearer $DEPLOY_TOKEN" \
+          #   "$DEPLOY_URL/hooks/deploy" \
+          #   -d "{\"sha\":\"$DEPLOY_SHA\",\"env\":\"$DEPLOY_ENV\"}"
+          #
+          # Prefer OIDC / short-lived tokens over long-lived DEPLOY_TOKEN when possible.

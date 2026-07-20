@@ -1,0 +1,220 @@
+# Permission inventory
+
+Generated: 2026-07-20T06:32:35.399Z
+
+Source of truth: `apps/backend/src/modules/rbac/permissions.catalog.ts`.
+
+Catalog size: **193**. Used on routes: **185**.
+
+## Catalog
+
+| Permission | Used on a controller route |
+|---|---|
+| `role.view` | yes |
+| `role.create` | yes |
+| `role.update` | yes |
+| `role.assign` | yes |
+| `permission.view` | yes |
+| `user.view` | yes |
+| `user.create` | yes |
+| `user.update` | yes |
+| `user.activate` | yes |
+| `user.deactivate` | yes |
+| `user.delete` | yes |
+| `user.reset_password` | yes |
+| `user.assign_role` | yes |
+| `user.assign_project` | yes |
+| `company.view` | yes |
+| `company.update` | yes |
+| `company.upload_logo` | yes |
+| `financial_year.view` | yes |
+| `financial_year.manage` | yes |
+| `financial_year.unlock` | yes |
+| `period_closure.view` | yes |
+| `period_closure.manage` | yes |
+| `period_closure.reopen` | yes |
+| `period_closure.approve_reopen` | yes |
+| `project.view` | yes |
+| `project.create` | yes |
+| `project.update` | yes |
+| `project.close` | **no** |
+| `project.upload_document` | yes |
+| `project_access.view` | yes |
+| `project_access.assign` | yes |
+| `project_access.manage` | yes |
+| `project_access.audit_view` | yes |
+| `director.view` | yes |
+| `director.create` | yes |
+| `director.update` | yes |
+| `director.upload_document` | yes |
+| `shareholding.view` | yes |
+| `shareholding.propose` | yes |
+| `shareholding.approve` | yes |
+| `investor.view` | yes |
+| `investor.view_all` | **no** |
+| `investor.create` | yes |
+| `investor.update` | yes |
+| `investor.verify_kyc` | yes |
+| `investor.activate` | yes |
+| `investor.upload_document` | yes |
+| `project_participant.view` | yes |
+| `project_participant.create` | yes |
+| `project_participant.update` | yes |
+| `project_participant.submit` | yes |
+| `project_participant.approve` | yes |
+| `project_participant.finalize` | yes |
+| `project_participant.upload_document` | yes |
+| `contribution_commitment.view` | yes |
+| `contribution_commitment.create` | yes |
+| `contribution_commitment.submit` | yes |
+| `contribution_commitment.approve` | yes |
+| `contribution_commitment.amend` | yes |
+| `contribution_commitment.cancel` | yes |
+| `contribution_commitment.record_receipt` | yes |
+| `contribution_receipt.view` | yes |
+| `contribution_receipt.create` | yes |
+| `contribution_receipt.submit` | yes |
+| `contribution_receipt.verify` | yes |
+| `contribution_receipt.post` | yes |
+| `contribution_receipt.cancel` | yes |
+| `contribution_receipt.upload_document` | yes |
+| `investment.view` | **no** |
+| `investment.create` | **no** |
+| `investment.approve` | **no** |
+| `investor_portal.view` | yes |
+| `investor_portal.manage` | yes |
+| `account.view` | yes |
+| `account.manage` | yes |
+| `journal.view` | yes |
+| `journal.create` | yes |
+| `journal.post` | yes |
+| `journal.reverse` | yes |
+| `bank.view` | yes |
+| `bank.manage` | yes |
+| `bank.view_sensitive` | **no** |
+| `bank_reconciliation.view` | yes |
+| `bank_reconciliation.manage` | yes |
+| `bank_reconciliation.import` | yes |
+| `bank_reconciliation.match` | yes |
+| `bank_reconciliation.post` | yes |
+| `cash.view` | yes |
+| `cash.manage` | yes |
+| `expense_category.view` | yes |
+| `expense_category.manage` | yes |
+| `expense.view` | yes |
+| `expense.create` | yes |
+| `expense.approve` | yes |
+| `expense.post` | yes |
+| `petty_cash.view` | yes |
+| `petty_cash.request` | yes |
+| `petty_cash.approve` | yes |
+| `petty_cash.fund` | yes |
+| `vendor.view` | yes |
+| `vendor.manage` | yes |
+| `material.view` | yes |
+| `material.manage` | yes |
+| `material_consumption.view` | yes |
+| `material_consumption.manage` | yes |
+| `material_consumption.approve` | yes |
+| `purchase.view` | yes |
+| `purchase.request` | yes |
+| `purchase.approve` | yes |
+| `purchase.order` | yes |
+| `quotation.view` | yes |
+| `quotation.manage` | yes |
+| `quotation.finalize` | yes |
+| `quotation.compare` | yes |
+| `quotation.recommend` | yes |
+| `grn.create` | yes |
+| `grn.approve` | yes |
+| `quality.view` | yes |
+| `quality.inspect` | yes |
+| `vendor_invoice.view` | yes |
+| `vendor_invoice.create` | yes |
+| `vendor_invoice.verify` | yes |
+| `vendor_invoice.match` | yes |
+| `vendor_invoice.approve` | yes |
+| `vendor_invoice.post` | yes |
+| `stock.view` | yes |
+| `stock.adjust` | yes |
+| `stock.issue` | yes |
+| `stock.count.director_approve` | **no** |
+| `payment.view` | yes |
+| `payment.release` | yes |
+| `payment.approve` | yes |
+| `boq.view` | yes |
+| `boq.manage` | yes |
+| `boq.approve` | yes |
+| `dpr.view` | yes |
+| `dpr.create` | yes |
+| `dpr.review` | yes |
+| `measurement.view` | yes |
+| `measurement.create` | yes |
+| `measurement.certify` | yes |
+| `contractor.view` | yes |
+| `contractor.manage` | yes |
+| `contractor_agreement.view` | yes |
+| `contractor_agreement.manage` | yes |
+| `contractor_agreement.approve` | yes |
+| `labour_category.view` | yes |
+| `labour_category.manage` | yes |
+| `attendance.view` | yes |
+| `attendance.create` | yes |
+| `attendance.confirm` | yes |
+| `manpower_plan.view` | yes |
+| `manpower_plan.manage` | yes |
+| `manpower_shortfall.view` | yes |
+| `manpower_shortfall.acknowledge` | yes |
+| `running_bill.view` | yes |
+| `running_bill.create` | yes |
+| `running_bill.verify` | yes |
+| `running_bill.certify` | yes |
+| `running_bill.finance_verify` | yes |
+| `running_bill.approve` | yes |
+| `running_bill.post` | yes |
+| `running_bill.pay` | yes |
+| `unit.view` | yes |
+| `unit.manage` | yes |
+| `customer.view` | yes |
+| `customer.manage` | yes |
+| `booking.view` | yes |
+| `booking.create` | yes |
+| `booking.approve` | yes |
+| `booking.cancel` | yes |
+| `collection.view` | yes |
+| `collection.create` | yes |
+| `collection.approve` | yes |
+| `collection.refund` | yes |
+| `document.view` | yes |
+| `document.upload` | yes |
+| `document.download` | yes |
+| `document.replace` | yes |
+| `document.archive` | yes |
+| `approval.view` | yes |
+| `approval.act` | yes |
+| `approval.configure` | yes |
+| `approval.cancel` | **no** |
+| `report.view` | yes |
+| `report.export` | yes |
+| `audit.view` | yes |
+| `dashboard.view` | yes |
+| `notification.view` | yes |
+| `notification.send` | yes |
+| `notification.manage` | yes |
+| `director_digest.view` | yes |
+| `director_digest.send` | yes |
+
+## Unused catalog permissions (present but not on any `@RequirePermissions`)
+
+- `project.close`
+- `investor.view_all`
+- `investment.view`
+- `investment.create`
+- `investment.approve`
+- `bank.view_sensitive`
+- `stock.count.director_approve`
+- `approval.cancel`
+
+## Permissions used on routes but missing from catalog
+
+_None._

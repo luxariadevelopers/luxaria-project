@@ -1,0 +1,67 @@
+# Standalone Docker builds (main/develop + manual).
+# Pull requests build images via "PR Validation" → Docker build.
+
+name: Docker
+
+on:
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-images:
+    name: Build images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build only — no registry push and no deploy secrets in this workflow.
+      - name: Build backend (dev)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile.dev
+          push: false
+          tags: luxaria-backend-dev:${{ github.sha }}
+          cache-from: type=gha,scope=backend-dev
+          cache-to: type=gha,mode=max,scope=backend-dev
+
+      - name: Build web (dev)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile.dev
+          push: false
+          tags: luxaria-web-dev:${{ github.sha }}
+          cache-from: type=gha,scope=web-dev
+          cache-to: type=gha,mode=max,scope=web-dev
+
+      - name: Build web (production)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          tags: luxaria-web:${{ github.sha }}
+          cache-from: type=gha,scope=web-prod
+          cache-to: type=gha,mode=max,scope=web-prod
+
+      - name: Build backend (production)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: false
+          tags: luxaria-backend:${{ github.sha }}
+          cache-from: type=gha,scope=backend-prod
+          cache-to: type=gha,mode=max,scope=backend-prod

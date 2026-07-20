@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+!.env.docker.example
+# Shared non-secret local defaults (placeholder values only — never put real keys here)
+!.env.development
+!.env.test
+!.env.production
+*.local
+_reference/**/.env
+_reference/**/.env.*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.cursor/
+*.swp
+*.swo
+
+# Expo / React Native
+apps/mobile/.expo/
+apps/mobile/android/app/build/
+apps/mobile/android/.gradle/
+apps/mobile/ios/build/
+apps/mobile/ios/Pods/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+*.orig.*
+web-build/
+
+# Nest / Vite
+apps/backend/dist/
+apps/backend/uploads/
+apps/web/dist/
+
+# Test / tooling
+.turbo/
+**/test-results/
+**/playwright-report/
+**/blob-report/
+.playwright/
