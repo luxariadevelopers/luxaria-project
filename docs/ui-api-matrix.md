@@ -146,11 +146,12 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR, Material Issue, Material Return |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
+| Material return offline enqueue | Present (Phase 126) | `POST /material-issues/:id/returns` via sync; photos → `notes` |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
-| Broader site workflows | Missing | Stock issue, attendance, petty cash UI, etc. |
+| Broader site workflows | Missing | Full material issue create/confirm, attendance, petty cash UI, etc. |
 
 **Mobile API / offline endpoints found:**
 
@@ -161,6 +162,10 @@ Every backend module must appear below with route/method/permission/response-sha
 | GET | `/auth/me` | `apps/mobile/src/api/auth.ts` |
 | POST? | `/daily-progress-reports` | `apps/mobile/src/features/dpr/buildDprOfflineEnqueue.ts` |
 | POST? | `/goods-receipts` | `apps/mobile/src/features/grn/buildGrnOfflineEnqueue.ts` |
+| GET | `/material-issues` | `apps/mobile/src/features/material-issue/api.ts` |
+| GET | `/material-issues/:id` | `apps/mobile/src/features/material-issue/api.ts` |
+| POST | `/material-issues/:id/returns` | `apps/mobile/src/features/material-issue/api.ts` + offline enqueue |
+| GET | `/users` | `apps/mobile/src/features/material-issue/api.ts` (recipient picker) |
 | POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` |
 | GET | `/projects` | `apps/mobile/src/context/ProjectContext.tsx` |
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |

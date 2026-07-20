@@ -1,5 +1,9 @@
 import axios from 'axios';
 import { apiClient, getErrorMessage } from '@/api/client';
+import {
+  isMaterialReturnEndpoint,
+  toCreateMaterialReturnBody,
+} from '@/features/material-issue/sanitizeReturnSyncPayload';
 import { uploadToPresignedUrl } from '@/utils/fileUpload';
 import {
   createSyncConflictError,
@@ -79,6 +83,12 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
 
     async syncTransaction(txn, payload) {
       try {
+        // Nest CreateMaterialReturnDto forbids offline envelope fields;
+        // fold photo_* document IDs into notes before POST.
+        const body = isMaterialReturnEndpoint(txn.endpoint)
+          ? toCreateMaterialReturnBody(payload)
+          : payload;
+
         const response = await apiClient.request<{
           success: boolean;
           message?: string;
@@ -92,7 +102,7 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
         }>({
           url: txn.endpoint,
           method: txn.method,
-          data: payload,
+          data: body,
           headers: {
             'Idempotency-Key': txn.idempotencyKey,
             ...(txn.projectId ? { 'X-Project-Id': txn.projectId } : {}),
