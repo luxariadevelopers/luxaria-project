@@ -1,0 +1,29 @@
+{
+  "name": "@luxaria/shared-format",
+  "version": "0.1.0",
+  "private": true,
+  "description": "India-focused display formatters for Luxaria Developers ERP",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "jest --runInBand --config jest.config.cjs"
+  },
+  "devDependencies": {
+    "@luxaria/eslint-config": "workspace:*",
+    "@luxaria/tsconfig": "workspace:*",
+    "@types/jest": "^29.5.14",
+    "eslint": "^9.22.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6",
+    "typescript": "^5.8.2"
+  }
+}

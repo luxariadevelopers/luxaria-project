@@ -13,6 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json apps/backend/
 COPY apps/web/package.json apps/web/
 COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/shared-format/package.json packages/shared-format/
 COPY packages/shared-validation/package.json packages/shared-validation/
 COPY packages/eslint-config/package.json packages/eslint-config/
 COPY packages/tsconfig packages/tsconfig/
@@ -26,6 +27,8 @@ ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 RUN pnpm --filter @luxaria/shared-types build \
+  && pnpm --filter @luxaria/shared-format build \
+  && pnpm --filter @luxaria/shared-validation build \
   && pnpm --filter @luxaria/web build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime

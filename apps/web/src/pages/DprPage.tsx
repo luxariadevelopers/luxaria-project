@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack, Typography, Chip } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
+import { projectScopedQueryKey } from '@luxaria/shared-types';
 import { apiGet } from '@/api/client';
 import { DataTable } from '@/components/DataTable';
+import { EmptyState, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { formatDate, formatInr } from '@/format';
 
 type DprRow = {
   id: string;
@@ -19,8 +22,11 @@ type DprRow = {
 export function DprPage() {
   const { selectedProjectId } = useProject();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['daily-progress-reports', selectedProjectId],
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: projectScopedQueryKey(
+      'daily-progress-reports',
+      selectedProjectId,
+    ),
     queryFn: async () => {
       const res = await apiGet<DprRow[]>('/daily-progress-reports', {
         projectId: selectedProjectId ?? undefined,
@@ -28,7 +34,9 @@ export function DprPage() {
       });
       return res.data ?? [];
     },
+    enabled: Boolean(selectedProjectId),
   });
+
 
   const columns: GridColDef<DprRow>[] = [
     { field: 'dprNumber', headerName: 'DPR No', width: 150 },
@@ -36,8 +44,7 @@ export function DprPage() {
       field: 'reportDate',
       headerName: 'Date',
       width: 130,
-      valueGetter: (_v, row) =>
-        row.reportDate ? String(row.reportDate).slice(0, 10) : '',
+      valueFormatter: (value: string) => formatDate(value),
     },
     { field: 'weather', headerName: 'Weather', width: 110 },
     { field: 'labourCount', headerName: 'Labour', width: 90 },
@@ -52,10 +59,10 @@ export function DprPage() {
     {
       field: 'siteCashBalance',
       headerName: 'Site cash',
-      width: 120,
-      valueFormatter: (value: number) =>
-        value != null ? Number(value).toLocaleString('en-IN') : '—',
+      width: 140,
+      valueFormatter: (value: number) => formatInr(value),
     },
+
     {
       field: 'workPerformed',
       headerName: 'Work performed',
@@ -66,24 +73,35 @@ export function DprPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Daily Progress Reports</Typography>
       <Typography color="text.secondary">
         Site DPRs for mobile and web. Submit from the field app (offline-ready);
         review and PDF on the backend.
       </Typography>
       {error ? (
-        <Typography color="error">
-          {(error as Error).message || 'Failed to load DPRs'}
-        </Typography>
-      ) : null}
-      <DataTable
-        title={selectedProjectId ? 'Project DPRs' : 'All DPRs'}
-        rows={data ?? []}
-        columns={columns}
-        loading={isLoading}
-        height={480}
-        getRowId={(row) => row.id}
-      />
+        <RetryPanel
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+          forceRetry
+        />
+      ) : !isLoading && (data?.length ?? 0) === 0 ? (
+        <EmptyState
+          title="No DPRs yet"
+          description="Daily progress reports submitted from the site app will appear here."
+        />
+      ) : (
+        <DataTable
+          title="Project DPRs"
+          rows={data ?? []}
+          columns={columns}
+          loading={isLoading || isFetching}
+          height={480}
+          getRowId={(row) => row.id}
+        />
+      )}
+
     </Stack>
   );
 }
+

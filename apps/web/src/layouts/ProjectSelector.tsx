@@ -4,6 +4,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Typography,
 } from '@mui/material';
 import { useProject } from '@/context/ProjectContext';
 
@@ -13,10 +14,29 @@ export function ProjectSelector() {
     selectedProjectId,
     setSelectedProjectId,
     isLoading,
+    error,
+    hasNoProjectAccess,
+    globalAccess,
   } = useProject();
 
   if (isLoading) {
     return <CircularProgress size={20} />;
+  }
+
+  if (error) {
+    return (
+      <Typography variant="caption" color="error">
+        Project list unavailable
+      </Typography>
+    );
+  }
+
+  if (hasNoProjectAccess) {
+    return (
+      <Typography variant="caption" color="text.secondary">
+        No project access
+      </Typography>
+    );
   }
 
   return (
@@ -31,9 +51,15 @@ export function ProjectSelector() {
           setSelectedProjectId(e.target.value ? String(e.target.value) : null)
         }
       >
-        <MenuItem value="">
-          <em>All projects</em>
-        </MenuItem>
+        {globalAccess ? (
+          <MenuItem value="">
+            <em>All projects</em>
+          </MenuItem>
+        ) : !selectedProjectId ? (
+          <MenuItem value="" disabled>
+            <em>Select project</em>
+          </MenuItem>
+        ) : null}
         {projects.map((project) => (
           <MenuItem key={project.id} value={project.id}>
             {project.projectCode} — {project.projectName}

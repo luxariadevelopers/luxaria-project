@@ -1,131 +1,219 @@
-import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import {
   Box,
   Divider,
   Drawer,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Toolbar,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useAuth } from '@/auth/AuthContext';
+import { getVisibleNavGroups } from '@/navigation/filterNav';
+import { navIcon } from './navIcons';
 
 export const DRAWER_WIDTH = 260;
-
-type NavItem = {
-  label: string;
-  to: string;
-  icon: ReactNode;
-  permission?: string;
-};
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', to: '/', icon: <DashboardOutlinedIcon /> },
-  {
-    label: 'Users',
-    to: '/users',
-    icon: <GroupOutlinedIcon />,
-    permission: 'user.view',
-  },
-  {
-    label: 'Projects',
-    to: '/projects',
-    icon: <FolderOutlinedIcon />,
-    permission: 'project.view',
-  },
-  {
-    label: 'Daily Progress',
-    to: '/daily-progress-reports',
-    icon: <AssignmentOutlinedIcon />,
-    permission: 'dpr.view',
-  },
-  {
-    label: 'Settings',
-    to: '/settings',
-    icon: <SettingsOutlinedIcon />,
-  },
-];
+export const DRAWER_WIDTH_COLLAPSED = 76;
 
 type SidebarProps = {
   mobileOpen: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 };
 
-export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
-  const { hasPermission, access } = useAuth();
+export function Sidebar({
+  mobileOpen,
+  onClose,
+  collapsed,
+  onToggleCollapsed,
+}: SidebarProps) {
+  const { access } = useAuth();
 
-  const items = NAV_ITEMS.filter((item) => {
-    if (!item.permission) return true;
-    if (!access) return true;
-    return hasPermission(item.permission);
+  const groups = getVisibleNavGroups({
+    accessLoaded: Boolean(access),
+    bypassPermissions: Boolean(access?.bypassPermissions),
+    permissions: access?.permissions ?? [],
   });
 
-  const content = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2.5, gap: 1.5 }}>
-        <Box
-          sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 1.5,
-            bgcolor: 'secondary.main',
-            color: 'primary.main',
-            display: 'grid',
-            placeItems: 'center',
-            fontWeight: 700,
-            fontFamily: 'Fraunces, serif',
-          }}
-        >
-          L
-        </Box>
-        <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+  const desktopWidth = collapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH;
+
+  const brand = (
+    <Toolbar
+      sx={{
+        px: collapsed ? 1 : 2,
+        gap: 1.5,
+        minHeight: 64,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+      }}
+    >
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: 1.5,
+          bgcolor: 'secondary.main',
+          color: 'primary.main',
+          display: 'grid',
+          placeItems: 'center',
+          fontWeight: 700,
+          fontFamily: 'Fraunces, serif',
+          flexShrink: 0,
+        }}
+      >
+        L
+      </Box>
+      {!collapsed ? (
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="subtitle1"
+            sx={{ fontWeight: 700, lineHeight: 1.2 }}
+            noWrap
+          >
             Luxaria
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" noWrap>
             Developers ERP
           </Typography>
         </Box>
-      </Toolbar>
+      ) : null}
+    </Toolbar>
+  );
+
+  const navList = (
+    <List
+      sx={{
+        px: collapsed ? 0.75 : 1.5,
+        py: 1.5,
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}
+      dense
+    >
+      {groups.map((group) => (
+        <Box key={group.id} sx={{ mb: 1.5 }}>
+          {!collapsed ? (
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{
+                display: 'block',
+                px: 1.5,
+                mb: 0.5,
+                letterSpacing: 1,
+                fontSize: 10,
+              }}
+            >
+              {group.label}
+            </Typography>
+          ) : (
+            <Divider sx={{ my: 1, mx: 1 }} />
+          )}
+          {group.items.map((item) => {
+            const button = (
+              <ListItemButton
+                key={item.id}
+                component={NavLink}
+                to={item.to}
+                end={item.end}
+                onClick={onClose}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.25,
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  px: collapsed ? 1 : 2,
+                  '&.active': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '& .MuiListItemIcon-root': { color: 'inherit' },
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: collapsed ? 0 : 40,
+                    color: 'inherit',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {navIcon(item.icon)}
+                </ListItemIcon>
+                {!collapsed ? <ListItemText primary={item.label} /> : null}
+              </ListItemButton>
+            );
+
+            return collapsed ? (
+              <Tooltip key={item.id} title={item.label} placement="right">
+                {button}
+              </Tooltip>
+            ) : (
+              button
+            );
+          })}
+        </Box>
+      ))}
+    </List>
+  );
+
+  const collapseControl = (
+    <Box
+      sx={{
+        display: { xs: 'none', md: 'flex' },
+        justifyContent: collapsed ? 'center' : 'flex-end',
+        px: 1,
+        py: 1,
+        borderTop: '1px solid',
+        borderColor: 'divider',
+      }}
+    >
+      <Tooltip title={collapsed ? 'Expand menu' : 'Collapse menu'}>
+        <IconButton
+          size="small"
+          onClick={onToggleCollapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+
+  const content = (forMobile: boolean) => (
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.paper',
+      }}
+    >
+      {brand}
       <Divider />
-      <List sx={{ px: 1.5, py: 2, flex: 1 }}>
-        {items.map((item) => (
-          <ListItemButton
-            key={item.to}
-            component={NavLink}
-            to={item.to}
-            end={item.to === '/'}
-            onClick={onClose}
-            sx={{
-              borderRadius: 2,
-              mb: 0.5,
-              '&.active': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '& .MuiListItemIcon-root': { color: 'inherit' },
-              },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
-      </List>
+      {navList}
+      {!forMobile ? collapseControl : null}
     </Box>
   );
 
   return (
     <Box
       component="nav"
-      sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+      aria-label="Main"
+      sx={{
+        width: { md: desktopWidth },
+        flexShrink: { md: 0 },
+        transition: (theme) =>
+          theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+      }}
     >
       <Drawer
         variant="temporary"
@@ -142,7 +230,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           },
         }}
       >
-        {content}
+        {content(true)}
       </Drawer>
       <Drawer
         variant="permanent"
@@ -150,15 +238,21 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         sx={{
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
-            width: DRAWER_WIDTH,
+            width: desktopWidth,
             boxSizing: 'border-box',
             borderRight: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper',
+            overflowX: 'hidden',
+            transition: (theme) =>
+              theme.transitions.create('width', {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.enteringScreen,
+              }),
           },
         }}
       >
-        {content}
+        {content(false)}
       </Drawer>
     </Box>
   );

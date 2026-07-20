@@ -1,0 +1,361 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WorkflowTimeline > renders mixed event types (snapshot) 1`] = `
+<div
+  class="MuiPaper-root MuiPaper-outlined MuiPaper-rounded css-1rq20nd-MuiPaper-root"
+  data-testid="workflow-timeline"
+>
+  <div
+    class="MuiStack-root css-1sazv7p-MuiStack-root"
+  >
+    <h6
+      class="MuiTypography-root MuiTypography-h6 css-1lajokf-MuiTypography-root"
+    >
+      Audit timeline
+    </h6>
+    <div
+      class="MuiStack-root css-nen11g-MuiStack-root"
+    >
+      <div
+        class="MuiBox-root css-1jly7z2"
+        data-event-id="aud-1"
+        data-testid="timeline-item"
+      >
+        <div
+          class="MuiBox-root css-1h0rxcu"
+        >
+          <div
+            class="MuiBox-root css-ry37ss"
+          />
+          <div
+            class="MuiBox-root css-1qplsob"
+          />
+        </div>
+        <div
+          class="MuiStack-root css-1d09kjy-MuiStack-root"
+        >
+          <div
+            class="MuiStack-root css-13hhz3e-MuiStack-root"
+          >
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorWarning css-f8ybp8-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Updated
+              </span>
+            </div>
+          </div>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1j6sqzk-MuiTypography-root"
+          >
+            <span
+              class="MuiBox-root css-35ezg3"
+            >
+              Unknown actor
+            </span>
+            <span
+              class="MuiBox-root css-0"
+              color="text.secondary"
+            >
+               · 
+              20 Jul 2026, 12:30 pm
+            </span>
+          </p>
+          <div
+            class="MuiStack-root css-1qxw92a-MuiStack-root"
+          >
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              Status
+            </span>
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorDefault css-1unicn3-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Draft
+              </span>
+            </div>
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              →
+            </span>
+            <div
+              class="MuiChip-root MuiChip-filled MuiChip-sizeSmall MuiChip-colorInfo css-k9uj71-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-eccknh-MuiChip-label"
+              >
+                Submitted
+              </span>
+            </div>
+          </div>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1xocwxp-MuiTypography-root"
+          >
+            Sent for approval
+          </p>
+        </div>
+      </div>
+      <div
+        class="MuiBox-root css-1jly7z2"
+        data-event-id="appr-1"
+        data-testid="timeline-item"
+      >
+        <div
+          class="MuiBox-root css-1h0rxcu"
+        >
+          <div
+            class="MuiBox-root css-ry37ss"
+          />
+          <div
+            class="MuiBox-root css-1qplsob"
+          />
+        </div>
+        <div
+          class="MuiStack-root css-1d09kjy-MuiStack-root"
+        >
+          <div
+            class="MuiStack-root css-13hhz3e-MuiStack-root"
+          >
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorWarning css-f8ybp8-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Submitted
+              </span>
+            </div>
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              Step 
+              1
+            </span>
+          </div>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1j6sqzk-MuiTypography-root"
+          >
+            <span
+              class="MuiBox-root css-35ezg3"
+            >
+              Unknown actor
+            </span>
+            <span
+              class="MuiBox-root css-0"
+              color="text.secondary"
+            >
+               · 
+              20 Jul 2026, 1:30 pm
+            </span>
+          </p>
+          <div
+            class="MuiStack-root css-1qxw92a-MuiStack-root"
+          >
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              Status
+            </span>
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorDefault css-1unicn3-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                —
+              </span>
+            </div>
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              →
+            </span>
+            <div
+              class="MuiChip-root MuiChip-filled MuiChip-sizeSmall MuiChip-colorWarning css-qaav6n-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-eccknh-MuiChip-label"
+              >
+                Pending
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="MuiBox-root css-1jly7z2"
+        data-event-id="appr-2"
+        data-testid="timeline-item"
+      >
+        <div
+          class="MuiBox-root css-1h0rxcu"
+        >
+          <div
+            class="MuiBox-root css-ry37ss"
+          />
+          <div
+            class="MuiBox-root css-1qplsob"
+          />
+        </div>
+        <div
+          class="MuiStack-root css-1d09kjy-MuiStack-root"
+        >
+          <div
+            class="MuiStack-root css-13hhz3e-MuiStack-root"
+          >
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorSuccess css-t36k59-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Approved
+              </span>
+            </div>
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              Step 
+              1
+            </span>
+          </div>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1j6sqzk-MuiTypography-root"
+          >
+            <span
+              class="MuiBox-root css-35ezg3"
+            >
+              Priya Finance
+            </span>
+            <span
+              class="MuiBox-root css-0"
+              color="text.secondary"
+            >
+               · 
+              20 Jul 2026, 3:00 pm
+            </span>
+          </p>
+          <div
+            class="MuiStack-root css-1qxw92a-MuiStack-root"
+          >
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              Status
+            </span>
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorWarning css-f8ybp8-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Pending
+              </span>
+            </div>
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              →
+            </span>
+            <div
+              class="MuiChip-root MuiChip-filled MuiChip-sizeSmall MuiChip-colorSuccess css-ciy3z7-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-eccknh-MuiChip-label"
+              >
+                Approved
+              </span>
+            </div>
+          </div>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1xocwxp-MuiTypography-root"
+          >
+            OK to proceed
+          </p>
+          <div
+            class="MuiStack-root css-pex525-MuiStack-root"
+          >
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              Documents
+            </span>
+            <span
+              class="MuiTypography-root MuiTypography-caption css-1mjxihk-MuiTypography-root"
+            >
+              doc-1
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="MuiBox-root css-1jly7z2"
+        data-event-id="leg-1"
+        data-testid="timeline-item"
+      >
+        <div
+          class="MuiBox-root css-1h0rxcu"
+        >
+          <div
+            class="MuiBox-root css-ry37ss"
+          />
+        </div>
+        <div
+          class="MuiStack-root css-1ee4668-MuiStack-root"
+        >
+          <div
+            class="MuiStack-root css-13hhz3e-MuiStack-root"
+          >
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorInfo css-dhaahy-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Legacy note
+              </span>
+            </div>
+            <div
+              class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorDefault css-1unicn3-MuiChip-root"
+            >
+              <span
+                class="MuiChip-label css-19m61dl-MuiChip-label"
+              >
+                Legacy
+              </span>
+            </div>
+          </div>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1j6sqzk-MuiTypography-root"
+          >
+            <span
+              class="MuiBox-root css-35ezg3"
+            >
+              Unknown actor
+            </span>
+            <span
+              class="MuiBox-root css-0"
+              color="text.secondary"
+            >
+               · 
+              Time unknown
+            </span>
+          </p>
+          <p
+            class="MuiTypography-root MuiTypography-body2 css-1xocwxp-MuiTypography-root"
+          >
+            Migrated from paper file
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
