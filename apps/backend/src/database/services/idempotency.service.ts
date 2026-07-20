@@ -22,6 +22,7 @@ export const SIGNED_PAYMENT_VOUCHER_IDEMPOTENCY_SCOPE =
 export const GOODS_RECEIPT_IDEMPOTENCY_SCOPE = 'goods_receipt';
 export const DPR_IDEMPOTENCY_SCOPE = 'daily_progress_report';
 export const LABOUR_ATTENDANCE_IDEMPOTENCY_SCOPE = 'labour_attendance';
+export const CONTRACTOR_BILL_IDEMPOTENCY_SCOPE = 'contractor.bill';
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 

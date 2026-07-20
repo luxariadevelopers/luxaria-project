@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
+  Account,
+  AccountSchema,
+} from '../chart-of-accounts/schemas/account.schema';
+import {
   ContractorAgreement,
   ContractorAgreementSchema,
 } from '../contractor-agreements/schemas/contractor-agreement.schema';
@@ -8,6 +12,12 @@ import {
   Contractor,
   ContractorSchema,
 } from '../contractors/schemas/contractor.schema';
+import { FinancialYearModule } from '../financial-year/financial-year.module';
+import { JournalModule } from '../journal/journal.module';
+import {
+  JournalEntry,
+  JournalEntrySchema,
+} from '../journal/schemas/journal-entry.schema';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { RbacModule } from '../rbac/rbac.module';
 import {
@@ -29,8 +39,12 @@ import {
       { name: WorkMeasurement.name, schema: WorkMeasurementSchema },
       { name: Project.name, schema: ProjectSchema },
       { name: Contractor.name, schema: ContractorSchema },
+      { name: Account.name, schema: AccountSchema },
+      { name: JournalEntry.name, schema: JournalEntrySchema },
     ]),
     RbacModule,
+    JournalModule,
+    FinancialYearModule,
   ],
   controllers: [ContractorBillsController],
   providers: [ContractorBillsService],

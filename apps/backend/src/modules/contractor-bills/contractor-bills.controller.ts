@@ -126,7 +126,10 @@ export class ContractorBillsController {
 
   @Post(':id/post')
   @RequirePermissions('running_bill.post')
-  @ApiOperation({ summary: 'Post bill (Director Approved → Posted)' })
+  @ApiOperation({
+    summary:
+      'Post bill (Director Approved → Posted; balanced AP journal; idempotent)',
+  })
   post(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
     return this.billsService.post(id, actor.id);
   }

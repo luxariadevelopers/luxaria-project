@@ -57,6 +57,7 @@ export type PublicContractorBill = {
   financeVerifiedAt: Date | null;
   directorApprovedBy: string | null;
   directorApprovedAt: Date | null;
+  journalEntryId: string | null;
   postedBy: string | null;
   postedAt: Date | null;
   paidBy: string | null;
@@ -114,6 +115,7 @@ type BillLike = {
   financeVerifiedAt?: Date | null;
   directorApprovedBy?: Types.ObjectId | string | null;
   directorApprovedAt?: Date | null;
+  journalEntryId?: Types.ObjectId | string | null;
   postedBy?: Types.ObjectId | string | null;
   postedAt?: Date | null;
   paidBy?: Types.ObjectId | string | null;
@@ -179,6 +181,7 @@ export function toPublicContractorBill(row: BillLike): PublicContractorBill {
     financeVerifiedAt: row.financeVerifiedAt ?? null,
     directorApprovedBy: oid(row.directorApprovedBy),
     directorApprovedAt: row.directorApprovedAt ?? null,
+    journalEntryId: oid(row.journalEntryId),
     postedBy: oid(row.postedBy),
     postedAt: row.postedAt ?? null,
     paidBy: oid(row.paidBy),

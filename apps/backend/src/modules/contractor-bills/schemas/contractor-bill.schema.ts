@@ -205,6 +205,15 @@ export class ContractorBill {
   @Prop({ type: Date, default: null })
   directorApprovedAt!: Date | null;
 
+  /** Posted AP journal created by running-bill posting (required when status=posted). */
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'JournalEntry',
+    default: null,
+    index: true,
+  })
+  journalEntryId!: Types.ObjectId | null;
+
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   postedBy!: Types.ObjectId | null;
 

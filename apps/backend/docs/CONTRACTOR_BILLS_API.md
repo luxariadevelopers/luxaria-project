@@ -41,6 +41,7 @@ Also stores `raNumber` (RA-1, RA-2…) per agreement.
 | `netPayable` | Current − all deductions |
 | `paidAmount` | Cumulative payments applied |
 | `remainingPayable` | `netPayable − paidAmount` (computed) |
+| `journalEntryId` | Posted AP journal id (required when `status=posted`) |
 | `invoiceDocument` | Document id / path (required to claim) |
 | `status` | Workflow status |
 
@@ -53,9 +54,11 @@ Draft
   → PM Certified            (pm-certify)
   → Finance Verified        (finance-verify)
   → Director Approved       (director-approve)
-  → Posted                  (post)
-  → Paid                    (mark-paid)
+  → Posted                  (post — balanced journal Dr WIP / Cr payable+deductions)
+  → Paid                    (mark-paid / contractor payment)
 ```
+
+Post is idempotent (`ctr-bill-post:{id}` + `contractor-bill-journal:{id}`). Posted bills are immutable (only draft/rejected editable). Retention release accounting is not implemented in this module.
 
 Reject from Claimed…Finance Verified → `rejected` (editable again as draft).
 
