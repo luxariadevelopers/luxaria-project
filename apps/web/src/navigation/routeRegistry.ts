@@ -1160,6 +1160,18 @@ const APP_ROUTES = [
     breadcrumbSegment: 'audit-logs',
   },
   {
+    id: 'system-health',
+    path: '/administration/system-health',
+    title: 'System Health',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'administration',
+    icon: 'audit',
+    anyOf: ['audit.view'],
+    projectScope: 'none',
+    breadcrumbSegment: 'system-health',
+  },
+  {
     id: 'settings',
     path: '/settings',
     title: 'Settings',
