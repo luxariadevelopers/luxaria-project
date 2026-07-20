@@ -9,6 +9,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
 import { colors } from '@/theme/colors';
@@ -19,11 +20,14 @@ type HomeNavigation = CompositeNavigationProp<
 >;
 
 export function HomeScreen() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
   const { activeCount } = useOfflineSync();
   const navigation = useNavigation<HomeNavigation>();
+  const canOpenLabourVoucher =
+    hasPermission(LABOUR_VOUCHER_PERMISSIONS.view) ||
+    hasPermission(LABOUR_VOUCHER_PERMISSIONS.createOrSubmit);
 
   return (
     <Screen
@@ -70,16 +74,19 @@ export function HomeScreen() {
         <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
       </Pressable>
 
-      <Pressable
-        style={styles.secondaryButton}
-        onPress={() => navigation.navigate('StockCountList')}
-      >
-        <Text style={styles.secondaryButtonText}>Stock Count</Text>
-      </Pressable>
+      {canOpenLabourVoucher ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('LabourVoucherHistory')}
+        >
+          <Text style={styles.secondaryButtonText}>Labour Voucher</Text>
+        </Pressable>
+      ) : null}
 
       <Text style={styles.note}>
-        GRN and stock counts queue offline for sync (media first, then submit).
-        Stock Count: Home › Stock Count.
+        GRN capture requires photos and GPS, then queues offline for sync
+        (media first, then submit). Labour vouchers create and submit signed
+        daily wage payments online.
       </Text>
     </Screen>
   );

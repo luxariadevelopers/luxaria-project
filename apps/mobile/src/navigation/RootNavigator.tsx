@@ -5,6 +5,11 @@ import { Text } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useProject } from '@/context/ProjectContext';
+import {
+  LabourVoucherDetailScreen,
+  LabourVoucherHistoryScreen,
+  NewLabourVoucherScreen,
+} from '@/labour-vouchers';
 import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
@@ -13,8 +18,6 @@ import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
-import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
-import { StockCountListScreen } from '@/screens/StockCountListScreen';
 import { colors } from '@/theme/colors';
 import type {
   AppStackParamList,
@@ -141,14 +144,19 @@ function AppNavigator() {
         options={{ title: 'Daily Progress Report' }}
       />
       <AppStack.Screen
-        name="StockCountList"
-        component={StockCountListScreen}
-        options={{ title: 'Stock Count' }}
+        name="LabourVoucherHistory"
+        component={LabourVoucherHistoryScreen}
+        options={{ title: 'Labour Voucher' }}
       />
       <AppStack.Screen
-        name="StockCountEntry"
-        component={StockCountEntryScreen}
-        options={{ title: 'Count entry' }}
+        name="NewLabourVoucher"
+        component={NewLabourVoucherScreen}
+        options={{ title: 'New Labour Voucher' }}
+      />
+      <AppStack.Screen
+        name="LabourVoucherDetail"
+        component={LabourVoucherDetailScreen}
+        options={{ title: 'Labour Voucher' }}
       />
     </AppStack.Navigator>
   );
