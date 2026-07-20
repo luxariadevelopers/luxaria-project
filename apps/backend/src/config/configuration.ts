@@ -83,10 +83,6 @@ export type AppConfig = {
   directorDigestCron: string;
   /** When true, enqueue BullMQ jobs via Redis instead of inline cron work. */
   redisEnabled: boolean;
-  /** When true, deliver push via Expo instead of stub logging. */
-  pushEnabled: boolean;
-  /** Optional Expo push access token for higher rate limits. */
-  expoAccessToken: string;
   redisHost: string;
   redisPort: number;
   redisPassword: string;
@@ -98,15 +94,16 @@ export type AppConfig = {
   vendorInvoiceFreightTolerancePercent: number;
   vendorInvoiceDiscountTolerancePercent: number;
   vendorInvoiceTotalTolerancePercent: number;
-  /** SMTP host — when unset, email channel runs in stub mode (local/dev). */
-  smtpHost: string;
-  smtpPort: number;
-  smtpUser: string;
-  smtpPass: string;
-  /** Use TLS (typical for port 465). Defaults from port when unset. */
-  smtpSecure: boolean;
-  /** From address for outbound notification emails. */
-  emailFrom: string;
+  /** Enable outbound error tracking hook (requires DSN). */
+  errorTrackingEnabled: boolean;
+  /** Error tracking ingest endpoint (never logged in full). */
+  errorTrackingDsn: string | null;
+  /** Optional webhook for operational alerts (never logged in full). */
+  opsAlertWebhookUrl: string | null;
+  /** Failed notification deliveries in 24h before health is degraded. */
+  alertDeliveryFailureThreshold24h: number;
+  alertDatabaseDownEnabled: boolean;
+  alertRedisDownEnabled: boolean;
 };
 
 export default (): AppConfig => {
@@ -227,9 +224,6 @@ export default (): AppConfig => {
     directorDigestCron: process.env.DIRECTOR_DIGEST_CRON ?? '0 8 * * *',
     redisEnabled:
       String(process.env.REDIS_ENABLED ?? 'false').toLowerCase() === 'true',
-    pushEnabled:
-      String(process.env.PUSH_ENABLED ?? 'false').toLowerCase() === 'true',
-    expoAccessToken: process.env.EXPO_ACCESS_TOKEN ?? '',
     redisHost: process.env.REDIS_HOST ?? '127.0.0.1',
     redisPort: Number(process.env.REDIS_PORT ?? 9018),
     redisPassword: process.env.REDIS_PASSWORD ?? '',
@@ -251,13 +245,19 @@ export default (): AppConfig => {
     vendorInvoiceTotalTolerancePercent: Number(
       process.env.VENDOR_INVOICE_TOTAL_TOLERANCE_PERCENT ?? 0,
     ),
-    smtpHost: process.env.SMTP_HOST?.trim() ?? '',
-    smtpPort: Number(process.env.SMTP_PORT ?? 587),
-    smtpUser: process.env.SMTP_USER?.trim() ?? '',
-    smtpPass: process.env.SMTP_PASS ?? '',
-    smtpSecure:
-      String(process.env.SMTP_SECURE ?? '').toLowerCase() === 'true' ||
-      Number(process.env.SMTP_PORT ?? 587) === 465,
-    emailFrom: process.env.EMAIL_FROM?.trim() ?? '',
+    errorTrackingEnabled:
+      String(process.env.ERROR_TRACKING_ENABLED ?? 'false').toLowerCase() ===
+      'true',
+    errorTrackingDsn: process.env.ERROR_TRACKING_DSN?.trim() || null,
+    opsAlertWebhookUrl: process.env.OPS_ALERT_WEBHOOK_URL?.trim() || null,
+    alertDeliveryFailureThreshold24h: Number(
+      process.env.ALERT_DELIVERY_FAILURE_THRESHOLD_24H ?? 10,
+    ),
+    alertDatabaseDownEnabled:
+      String(process.env.ALERT_DATABASE_DOWN_ENABLED ?? 'true').toLowerCase() !==
+      'false',
+    alertRedisDownEnabled:
+      String(process.env.ALERT_REDIS_DOWN_ENABLED ?? 'true').toLowerCase() !==
+      'false',
   };
 };
