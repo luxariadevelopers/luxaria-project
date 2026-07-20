@@ -9,6 +9,12 @@ import { InAppChannel } from './channels/in-app.channel';
 import { PushChannel } from './channels/push.channel';
 import { WhatsAppChannel } from './channels/whatsapp.channel';
 import { NOTIFICATIONS_QUEUE } from './notifications.constants';
+import { PushAdapter } from './push.adapter';
+import { PushTokenService } from './push-token.service';
+import {
+  PushDeviceToken,
+  PushDeviceTokenSchema,
+} from './schemas/push-device-token.schema';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsDispatcher } from './notifications.dispatcher';
 import { NotificationsProcessor } from './notifications.processor';
@@ -58,6 +64,7 @@ const redisEnabled =
         name: ScheduledNotification.name,
         schema: ScheduledNotificationSchema,
       },
+      { name: PushDeviceToken.name, schema: PushDeviceTokenSchema },
     ]),
     ...(redisEnabled
       ? [
@@ -86,12 +93,14 @@ const redisEnabled =
     NotificationsDispatcher,
     NotificationsScheduler,
     NotificationsSeedService,
+    PushTokenService,
+    PushAdapter,
     InAppChannel,
     PushChannel,
     EmailChannel,
     WhatsAppChannel,
     ...(redisEnabled ? [NotificationsProcessor] : []),
   ],
-  exports: [NotificationsService, NotificationsDispatcher],
+  exports: [NotificationsService, NotificationsDispatcher, PushTokenService],
 })
 export class NotificationsModule {}

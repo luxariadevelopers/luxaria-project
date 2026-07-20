@@ -8,6 +8,8 @@ import { EmailChannel } from './channels/email.channel';
 import { InAppChannel } from './channels/in-app.channel';
 import { PushChannel } from './channels/push.channel';
 import { WhatsAppChannel } from './channels/whatsapp.channel';
+import { PushAdapter } from './push.adapter';
+import { PushTokenService } from './push-token.service';
 import {
   ALL_NOTIFICATION_EVENTS,
   NotificationChannel,
@@ -38,6 +40,10 @@ import {
   ScheduledNotification,
   ScheduledNotificationSchema,
 } from './schemas/scheduled-notification.schema';
+import {
+  PushDeviceToken,
+  PushDeviceTokenSchema,
+} from './schemas/push-device-token.schema';
 
 describe('NotificationsService', () => {
   let mongoServer: MongoMemoryServer;
@@ -45,8 +51,20 @@ describe('NotificationsService', () => {
   let service: NotificationsService;
   let dispatcher: NotificationsDispatcher;
   let seedService: NotificationsSeedService;
+  let pushTokenService: PushTokenService;
   let deliveryLogModel: Model<NotificationDeliveryLog>;
   let userId: string;
+
+  const configService = {
+    get: (key: string) => {
+      if (key === 'redisEnabled') return false;
+      if (key === 'pushEnabled') return false;
+      if (key === 'expoAccessToken') return '';
+      return undefined;
+    },
+  } as unknown as ConfigService<AppConfig, true>;
+
+  const pushAdapter = new PushAdapter(configService);
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -73,6 +91,12 @@ describe('NotificationsService', () => {
       ScheduledNotification.name,
       ScheduledNotificationSchema,
     ) as Model<ScheduledNotification>;
+    const pushTokenModel = connection.model(
+      PushDeviceToken.name,
+      PushDeviceTokenSchema,
+    ) as Model<PushDeviceToken>;
+
+    pushTokenService = new PushTokenService(pushTokenModel);
 
     dispatcher = new NotificationsDispatcher(
       notificationModel,
@@ -80,17 +104,10 @@ describe('NotificationsService', () => {
       preferenceModel,
       deliveryLogModel,
       new InAppChannel(),
-      new PushChannel(),
+      new PushChannel(pushTokenService, pushAdapter),
       new EmailChannel(),
       new WhatsAppChannel(),
     );
-
-    const configService = {
-      get: (key: string) => {
-        if (key === 'redisEnabled') return false;
-        return undefined;
-      },
-    } as unknown as ConfigService<AppConfig, true>;
 
     const moduleRef = {
       get: () => {

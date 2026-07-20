@@ -14,6 +14,7 @@ export type AppStackParamList = {
   ProjectSelect: undefined;
   GoodsReceipt: undefined;
   DailyProgressReport: undefined;
+  NotificationPreferences: undefined;
 };
 
 export type RootStackParamList = {

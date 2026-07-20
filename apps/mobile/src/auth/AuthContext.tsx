@@ -19,6 +19,7 @@ import {
 import { getErrorMessage } from '@/api/client';
 import { setAuthFailureHandler } from '@/api/session';
 import type { AuthUser, UserAccess } from '@/api/types';
+import { unregisterPushFromBackend } from '@/notifications/pushLifecycle';
 import { tokenStorage } from './tokenStorage';
 
 type AuthContextValue = {
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore logout network errors
     } finally {
+      await unregisterPushFromBackend();
       await tokenStorage.clearAll();
       setUser(null);
       setSessionEpoch((n) => n + 1);

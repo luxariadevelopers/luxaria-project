@@ -7,6 +7,7 @@ import { AuthProvider } from '@/auth/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NetworkProvider } from '@/context/NetworkContext';
 import { ProjectProvider } from '@/context/ProjectContext';
+import { PushNotificationProvider } from '@/notifications/PushNotificationContext';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { OfflineSyncProvider } from '@/offline';
 
@@ -32,7 +33,9 @@ export default function App() {
               <AuthProvider>
                 <ProjectProvider>
                   <OfflineSyncProvider>
-                    <RootNavigator />
+                    <PushNotificationProvider>
+                      <RootNavigator />
+                    </PushNotificationProvider>
                     <StatusBar style="light" />
                   </OfflineSyncProvider>
                 </ProjectProvider>

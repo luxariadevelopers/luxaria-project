@@ -12,4 +12,7 @@ module.exports = {
   testEnvironment: 'node',
   testTimeout: 120_000,
   displayName: 'backend-unit',
+  moduleNameMapper: {
+    '^expo-server-sdk$': '<rootDir>/../test/mocks/expo-server-sdk.ts',
+  },
 };
