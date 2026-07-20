@@ -18,7 +18,7 @@
     "test": "node -e \"console.log('No tests in @luxaria/shared-validation (Phase 1 placeholder)')\""
   },
   "dependencies": {
-    "zod": "^3.24.2"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@luxaria/eslint-config": "workspace:*",
