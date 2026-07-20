@@ -14,6 +14,9 @@ export type AppStackParamList = {
   ProjectSelect: undefined;
   GoodsReceipt: undefined;
   DailyProgressReport: undefined;
+  LabourVoucherHistory: undefined;
+  NewLabourVoucher: undefined;
+  LabourVoucherDetail: { voucherId: string };
 };
 
 export type RootStackParamList = {

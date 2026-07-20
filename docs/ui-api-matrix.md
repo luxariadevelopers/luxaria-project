@@ -146,11 +146,12 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR, Labour Voucher |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
+| Labour vouchers (Micro Phase 128) | Present | Create/submit labour signed-payment vouchers + history/PDF; `apps/mobile/src/labour-vouchers/` |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
-| Broader site workflows | Missing | Stock issue, attendance, petty cash UI, etc. |
+| Broader site workflows | Missing | Stock issue, attendance, etc. |
 
 **Mobile API / offline endpoints found:**
 
@@ -166,6 +167,16 @@ Every backend module must appear below with route/method/permission/response-sha
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/rbac/me/permissions` | `apps/mobile/src/api/auth.ts` |
+| GET | `/signed-payment-vouchers` | `apps/mobile/src/labour-vouchers/api.ts` |
+| POST | `/signed-payment-vouchers` | `apps/mobile/src/labour-vouchers/api.ts` |
+| GET | `/signed-payment-vouchers/:id` | `apps/mobile/src/labour-vouchers/api.ts` |
+| PATCH | `/signed-payment-vouchers/:id` | `apps/mobile/src/labour-vouchers/api.ts` |
+| POST | `/signed-payment-vouchers/:id/signatures` | `apps/mobile/src/labour-vouchers/api.ts` |
+| POST | `/signed-payment-vouchers/:id/submit` | `apps/mobile/src/labour-vouchers/api.ts` |
+| GET | `/cash-accounts` | `apps/mobile/src/labour-vouchers/api.ts` |
+| POST | `/documents/presign-upload` | `apps/mobile/src/labour-vouchers/api.ts` |
+| POST | `/documents/:id/confirm-upload` | `apps/mobile/src/labour-vouchers/api.ts` |
+| GET | `/documents/:id/download-url` | `apps/mobile/src/labour-vouchers/api.ts` |
 
 ### Shared packages
 

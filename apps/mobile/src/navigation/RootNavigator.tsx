@@ -5,6 +5,11 @@ import { Text } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useProject } from '@/context/ProjectContext';
+import {
+  LabourVoucherDetailScreen,
+  LabourVoucherHistoryScreen,
+  NewLabourVoucherScreen,
+} from '@/labour-vouchers';
 import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
@@ -137,6 +142,21 @@ function AppNavigator() {
         name="DailyProgressReport"
         component={DailyProgressReportScreen}
         options={{ title: 'Daily Progress Report' }}
+      />
+      <AppStack.Screen
+        name="LabourVoucherHistory"
+        component={LabourVoucherHistoryScreen}
+        options={{ title: 'Labour Voucher' }}
+      />
+      <AppStack.Screen
+        name="NewLabourVoucher"
+        component={NewLabourVoucherScreen}
+        options={{ title: 'New Labour Voucher' }}
+      />
+      <AppStack.Screen
+        name="LabourVoucherDetail"
+        component={LabourVoucherDetailScreen}
+        options={{ title: 'Labour Voucher' }}
       />
     </AppStack.Navigator>
   );
