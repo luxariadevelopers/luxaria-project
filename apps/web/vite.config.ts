@@ -15,11 +15,24 @@ export default defineConfig({
         __dirname,
         '../../packages/shared-types/src/index.ts',
       ),
+      '@luxaria/shared-format': path.resolve(
+        __dirname,
+        '../../packages/shared-format/src/index.ts',
+      ),
+      '@luxaria/shared-validation': path.resolve(
+        __dirname,
+        '../../packages/shared-validation/src/index.ts',
+      ),
     },
   },
   optimizeDeps: {
-    exclude: ['@luxaria/shared-types'],
+    exclude: [
+      '@luxaria/shared-types',
+      '@luxaria/shared-format',
+      '@luxaria/shared-validation',
+    ],
   },
+
   server: {
     host: true,
     port: 9001,

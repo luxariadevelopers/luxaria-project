@@ -27,7 +27,6 @@ const columns: GridColDef<PlaceholderUser>[] = [
 export function UsersPage() {
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Users</Typography>
       <Typography color="text.secondary">
         Placeholder page. User management UI will be implemented later.
       </Typography>

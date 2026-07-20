@@ -17,12 +17,15 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.type-tests.json --noEmit",
     "lint": "eslint .",
-    "test": "tsc -p tsconfig.type-tests.json --noEmit"
+    "test": "tsc -p tsconfig.type-tests.json --noEmit && jest --runInBand --config jest.config.cjs"
   },
   "devDependencies": {
     "@luxaria/eslint-config": "workspace:*",
     "@luxaria/tsconfig": "workspace:*",
     "eslint": "^9.22.0",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6"
   }
 }
