@@ -220,3 +220,49 @@ export class RetryDeliveryDto {
   @IsBoolean()
   force?: boolean;
 }
+
+export class RegisterPushTokenDto {
+  @ApiProperty({ description: 'Expo push token' })
+  @IsString()
+  @MaxLength(200)
+  token!: string;
+
+  @ApiProperty({ enum: ['ios', 'android'] })
+  @IsEnum(['ios', 'android'] as const)
+  platform!: 'ios' | 'android';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  deviceName?: string;
+}
+
+export class UnregisterPushTokenDto {
+  @ApiProperty({ description: 'Expo push token to invalidate' })
+  @IsString()
+  @MaxLength(200)
+  token!: string;
+}
+
+export class ListPushTokensQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  userId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}

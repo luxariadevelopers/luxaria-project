@@ -134,10 +134,7 @@ export async function apiPut<T>(url: string, body?: unknown) {
   return data;
 }
 
-export async function apiDelete<T>(
-  url: string,
-  config?: { data?: unknown },
-) {
+export async function apiDelete<T>(url: string, config?: { data?: unknown }) {
   const { data } = await apiClient.delete<ApiResponse<T>>(url, config);
   return data;
 }

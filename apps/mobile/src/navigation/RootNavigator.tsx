@@ -9,11 +9,12 @@ import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
-import { ConflictDetailScreen } from '@/screens/ConflictDetailScreen';
+import { NotificationPreferencesScreen } from '@/screens/NotificationPreferencesScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
+import { appNavigationRef } from '@/navigation/navigationRef';
 import { colors } from '@/theme/colors';
 import type {
   AppStackParamList,
@@ -140,9 +141,9 @@ function AppNavigator() {
         options={{ title: 'Daily Progress Report' }}
       />
       <AppStack.Screen
-        name="ConflictDetail"
-        component={ConflictDetailScreen}
-        options={{ title: 'Sync issue' }}
+        name="NotificationPreferences"
+        component={NotificationPreferencesScreen}
+        options={{ title: 'Notification preferences' }}
       />
     </AppStack.Navigator>
   );
@@ -156,7 +157,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={appNavigationRef}>
       {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

@@ -83,6 +83,10 @@ export type AppConfig = {
   directorDigestCron: string;
   /** When true, enqueue BullMQ jobs via Redis instead of inline cron work. */
   redisEnabled: boolean;
+  /** When true, deliver push via Expo instead of stub logging. */
+  pushEnabled: boolean;
+  /** Optional Expo push access token for higher rate limits. */
+  expoAccessToken: string;
   redisHost: string;
   redisPort: number;
   redisPassword: string;
@@ -223,6 +227,9 @@ export default (): AppConfig => {
     directorDigestCron: process.env.DIRECTOR_DIGEST_CRON ?? '0 8 * * *',
     redisEnabled:
       String(process.env.REDIS_ENABLED ?? 'false').toLowerCase() === 'true',
+    pushEnabled:
+      String(process.env.PUSH_ENABLED ?? 'false').toLowerCase() === 'true',
+    expoAccessToken: process.env.EXPO_ACCESS_TOKEN ?? '',
     redisHost: process.env.REDIS_HOST ?? '127.0.0.1',
     redisPort: Number(process.env.REDIS_PORT ?? 9018),
     redisPassword: process.env.REDIS_PASSWORD ?? '',

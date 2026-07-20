@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -15,12 +16,16 @@ import { RequirePermissions } from '../rbac/decorators/require-permissions.decor
 import {
   ListDeliveryLogsQueryDto,
   ListNotificationsQueryDto,
+  ListPushTokensQueryDto,
+  RegisterPushTokenDto,
   RetryDeliveryDto,
   ScheduleNotificationDto,
   SendNotificationDto,
+  UnregisterPushTokenDto,
   UpdatePreferencesDto,
   UpsertTemplateDto,
 } from './dto/notification.dto';
+import { PushTokenService } from './push-token.service';
 import { ScheduledNotificationStatus } from './notifications.constants';
 import { NotificationsScheduler } from './notifications.scheduler';
 import { NotificationsService } from './notifications.service';
@@ -32,6 +37,7 @@ export class NotificationsController {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly scheduler: NotificationsScheduler,
+    private readonly pushTokenService: PushTokenService,
   ) {}
 
   @Get()
@@ -73,6 +79,47 @@ export class NotificationsController {
     @Body() dto: UpdatePreferencesDto,
   ) {
     return this.notificationsService.updatePreferences(actor.id, dto);
+  }
+
+  @Post('push-tokens')
+  @RequirePermissions('notification.view')
+  @ApiOperation({ summary: 'Register an Expo push token for the current user' })
+  registerPushToken(
+    @CurrentUser() actor: AuthUser,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
+    return this.pushTokenService.register(actor.id, dto);
+  }
+
+  @Delete('push-tokens')
+  @RequirePermissions('notification.view')
+  @ApiOperation({ summary: 'Unregister an Expo push token for the current user' })
+  unregisterPushToken(
+    @CurrentUser() actor: AuthUser,
+    @Body() dto: UnregisterPushTokenDto,
+  ) {
+    return this.pushTokenService.unregister(actor.id, dto);
+  }
+
+  @Get('push-tokens/mine')
+  @RequirePermissions('notification.view')
+  @ApiOperation({ summary: 'List active push tokens for the current user' })
+  listMyPushTokens(@CurrentUser() actor: AuthUser) {
+    return this.pushTokenService.listMine(actor.id);
+  }
+
+  @Get('push-tokens')
+  @RequirePermissions('notification.manage')
+  @ApiOperation({ summary: 'List push tokens (admin)' })
+  listPushTokens(@Query() query: ListPushTokensQueryDto) {
+    return this.pushTokenService.listAdmin(query);
+  }
+
+  @Delete('push-tokens/:id')
+  @RequirePermissions('notification.manage')
+  @ApiOperation({ summary: 'Revoke a push token by id (admin)' })
+  revokePushToken(@Param('id') id: string) {
+    return this.pushTokenService.revokeById(id);
   }
 
   @Post('send')

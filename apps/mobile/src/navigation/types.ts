@@ -14,7 +14,7 @@ export type AppStackParamList = {
   ProjectSelect: undefined;
   GoodsReceipt: undefined;
   DailyProgressReport: undefined;
-  ConflictDetail: { transactionId: string };
+  NotificationPreferences: undefined;
 };
 
 export type RootStackParamList = {

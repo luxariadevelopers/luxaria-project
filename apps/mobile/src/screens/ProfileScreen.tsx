@@ -1,23 +1,35 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
-import type { MainTabParamList } from '@/navigation/types';
-import { registerForPushNotificationsAsync } from '@/notifications/pushNotifications';
-import { useOfflineSync } from '@/offline';
+import { usePushNotifications } from '@/notifications/PushNotificationContext';
+import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
 import {
   requestCameraPermission,
   requestLocationPermission,
 } from '@/utils/permissions';
 import { colors } from '@/theme/colors';
 
+type ProfileNavigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Profile'>,
+  NativeStackNavigationProp<AppStackParamList>
+>;
+
 export function ProfileScreen() {
+  const navigation = useNavigation<ProfileNavigation>();
   const { user, access, logout } = useAuth();
-  const { activeCount } = useOfflineSync();
-  const navigation =
-    useNavigation<BottomTabNavigationProp<MainTabParamList, 'Profile'>>();
+  const { syncPushRegistration, lastForegroundTitle } = usePushNotifications();
   const [busy, setBusy] = useState(false);
 
   const runPermission = async (
@@ -50,15 +62,18 @@ export function ProfileScreen() {
         </Text>
       </View>
 
-      <Text style={styles.section}>Offline sync</Text>
+      <Text style={styles.section}>Notifications</Text>
       <Pressable
         style={styles.action}
-        onPress={() => navigation.navigate('PendingSync')}
+        onPress={() => navigation.navigate('NotificationPreferences')}
       >
-        <Text style={styles.actionText}>
-          Pending Sync{activeCount > 0 ? ` (${activeCount})` : ''}
-        </Text>
+        <Text style={styles.actionText}>Notification preferences</Text>
       </Pressable>
+      {lastForegroundTitle ? (
+        <Text style={styles.hint}>
+          Last foreground alert: {lastForegroundTitle}
+        </Text>
+      ) : null}
 
       <Text style={styles.section}>Device permissions</Text>
       <Pressable
@@ -81,12 +96,12 @@ export function ProfileScreen() {
         style={styles.action}
         onPress={() => {
           void (async () => {
-            const result = await registerForPushNotificationsAsync();
+            const result = await syncPushRegistration();
             Alert.alert('Push notifications', result.message);
           })();
         }}
       >
-        <Text style={styles.actionText}>Register push (placeholder)</Text>
+        <Text style={styles.actionText}>Sync push token with server</Text>
       </Pressable>
 
       <Pressable
@@ -136,6 +151,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
     marginBottom: 10,
+  },
+  hint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginBottom: 12,
   },
   action: {
     backgroundColor: colors.surface,
