@@ -15,13 +15,10 @@ import { ChartOfAccountsPage } from '@/pages/ChartOfAccountsPage';
 import { CommitmentDetailPage } from '@/pages/CommitmentDetailPage';
 import { BankAccountDetailPage } from '@/pages/BankAccountDetailPage';
 import { BankAccountsPage } from '@/pages/BankAccountsPage';
-import { BankReconciliationDetailPage } from '@/pages/BankReconciliationDetailPage';
-import { BankReconciliationPage } from '@/pages/BankReconciliationPage';
 import { CashAccountsPage } from '@/pages/CashAccountsPage';
 import { JournalCreatePage } from '@/pages/JournalCreatePage';
 import { JournalDetailPage } from '@/pages/JournalDetailPage';
 import { JournalsPage } from '@/pages/JournalsPage';
-import { PeriodClosePage } from '@/pages/PeriodClosePage';
 import { PettyCashRequestCreatePage } from '@/pages/PettyCashRequestCreatePage';
 import { PettyCashRequestDetailPage } from '@/pages/PettyCashRequestDetailPage';
 import { PettyCashRequestsPage } from '@/pages/PettyCashRequestsPage';
@@ -41,9 +38,6 @@ import { DirectorsPage } from '@/pages/DirectorsPage';
 import { DocumentsDemoPage } from '@/pages/DocumentsDemoPage';
 import { DocumentsPage } from '@/pages/DocumentsPage';
 import { DprPage } from '@/pages/DprPage';
-import { ExpenseCategoriesPage } from '@/pages/ExpenseCategoriesPage';
-import { ExpenseDetailPage } from '@/pages/ExpenseDetailPage';
-import { ExpensesPage } from '@/pages/ExpensesPage';
 import { InvestorDetailPage } from '@/pages/InvestorDetailPage';
 import { InvestorsPage } from '@/pages/InvestorsPage';
 import { EntityDetailDemoPage } from '@/pages/EntityDetailDemoPage';
@@ -73,14 +67,9 @@ import { PurchaseRequestDetailPage } from '@/pages/PurchaseRequestDetailPage';
 import { PurchaseRequestsPage } from '@/pages/PurchaseRequestsPage';
 import { QuotationsPage } from '@/pages/QuotationsPage';
 import { QuotationComparisonPage } from '@/pages/QuotationComparisonPage';
-import { VendorInvoiceMatchPage } from '@/pages/VendorInvoiceMatchPage';
-import { VendorInvoicesPage } from '@/pages/VendorInvoicesPage';
-import { ContractorPaymentsPage } from '@/pages/ContractorPaymentsPage';
-import { VendorPaymentsPage } from '@/pages/VendorPaymentsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ShareholdingPage } from '@/pages/ShareholdingPage';
 import { UsersPage } from '@/pages/UsersPage';
-import { VendorDetailPage } from '@/pages/VendorDetailPage';
 import { VendorsPage } from '@/pages/VendorsPage';
 import { ExportDemoPage } from '@/pages/ExportDemoPage';
 import { FinanceDashboardPage } from '@/pages/FinanceDashboardPage';
@@ -93,17 +82,12 @@ import { StockCountsPage } from '@/pages/StockCountsPage';
 import { StockLedgerPage } from '@/pages/StockLedgerPage';
 import { QualityInspectionDetailPage } from '@/pages/QualityInspectionDetailPage';
 import { QualityInspectionsPage } from '@/pages/QualityInspectionsPage';
-import { MaterialDetailPage } from '@/pages/MaterialDetailPage';
-import { MaterialsPage } from '@/pages/MaterialsPage';
 import { MaterialIssueDetailPage } from '@/pages/MaterialIssueDetailPage';
 import { MaterialIssuesPage } from '@/pages/MaterialIssuesPage';
 import { ReorderAlertsPage } from '@/pages/ReorderAlertsPage';
 import { BoqPage } from '@/pages/BoqPage';
 import { BoqImportPage } from '@/pages/BoqImportPage';
-import { BoqItemEditorPage } from '@/pages/BoqItemEditorPage';
-import { BoqVersionsPage } from '@/pages/BoqVersionsPage';
-import { UnitsPage } from '@/pages/UnitsPage';
-import { UnitDetailPage } from '@/pages/UnitDetailPage';
+import { WorkMeasurementsPage } from '@/pages/WorkMeasurementsPage';
 import { WorkflowTimelineDemoPage } from '@/pages/WorkflowTimelineDemoPage';
 
 /**
@@ -127,9 +111,7 @@ const APP_ROUTE_ELEMENTS = {
   'profit-share-detail': <ProfitSharePage />,
   'daily-progress': <DprPage />,
   vendors: <VendorsPage />,
-  'vendor-detail': <VendorDetailPage />,
   contractors: <ContractorsPage />,
-  'contractor-payments': <ContractorPaymentsPage />,
   customers: <CustomersPage />,
   'purchase-orders': <PurchaseOrdersPage />,
   'purchase-order-create': <PurchaseOrderCreatePage />,
@@ -139,12 +121,7 @@ const APP_ROUTE_ELEMENTS = {
   'purchase-request-detail': <PurchaseRequestDetailPage />,
   quotations: <QuotationsPage />,
   'quotation-comparison': <QuotationComparisonPage />,
-  'vendor-invoices': <VendorInvoicesPage />,
-  'vendor-invoice-match': <VendorInvoiceMatchPage />,
-  'vendor-payments': <VendorPaymentsPage />,
   bookings: <BookingsPage />,
-  units: <UnitsPage />,
-  'unit-detail': <UnitDetailPage />,
   directors: <DirectorsPage />,
   'director-detail': <DirectorDetailPage />,
   shareholding: <ShareholdingPage />,
@@ -163,18 +140,10 @@ const APP_ROUTE_ELEMENTS = {
   'cash-accounts': <CashAccountsPage />,
   'bank-accounts': <BankAccountsPage />,
   'bank-account-detail': <BankAccountDetailPage />,
-  'bank-reconciliation': <BankReconciliationPage />,
-  'bank-reconciliation-detail': <BankReconciliationDetailPage />,
-  'period-close': <PeriodClosePage />,
-  'expense-categories': <ExpenseCategoriesPage />,
-  'site-expenses': <ExpensesPage />,
-  'site-expense-detail': <ExpenseDetailPage />,
   'petty-cash-requests': <PettyCashRequestsPage />,
   'petty-cash-request-create': <PettyCashRequestCreatePage />,
   'petty-cash-request-detail': <PettyCashRequestDetailPage />,
   'petty-cash-fund-transfers': <PettyCashTransfersPage />,
-  materials: <MaterialsPage />,
-  'material-detail': <MaterialDetailPage />,
   'stock-balances': <StockBalancesPage />,
   'stock-ledger': <StockLedgerPage />,
   'stock-counts': <StockCountsPage />,
@@ -188,8 +157,7 @@ const APP_ROUTE_ELEMENTS = {
   'reorder-alerts': <ReorderAlertsPage />,
   boq: <BoqPage />,
   'boq-import': <BoqImportPage />,
-  'boq-item-editor': <BoqItemEditorPage />,
-  'boq-versions': <BoqVersionsPage />,
+  'work-measurements': <WorkMeasurementsPage />,
   users: <UsersPage />,
   documents: <DocumentsPage />,
   'audit-logs': <AuditLogsPage />,
@@ -480,60 +448,6 @@ export function AppRouter() {
             </Route>
 
             <Route
-              element={<RegistryRouteGuard routeId="bank-reconciliation" />}
-            >
-              <Route
-                path={toRelativeAppPath('/accounting/bank-reconciliation')}
-                element={APP_ROUTE_ELEMENTS['bank-reconciliation']}
-              />
-            </Route>
-
-            <Route
-              element={
-                <RegistryRouteGuard routeId="bank-reconciliation-detail" />
-              }
-            >
-              <Route
-                path={toRelativeAppPath(
-                  '/accounting/bank-reconciliation/:sessionId',
-                )}
-                element={APP_ROUTE_ELEMENTS['bank-reconciliation-detail']}
-              />
-            </Route>
-
-            <Route element={<RegistryRouteGuard routeId="period-close" />}>
-              <Route
-                path={toRelativeAppPath('/accounting/period-close')}
-                element={APP_ROUTE_ELEMENTS['period-close']}
-              />
-            </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="expense-categories" />}
-            >
-              <Route
-                path={toRelativeAppPath('/accounting/expense-categories')}
-                element={APP_ROUTE_ELEMENTS['expense-categories']}
-              />
-            </Route>
-
-            <Route element={<RegistryRouteGuard routeId="site-expenses" />}>
-              <Route
-                path={toRelativeAppPath('/accounting/expenses')}
-                element={APP_ROUTE_ELEMENTS['site-expenses']}
-              />
-            </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="site-expense-detail" />}
-            >
-              <Route
-                path={toRelativeAppPath('/accounting/expenses/:expenseId')}
-                element={APP_ROUTE_ELEMENTS['site-expense-detail']}
-              />
-            </Route>
-
-            <Route
               element={
                 <RegistryRouteGuard routeId="petty-cash-request-create" />
               }
@@ -576,36 +490,6 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/accounting/petty-cash/transfers')}
                 element={APP_ROUTE_ELEMENTS['petty-cash-fund-transfers']}
-              />
-            </Route>
-
-            <Route element={<RegistryRouteGuard routeId="materials" />}>
-              <Route
-                path={toRelativeAppPath('/inventory/materials')}
-                element={APP_ROUTE_ELEMENTS.materials}
-              />
-            </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="material-detail" />}
-            >
-              <Route
-                path={toRelativeAppPath('/inventory/materials/:materialId')}
-                element={APP_ROUTE_ELEMENTS['material-detail']}
-              />
-            </Route>
-
-            <Route element={<RegistryRouteGuard routeId="units" />}>
-              <Route
-                path={toRelativeAppPath('/sales/units')}
-                element={APP_ROUTE_ELEMENTS.units}
-              />
-            </Route>
-
-            <Route element={<RegistryRouteGuard routeId="unit-detail" />}>
-              <Route
-                path={toRelativeAppPath('/sales/units/:id')}
-                element={APP_ROUTE_ELEMENTS['unit-detail']}
               />
             </Route>
 
@@ -705,24 +589,19 @@ export function AppRouter() {
               />
             </Route>
 
-            <Route element={<RegistryRouteGuard routeId="boq-versions" />}>
-              <Route
-                path={toRelativeAppPath('/project-control/boq/versions')}
-                element={APP_ROUTE_ELEMENTS['boq-versions']}
-              />
-            </Route>
-
-            <Route element={<RegistryRouteGuard routeId="boq-item-editor" />}>
-              <Route
-                path={toRelativeAppPath('/project-control/boq/items/:id')}
-                element={APP_ROUTE_ELEMENTS['boq-item-editor']}
-              />
-            </Route>
-
             <Route element={<RegistryRouteGuard routeId="boq" />}>
               <Route
                 path={toRelativeAppPath('/project-control/boq')}
                 element={APP_ROUTE_ELEMENTS.boq}
+              />
+            </Route>
+
+            <Route
+              element={<RegistryRouteGuard routeId="work-measurements" />}
+            >
+              <Route
+                path={toRelativeAppPath('/project-control/work-measurements')}
+                element={APP_ROUTE_ELEMENTS['work-measurements']}
               />
             </Route>
 
@@ -818,25 +697,10 @@ export function AppRouter() {
 
             <Route element={<RegistryRouteGuard routeId="vendors" />}>
               <Route
-                path={toRelativeAppPath('/procurement/vendors')}
+                path={toRelativeAppPath('/vendors')}
                 element={APP_ROUTE_ELEMENTS.vendors}
               />
             </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="vendor-detail" />}
-            >
-              <Route
-                path={toRelativeAppPath('/procurement/vendors/:vendorId')}
-                element={APP_ROUTE_ELEMENTS['vendor-detail']}
-              />
-            </Route>
-
-            {/* Legacy quick-search path */}
-            <Route
-              path="vendors"
-              element={<Navigate to="/procurement/vendors" replace />}
-            />
 
             <Route
               element={<RegistryRouteGuard routeId="contractors" />}
@@ -844,18 +708,6 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/contractors')}
                 element={APP_ROUTE_ELEMENTS.contractors}
-              />
-            </Route>
-
-            {/* /contractors/payments before any future /contractors/:id */}
-            <Route
-              element={
-                <RegistryRouteGuard routeId="contractor-payments" />
-              }
-            >
-              <Route
-                path={toRelativeAppPath('/contractors/payments')}
-                element={APP_ROUTE_ELEMENTS['contractor-payments']}
               />
             </Route>
 
@@ -971,40 +823,9 @@ export function AppRouter() {
               />
             </Route>
 
-            <Route
-              element={
-                <RegistryRouteGuard routeId="vendor-invoice-match" />
-              }
-            >
-              <Route
-                path={toRelativeAppPath(
-                  '/procurement/vendor-invoices/:invoiceId/match',
-                )}
-                element={APP_ROUTE_ELEMENTS['vendor-invoice-match']}
-              />
-            </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="vendor-invoices" />}
-            >
-              <Route
-                path={toRelativeAppPath('/procurement/vendor-invoices')}
-                element={APP_ROUTE_ELEMENTS['vendor-invoices']}
-              />
-            </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="vendor-payments" />}
-            >
-              <Route
-                path={toRelativeAppPath('/procurement/vendor-payments')}
-                element={APP_ROUTE_ELEMENTS['vendor-payments']}
-              />
-            </Route>
-
             <Route element={<RegistryRouteGuard routeId="bookings" />}>
               <Route
-                path={toRelativeAppPath('/sales/bookings')}
+                path={toRelativeAppPath('/bookings')}
                 element={APP_ROUTE_ELEMENTS.bookings}
               />
             </Route>

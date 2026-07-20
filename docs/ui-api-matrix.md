@@ -51,7 +51,7 @@ Every backend module must appear below with route/method/permission/response-sha
 | `auth` | 8 | POST, GET | Public and/or authenticated routes; see route inventory for per-route RequirePermissions | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`AUTH_API.md`](../apps/backend/docs/AUTH_API.md) | `apps/backend/src/modules/auth/auth.controller.ts` |
 | `bank-reconciliation` | 14 | POST, GET, PATCH | `bank_reconciliation.manage`, `bank_reconciliation.view`, `bank_reconciliation.import`, `bank_reconciliation.match`, `bank_reconciliation.post` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/bank-reconciliation/bank-reconciliation.controller.ts` |
 | `booking-cancellations` | 10 | POST, GET | `booking.cancel`, `booking.view`, `booking.approve`, `collection.refund` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/booking-cancellations/booking-cancellations.controller.ts` |
-| `bookings` | 10 | POST, GET, PATCH | `booking.create`, `booking.view`, `booking.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | Web Phase 101 (`/sales/bookings` list) | `apps/backend/src/modules/bookings/bookings.controller.ts` |
+| `bookings` | 10 | POST, GET, PATCH | `booking.create`, `booking.view`, `booking.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/bookings/bookings.controller.ts` |
 | `boq` | 28 | POST, GET, PATCH | `boq.manage`, `boq.view`, `boq.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`BOQ_API.md`](../apps/backend/docs/BOQ_API.md); Web Phases 077–078 | `apps/backend/src/modules/boq/boq.controller.ts` |
 | `cash-accounts` | 10 | POST, GET | `cash.manage`, `cash.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CASH_ACCOUNTS_API.md`](../apps/backend/docs/CASH_ACCOUNTS_API.md); Web Phase 047 | `apps/backend/src/modules/cash-accounts/cash-accounts.controller.ts` |
 | `chart-of-accounts` | 11 | POST, GET, PATCH, DELETE | `account.manage`, `account.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CHART_OF_ACCOUNTS_API.md`](../apps/backend/docs/CHART_OF_ACCOUNTS_API.md) | `apps/backend/src/modules/chart-of-accounts/chart-of-accounts.controller.ts` |
@@ -60,7 +60,7 @@ Every backend module must appear below with route/method/permission/response-sha
 | `construction-reports` | 3 | GET | `report.view`, `report.export` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/construction-reports/construction-reports.controller.ts` |
 | `contractor-agreements` | 13 | POST, GET, PATCH | `contractor_agreement.manage`, `contractor_agreement.view`, `contractor_agreement.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CONTRACTOR_AGREEMENTS_API.md`](../apps/backend/docs/CONTRACTOR_AGREEMENTS_API.md) | `apps/backend/src/modules/contractor-agreements/contractor-agreements.controller.ts` |
 | `contractor-bills` | 13 | POST, GET, PATCH | `running_bill.create`, `running_bill.view`, `running_bill.verify`, `running_bill.certify`, `running_bill.finance_verify`, `running_bill.approve`, … (+2) | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CONTRACTOR_BILLS_API.md`](../apps/backend/docs/CONTRACTOR_BILLS_API.md) | `apps/backend/src/modules/contractor-bills/contractor-bills.controller.ts` |
-| `contractor-payments` | 10 | POST, GET, PATCH | `payment.release`, `payment.view`, `payment.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CONTRACTOR_PAYMENTS_API.md`](../apps/backend/docs/CONTRACTOR_PAYMENTS_API.md); Web Phase 096 | `apps/backend/src/modules/contractor-payments/contractor-payments.controller.ts` |
+| `contractor-payments` | 10 | POST, GET, PATCH | `payment.release`, `payment.view`, `payment.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CONTRACTOR_PAYMENTS_API.md`](../apps/backend/docs/CONTRACTOR_PAYMENTS_API.md) | `apps/backend/src/modules/contractor-payments/contractor-payments.controller.ts` |
 | `contractors` | 13 | POST, GET, PATCH, DELETE | `contractor.manage`, `contractor.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CONTRACTORS_API.md`](../apps/backend/docs/CONTRACTORS_API.md) | `apps/backend/src/modules/contractors/contractors.controller.ts` |
 | `contribution-receipts` | 9 | POST, GET | `contribution_receipt.create`, `contribution_receipt.view`, `contribution_receipt.submit`, `contribution_receipt.verify`, `contribution_receipt.post`, `contribution_receipt.cancel`, … (+1) | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`CONTRIBUTION_RECEIPTS_API.md`](../apps/backend/docs/CONTRIBUTION_RECEIPTS_API.md); Web Phase 039 | `apps/backend/src/modules/contribution-receipts/contribution-receipts.controller.ts` |
 | `customer-receipts` | 7 | POST, GET, PATCH | `collection.create`, `collection.view`, `collection.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/customer-receipts/customer-receipts.controller.ts` |
@@ -103,17 +103,17 @@ Every backend module must appear below with route/method/permission/response-sha
 | `sessions` | 0 | — | Internal session store (no dedicated HTTP controller); auth routes manage sessions | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | n/a | — |
 | `signed-payment-vouchers` | 10 | POST, GET, PATCH | `payment.release`, `payment.view`, `payment.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`SIGNED_PAYMENT_VOUCHERS_API.md`](../apps/backend/docs/SIGNED_PAYMENT_VOUCHERS_API.md) | `apps/backend/src/modules/signed-payment-vouchers/signed-payment-vouchers.controller.ts` |
 | `site-expense-vouchers` | 11 | POST, GET, PATCH | `expense.create`, `expense.view`, `expense.approve`, `expense.post` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`SITE_EXPENSE_VOUCHERS_API.md`](../apps/backend/docs/SITE_EXPENSE_VOUCHERS_API.md) | `apps/backend/src/modules/site-expense-vouchers/site-expense-vouchers.controller.ts` |
-| `stock-counts` | 9 | POST, GET, PATCH | `stock.adjust`, `stock.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`STOCK_COUNTS_API.md`](../apps/backend/docs/STOCK_COUNTS_API.md); Web Phase 072 | `apps/backend/src/modules/stock-counts/stock-counts.controller.ts` |
-| `stock-ledger` | 5 | POST, GET | `stock.adjust`, `stock.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`STOCK_LEDGER_API.md`](../apps/backend/docs/STOCK_LEDGER_API.md); Web Phase 070 (balance); Web Phase 071 (ledger) | `apps/backend/src/modules/stock-ledger/stock-ledger.controller.ts` |
+| `stock-counts` | 9 | POST, GET, PATCH | `stock.adjust`, `stock.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`STOCK_COUNTS_API.md`](../apps/backend/docs/STOCK_COUNTS_API.md) | `apps/backend/src/modules/stock-counts/stock-counts.controller.ts` |
+| `stock-ledger` | 5 | POST, GET | `stock.adjust`, `stock.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`STOCK_LEDGER_API.md`](../apps/backend/docs/STOCK_LEDGER_API.md); Web Phase 070 (balance only) | `apps/backend/src/modules/stock-ledger/stock-ledger.controller.ts` |
 | `stock-reorder` | 3 | GET, POST | `stock.view`, `stock.adjust` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`STOCK_REORDER_API.md`](../apps/backend/docs/STOCK_REORDER_API.md); Web Phase 070 (forecast); Web Phase 074 (alerts) | `apps/backend/src/modules/stock-reorder/stock-reorder.controller.ts` |
-| `units` | 6 | POST, GET, PATCH, DELETE | `unit.manage`, `unit.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`UNITS_API.md`](../apps/backend/docs/UNITS_API.md); Web Phases 097–098 | `apps/backend/src/modules/units/units.controller.ts` |
+| `units` | 6 | POST, GET, PATCH, DELETE | `unit.manage`, `unit.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`UNITS_API.md`](../apps/backend/docs/UNITS_API.md) | `apps/backend/src/modules/units/units.controller.ts` |
 | `users` | 11 | POST, GET, PATCH, DELETE | `user.create`, `user.view`, `user.update`, `user.activate`, `user.deactivate`, `user.reset_password`, … (+3) | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`USERS_API.md`](../apps/backend/docs/USERS_API.md) | `apps/backend/src/modules/users/users.controller.ts` |
-| `vendor-invoices` | 12 | POST, GET, PATCH | `vendor_invoice.create`, `vendor_invoice.view`, `vendor_invoice.verify`, `vendor_invoice.match`, `vendor_invoice.approve`, `vendor_invoice.post`, … (+1) | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`VENDOR_INVOICES_API.md`](../apps/backend/docs/VENDOR_INVOICES_API.md); Web Phases 025/075/076 (match) | `apps/backend/src/modules/vendor-invoices/vendor-invoices.controller.ts` |
-| `vendor-payments` | 10 | POST, GET, PATCH | `payment.release`, `payment.view`, `payment.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`VENDOR_PAYMENTS_API.md`](../apps/backend/docs/VENDOR_PAYMENTS_API.md); Web Phase 076 | `apps/backend/src/modules/vendor-payments/vendor-payments.controller.ts` |
+| `vendor-invoices` | 12 | POST, GET, PATCH | `vendor_invoice.create`, `vendor_invoice.view`, `vendor_invoice.verify`, `vendor_invoice.match`, `vendor_invoice.approve`, `vendor_invoice.post`, … (+1) | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`VENDOR_INVOICES_API.md`](../apps/backend/docs/VENDOR_INVOICES_API.md); Web Phase 025 | `apps/backend/src/modules/vendor-invoices/vendor-invoices.controller.ts` |
+| `vendor-payments` | 10 | POST, GET, PATCH | `payment.release`, `payment.view`, `payment.approve` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`VENDOR_PAYMENTS_API.md`](../apps/backend/docs/VENDOR_PAYMENTS_API.md) | `apps/backend/src/modules/vendor-payments/vendor-payments.controller.ts` |
 | `vendor-quotations` | 10 | POST, GET, PATCH | `quotation.manage`, `quotation.view`, `quotation.finalize` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`VENDOR_QUOTATIONS_API.md`](../apps/backend/docs/VENDOR_QUOTATIONS_API.md); Web Phase 063 | `apps/backend/src/modules/vendor-quotations/vendor-quotations.controller.ts` |
 | `vendors` | 13 | POST, GET, PATCH, DELETE | `vendor.manage`, `vendor.view` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`VENDORS_API.md`](../apps/backend/docs/VENDORS_API.md) | `apps/backend/src/modules/vendors/vendors.controller.ts` |
 | `version` | 1 | GET | Public and/or authenticated routes; see route inventory for per-route RequirePermissions | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | **missing** | `apps/backend/src/modules/version/version.controller.ts` |
-| `work-measurements` | 8 | POST, GET, PATCH | `measurement.create`, `measurement.view`, `measurement.certify` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`WORK_MEASUREMENTS_API.md`](../apps/backend/docs/WORK_MEASUREMENTS_API.md) | `apps/backend/src/modules/work-measurements/work-measurement.controller.ts` |
+| `work-measurements` | 8 | POST, GET, PATCH | `measurement.create`, `measurement.view`, `measurement.certify` | `ApiSuccessResponse { success: true, message: string, data: T, meta?: object }` | [`WORK_MEASUREMENTS_API.md`](../apps/backend/docs/WORK_MEASUREMENTS_API.md); Web Phase 081 | `apps/backend/src/modules/work-measurements/work-measurement.controller.ts` |
 
 ## Frontend capability map (current)
 
@@ -530,26 +530,6 @@ Every backend module must appear below with route/method/permission/response-sha
 | UI | `/project-control/boq/import` — step wizard, error grid, import summary | Opened from BOQ toolbar |
 | Nav | Not in sidebar | `projectScope: required` + `RegistryRouteGuard` + 403 → `PermissionDenied` |
 
-#### BOQ item editor (Phase 079)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | `POST /boq/projects/:projectId/items`, `GET/PATCH /boq/items/:id`, `GET …/hierarchy` | Nest `boq` |
-| Permissions | View **`boq.view`**; create/update **`boq.manage`** | No `boq.create` / `boq.update` aliases |
-| Rules | `plannedRate` = cost sum; `plannedValue` = qty × rate; `endDate` ≥ `startDate` | Work location = hierarchy; contractor cost = `subcontractCost` (no contractor FK) |
-| UI | `apps/web/src/boq` + `/project-control/boq/items/:id` (`new` = create) | `ItemForm` |
-| Nav | Deep link from BOQ list / item panel | `projectScope: required` + `RegistryRouteGuard` |
-
-#### BOQ versions / variations (Phase 080)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | versions list/create/get/patch + submit/approve/reject/activate + compare | Nest `boq` |
-| Permissions | View/compare **`boq.view`**; manage/activate **`boq.manage`**; approve/reject **`boq.approve`** | No `boq_version.*` aliases |
-| Rules | One active version; Variation cannot `/activate` (submit → approve) | Side-by-side compare + impact summary |
-| UI | `apps/web/src/boq` + `/project-control/boq/versions` | `VersionTable`, `VersionCompareView`, `ImpactSummary` |
-| Nav | Project Control → BOQ Versions | `projectScope: required` + `RegistryRouteGuard` |
-
 #### Directors master (Phase 031)
 
 | Piece | Location | Notes |
@@ -621,37 +601,6 @@ Every backend module must appear below with route/method/permission/response-sha
 | UI | `apps/web/src/quotation-comparisons` + `/procurement/quotation-comparisons/:prId` | Matrix, recommendation panel, PDF |
 | Nav | Not in sidebar; opened from PR detail / Quotations | `projectScope: required` + `RegistryRouteGuard` |
 
-#### Vendor invoices (Phase 075)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | `GET/POST /vendor-invoices`, `PATCH /:id`, `POST …/submit` (+ cancel) | Nest `vendor-invoices`; PO/GRN selectors via `GET /purchase-orders`, `GET /goods-receipts` |
-| Permissions | List/view **`vendor_invoice.view`**; create/update/submit/cancel **`vendor_invoice.create`** | No Nest `vendor_invoice.submit` alias |
-| Validation | Duplicate vendor invoice # (409); GRN accepted qty warning; taxable+GST+freight = total | Client soft-checks; Nest authoritative |
-| UI | `apps/web/src/vendor-invoices` + `/procurement/vendor-invoices` | InvoiceTable, form drawer, PO/GRN selectors, tax totals, document panel |
-| Nav | Procurement → Vendor Invoices | `projectScope: required` + `RegistryRouteGuard` |
-
-#### Three-way match & vendor payments (Phase 076)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | Invoice: match / reject-matching / approve / post; Payments: `GET/POST /vendor-payments`, submit / approve / release / verify / post | Nest `vendor-invoices` + `vendor-payments` |
-| Permissions | Match **`vendor_invoice.match`**; exception approve **`vendor_invoice.approve`** (+ comment); list payments **`payment.view`**; create/release **`payment.release`**; approve/verify/post **`payment.approve`** | No `vendor_payment.*` / `vendor_invoice.exception` aliases |
-| Rules | No payment before match / exception approval; allocation ≤ remaining payable; partial OK | Client filters payable invoices; Nest authoritative |
-| UI | `/procurement/vendor-invoices/:invoiceId/match` — MatchMatrix, ToleranceIndicators; `/procurement/vendor-payments` — allocation + proof | `apps/web/src/vendor-invoices` + `vendor-payments` |
-| Nav | Match deep-link; Procurement → Vendor Payments | `projectScope: required` |
-
-#### Contractor payments (Phase 096)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | `GET/POST /contractor-payments`, `PATCH /:id`, submit / approve / release / verify / post / cancel; allocation picker `GET /contractor-bills?status=posted` | Nest `contractor-payments` + `contractor-bills` |
-| Permissions | List/view **`payment.view`**; create/update/submit/release/cancel **`payment.release`**; approve/verify/post **`payment.approve`** | No `contractor_payment.*` aliases |
-| Rules | Only **posted** running bills; allocation ≤ remaining payable (`netPayable − paidAmount`); partial OK; withholdings `tds`/`retention`/`advanceRecovery`/`penalty` | Client filters payable bills; Nest authoritative |
-| UI | `/contractors/payments` — PaymentForm, BillAllocationEditor, proof panel | `apps/web/src/contractor-payments` |
-| Nav | Contractors → Payments | `projectScope: required` + `RegistryRouteGuard` |
-| Cross-link | Running bills (parallel) | → `/contractors/running-bills` (do not invent that module here) |
-
 #### Purchase order list (Phase 065)
 
 | Piece | Location | Notes |
@@ -697,25 +646,6 @@ Every backend module must appear below with route/method/permission/response-sha
 | Permissions | List/detail **`quality.view`**; inspect/complete **`quality.inspect`** | Exact Nest codes |
 | UI | `apps/web/src/quality-inspections` + `/inventory/quality-inspections` (+ `/:inspectionId`) | Parameter grid, result actions, sample media |
 | Nav | Inventory → Quality Inspections | `projectScope: required` + `RegistryRouteGuard` |
-
-#### Material issues (Phase 073)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | `GET/POST /material-issues`, `GET/PATCH /:id`, signatures / submit / confirm / returns / cancel | Nest `material-issues`; stock via `GET /stock-ledger/balance`; BOQ via `GET /boq/projects/:projectId/items` |
-| Permissions | List/detail **`stock.view`**; create/submit/returns/signatures **`stock.issue`**; confirm **`stock.adjust`** | No `material_issue.view|create|confirm` aliases |
-| Validation | Issue qty ≤ available stock; return qty &gt; 0 and ≤ remaining issued; workLocation + boqItemId required | Client mirrors Nest; server authoritative |
-| UI | `apps/web/src/material-issues` + `/inventory/material-issues` (+ `/:issueId`) | IssueForm, BOQ/work-location selector, available-stock indicator, signature preview |
-| Nav | Inventory → Material Issues | `projectScope: required` + `RegistryRouteGuard` |
-
-#### Reorder alerts (Phase 074)
-
-| Piece | Location | Notes |
-|---|---|---|
-| APIs | `GET /stock-reorder/alerts`, `GET /stock-reorder/forecast?projectId=`, optional `POST /stock-reorder/evaluate` | Nest `stock-reorder` |
-| Permissions | View **`stock.view`**; evaluate **`stock.adjust`** | No `stock_forecast.view` alias |
-| UI | `apps/web/src/reorder-alerts` + `/inventory/reorder-alerts` | AlertTable (severity, stock-out date, pending PO, recommended qty), assumptions banner (timestamp + lookback rules) |
-| Nav | Inventory → Reorder Alerts | `projectScope: required` + `RegistryRouteGuard` |
 
 #### Project dashboard (Phase 024)
 
@@ -885,6 +815,7 @@ Web and mobile API clients import these from `@luxaria/shared-types` (see `apps/
 - `accounting-reports`
 - `bank-reconciliation`
 - `booking-cancellations`
+- `bookings`
 - `construction-reports`
 - `customer-receipts`
 - `customers`
@@ -945,18 +876,3 @@ pnpm --filter @luxaria/backend test -- ui-api-matrix.coverage.spec
 ## Confirmation
 
 This document is the Phase 001 deliverable only. No later micro-phase UI was implemented while producing it.
-
-## Micro phases 051–060 (web UI merge)
-
-Integrated web modules (routes registered in `apps/web/src/navigation/routeRegistry.ts`):
-
-| Phase | Route | Module |
-|------:|-------|--------|
-| 051 | `/accounting/expense-categories` | `apps/web/src/expense-categories/` |
-| 052–053 | `/accounting/expenses` (+ `/:expenseId`) | `apps/web/src/expenses/` |
-| 054 | `/accounting/bank-reconciliation` (+ `/:sessionId`) | `apps/web/src/bank-reconciliation/` |
-| 055 | `/accounting/period-close` | `apps/web/src/period-close/` |
-| 056–057 | `/procurement/vendors` (+ `/:vendorId`) | `apps/web/src/vendors/` |
-| 058–059 | `/inventory/materials` (+ `/:materialId`) | `apps/web/src/materials/` |
-| 060 | `/procurement/purchase-requests` | `apps/web/src/purchase-requests/` (queue helpers merged into existing list/detail) |
-| 097–098 | `/sales/units` (+ `/:id`) | `apps/web/src/units/` |
