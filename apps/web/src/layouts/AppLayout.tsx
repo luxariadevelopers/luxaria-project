@@ -2,9 +2,7 @@ import { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Box, Container, Toolbar } from '@mui/material';
 import { ProjectProvider } from '@/context/ProjectContext';
-import { QuickSearchProvider } from '@/quick-search';
 import { Header } from './Header';
-import { PageHeader } from './PageHeader';
 import {
   DRAWER_WIDTH,
   DRAWER_WIDTH_COLLAPSED,
@@ -30,54 +28,46 @@ export function AppLayout() {
 
   return (
     <ProjectProvider>
-      <QuickSearchProvider>
+      <Box
+        sx={{
+          display: 'flex',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+          overflowX: 'hidden',
+        }}
+      >
+        <Header
+          onMenuClick={() => setMobileOpen((v) => !v)}
+          sidebarCollapsed={collapsed}
+        />
+        <Sidebar
+          mobileOpen={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          collapsed={collapsed}
+          onToggleCollapsed={toggleCollapsed}
+        />
         <Box
+          component="main"
           sx={{
-            display: 'flex',
-            minHeight: '100vh',
-            bgcolor: 'background.default',
-            overflowX: 'hidden',
+            flexGrow: 1,
+            width: { md: `calc(100% - ${drawerWidth}px)` },
+            minWidth: 0,
+            maxWidth: '100%',
           }}
         >
-          <Header
-            onMenuClick={() => setMobileOpen((v) => !v)}
-            sidebarCollapsed={collapsed}
-          />
-          <Sidebar
-            mobileOpen={mobileOpen}
-            onClose={() => setMobileOpen(false)}
-            collapsed={collapsed}
-            onToggleCollapsed={toggleCollapsed}
-          />
-          <Box
-            component="main"
+          <Toolbar />
+          <Container
+            maxWidth="xl"
             sx={{
-              flexGrow: 1,
-              width: { md: `calc(100% - ${drawerWidth}px)` },
+              py: { xs: 2, sm: 3 },
+              px: { xs: 2, sm: 3 },
               minWidth: 0,
-              maxWidth: '100%',
-              transition: (theme) =>
-                theme.transitions.create('width', {
-                  easing: theme.transitions.easing.sharp,
-                  duration: theme.transitions.duration.enteringScreen,
-                }),
             }}
           >
-            <Toolbar />
-            <Container
-              maxWidth="xl"
-              sx={{
-                py: { xs: 2, sm: 3 },
-                px: { xs: 2, sm: 3 },
-                minWidth: 0,
-              }}
-            >
-              <PageHeader />
-              <Outlet />
-            </Container>
-          </Box>
+            <Outlet />
+          </Container>
         </Box>
-      </QuickSearchProvider>
+      </Box>
     </ProjectProvider>
   );
 }

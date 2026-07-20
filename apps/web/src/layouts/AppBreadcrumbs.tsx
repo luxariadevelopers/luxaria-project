@@ -1,15 +1,7 @@
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { Breadcrumbs, Link, Typography } from '@mui/material';
+import { getRouteLabel } from '@/navigation/routeRegistry';
 
-const LABELS: Record<string, string> = {
-  '': 'Dashboard',
-  users: 'Users',
-  projects: 'Projects',
-  sales: 'Sales',
-  collections: 'Collections',
-  settings: 'Settings',
-  forbidden: 'Access denied',
-};
 
 export function AppBreadcrumbs() {
   const location = useLocation();
@@ -20,25 +12,32 @@ export function AppBreadcrumbs() {
     ...parts.map((part, index) => {
       const to = `/${parts.slice(0, index + 1).join('/')}`;
       return {
-        label: LABELS[part] ?? part,
+        label: getRouteLabel(part),
         to,
       };
     }),
   ];
 
-  // Avoid duplicate Home / Dashboard on root
   const visible =
-    parts.length === 0
-      ? [{ label: 'Dashboard', to: '/' }]
-      : crumbs;
+    parts.length === 0 ? [{ label: 'Dashboard', to: '/' }] : crumbs;
 
   return (
-    <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+    <Breadcrumbs
+      aria-label="breadcrumb"
+      sx={{
+        '& .MuiBreadcrumbs-ol': { flexWrap: 'wrap' },
+        maxWidth: '100%',
+      }}
+    >
       {visible.map((crumb, index) => {
         const isLast = index === visible.length - 1;
         if (isLast) {
           return (
-            <Typography key={crumb.to} color="text.primary" sx={{ fontWeight: 600 }}>
+            <Typography
+              key={crumb.to}
+              color="text.primary"
+              sx={{ fontWeight: 600 }}
+            >
               {crumb.label}
             </Typography>
           );

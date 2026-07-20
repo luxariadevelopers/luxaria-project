@@ -50,6 +50,15 @@ Group **Capital & Investment** → item **Shareholding** (`/capital/shareholding
 Deep link `/capital/investors/:investorId` (`investor-detail`, `investor.view`,
 `showInNav: false`). List remains Capital & Investment → Investors.
 
+## Customers nav (Phases 099–100)
+
+Group **Sales** → item **Customers** (`/sales/customers`, `customer.view`,
+`projectScope: none`). Create/update/KYC/activate map to Nest `customer.manage`
+(prompt aliases `customer.create` / `customer.update` /
+`customer.view_sensitive`). Deep link `/sales/customers/:customerId`
+(`customer-detail`, `customer.view`, `showInNav: false`). Coordinates with
+Units at `/sales/units` under the same Sales group.
+
 ## Commitments nav (Phases 037–038)
 
 Group **Capital & Investment** → item **Commitments** (`/capital/commitments`,
@@ -129,6 +138,27 @@ Group **Inventory** → item **Quality Inspections**
 Detail: `/:inspectionId` (`quality.view`, `showInNav: false`). Create /
 update / complete / cancel use Nest `quality.inspect` (catalog has no
 `quality_inspection.view|create|approve`).
+
+## Contractor payments nav (Phase 096)
+
+Group **Contractors** → item **Payments** (`/contractors/payments`,
+`payment.view`, `projectScope: required`). Create/update/submit/release/cancel
+use Nest `payment.release`; approve/verify/post use `payment.approve` (catalog
+has no `contractor_payment.*`).
+
+## Running bills nav (Phases 093–095)
+
+Group **Contractors** → item **Running Bills** (`/contractors/running-bills`,
+`running_bill.view`, `projectScope: required`).
+
+| Route id | Path | Nav | Permission |
+|----------|------|-----|------------|
+| `running-bills` | `/contractors/running-bills` | yes | `running_bill.view` |
+| `running-bill-create` | `/contractors/running-bills/new` | no | `running_bill.create` |
+| `running-bill-detail` | `/contractors/running-bills/:id` | no | `running_bill.view` |
+
+Submit-claim uses Nest `running_bill.create` (no `running_bill.submit` code).
+Workflow: verify → certify → finance_verify → approve.
 
 ## Tests
 

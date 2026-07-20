@@ -1,4 +1,4 @@
-const SIDEBAR_COLLAPSED_KEY = 'luxaria.sidebarCollapsed';
+const SIDEBAR_COLLAPSED_KEY = 'luxaria.web.sidebarCollapsed';
 
 export const shellStorage = {
   getSidebarCollapsed(): boolean {
@@ -8,11 +8,11 @@ export const shellStorage = {
       return false;
     }
   },
-  setSidebarCollapsed(collapsed: boolean) {
+  setSidebarCollapsed(collapsed: boolean): void {
     try {
       localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
     } catch {
-      // ignore quota / private mode
+      /* ignore */
     }
   },
 };

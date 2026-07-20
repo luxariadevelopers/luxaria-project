@@ -1,24 +1,14 @@
-import { PermissionDenied } from '@/components/errors';
-import { useProject } from '@/context/ProjectContext';
-import { Button, Stack } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 
+/** Shown when the user has no accessible projects for a project-scoped route. */
 export function NoProjectAccessPage() {
-  const { refetch, isLoading } = useProject();
-
   return (
-    <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
-      <PermissionDenied
-        title="No project access"
-        message="You are not assigned to any project, and you do not have global project access. Ask an administrator to assign projects via project access."
-        showHomeLink
-      />
-      <Button
-        variant="outlined"
-        disabled={isLoading}
-        onClick={() => void refetch()}
-      >
-        Retry
-      </Button>
+    <Stack spacing={1} sx={{ py: 4 }}>
+      <Typography variant="h5">No project access</Typography>
+      <Typography color="text.secondary">
+        You need access to at least one active project to open this page.
+        Ask an administrator to grant project membership.
+      </Typography>
     </Stack>
   );
 }
