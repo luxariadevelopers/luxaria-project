@@ -67,3 +67,5 @@ apps/web/dist/
 apps/web/e2e/.auth/
 apps/web/e2e/.e2e/
 .playwright/
+apps/web/e2e/.auth/
+apps/web/e2e/.e2e/

@@ -37,7 +37,13 @@ export default defineConfig({
     {
       name: 'chromium-live',
       testMatch: '**/*.smoke.spec.ts',
-      testIgnore: '**/smoke.spec.ts',
+      testIgnore: ['**/smoke.spec.ts', '**/golden-path-*.spec.ts'],
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-golden-path',
+      testMatch: '**/golden-path-*.spec.ts',
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] },
     },

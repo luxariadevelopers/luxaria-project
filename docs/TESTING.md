@@ -85,6 +85,8 @@ pnpm --filter @luxaria/mobile test:offline       # offline sync suites only
 | File upload | `common/security/file-upload.util.spec.ts` + `test/file-upload.e2e-spec.ts` |
 | Offline sync | `apps/mobile/src/offline/__tests__/**` |
 | Web e2e | `apps/web/e2e/**` |
+| Web golden-path e2e (phase 138) | `apps/web/e2e/golden-path-*.spec.ts` (explicit skips until UI and multi-role browser seeds exist) |
+| Backend golden-path e2e (phase 138) | `apps/backend/test/golden-path-*.e2e-spec.ts` + `test/helpers/golden-path/**` |
 | Mobile components | `apps/mobile/src/**/__tests__/**/*.tsx` |
 | UI/API matrix coverage | `apps/backend/src/common/docs/ui-api-matrix.coverage.spec.ts` |
 | Shared API envelope type tests | `packages/shared-types/type-tests/api-contracts.type-test.ts` |
@@ -93,6 +95,18 @@ pnpm --filter @luxaria/mobile test:offline       # offline sync suites only
 
 - `apps/backend/test/helpers/create-api-app.ts` — Nest + ValidationPipe + Supertest harness
 - `apps/backend/test/helpers/mongo-test.helper.ts` — memory Mongo / replica set
+- `apps/backend/test/helpers/golden-path/**` — phase 138 deterministic seeds, auth, cleanup, full-app bootstrap
+
+### Golden-path E2E (phase 138)
+
+Cross-module journeys run against an in-memory MongoDB bootstrapped via `createGoldenPathApp()`:
+
+```bash
+pnpm --filter @luxaria/backend test:e2e -- golden-path
+pnpm --filter @luxaria/web exec playwright test --project=chromium-golden-path
+```
+
+Procurement, petty cash, and booking/collection UI routes are not in the committed web shell. Their Playwright specs use explicit skips; API-assisted browser variants also skip because phase 137 seeds do not provide the distinct workflow approvers required by these journeys. Backend specs run all three API paths with deterministic seeds, multi-role approvals, cleanup, and role-boundary 403 checks.
 
 ## CI
 
