@@ -146,7 +146,8 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, ConflictDetail, GRN, DPR |
+| Sync conflict centre (Phase 131) | Present | Local queue filters, conflict detail, retry, confirmed discard, open record; owner + project guards |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
@@ -161,8 +162,11 @@ Every backend module must appear below with route/method/permission/response-sha
 | GET | `/auth/me` | `apps/mobile/src/api/auth.ts` |
 | POST? | `/daily-progress-reports` | `apps/mobile/src/features/dpr/buildDprOfflineEnqueue.ts` |
 | POST? | `/goods-receipts` | `apps/mobile/src/features/grn/buildGrnOfflineEnqueue.ts` |
-| POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` |
+| POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` (demo enqueue) |
+| local | Offline SQLite queue | `apps/mobile/src/offline/*`, UI `PendingSync` / `ConflictDetail` / `src/sync-centre` |
 | GET | `/projects` | `apps/mobile/src/context/ProjectContext.tsx` |
+| POST | `/documents/presign-upload` | `apps/mobile/src/offline/transport.ts` |
+| POST | `/documents/:id/confirm-upload` | `apps/mobile/src/offline/transport.ts` |
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/rbac/me/permissions` | `apps/mobile/src/api/auth.ts` |

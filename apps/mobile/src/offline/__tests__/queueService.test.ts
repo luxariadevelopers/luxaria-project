@@ -1,12 +1,14 @@
 import {
   MAX_SYNC_ATTEMPTS,
   OfflineQueueService,
+  QueueAccessError,
   canAutoProcess,
+  canDiscardQueueItem,
   computeNextRetryAt,
   isUploadingStuck,
 } from '../queueService';
 import { createMemoryOfflineRepository } from '../repository';
-import { OfflineTxnStatus } from '../types';
+import { OfflineFailureKind, OfflineTxnStatus } from '../types';
 
 describe('OfflineQueueService', () => {
   let ids: string[];
@@ -18,6 +20,8 @@ describe('OfflineQueueService', () => {
       '11111111-1111-4111-8111-111111111111',
       '22222222-2222-4222-8222-222222222222',
       '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444',
+      '55555555-5555-4555-8555-555555555555',
     ];
     now = new Date('2026-07-17T06:00:00.000Z');
     let i = 0;
@@ -34,6 +38,7 @@ describe('OfflineQueueService', () => {
       type: 'site_expense.voucher',
       label: 'Cement bags',
       projectId: 'proj-1',
+      createdByUserId: 'user-1',
       endpoint: '/site-expense-vouchers',
       payload: { amount: 500 },
       media: [
@@ -49,6 +54,7 @@ describe('OfflineQueueService', () => {
     expect(txn.id).toBe(ids[0]);
     expect(txn.idempotencyKey).toBe(`mobile-txn:${ids[0]}`);
     expect(txn.status).toBe(OfflineTxnStatus.Pending);
+    expect(txn.createdByUserId).toBe('user-1');
     expect(txn.deviceTimestamp).toBe(now.toISOString());
     expect(txn.serverTimestamp).toBeNull();
 
@@ -107,6 +113,7 @@ describe('OfflineQueueService', () => {
     expect(failed?.status).toBe(OfflineTxnStatus.Failed);
     expect(failed?.attemptCount).toBe(1);
     expect(failed?.lastError).toBe('Network timeout');
+    expect(failed?.failureKind).toBe(OfflineFailureKind.Transient);
     expect(failed?.nextRetryAt).toBe(computeNextRetryAt(1, now));
 
     // Not due yet
@@ -233,5 +240,110 @@ describe('OfflineQueueService', () => {
     expect(payload.clientTransactionId).toBe(txn.id);
     expect(payload.idempotencyKey).toBe(txn.idempotencyKey);
     expect(payload.deviceTimestamp).toBe(txn.deviceTimestamp);
+  });
+
+  it('marks permanent validation failures without auto-retry', async () => {
+    const txn = await queue.enqueue({
+      type: 'demo',
+      label: 'Invalid',
+      endpoint: '/x',
+      payload: {},
+      createdByUserId: 'user-1',
+    });
+    await queue.claimForSync(txn.id);
+    await queue.markFailed(txn.id, 'amount must be positive', {
+      permanent: true,
+      errorCode: 'VALIDATION_ERROR',
+    });
+
+    const failed = await queue.getTransaction(txn.id);
+    expect(failed?.status).toBe(OfflineTxnStatus.Failed);
+    expect(failed?.failureKind).toBe(OfflineFailureKind.Permanent);
+    expect(failed?.lastErrorCode).toBe('VALIDATION_ERROR');
+    expect(failed?.nextRetryAt).toBeNull();
+    expect(canAutoProcess(failed!, now)).toBe(false);
+    expect(await queue.getProcessableIds()).not.toContain(txn.id);
+  });
+
+  it('allows repeated manual retry without discarding data', async () => {
+    const actor = {
+      userId: 'user-1',
+      accessibleProjectIds: ['proj-1'],
+    };
+    const txn = await queue.enqueue({
+      type: 'demo',
+      label: 'Retry loop',
+      projectId: 'proj-1',
+      createdByUserId: 'user-1',
+      endpoint: '/x',
+      payload: { n: 1 },
+    });
+
+    for (let i = 0; i < 3; i += 1) {
+      await queue.claimForSync(txn.id);
+      await queue.markFailed(txn.id, `transient-${i}`);
+      const retried = await queue.manualRetry(txn.id, actor);
+      expect(retried?.status).toBe(OfflineTxnStatus.Pending);
+      expect(retried?.idempotencyKey).toBe(txn.idempotencyKey);
+      expect(await queue.getTransaction(txn.id)).not.toBeNull();
+    }
+
+    expect(canDiscardQueueItem((await queue.getTransaction(txn.id))!)).toBe(
+      true,
+    );
+  });
+
+  it('never discards without explicit confirmation', async () => {
+    const actor = {
+      userId: 'user-1',
+      accessibleProjectIds: ['proj-1'],
+    };
+    const txn = await queue.enqueue({
+      type: 'demo',
+      label: 'Keep me',
+      projectId: 'proj-1',
+      createdByUserId: 'user-1',
+      endpoint: '/x',
+      payload: {},
+    });
+
+    await expect(
+      queue.discardDraft(txn.id, actor, { confirmed: false }),
+    ).rejects.toBeInstanceOf(QueueAccessError);
+
+    expect(await queue.getTransaction(txn.id)).not.toBeNull();
+
+    await queue.discardDraft(txn.id, actor, { confirmed: true });
+    expect(await queue.getTransaction(txn.id)).toBeNull();
+  });
+
+  it('blocks discard and retry for other users or inaccessible projects', async () => {
+    const txn = await queue.enqueue({
+      type: 'demo',
+      label: 'Owned',
+      projectId: 'proj-1',
+      createdByUserId: 'user-1',
+      endpoint: '/x',
+      payload: {},
+    });
+    await queue.claimForSync(txn.id);
+    await queue.markFailed(txn.id, 'boom');
+
+    await expect(
+      queue.manualRetry(txn.id, {
+        userId: 'user-2',
+        accessibleProjectIds: ['proj-1'],
+      }),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+
+    await expect(
+      queue.discardDraft(
+        txn.id,
+        { userId: 'user-1', accessibleProjectIds: ['other'] },
+        { confirmed: true },
+      ),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+
+    expect(await queue.getTransaction(txn.id)).not.toBeNull();
   });
 });

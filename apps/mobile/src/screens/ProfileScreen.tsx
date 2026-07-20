@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
+import type { MainTabParamList } from '@/navigation/types';
 import { registerForPushNotificationsAsync } from '@/notifications/pushNotifications';
+import { useOfflineSync } from '@/offline';
 import {
   requestCameraPermission,
   requestLocationPermission,
@@ -11,6 +15,9 @@ import { colors } from '@/theme/colors';
 
 export function ProfileScreen() {
   const { user, access, logout } = useAuth();
+  const { activeCount } = useOfflineSync();
+  const navigation =
+    useNavigation<BottomTabNavigationProp<MainTabParamList, 'Profile'>>();
   const [busy, setBusy] = useState(false);
 
   const runPermission = async (
@@ -42,6 +49,16 @@ export function ProfileScreen() {
           {access?.roleCodes?.join(', ') || '—'}
         </Text>
       </View>
+
+      <Text style={styles.section}>Offline sync</Text>
+      <Pressable
+        style={styles.action}
+        onPress={() => navigation.navigate('PendingSync')}
+      >
+        <Text style={styles.actionText}>
+          Pending Sync{activeCount > 0 ? ` (${activeCount})` : ''}
+        </Text>
+      </Pressable>
 
       <Text style={styles.section}>Device permissions</Text>
       <Pressable

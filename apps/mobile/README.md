@@ -16,20 +16,27 @@ React Native (Expo) foundation for site engineers. Android-first, iOS-compatible
 Local queue in SQLite (`src/offline`):
 
 - UUID per offline transaction + stable `Idempotency-Key`
+- Owner (`createdByUserId`) + project scoping for resolve actions
 - Statuses: `pending` → `uploading` → `synced` | `failed` | `conflict`
+- Failure kinds: `transient` | `permanent` (validation) | `forbidden` (403)
 - Local media paths; media uploads before transaction sync
 - Safe retry with backoff; manual retry on Failed/Conflict
+- Explicit discard only (confirm required — never silent)
 - Device timestamp + server timestamp recorded on each row
 
-Pending Sync screen shows errors and Retry. Expense capture will enqueue into this engine later.
+**Pending Sync** (tab + Profile → Pending Sync) lists the local queue with filters.
+**Conflict detail** shows error guidance, retry, confirmed discard, and open-record
+links for GRN/DPR capture screens (`src/sync-centre`).
 
 ## Screens
 
 - Login
 - Home
 - Projects (+ project selection flow)
-- Pending Sync
-- Profile (permissions + push placeholder)
+- Pending Sync (queue filters + needs-attention)
+- Conflict detail (resolve failed / conflict rows)
+- Profile (Pending Sync entry + permissions + push placeholder)
+- Goods receipt / Daily progress report (offline enqueue)
 
 ## API
 

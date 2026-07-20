@@ -1,4 +1,9 @@
-import type { OfflineMedia, OfflineTransaction, OfflineTxnStatus } from './types';
+import type {
+  OfflineFailureKind,
+  OfflineMedia,
+  OfflineTransaction,
+  OfflineTxnStatus,
+} from './types';
 
 export type OfflineRepository = {
   init(): Promise<void>;
@@ -14,8 +19,9 @@ export type OfflineRepository = {
   listTransactions(options?: {
     statuses?: OfflineTxnStatus[];
     excludeSynced?: boolean;
+    createdByUserId?: string | null;
   }): Promise<OfflineTransaction[]>;
-  countActive(): Promise<number>;
+  countActive(options?: { createdByUserId?: string | null }): Promise<number>;
   /**
    * Atomically claim a transaction for processing if still in an allowed status.
    * Returns the claimed row, or null if another worker claimed it.
@@ -26,6 +32,8 @@ export type OfflineRepository = {
     toStatus: OfflineTxnStatus,
     updatedAt: string,
   ): Promise<OfflineTransaction | null>;
+  /** Deletes a transaction and its media rows. Caller enforces discard rules. */
+  deleteTransaction(id: string): Promise<void>;
 };
 
 export function createMemoryOfflineRepository(): OfflineRepository {
@@ -86,13 +94,20 @@ export function createMemoryOfflineRepository(): OfflineRepository {
       if (options?.excludeSynced) {
         rows = rows.filter((r) => r.status !== 'synced');
       }
+      if (options?.createdByUserId) {
+        const owner = options.createdByUserId;
+        rows = rows.filter(
+          (r) => !r.createdByUserId || r.createdByUserId === owner,
+        );
+      }
       return rows
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map((r) => ({ ...r }));
     },
 
-    async countActive() {
-      return [...txns.values()].filter((r) => r.status !== 'synced').length;
+    async countActive(options) {
+      return (await this.listTransactions({ excludeSynced: true, ...options }))
+        .length;
     },
 
     async claimTransaction(id, fromStatuses, toStatus, updatedAt) {
@@ -104,5 +119,17 @@ export function createMemoryOfflineRepository(): OfflineRepository {
       txns.set(id, next);
       return { ...next };
     },
+
+    async deleteTransaction(id) {
+      for (const [mediaId, row] of media) {
+        if (row.transactionId === id) {
+          media.delete(mediaId);
+        }
+      }
+      txns.delete(id);
+    },
   };
 }
+
+/** Re-export for consumers that type failure patches. */
+export type { OfflineFailureKind };

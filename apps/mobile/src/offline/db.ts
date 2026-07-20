@@ -13,12 +13,15 @@ CREATE TABLE IF NOT EXISTS offline_transactions (
   type TEXT NOT NULL,
   label TEXT NOT NULL,
   project_id TEXT,
+  created_by_user_id TEXT,
   endpoint TEXT NOT NULL,
   method TEXT NOT NULL,
   payload_json TEXT NOT NULL,
   status TEXT NOT NULL,
   attempt_count INTEGER NOT NULL DEFAULT 0,
   last_error TEXT,
+  last_error_code TEXT,
+  failure_kind TEXT,
   device_timestamp TEXT NOT NULL,
   server_timestamp TEXT,
   server_record_id TEXT,
@@ -32,6 +35,9 @@ CREATE INDEX IF NOT EXISTS idx_offline_txn_status
 
 CREATE INDEX IF NOT EXISTS idx_offline_txn_retry
   ON offline_transactions(next_retry_at);
+
+CREATE INDEX IF NOT EXISTS idx_offline_txn_owner
+  ON offline_transactions(created_by_user_id);
 
 CREATE TABLE IF NOT EXISTS offline_media (
   id TEXT PRIMARY KEY NOT NULL,
@@ -53,11 +59,35 @@ CREATE INDEX IF NOT EXISTS idx_offline_media_txn
   ON offline_media(transaction_id);
 `;
 
+type ColumnInfo = { name: string };
+
+async function ensureColumn(
+  db: SQLite.SQLiteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+) {
+  const cols = await db.getAllAsync<ColumnInfo>(`PRAGMA table_info(${table})`);
+  if (cols.some((c) => c.name === column)) {
+    return;
+  }
+  await db.execAsync(
+    `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`,
+  );
+}
+
+async function migrateSchema(db: SQLite.SQLiteDatabase) {
+  await db.execAsync(MIGRATION_SQL);
+  await ensureColumn(db, 'offline_transactions', 'created_by_user_id', 'TEXT');
+  await ensureColumn(db, 'offline_transactions', 'last_error_code', 'TEXT');
+  await ensureColumn(db, 'offline_transactions', 'failure_kind', 'TEXT');
+}
+
 export async function getOfflineDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = (async () => {
       const db = await SQLite.openDatabaseAsync(DB_NAME);
-      await db.execAsync(MIGRATION_SQL);
+      await migrateSchema(db);
       return db;
     })();
   }

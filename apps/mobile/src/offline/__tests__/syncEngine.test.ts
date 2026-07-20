@@ -3,8 +3,10 @@ import { createMemoryOfflineRepository } from '../repository';
 import { OfflineSyncEngine } from '../syncEngine';
 import type { OfflineSyncTransport } from '../transport';
 import {
+  OfflineFailureKind,
   OfflineTxnStatus,
   createSyncConflictError,
+  createSyncPermanentError,
   type OfflineMedia,
   type OfflineTransaction,
 } from '../types';
@@ -151,6 +153,52 @@ describe('OfflineSyncEngine', () => {
     // Second pass should not auto-process conflict
     const second = await engine.processQueue();
     expect(second.processed).toBe(0);
+  });
+
+  it('marks permanent validation errors and does not auto-retry them', async () => {
+    const txn = await queue.enqueue({
+      type: 'demo',
+      label: 'Invalid',
+      endpoint: '/x',
+      payload: {},
+    });
+
+    transport.syncTransaction = async () => {
+      throw createSyncPermanentError(
+        'receivedQuantity must be greater than 0',
+        'VALIDATION_ERROR',
+      );
+    };
+
+    const engine = new OfflineSyncEngine({
+      queue,
+      transport,
+      isOnline: () => online,
+    });
+
+    await engine.processQueue();
+    const row = await queue.getTransaction(txn.id);
+    expect(row?.status).toBe(OfflineTxnStatus.Failed);
+    expect(row?.failureKind).toBe(OfflineFailureKind.Permanent);
+    expect(row?.lastErrorCode).toBe('VALIDATION_ERROR');
+
+    const second = await engine.processQueue();
+    expect(second.processed).toBe(0);
+
+    // Manual retry is allowed; same idempotency key is preserved.
+    await queue.manualRetry(txn.id);
+    transport.syncTransaction = async (queued) => {
+      syncedKeys.push(queued.idempotencyKey);
+      return {
+        serverRecordId: 'srv-fixed',
+        serverTimestamp: '2026-07-17T12:00:00.000Z',
+      };
+    };
+    await engine.processQueue();
+    expect(syncedKeys).toEqual([txn.idempotencyKey]);
+    expect((await queue.getTransaction(txn.id))?.status).toBe(
+      OfflineTxnStatus.Synced,
+    );
   });
 
   it('skips processing while offline', async () => {
