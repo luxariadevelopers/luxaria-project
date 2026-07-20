@@ -70,9 +70,17 @@ export function HomeScreen() {
         <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
       </Pressable>
 
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => navigation.navigate('WorkMeasurementList')}
+      >
+        <Text style={styles.secondaryButtonText}>Work Measurement</Text>
+      </Pressable>
+
       <Text style={styles.note}>
         GRN capture requires photos and GPS, then queues offline for sync
-        (media first, then submit).
+        (media first, then submit). Work measurements capture BOQ quantities
+        with evidence for later engineer verification.
       </Text>
     </Screen>
   );

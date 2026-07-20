@@ -146,9 +146,10 @@ Every backend module must appear below with route/method/permission/response-sha
 | Area | Status | Notes |
 |---|---|---|
 | Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
+| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR, Work Measurement |
 | GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
 | DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
+| Work measurement offline enqueue | **Phase 129** | List/form; `POST /work-measurements` via sync (`measurement.create`) |
 | Purchase orders | Partial | `GET /purchase-orders` helpers |
 | Broader site workflows | Missing | Stock issue, attendance, petty cash UI, etc. |
 
@@ -159,6 +160,8 @@ Every backend module must appear below with route/method/permission/response-sha
 | POST | `/auth/login` | `apps/mobile/src/api/auth.ts` |
 | POST | `/auth/logout` | `apps/mobile/src/api/auth.ts` |
 | GET | `/auth/me` | `apps/mobile/src/api/auth.ts` |
+| GET | `/boq/projects/${projectId}/items` | `apps/mobile/src/work-measurement/api.ts` |
+| GET | `/contractors` | `apps/mobile/src/work-measurement/api.ts` |
 | POST? | `/daily-progress-reports` | `apps/mobile/src/features/dpr/buildDprOfflineEnqueue.ts` |
 | POST? | `/goods-receipts` | `apps/mobile/src/features/grn/buildGrnOfflineEnqueue.ts` |
 | POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` |
@@ -166,6 +169,9 @@ Every backend module must appear below with route/method/permission/response-sha
 | GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |
 | GET | `/rbac/me/permissions` | `apps/mobile/src/api/auth.ts` |
+| GET | `/work-measurements` | `apps/mobile/src/work-measurement/api.ts` |
+| GET | `/work-measurements/${id}` | `apps/mobile/src/work-measurement/api.ts` |
+| POST? | `/work-measurements` | `apps/mobile/src/work-measurement/buildMeasurementOfflineEnqueue.ts` |
 
 ### Shared packages
 
