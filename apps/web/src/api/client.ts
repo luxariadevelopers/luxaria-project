@@ -83,8 +83,13 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(original);
       }
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.assign('/login');
+      if (typeof window !== 'undefined') {
+        const path = window.location.pathname;
+        if (path.startsWith('/investor')) {
+          window.location.assign('/investor/login');
+        } else if (!path.startsWith('/login')) {
+          window.location.assign('/login');
+        }
       }
     }
 

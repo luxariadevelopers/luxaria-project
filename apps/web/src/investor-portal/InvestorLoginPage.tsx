@@ -7,7 +7,10 @@ import { z } from 'zod';
 import { getErrorMessage, useAuth } from '@/auth/AuthContext';
 import { FormTextField } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
-import { investorHomePath, isInvestorOnlySession } from '@/investor-portal/session';
+import {
+  hasInvestorPortalAccess,
+  investorHomePath,
+} from './session';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Email or mobile is required'),
@@ -16,7 +19,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export function LoginPage() {
+export function InvestorLoginPage() {
   const { login, isAuthenticated, isBootstrapping, access } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,11 +34,14 @@ export function LoginPage() {
     },
   });
 
-  if (!isBootstrapping && isAuthenticated) {
-    if (access && isInvestorOnlySession(access)) {
-      return <Navigate to={investorHomePath()} replace />;
+  if (!isBootstrapping && isAuthenticated && access) {
+    if (hasInvestorPortalAccess(access)) {
+      const from =
+        (location.state as { from?: { pathname?: string } } | null)?.from
+          ?.pathname ?? investorHomePath();
+      return <Navigate to={from.startsWith('/investor') ? from : investorHomePath()} replace />;
     }
-    return <Navigate to="/" replace />;
+    return <Navigate to="/investor/forbidden" replace />;
   }
 
   const onSubmit = handleSubmit(async (values) => {
@@ -46,11 +52,13 @@ export function LoginPage() {
         password: values.password,
         deviceName: navigator.userAgent.slice(0, 80),
       });
-      success('Welcome back');
+      success('Welcome to the investor portal');
       const from =
         (location.state as { from?: { pathname?: string } } | null)?.from
-          ?.pathname || '/';
-      navigate(from, { replace: true });
+          ?.pathname ?? investorHomePath();
+      navigate(from.startsWith('/investor') ? from : investorHomePath(), {
+        replace: true,
+      });
     } catch (err) {
       error(getErrorMessage(err, 'Invalid credentials'));
     } finally {
@@ -59,7 +67,7 @@ export function LoginPage() {
   });
 
   return (
-    <Box component="form" onSubmit={onSubmit} noValidate>
+    <Box component="form" onSubmit={onSubmit} noValidate data-testid="investor-login-form">
       <Stack spacing={2.5}>
         <FormTextField
           name="identifier"

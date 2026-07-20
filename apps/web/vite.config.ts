@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 const apiProxyTarget =
   process.env.VITE_PROXY_TARGET ?? 'http://localhost:9000';
@@ -41,5 +41,11 @@ export default defineConfig({
     host: true,
     port: 9001,
     strictPort: true,
+  },
+  test: {
+    globals: false,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });

@@ -30,3 +30,4 @@ API calls proxy to `http://localhost:9000` via Vite (`/api` → backend).
 - API client with refresh handling
 - Shared DataTable, forms, file upload, confirmation dialog
 - Placeholder pages: Login, Dashboard, Users, Projects, Settings
+- **Investor portal shell** (`/investor/*`) — see [`src/investor-portal/README.md`](./src/investor-portal/README.md)
