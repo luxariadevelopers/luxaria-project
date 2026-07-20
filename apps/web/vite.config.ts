@@ -10,12 +10,23 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Vite serves workspace packages from source (dist is CommonJS for Nest).
+      '@luxaria/shared-types': path.resolve(
+        __dirname,
+        '../../packages/shared-types/src/index.ts',
+      ),
     },
+  },
+  optimizeDeps: {
+    exclude: ['@luxaria/shared-types'],
   },
   server: {
     host: true,
     port: 9001,
     strictPort: true,
+    fs: {
+      allow: [path.resolve(__dirname, '../..')],
+    },
     watch: {
       usePolling: process.env.CHOKIDAR_USEPOLLING === 'true',
     },

@@ -44,7 +44,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     retry: false,
   });
 
-  const projects = projectsQuery.data ?? [];
+  const projects: ProjectOption[] = projectsQuery.data ?? [];
 
   const setSelectedProjectId = useCallback((id: string | null) => {
     tokenStorage.setSelectedProjectId(id);
@@ -52,7 +52,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectedProject =
-    projects.find((p) => p.id === selectedProjectId) ?? null;
+    projects.find((p: ProjectOption) => p.id === selectedProjectId) ?? null;
 
   const value = useMemo(
     () => ({

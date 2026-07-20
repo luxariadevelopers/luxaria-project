@@ -109,7 +109,9 @@ describe('payment-schedules.validation', () => {
   it('gates mark-due and demand generation by line status', () => {
     expect(canMarkDue(PaymentScheduleLineStatus.Pending)).toBe(true);
     expect(canMarkDue(PaymentScheduleLineStatus.Demanded)).toBe(false);
+    expect(canGenerateDemand(PaymentScheduleLineStatus.Pending)).toBe(false);
     expect(canGenerateDemand(PaymentScheduleLineStatus.Due)).toBe(true);
+    expect(canGenerateDemand(PaymentScheduleLineStatus.Overdue)).toBe(true);
     expect(canGenerateDemand(PaymentScheduleLineStatus.Paid)).toBe(false);
   });
 });

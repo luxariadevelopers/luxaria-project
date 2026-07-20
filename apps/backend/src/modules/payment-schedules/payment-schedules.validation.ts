@@ -147,8 +147,8 @@ export function canMarkDue(status: PaymentScheduleLineStatus): boolean {
 }
 
 export function canGenerateDemand(status: PaymentScheduleLineStatus): boolean {
+  // Demand requires mark-due first (Pending lines are not billable yet).
   return (
-    status === PaymentScheduleLineStatus.Pending ||
     status === PaymentScheduleLineStatus.Due ||
     status === PaymentScheduleLineStatus.Overdue
   );
