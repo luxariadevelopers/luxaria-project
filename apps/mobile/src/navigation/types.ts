@@ -14,6 +14,8 @@ export type AppStackParamList = {
   ProjectSelect: undefined;
   GoodsReceipt: undefined;
   DailyProgressReport: undefined;
+  MaterialIssue: undefined;
+  MaterialReturn: { issueId?: string } | undefined;
 };
 
 export type RootStackParamList = {

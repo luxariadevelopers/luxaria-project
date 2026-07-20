@@ -9,6 +9,8 @@ import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { MaterialIssueScreen } from '@/screens/MaterialIssueScreen';
+import { MaterialReturnScreen } from '@/screens/MaterialReturnScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
@@ -137,6 +139,16 @@ function AppNavigator() {
         name="DailyProgressReport"
         component={DailyProgressReportScreen}
         options={{ title: 'Daily Progress Report' }}
+      />
+      <AppStack.Screen
+        name="MaterialIssue"
+        component={MaterialIssueScreen}
+        options={{ title: 'Material issue' }}
+      />
+      <AppStack.Screen
+        name="MaterialReturn"
+        component={MaterialReturnScreen}
+        options={{ title: 'Material return' }}
       />
     </AppStack.Navigator>
   );

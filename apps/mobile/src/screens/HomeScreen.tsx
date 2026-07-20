@@ -70,9 +70,17 @@ export function HomeScreen() {
         <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
       </Pressable>
 
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => navigation.navigate('MaterialIssue')}
+      >
+        <Text style={styles.secondaryButtonText}>Material issue</Text>
+      </Pressable>
+
       <Text style={styles.note}>
         GRN capture requires photos and GPS, then queues offline for sync
-        (media first, then submit).
+        (media first, then submit). Material Issue → Return posts unused stock
+        back via offline sync.
       </Text>
     </Screen>
   );
