@@ -4,7 +4,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { Types, connect, disconnect } from 'mongoose';
 import type { AppConfig } from '../../config/configuration';
+import { User, UserSchema } from '../users/schemas/user.schema';
 import { EmailChannel } from './channels/email.channel';
+import { EmailSmtpProvider } from './channels/email-smtp.provider';
 import { InAppChannel } from './channels/in-app.channel';
 import { PushChannel } from './channels/push.channel';
 import { WhatsAppChannel } from './channels/whatsapp.channel';
@@ -73,6 +75,18 @@ describe('NotificationsService', () => {
       ScheduledNotification.name,
       ScheduledNotificationSchema,
     ) as Model<ScheduledNotification>;
+    const userModel = connection.model(User.name, UserSchema) as Model<User>;
+
+    const configService = {
+      get: (key: string) => {
+        if (key === 'redisEnabled') return false;
+        if (key === 'smtpHost') return '';
+        if (key === 'emailFrom') return '';
+        return undefined;
+      },
+    } as unknown as ConfigService<AppConfig, true>;
+
+    const smtpProvider = new EmailSmtpProvider(configService);
 
     dispatcher = new NotificationsDispatcher(
       notificationModel,
@@ -81,16 +95,9 @@ describe('NotificationsService', () => {
       deliveryLogModel,
       new InAppChannel(),
       new PushChannel(),
-      new EmailChannel(),
+      new EmailChannel(configService, userModel, smtpProvider),
       new WhatsAppChannel(),
     );
-
-    const configService = {
-      get: (key: string) => {
-        if (key === 'redisEnabled') return false;
-        return undefined;
-      },
-    } as unknown as ConfigService<AppConfig, true>;
 
     const moduleRef = {
       get: () => {

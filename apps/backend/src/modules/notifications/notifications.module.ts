@@ -4,7 +4,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 import type { AppConfig } from '../../config/configuration';
+import { User, UserSchema } from '../users/schemas/user.schema';
 import { EmailChannel } from './channels/email.channel';
+import { EmailSmtpProvider } from './channels/email-smtp.provider';
 import { InAppChannel } from './channels/in-app.channel';
 import { PushChannel } from './channels/push.channel';
 import { WhatsAppChannel } from './channels/whatsapp.channel';
@@ -58,6 +60,7 @@ const redisEnabled =
         name: ScheduledNotification.name,
         schema: ScheduledNotificationSchema,
       },
+      { name: User.name, schema: UserSchema },
     ]),
     ...(redisEnabled
       ? [
@@ -88,6 +91,7 @@ const redisEnabled =
     NotificationsSeedService,
     InAppChannel,
     PushChannel,
+    EmailSmtpProvider,
     EmailChannel,
     WhatsAppChannel,
     ...(redisEnabled ? [NotificationsProcessor] : []),
