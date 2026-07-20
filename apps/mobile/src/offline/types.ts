@@ -19,18 +19,32 @@ export const OfflineMediaStatus = {
 export type OfflineMediaStatus =
   (typeof OfflineMediaStatus)[keyof typeof OfflineMediaStatus];
 
+/** Classifies failed syncs for UI resolution (conflict uses status=conflict). */
+export const OfflineFailureKind = {
+  Transient: 'transient',
+  Permanent: 'permanent',
+  Forbidden: 'forbidden',
+} as const;
+
+export type OfflineFailureKind =
+  (typeof OfflineFailureKind)[keyof typeof OfflineFailureKind];
+
 export type OfflineTransaction = {
   id: string;
   idempotencyKey: string;
   type: string;
   label: string;
   projectId: string | null;
+  /** Owner of the queued row; actions restricted to this user. */
+  createdByUserId: string | null;
   endpoint: string;
   method: 'POST' | 'PATCH' | 'PUT';
   payloadJson: string;
   status: OfflineTxnStatus;
   attemptCount: number;
   lastError: string | null;
+  lastErrorCode: string | null;
+  failureKind: OfflineFailureKind | null;
   deviceTimestamp: string;
   serverTimestamp: string | null;
   serverRecordId: string | null;
@@ -67,6 +81,7 @@ export type EnqueueTransactionInput = {
   type: string;
   label: string;
   projectId?: string | null;
+  createdByUserId?: string | null;
   endpoint: string;
   method?: 'POST' | 'PATCH' | 'PUT';
   payload: Record<string, unknown>;
@@ -88,11 +103,41 @@ export type SyncConflictError = Error & {
   serverTimestamp?: string | null;
 };
 
+export type SyncPermanentError = Error & {
+  code: 'permanent';
+  errorCode?: string | null;
+};
+
+export type SyncForbiddenError = Error & {
+  code: 'forbidden';
+  errorCode?: string | null;
+};
+
 export function isSyncConflictError(error: unknown): error is SyncConflictError {
   return (
     error instanceof Error &&
     'code' in error &&
     (error as SyncConflictError).code === 'conflict'
+  );
+}
+
+export function isSyncPermanentError(
+  error: unknown,
+): error is SyncPermanentError {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error as SyncPermanentError).code === 'permanent'
+  );
+}
+
+export function isSyncForbiddenError(
+  error: unknown,
+): error is SyncForbiddenError {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error as SyncForbiddenError).code === 'forbidden'
   );
 }
 
@@ -103,5 +148,25 @@ export function createSyncConflictError(
   const err = new Error(message) as SyncConflictError;
   err.code = 'conflict';
   err.serverTimestamp = serverTimestamp ?? null;
+  return err;
+}
+
+export function createSyncPermanentError(
+  message: string,
+  errorCode?: string | null,
+): SyncPermanentError {
+  const err = new Error(message) as SyncPermanentError;
+  err.code = 'permanent';
+  err.errorCode = errorCode ?? null;
+  return err;
+}
+
+export function createSyncForbiddenError(
+  message: string,
+  errorCode?: string | null,
+): SyncForbiddenError {
+  const err = new Error(message) as SyncForbiddenError;
+  err.code = 'forbidden';
+  err.errorCode = errorCode ?? null;
   return err;
 }

@@ -9,7 +9,7 @@ import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
-import { NotificationsScreen } from '@/screens/NotificationsScreen';
+import { ConflictDetailScreen } from '@/screens/ConflictDetailScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
@@ -140,9 +140,9 @@ function AppNavigator() {
         options={{ title: 'Daily Progress Report' }}
       />
       <AppStack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{ title: 'Notifications' }}
+        name="ConflictDetail"
+        component={ConflictDetailScreen}
+        options={{ title: 'Sync issue' }}
       />
     </AppStack.Navigator>
   );

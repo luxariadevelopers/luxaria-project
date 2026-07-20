@@ -1,6 +1,7 @@
 import { createIdempotencyKey, createOfflineId } from './ids';
 import type { OfflineRepository } from './repository';
 import {
+  OfflineFailureKind,
   OfflineMediaStatus,
   OfflineTxnStatus,
   type EnqueueTransactionInput,
@@ -21,11 +22,31 @@ const defaultClock: QueueClock = {
   now: () => new Date(),
 };
 
+export type QueueActorContext = {
+  userId: string;
+  /** Project IDs the actor may access. Empty + bypass=false blocks project-scoped rows. */
+  accessibleProjectIds: ReadonlySet<string> | readonly string[];
+  bypassProjectAccess?: boolean;
+};
+
+export class QueueAccessError extends Error {
+  readonly code: 'forbidden' | 'not_found' | 'invalid_state';
+
+  constructor(code: QueueAccessError['code'], message: string) {
+    super(message);
+    this.name = 'QueueAccessError';
+    this.code = code;
+  }
+}
+
 export function computeNextRetryAt(
   attemptCount: number,
   now: Date = new Date(),
 ): string {
-  const delay = Math.min(BASE_RETRY_MS * 2 ** Math.max(0, attemptCount - 1), MAX_RETRY_MS);
+  const delay = Math.min(
+    BASE_RETRY_MS * 2 ** Math.max(0, attemptCount - 1),
+    MAX_RETRY_MS,
+  );
   return new Date(now.getTime() + delay).toISOString();
 }
 
@@ -50,6 +71,8 @@ export function canAutoProcess(
   txn: OfflineTransaction,
   now: Date = new Date(),
 ): boolean {
+  if (txn.failureKind === OfflineFailureKind.Permanent) return false;
+  if (txn.failureKind === OfflineFailureKind.Forbidden) return false;
   if (txn.status === OfflineTxnStatus.Pending) {
     // Fresh enqueue or manual retry (nextRetryAt cleared) always eligible.
     if (!txn.nextRetryAt) return true;
@@ -63,6 +86,59 @@ export function canAutoProcess(
     return true;
   }
   return false;
+}
+
+export function isQueueOwner(
+  txn: OfflineTransaction,
+  userId: string | null | undefined,
+): boolean {
+  if (!userId) return false;
+  // Legacy rows without owner remain actionable on the device that holds them.
+  if (!txn.createdByUserId) return true;
+  return txn.createdByUserId === userId;
+}
+
+export function hasQueueProjectAccess(
+  txn: OfflineTransaction,
+  actor: Pick<QueueActorContext, 'accessibleProjectIds' | 'bypassProjectAccess'>,
+): boolean {
+  if (!txn.projectId) return true;
+  if (actor.bypassProjectAccess) return true;
+  const ids = actor.accessibleProjectIds;
+  if (ids instanceof Set) {
+    return ids.has(txn.projectId);
+  }
+  return (ids as readonly string[]).includes(txn.projectId);
+}
+
+export function assertCanActOnQueueItem(
+  txn: OfflineTransaction | null,
+  actor: QueueActorContext,
+): OfflineTransaction {
+  if (!txn) {
+    throw new QueueAccessError('not_found', 'Queued record not found');
+  }
+  if (!isQueueOwner(txn, actor.userId)) {
+    throw new QueueAccessError(
+      'forbidden',
+      'You can only resolve your own queued records',
+    );
+  }
+  if (!hasQueueProjectAccess(txn, actor)) {
+    throw new QueueAccessError(
+      'forbidden',
+      'You do not have access to this project queue item',
+    );
+  }
+  return txn;
+}
+
+export function canDiscardQueueItem(txn: OfflineTransaction): boolean {
+  return (
+    txn.status === OfflineTxnStatus.Pending ||
+    txn.status === OfflineTxnStatus.Failed ||
+    txn.status === OfflineTxnStatus.Conflict
+  );
 }
 
 export class OfflineQueueService {
@@ -96,12 +172,15 @@ export class OfflineQueueService {
       type: input.type,
       label: input.label,
       projectId: input.projectId ?? null,
+      createdByUserId: input.createdByUserId ?? null,
       endpoint: input.endpoint,
       method: input.method ?? 'POST',
       payloadJson: JSON.stringify(input.payload ?? {}),
       status: OfflineTxnStatus.Pending,
       attemptCount: 0,
       lastError: null,
+      lastErrorCode: null,
+      failureKind: null,
       deviceTimestamp: input.deviceTimestamp ?? now,
       serverTimestamp: null,
       serverRecordId: null,
@@ -135,10 +214,13 @@ export class OfflineQueueService {
     return txn;
   }
 
-  async listForUi(): Promise<
+  async listForUi(userId?: string | null): Promise<
     Array<OfflineTransaction & { media: OfflineMedia[] }>
   > {
-    const rows = await this.repo.listTransactions({ excludeSynced: true });
+    const rows = await this.repo.listTransactions({
+      excludeSynced: true,
+      createdByUserId: userId ?? undefined,
+    });
     const result = [];
     for (const txn of rows) {
       const media = await this.repo.getMediaForTransaction(txn.id);
@@ -147,8 +229,10 @@ export class OfflineQueueService {
     return result;
   }
 
-  async countActive(): Promise<number> {
-    return this.repo.countActive();
+  async countActive(userId?: string | null): Promise<number> {
+    return this.repo.countActive({
+      createdByUserId: userId ?? undefined,
+    });
   }
 
   async getProcessableIds(): Promise<string[]> {
@@ -163,6 +247,7 @@ export class OfflineQueueService {
           status: OfflineTxnStatus.Pending,
           updatedAt: now.toISOString(),
           lastError: 'Recovered stuck upload; will retry safely',
+          failureKind: OfflineFailureKind.Transient,
         });
       }
     }
@@ -222,24 +307,45 @@ export class OfflineQueueService {
       serverRecordId: input.serverRecordId,
       serverTimestamp: input.serverTimestamp,
       lastError: null,
+      lastErrorCode: null,
+      failureKind: null,
       nextRetryAt: null,
       updatedAt: now,
     });
   }
 
-  async markFailed(id: string, error: string) {
+  async markFailed(
+    id: string,
+    error: string,
+    options?: {
+      permanent?: boolean;
+      forbidden?: boolean;
+      errorCode?: string | null;
+    },
+  ) {
     const txn = await this.repo.getTransaction(id);
     if (!txn) return;
     const attemptCount = txn.attemptCount + 1;
     const now = this.clock.now();
+    const permanent = Boolean(options?.permanent);
+    const forbidden = Boolean(options?.forbidden);
     const exhausted = attemptCount >= MAX_SYNC_ATTEMPTS;
+    const failureKind = forbidden
+      ? OfflineFailureKind.Forbidden
+      : permanent
+        ? OfflineFailureKind.Permanent
+        : OfflineFailureKind.Transient;
+    const stopAuto = permanent || forbidden || exhausted;
+
     await this.repo.updateTransaction(id, {
       status: OfflineTxnStatus.Failed,
       attemptCount,
-      lastError: exhausted
+      lastError: exhausted && !permanent && !forbidden
         ? `${error} (max retries reached)`
         : error,
-      nextRetryAt: exhausted ? null : computeNextRetryAt(attemptCount, now),
+      lastErrorCode: options?.errorCode ?? null,
+      failureKind,
+      nextRetryAt: stopAuto ? null : computeNextRetryAt(attemptCount, now),
       updatedAt: now.toISOString(),
     });
   }
@@ -250,6 +356,8 @@ export class OfflineQueueService {
     await this.repo.updateTransaction(id, {
       status: OfflineTxnStatus.Conflict,
       lastError: error,
+      lastErrorCode: 'CONFLICT',
+      failureKind: null,
       serverTimestamp: serverTimestamp ?? null,
       nextRetryAt: null,
       attemptCount: txn.attemptCount + 1,
@@ -258,8 +366,14 @@ export class OfflineQueueService {
   }
 
   /** Manual retry — Failed or Conflict → Pending (safe due to idempotency key). */
-  async manualRetry(id: string): Promise<OfflineTransaction | null> {
+  async manualRetry(
+    id: string,
+    actor?: QueueActorContext,
+  ): Promise<OfflineTransaction | null> {
     const txn = await this.repo.getTransaction(id);
+    if (actor) {
+      assertCanActOnQueueItem(txn, actor);
+    }
     if (!txn) return null;
     if (
       txn.status !== OfflineTxnStatus.Failed &&
@@ -271,6 +385,8 @@ export class OfflineQueueService {
     await this.repo.updateTransaction(id, {
       status: OfflineTxnStatus.Pending,
       lastError: null,
+      lastErrorCode: null,
+      failureKind: null,
       nextRetryAt: null,
       updatedAt: now,
     });
@@ -289,12 +405,51 @@ export class OfflineQueueService {
     return this.repo.getTransaction(id);
   }
 
+  /**
+   * Explicit discard only. Never called automatically — UI must confirm.
+   * Blocks synced / uploading rows so submitted work is not silently dropped.
+   */
+  async discardDraft(
+    id: string,
+    actor: QueueActorContext,
+    options?: { confirmed?: boolean },
+  ): Promise<void> {
+    if (!options?.confirmed) {
+      throw new QueueAccessError(
+        'invalid_state',
+        'Discard requires explicit confirmation',
+      );
+    }
+    const txn = assertCanActOnQueueItem(
+      await this.repo.getTransaction(id),
+      actor,
+    );
+    if (!canDiscardQueueItem(txn)) {
+      throw new QueueAccessError(
+        'invalid_state',
+        `Cannot discard a ${txn.status} queue item`,
+      );
+    }
+    await this.repo.deleteTransaction(id);
+  }
+
   async getMedia(transactionId: string) {
     return this.repo.getMediaForTransaction(transactionId);
   }
 
   async getTransaction(id: string) {
     return this.repo.getTransaction(id);
+  }
+
+  async getForActor(
+    id: string,
+    actor: QueueActorContext,
+  ): Promise<(OfflineTransaction & { media: OfflineMedia[] }) | null> {
+    const txn = await this.repo.getTransaction(id);
+    if (!txn) return null;
+    assertCanActOnQueueItem(txn, actor);
+    const media = await this.repo.getMediaForTransaction(id);
+    return { ...txn, media };
   }
 
   /**

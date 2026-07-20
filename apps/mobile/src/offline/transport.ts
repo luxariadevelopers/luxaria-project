@@ -1,3 +1,4 @@
+import { ERROR_CODES, type ApiError } from '@luxaria/shared-types';
 import axios from 'axios';
 import { apiClient, getErrorMessage } from '@/api/client';
 import {
@@ -7,6 +8,8 @@ import {
 import { uploadToPresignedUrl } from '@/utils/fileUpload';
 import {
   createSyncConflictError,
+  createSyncForbiddenError,
+  createSyncPermanentError,
   type OfflineMedia,
   type OfflineTransaction,
   type SyncTransactionResult,
@@ -26,6 +29,27 @@ type PresignResponse = {
 };
 
 type ConfirmIgnored = { id?: string };
+
+function readApiError(error: unknown): ApiError | null {
+  if (!axios.isAxiosError<ApiError>(error)) return null;
+  const data = error.response?.data;
+  if (data && typeof data === 'object' && data.success === false) {
+    return data;
+  }
+  return null;
+}
+
+function readConflictServerTimestamp(error: unknown): string | null {
+  if (!axios.isAxiosError(error)) return null;
+  const data = error.response?.data;
+  if (typeof data === 'object' && data && 'data' in data) {
+    const nested = (data as { data?: { serverTimestamp?: string } }).data;
+    return nested?.serverTimestamp
+      ? String(nested.serverTimestamp)
+      : null;
+  }
+  return null;
+}
 
 /**
  * HTTP transport: upload media via documents presign, then sync with Idempotency-Key.
@@ -160,17 +184,36 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const status = error.response?.status;
-          if (status === 409) {
+          const apiError = readApiError(error);
+          const errorCode = apiError?.errorCode ?? null;
+          const message = getErrorMessage(error, 'Sync failed');
+
+          if (status === 409 || errorCode === ERROR_CODES.CONFLICT) {
             throw createSyncConflictError(
-              getErrorMessage(error, 'Sync conflict'),
-              typeof error.response?.data === 'object' &&
-                error.response?.data &&
-                'data' in error.response.data
-                ? String(
-                    (error.response.data as { data?: { serverTimestamp?: string } })
-                      .data?.serverTimestamp ?? '',
-                  ) || null
-                : null,
+              message || 'Sync conflict',
+              readConflictServerTimestamp(error),
+            );
+          }
+
+          if (
+            status === 403 ||
+            errorCode === ERROR_CODES.FORBIDDEN
+          ) {
+            throw createSyncForbiddenError(
+              message || 'Permission denied for this sync',
+              errorCode,
+            );
+          }
+
+          if (
+            status === 422 ||
+            status === 400 ||
+            errorCode === ERROR_CODES.VALIDATION_ERROR ||
+            errorCode === ERROR_CODES.BAD_REQUEST
+          ) {
+            throw createSyncPermanentError(
+              message || 'Validation rejected this sync',
+              errorCode,
             );
           }
         }

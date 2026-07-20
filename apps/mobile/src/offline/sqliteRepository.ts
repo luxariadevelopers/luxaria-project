@@ -1,7 +1,12 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { getOfflineDatabase } from './db';
 import type { OfflineRepository } from './repository';
-import type { OfflineMedia, OfflineTransaction, OfflineTxnStatus } from './types';
+import type {
+  OfflineFailureKind,
+  OfflineMedia,
+  OfflineTransaction,
+  OfflineTxnStatus,
+} from './types';
 
 type TxnRow = {
   id: string;
@@ -9,12 +14,15 @@ type TxnRow = {
   type: string;
   label: string;
   project_id: string | null;
+  created_by_user_id: string | null;
   endpoint: string;
   method: string;
   payload_json: string;
   status: string;
   attempt_count: number;
   last_error: string | null;
+  last_error_code: string | null;
+  failure_kind: string | null;
   device_timestamp: string;
   server_timestamp: string | null;
   server_record_id: string | null;
@@ -45,12 +53,15 @@ function mapTxn(row: TxnRow): OfflineTransaction {
     type: row.type,
     label: row.label,
     projectId: row.project_id,
+    createdByUserId: row.created_by_user_id ?? null,
     endpoint: row.endpoint,
     method: row.method as OfflineTransaction['method'],
     payloadJson: row.payload_json,
     status: row.status as OfflineTxnStatus,
     attemptCount: row.attempt_count,
     lastError: row.last_error,
+    lastErrorCode: row.last_error_code ?? null,
+    failureKind: (row.failure_kind as OfflineFailureKind | null) ?? null,
     deviceTimestamp: row.device_timestamp,
     serverTimestamp: row.server_timestamp,
     serverRecordId: row.server_record_id,
@@ -89,21 +100,25 @@ export function createSqliteOfflineRepository(
       const db = await getDb();
       await db.runAsync(
         `INSERT INTO offline_transactions (
-          id, idempotency_key, type, label, project_id, endpoint, method,
-          payload_json, status, attempt_count, last_error, device_timestamp,
-          server_timestamp, server_record_id, created_at, updated_at, next_retry_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, idempotency_key, type, label, project_id, created_by_user_id,
+          endpoint, method, payload_json, status, attempt_count, last_error,
+          last_error_code, failure_kind, device_timestamp, server_timestamp,
+          server_record_id, created_at, updated_at, next_retry_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         txn.id,
         txn.idempotencyKey,
         txn.type,
         txn.label,
         txn.projectId,
+        txn.createdByUserId,
         txn.endpoint,
         txn.method,
         txn.payloadJson,
         txn.status,
         txn.attemptCount,
         txn.lastError,
+        txn.lastErrorCode,
+        txn.failureKind,
         txn.deviceTimestamp,
         txn.serverTimestamp,
         txn.serverRecordId,
@@ -145,21 +160,25 @@ export function createSqliteOfflineRepository(
       const db = await getDb();
       await db.runAsync(
         `UPDATE offline_transactions SET
-          idempotency_key = ?, type = ?, label = ?, project_id = ?, endpoint = ?,
-          method = ?, payload_json = ?, status = ?, attempt_count = ?, last_error = ?,
-          device_timestamp = ?, server_timestamp = ?, server_record_id = ?,
-          created_at = ?, updated_at = ?, next_retry_at = ?
+          idempotency_key = ?, type = ?, label = ?, project_id = ?,
+          created_by_user_id = ?, endpoint = ?, method = ?, payload_json = ?,
+          status = ?, attempt_count = ?, last_error = ?, last_error_code = ?,
+          failure_kind = ?, device_timestamp = ?, server_timestamp = ?,
+          server_record_id = ?, created_at = ?, updated_at = ?, next_retry_at = ?
          WHERE id = ?`,
         next.idempotencyKey,
         next.type,
         next.label,
         next.projectId,
+        next.createdByUserId,
         next.endpoint,
         next.method,
         next.payloadJson,
         next.status,
         next.attemptCount,
         next.lastError,
+        next.lastErrorCode,
+        next.failureKind,
         next.deviceTimestamp,
         next.serverTimestamp,
         next.serverRecordId,
@@ -235,6 +254,12 @@ export function createSqliteOfflineRepository(
       if (options?.excludeSynced) {
         clauses.push(`status != 'synced'`);
       }
+      if (options?.createdByUserId) {
+        clauses.push(
+          `(created_by_user_id IS NULL OR created_by_user_id = ?)`,
+        );
+        params.push(options.createdByUserId);
+      }
       if (clauses.length) {
         sql += ` WHERE ${clauses.join(' AND ')}`;
       }
@@ -244,8 +269,17 @@ export function createSqliteOfflineRepository(
       return rows.map(mapTxn);
     },
 
-    async countActive() {
+    async countActive(options) {
       const db = await getDb();
+      if (options?.createdByUserId) {
+        const rows = await db.getAllAsync<{ count: number }>(
+          `SELECT COUNT(*) as count FROM offline_transactions
+           WHERE status != 'synced'
+             AND (created_by_user_id IS NULL OR created_by_user_id = ?)`,
+          options.createdByUserId,
+        );
+        return rows[0]?.count ?? 0;
+      }
       const rows = await db.getAllAsync<{ count: number }>(
         `SELECT COUNT(*) as count FROM offline_transactions WHERE status != 'synced'`,
       );
@@ -268,6 +302,15 @@ export function createSqliteOfflineRepository(
         return null;
       }
       return this.getTransaction(id);
+    },
+
+    async deleteTransaction(id) {
+      const db = await getDb();
+      await db.runAsync(
+        'DELETE FROM offline_media WHERE transaction_id = ?',
+        id,
+      );
+      await db.runAsync('DELETE FROM offline_transactions WHERE id = ?', id);
     },
   };
 }

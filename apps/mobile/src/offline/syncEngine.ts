@@ -4,6 +4,8 @@ import type { OfflineSyncTransport } from './transport';
 import {
   OfflineMediaStatus,
   isSyncConflictError,
+  isSyncForbiddenError,
+  isSyncPermanentError,
   type OfflineMedia,
 } from './types';
 
@@ -19,7 +21,7 @@ export type SyncEngineOptions = {
  * 1) claim transaction
  * 2) upload media that is not yet uploaded
  * 3) sync payload with stable Idempotency-Key
- * 4) mark synced / failed / conflict
+ * 4) mark synced / failed / conflict / permanent / forbidden
  */
 export class OfflineSyncEngine {
   private running = false;
@@ -93,6 +95,16 @@ export class OfflineSyncEngine {
           error.message,
           error.serverTimestamp,
         );
+      } else if (isSyncPermanentError(error)) {
+        await this.options.queue.markFailed(claimed.id, error.message, {
+          permanent: true,
+          errorCode: error.errorCode,
+        });
+      } else if (isSyncForbiddenError(error)) {
+        await this.options.queue.markFailed(claimed.id, error.message, {
+          forbidden: true,
+          errorCode: error.errorCode,
+        });
       } else {
         await this.options.queue.markFailed(
           claimed.id,
