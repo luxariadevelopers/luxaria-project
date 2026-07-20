@@ -105,11 +105,7 @@ export function InvoiceDocumentPanel({
           ) : null}
 
           {editable ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ alignItems: 'flex-start' }}
-            >
+            <Stack direction="row" spacing={1} alignItems="flex-start">
               <TextField
                 label="Or paste document id / path"
                 fullWidth

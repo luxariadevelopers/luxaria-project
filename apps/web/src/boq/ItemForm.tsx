@@ -232,7 +232,7 @@ export function ItemForm({
                 onBlur={field.onBlur}
                 error={Boolean(fieldState.error)}
                 helperText={fieldState.error?.message}
-                slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                inputProps={{ min: 0, step: 'any' }}
               />
             )}
           />
@@ -310,11 +310,7 @@ export function ItemForm({
         description="endDate cannot be before startDate."
         disabled={disabled}
       >
-        <Stack
-          spacing={2}
-          direction={{ xs: 'column', sm: 'row' }}
-          sx={{ width: '100%' }}
-        >
+        <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }}>
           <DateInput
             name="startDate"
             control={control}

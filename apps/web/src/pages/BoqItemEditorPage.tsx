@@ -7,11 +7,7 @@ import {
   Typography,
 } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  FormProvider,
-  useForm,
-  type Resolver,
-} from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -76,9 +72,7 @@ export function BoqItemEditorPage() {
   const update = useUpdateBoqItem();
 
   const methods = useForm<BoqItemFormValues>({
-    resolver: zodResolver(
-      boqItemFormSchema,
-    ) as Resolver<BoqItemFormValues>,
+    resolver: zodResolver(boqItemFormSchema),
     defaultValues: defaultBoqItemFormValues(),
   });
 
@@ -147,7 +141,7 @@ export function BoqItemEditorPage() {
 
   if (!isCreate && itemQuery.isLoading) {
     return (
-      <Stack sx={{ alignItems: 'center', py: 6 }}>
+      <Stack alignItems="center" py={6}>
         <CircularProgress size={32} />
       </Stack>
     );
@@ -248,11 +242,7 @@ export function BoqItemEditorPage() {
       )}
 
       {item && (
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ alignItems: 'center' }}
-        >
+        <Stack direction="row" spacing={1} alignItems="center">
           <BoqItemStatusChip status={item.status} />
           <Typography variant="body2" color="text.secondary">
             Version id: {item.versionId}

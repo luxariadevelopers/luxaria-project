@@ -84,9 +84,9 @@ export function VendorInvoiceMatchPage() {
     }
     return (
       <RetryPanel
-        error={detail.error}
+        title="Could not load invoice"
+        message={getErrorMessage(detail.error)}
         onRetry={() => void detail.refetch()}
-        forceRetry
       />
     );
   }
@@ -108,10 +108,7 @@ export function VendorInvoiceMatchPage() {
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-        }}
+        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
       >
         <div>
           <Typography variant="h5">
@@ -131,13 +128,13 @@ export function VendorInvoiceMatchPage() {
           to="/procurement/vendor-invoices"
           variant="outlined"
         >
-          Back to list
+          Back to invoices
         </Button>
       </Stack>
 
       <ToleranceIndicators invoice={invoice} />
 
-      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={1} flexWrap="wrap">
         {actions.has('match') ? (
           <Button
             variant="contained"

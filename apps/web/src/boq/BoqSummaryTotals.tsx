@@ -3,7 +3,7 @@ import { formatIndianNumber, formatInr } from '@/format';
 import type { BoqProjectTotalsResult } from './types';
 
 type Props = {
-  totals: BoqProjectTotalsResult['totals'] | null | undefined;
+  totals: BoqProjectTotalsResult['totals'] | null;
   valid: boolean | null;
   invalidCount?: number;
   loading?: boolean;

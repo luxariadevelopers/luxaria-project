@@ -65,7 +65,7 @@ export function WorkLocationBoqSelector({
         label="Search BOQ"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        slotProps={{ htmlInput: { 'data-testid': 'boq-search' } }}
+        inputProps={{ 'data-testid': 'boq-search' }}
       />
 
       {boqQuery.error ? (

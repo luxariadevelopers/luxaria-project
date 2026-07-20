@@ -65,20 +65,17 @@ function Row({
   emphasize?: boolean;
 }) {
   return (
-    <Stack
-      direction="row"
-      sx={{ justifyContent: 'space-between', gap: 2 }}
-    >
+    <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
       <Typography
         variant="body2"
         color={emphasize ? 'text.primary' : 'text.secondary'}
-        sx={{ fontWeight: emphasize ? 600 : 400 }}
+        fontWeight={emphasize ? 600 : 400}
       >
         {label}
       </Typography>
       <Typography
         variant="body2"
-        sx={{ fontWeight: emphasize ? 600 : 400 }}
+        fontWeight={emphasize ? 600 : 400}
         data-testid={`invoice-total-${label.toLowerCase().replace(/\s+/g, '-')}`}
       >
         {formatInr(value)}

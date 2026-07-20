@@ -40,11 +40,7 @@ export function ToleranceIndicators({ invoice }: Props) {
 
   return (
     <Stack spacing={1.5} data-testid="tolerance-indicators">
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', flexWrap: 'wrap' }}
-      >
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
         <Typography variant="subtitle2">Matching status</Typography>
         <MatchingStatusChip status={invoice.matchingStatus} />
         {invoice.exceptionApproved ? (
@@ -52,7 +48,7 @@ export function ToleranceIndicators({ invoice }: Props) {
         ) : null}
       </Stack>
 
-      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={1} flexWrap="wrap">
         <Chip size="small" label={`${variances.length} variance(s)`} />
         <Chip
           size="small"

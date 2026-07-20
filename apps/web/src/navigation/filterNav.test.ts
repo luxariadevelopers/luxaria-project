@@ -12,22 +12,6 @@ import {
 } from './routeRegistry';
 import { PERMISSIONS } from './permissionCatalog';
 
-/** Compact access context for permission-gated nav/guard cases. */
-function access(
-  permissions: readonly string[],
-  _projectId?: string,
-): {
-  accessLoaded: true;
-  bypassPermissions: false;
-  permissions: readonly string[];
-} {
-  return {
-    accessLoaded: true,
-    bypassPermissions: false,
-    permissions,
-  };
-}
-
 /** Representative role permission sets (from seeded RBAC shapes). */
 const ROLES = {
   siteEngineer: {
@@ -87,6 +71,8 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(canEnterRoute(requireRouteById('users'), ctx)).toBe(false);
 
     expect(requireRouteById('daily-progress').projectScope).toBe('required');
+    expect(requireRouteById('daily-progress').path).toBe('/project-control/dpr');
+    expect(requireRouteById('daily-progress').groupId).toBe('project-control');
   });
 
   it('user admin sees users and is denied project modules', () => {
@@ -131,13 +117,8 @@ describe('representative role visibility (nav + guard same source)', () => {
         'journal-create',
         'cash-accounts',
         'bank-accounts',
-        'bank-reconciliation',
-        'period-close',
-        'expense-categories',
-        'site-expenses',
         'petty-cash-requests',
         'petty-cash-fund-transfers',
-        'materials',
         'stock-balances',
         'stock-ledger',
         'stock-counts',
@@ -145,23 +126,14 @@ describe('representative role visibility (nav + guard same source)', () => {
         'quality-inspections',
         'material-issues',
         'reorder-alerts',
-        'boq',
-        'boq-versions',
         'project-participants',
         'profit-share',
-        'vendors',
         'purchase-orders',
         'purchase-requests',
         'quotations',
-        'vendor-invoices',
-        'vendor-payments',
-        'contractor-payments',
         'settings',
       ]),
     );
-    expect(ids).not.toContain('vendor-detail');
-    expect(ids).not.toContain('boq-import');
-    expect(ids).not.toContain('boq-item-editor');
 
     for (const id of [
       'projects',
@@ -181,18 +153,10 @@ describe('representative role visibility (nav + guard same source)', () => {
       'cash-accounts',
       'bank-accounts',
       'bank-account-detail',
-      'bank-reconciliation',
-      'bank-reconciliation-detail',
-      'period-close',
-      'expense-categories',
-      'site-expenses',
-      'site-expense-detail',
       'petty-cash-requests',
       'petty-cash-request-create',
       'petty-cash-request-detail',
       'petty-cash-fund-transfers',
-      'materials',
-      'material-detail',
       'stock-balances',
       'stock-ledger',
       'stock-counts',
@@ -204,18 +168,6 @@ describe('representative role visibility (nav + guard same source)', () => {
       'material-issues',
       'material-issue-detail',
       'reorder-alerts',
-      'boq',
-      'boq-import',
-      'boq-item-editor',
-      'boq-versions',
-      'vendors',
-      'vendor-detail',
-      'purchase-orders',
-      'purchase-requests',
-      'vendor-invoices',
-      'vendor-invoice-match',
-      'vendor-payments',
-      'contractor-payments',
       'notifications',
       'approvals',
       'director-command-centre',
@@ -803,22 +755,15 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(visibleIds(ctx)).not.toContain('quality-inspections');
   });
 
-  it('BOQ viewer sees Project Control → BOQ + Versions; import needs boq.manage', () => {
+  it('BOQ viewer sees Project Control → BOQ; import needs boq.manage', () => {
     const viewer = {
       accessLoaded: true,
       bypassPermissions: false,
       permissions: ['boq.view'] as const,
     };
     expect(visibleIds(viewer)).toContain('boq');
-    expect(visibleIds(viewer)).toContain('boq-versions');
     expect(canEnterRoute(requireRouteById('boq'), viewer)).toBe(true);
-    expect(canEnterRoute(requireRouteById('boq-versions'), viewer)).toBe(true);
-    expect(canEnterRoute(requireRouteById('boq-item-editor'), viewer)).toBe(
-      true,
-    );
     expect(canEnterRoute(requireRouteById('boq-import'), viewer)).toBe(false);
-    expect(visibleIds(viewer)).not.toContain('boq-import');
-    expect(visibleIds(viewer)).not.toContain('boq-item-editor');
     expect(requireRouteById('boq').path).toBe('/project-control/boq');
     expect(requireRouteById('boq').groupId).toBe('project-control');
     expect(requireRouteById('boq').projectScope).toBe('required');
@@ -826,15 +771,6 @@ describe('representative role visibility (nav + guard same source)', () => {
       '/project-control/boq/import',
     );
     expect(requireRouteById('boq-import').showInNav).toBe(false);
-    expect(requireRouteById('boq-versions').path).toBe(
-      '/project-control/boq/versions',
-    );
-    expect(requireRouteById('boq-versions').groupId).toBe('project-control');
-    expect(requireRouteById('boq-versions').projectScope).toBe('required');
-    expect(requireRouteById('boq-item-editor').path).toBe(
-      '/project-control/boq/items/:id',
-    );
-    expect(requireRouteById('boq-item-editor').showInNav).toBe(false);
 
     const importer = {
       accessLoaded: true,
@@ -843,7 +779,6 @@ describe('representative role visibility (nav + guard same source)', () => {
     };
     expect(canEnterRoute(requireRouteById('boq-import'), importer)).toBe(true);
     expect(visibleIds(importer)).not.toContain('boq');
-    expect(visibleIds(importer)).not.toContain('boq-versions');
   });
 
   it('petty-cash requester can enter create form; viewer cannot', () => {
@@ -997,105 +932,6 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(requireRouteById('quotations').title).toBe('Quotations');
   });
 
-  it('vendor invoice viewer sees Procurement → Vendor Invoices', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['vendor_invoice.view'] as const,
-    };
-    expect(visibleIds(ctx)).toContain('vendor-invoices');
-    expect(canEnterRoute(requireRouteById('vendor-invoices'), ctx)).toBe(true);
-    expect(requireRouteById('vendor-invoices').path).toBe(
-      '/procurement/vendor-invoices',
-    );
-    expect(requireRouteById('vendor-invoices').groupId).toBe('procurement');
-    expect(requireRouteById('vendor-invoices').projectScope).toBe('required');
-    expect(requireRouteById('vendor-invoices').title).toBe('Vendor Invoices');
-  });
-
-  it('vendor invoice match route is guarded but not in nav', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['vendor_invoice.view'] as const,
-    };
-    expect(canEnterRoute(requireRouteById('vendor-invoice-match'), ctx)).toBe(
-      true,
-    );
-    expect(visibleIds(ctx)).not.toContain('vendor-invoice-match');
-    expect(requireRouteById('vendor-invoice-match').path).toBe(
-      '/procurement/vendor-invoices/:invoiceId/match',
-    );
-  });
-
-  it('denies vendor invoices without vendor_invoice.view', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['vendor_invoice.create'] as const,
-    };
-    expect(canEnterRoute(requireRouteById('vendor-invoices'), ctx)).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('vendor-invoices');
-  });
-
-  it('payment viewer sees Procurement → Vendor Payments', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['payment.view'] as const,
-    };
-    expect(visibleIds(ctx)).toContain('vendor-payments');
-    expect(canEnterRoute(requireRouteById('vendor-payments'), ctx)).toBe(true);
-    expect(requireRouteById('vendor-payments').path).toBe(
-      '/procurement/vendor-payments',
-    );
-    expect(requireRouteById('vendor-payments').groupId).toBe('procurement');
-    expect(requireRouteById('vendor-payments').projectScope).toBe('required');
-    expect(requireRouteById('vendor-payments').title).toBe('Vendor Payments');
-  });
-
-  it('denies vendor payments without payment.view', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['payment.release'] as const,
-    };
-    expect(canEnterRoute(requireRouteById('vendor-payments'), ctx)).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('vendor-payments');
-  });
-
-  it('payment viewer sees Contractors → Payments', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['payment.view'] as const,
-    };
-    expect(visibleIds(ctx)).toContain('contractor-payments');
-    expect(canEnterRoute(requireRouteById('contractor-payments'), ctx)).toBe(
-      true,
-    );
-    expect(requireRouteById('contractor-payments').path).toBe(
-      '/contractors/payments',
-    );
-    expect(requireRouteById('contractor-payments').groupId).toBe('contractors');
-    expect(requireRouteById('contractor-payments').projectScope).toBe(
-      'required',
-    );
-    expect(requireRouteById('contractor-payments').title).toBe('Payments');
-  });
-
-  it('denies contractor payments without payment.view', () => {
-    const ctx = {
-      accessLoaded: true,
-      bypassPermissions: false,
-      permissions: ['payment.release'] as const,
-    };
-    expect(canEnterRoute(requireRouteById('contractor-payments'), ctx)).toBe(
-      false,
-    );
-    expect(visibleIds(ctx)).not.toContain('contractor-payments');
-  });
-
   it('quotation comparison route is guarded but not in nav', () => {
     const ctx = {
       accessLoaded: true,
@@ -1160,125 +996,6 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(visibleIds(ctx)).toContain('users');
     expect(canEnterRoute(requireRouteById('users'), ctx)).toBe(true);
   });
-
-  it('expense category viewer sees Petty Cash → Expense Categories', () => {
-    const ctx = access(['expense_category.view']);
-    expect(visibleIds(ctx)).toContain('expense-categories');
-    expect(canEnterRoute(requireRouteById('expense-categories'), ctx)).toBe(
-      true,
-    );
-    expect(requireRouteById('expense-categories').path).toBe(
-      '/accounting/expense-categories',
-    );
-    expect(requireRouteById('expense-categories').groupId).toBe('petty-cash');
-    expect(requireRouteById('expense-categories').projectScope).toBe('none');
-  });
-
-  it('denies expense categories without expense_category.view', () => {
-    const ctx = access(['expense.view']);
-    expect(canEnterRoute(requireRouteById('expense-categories'), ctx)).toBe(
-      false,
-    );
-    expect(visibleIds(ctx)).not.toContain('expense-categories');
-  });
-
-  it('expense viewer sees Petty Cash → Site Expenses (list + detail)', () => {
-    const ctx = access(['expense.view'], 'p1');
-    expect(visibleIds(ctx)).toContain('site-expenses');
-    expect(canEnterRoute(requireRouteById('site-expenses'), ctx)).toBe(true);
-    expect(canEnterRoute(requireRouteById('site-expense-detail'), ctx)).toBe(
-      true,
-    );
-    expect(requireRouteById('site-expenses').path).toBe('/accounting/expenses');
-    expect(requireRouteById('site-expense-detail').path).toBe(
-      '/accounting/expenses/:expenseId',
-    );
-    expect(requireRouteById('site-expenses').groupId).toBe('petty-cash');
-    expect(requireRouteById('site-expenses').projectScope).toBe('required');
-  });
-
-  it('denies site expenses without expense.view', () => {
-    const ctx = access(['expense_category.view'], 'p1');
-    expect(canEnterRoute(requireRouteById('site-expenses'), ctx)).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('site-expenses');
-  });
-
-  it('bank reconciliation viewer sees Accounting → Bank Reconciliation', () => {
-    const ctx = access(['bank_reconciliation.view']);
-    expect(visibleIds(ctx)).toContain('bank-reconciliation');
-    expect(canEnterRoute(requireRouteById('bank-reconciliation'), ctx)).toBe(
-      true,
-    );
-    expect(requireRouteById('bank-reconciliation').path).toBe(
-      '/accounting/bank-reconciliation',
-    );
-    expect(requireRouteById('bank-reconciliation').groupId).toBe('accounting');
-    expect(
-      canEnterRoute(requireRouteById('bank-reconciliation-detail'), ctx),
-    ).toBe(true);
-    expect(visibleIds(ctx)).not.toContain('bank-reconciliation-detail');
-  });
-
-  it('denies bank reconciliation without bank_reconciliation.view', () => {
-    const ctx = access(['bank.view']);
-    expect(
-      canEnterRoute(requireRouteById('bank-reconciliation'), ctx),
-    ).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('bank-reconciliation');
-  });
-
-  it('period closure viewer sees Accounting → Period Closure', () => {
-    const ctx = access(['period_closure.view']);
-    expect(visibleIds(ctx)).toContain('period-close');
-    expect(canEnterRoute(requireRouteById('period-close'), ctx)).toBe(true);
-    expect(requireRouteById('period-close').path).toBe(
-      '/accounting/period-close',
-    );
-    expect(requireRouteById('period-close').groupId).toBe('accounting');
-  });
-
-  it('denies period closure without period_closure.view', () => {
-    const ctx = access(['account.view']);
-    expect(canEnterRoute(requireRouteById('period-close'), ctx)).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('period-close');
-  });
-
-  it('vendor viewer sees Procurement → Vendors (list + detail)', () => {
-    const ctx = access(['vendor.view']);
-    expect(visibleIds(ctx)).toContain('vendors');
-    expect(canEnterRoute(requireRouteById('vendors'), ctx)).toBe(true);
-    expect(canEnterRoute(requireRouteById('vendor-detail'), ctx)).toBe(true);
-    expect(requireRouteById('vendors').path).toBe('/procurement/vendors');
-    expect(requireRouteById('vendor-detail').path).toBe(
-      '/procurement/vendors/:vendorId',
-    );
-    expect(requireRouteById('vendors').groupId).toBe('procurement');
-  });
-
-  it('denies vendors without vendor.view', () => {
-    const ctx = access(['purchase.view']);
-    expect(canEnterRoute(requireRouteById('vendors'), ctx)).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('vendors');
-  });
-
-  it('material viewer sees Inventory → Materials (list + detail)', () => {
-    const ctx = access(['material.view']);
-    expect(visibleIds(ctx)).toContain('materials');
-    expect(canEnterRoute(requireRouteById('materials'), ctx)).toBe(true);
-    expect(canEnterRoute(requireRouteById('material-detail'), ctx)).toBe(true);
-    expect(requireRouteById('materials').path).toBe('/inventory/materials');
-    expect(requireRouteById('material-detail').path).toBe(
-      '/inventory/materials/:materialId',
-    );
-    expect(requireRouteById('materials').groupId).toBe('inventory');
-  });
-
-  it('denies materials without material.view', () => {
-    const ctx = access(['stock.view']);
-    expect(canEnterRoute(requireRouteById('materials'), ctx)).toBe(false);
-    expect(visibleIds(ctx)).not.toContain('materials');
-  });
-
 });
 
 describe('filterNavGroups', () => {
@@ -1362,16 +1079,6 @@ describe('getPageTitle', () => {
     ).toBe('Journal');
     expect(getPageTitle('/accounting/cash-accounts')).toBe('Cash & Petty Cash');
     expect(getPageTitle('/accounting/bank-accounts')).toBe('Bank Accounts');
-    expect(getPageTitle('/accounting/bank-reconciliation')).toBe(
-      'Bank Reconciliation',
-    );
-    expect(getPageTitle('/accounting/period-close')).toBe('Period Closure');
-    expect(getPageTitle('/accounting/expense-categories')).toBe(
-      'Expense Categories',
-    );
-    expect(getPageTitle('/accounting/expenses')).toBe('Site Expenses');
-    expect(getPageTitle('/inventory/materials')).toBe('Materials');
-    expect(getPageTitle('/procurement/vendors')).toBe('Vendors');
     expect(
       getPageTitle('/accounting/bank-accounts/507f1f77bcf86cd799439011'),
     ).toBe('Bank Account');
@@ -1404,18 +1111,6 @@ describe('getPageTitle', () => {
       'Fund Transfers',
     );
     expect(getPageTitle('/procurement/quotations')).toBe('Quotations');
-    expect(getPageTitle('/procurement/vendor-invoices')).toBe(
-      'Vendor Invoices',
-    );
-    expect(
-      getPageTitle(
-        '/procurement/vendor-invoices/507f1f77bcf86cd799439011/match',
-      ),
-    ).toBe('Three-way Match');
-    expect(getPageTitle('/procurement/vendor-payments')).toBe(
-      'Vendor Payments',
-    );
-    expect(getPageTitle('/contractors/payments')).toBe('Payments');
     expect(getPageTitle('/inventory/stock-balances')).toBe('Stock Balances');
     expect(getPageTitle('/inventory/stock-ledger')).toBe('Stock Ledger');
     expect(getPageTitle('/inventory/stock-counts')).toBe('Stock Counts');
@@ -1439,16 +1134,11 @@ describe('getPageTitle', () => {
       getPageTitle('/inventory/material-issues/507f1f77bcf86cd799439011'),
     ).toBe('Material Issue');
     expect(getPageTitle('/inventory/reorder-alerts')).toBe('Reorder Alerts');
-    expect(getPageTitle('/project-control/boq')).toBe('BOQ');
-    expect(getPageTitle('/project-control/boq/import')).toBe('Import BOQ');
-    expect(getPageTitle('/project-control/boq/versions')).toBe('BOQ Versions');
-    expect(
-      getPageTitle('/project-control/boq/items/507f1f77bcf86cd799439011'),
-    ).toBe('BOQ Item');
     expect(getPageTitle('/approvals')).toBe('Pending');
     expect(getPageTitle('/approvals/abc123')).toBe('Pending');
     expect(getPageTitle('/documents')).toBe('Documents');
     expect(getPageTitle('/administration/audit-logs')).toBe('Audit Logs');
+    expect(getPageTitle('/project-control/dpr')).toBe('Daily progress');
     expect(getPageTitle('/daily-progress-reports')).toBe('Daily progress');
     expect(getPageTitle('/forbidden')).toBe('Access denied');
   });
@@ -1560,34 +1250,6 @@ describe('pathMatchesPattern / param routes', () => {
         '/accounting/bank-accounts/507f1f77bcf86cd799439011',
       ),
     ).toBe(true);
-
-    expect(
-      pathMatchesPattern(
-        '/accounting/bank-reconciliation/:sessionId',
-        '/accounting/bank-reconciliation/507f1f77bcf86cd799439011',
-      ),
-    ).toBe(true);
-
-    expect(
-      pathMatchesPattern(
-        '/procurement/vendors/:vendorId',
-        '/procurement/vendors/507f1f77bcf86cd799439011',
-      ),
-    ).toBe(true);
-
-    expect(
-      pathMatchesPattern(
-        '/inventory/materials/:materialId',
-        '/inventory/materials/507f1f77bcf86cd799439011',
-      ),
-    ).toBe(true);
-
-    expect(
-      pathMatchesPattern(
-        '/accounting/expenses/:expenseId',
-        '/accounting/expenses/507f1f77bcf86cd799439011',
-      ),
-    ).toBe(true);
     expect(
       findRouteByPathname(
         '/accounting/bank-accounts/507f1f77bcf86cd799439011',
@@ -1632,23 +1294,5 @@ describe('pathMatchesPattern / param routes', () => {
         '/procurement/purchase-orders/507f1f77bcf86cd799439011',
       )?.id,
     ).toBe('purchase-order-detail');
-  });
-
-  it('matches BOQ nested paths before list prefix', () => {
-    expect(findRouteByPathname('/project-control/boq')?.id).toBe('boq');
-    expect(findRouteByPathname('/project-control/boq/import')?.id).toBe(
-      'boq-import',
-    );
-    expect(findRouteByPathname('/project-control/boq/versions')?.id).toBe(
-      'boq-versions',
-    );
-    expect(
-      findRouteByPathname(
-        '/project-control/boq/items/507f1f77bcf86cd799439011',
-      )?.id,
-    ).toBe('boq-item-editor');
-    expect(findRouteByPathname('/project-control/boq/items/new')?.id).toBe(
-      'boq-item-editor',
-    );
   });
 });

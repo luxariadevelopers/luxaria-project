@@ -1,4 +1,4 @@
-import type { VendorPaymentMode, VendorPaymentStatus } from './types';
+import { VendorPaymentMode, VendorPaymentStatus } from './types';
 
 const STATUS_LABELS: Record<VendorPaymentStatus, string> = {
   draft: 'Draft',

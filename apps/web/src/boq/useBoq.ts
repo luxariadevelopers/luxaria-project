@@ -140,15 +140,11 @@ export function useDownloadBoqTemplate() {
   });
 }
 
-export function useImportBoqExcel(projectId: string | null | undefined) {
+export function useImportBoqExcel(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => {
-      if (!projectId) throw new Error('Project required');
-      return importBoqExcel(projectId, file);
-    },
+    mutationFn: (file: File) => importBoqExcel(projectId, file),
     onSuccess: () => {
-      if (!projectId) return;
       void qc.invalidateQueries({ queryKey: boqKeys.all });
     },
   });

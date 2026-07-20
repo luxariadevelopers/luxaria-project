@@ -4,6 +4,7 @@ import { RegistryRouteGuard } from '@/auth/RegistryRouteGuard';
 import { AppLayout } from '@/layouts/AppLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { toRelativeAppPath } from '@/navigation/routeRegistry';
+import { DPR_ROUTES } from '@/dpr/routes';
 import { PURCHASE_ORDER_ROUTES } from '@/purchase-orders/routes';
 import { ApprovalDetailPage } from '@/pages/ApprovalDetailPage';
 import { ApprovalsPage } from '@/pages/ApprovalsPage';
@@ -37,7 +38,8 @@ import { DirectorDetailPage } from '@/pages/DirectorDetailPage';
 import { DirectorsPage } from '@/pages/DirectorsPage';
 import { DocumentsDemoPage } from '@/pages/DocumentsDemoPage';
 import { DocumentsPage } from '@/pages/DocumentsPage';
-import { DprPage } from '@/pages/DprPage';
+import { DprDetailPage } from '@/pages/DprDetailPage';
+import { DprListPage } from '@/pages/DprListPage';
 import { InvestorDetailPage } from '@/pages/InvestorDetailPage';
 import { InvestorsPage } from '@/pages/InvestorsPage';
 import { EntityDetailDemoPage } from '@/pages/EntityDetailDemoPage';
@@ -87,8 +89,20 @@ import { MaterialIssuesPage } from '@/pages/MaterialIssuesPage';
 import { ReorderAlertsPage } from '@/pages/ReorderAlertsPage';
 import { BoqPage } from '@/pages/BoqPage';
 import { BoqImportPage } from '@/pages/BoqImportPage';
-import { WorkMeasurementsPage } from '@/pages/WorkMeasurementsPage';
+import { BoqItemEditorPage } from '@/pages/BoqItemEditorPage';
+import { BoqVersionsPage } from '@/pages/BoqVersionsPage';
 import { WorkflowTimelineDemoPage } from '@/pages/WorkflowTimelineDemoPage';
+
+function DailyProgressLegacyRedirect() {
+  const [searchParams] = useSearchParams();
+  const search = searchParams.toString();
+  return (
+    <Navigate
+      to={search ? `${DPR_ROUTES.list}?${search}` : DPR_ROUTES.list}
+      replace
+    />
+  );
+}
 
 /**
  * Page elements keyed by registry route id.
@@ -109,7 +123,8 @@ const APP_ROUTE_ELEMENTS = {
   'project-participants-detail': <ProjectParticipantsPage />,
   'profit-share': <ProfitShareEntryPage />,
   'profit-share-detail': <ProfitSharePage />,
-  'daily-progress': <DprPage />,
+  'daily-progress': <DprListPage />,
+  'daily-progress-detail': <DprDetailPage />,
   vendors: <VendorsPage />,
   contractors: <ContractorsPage />,
   customers: <CustomersPage />,
@@ -157,7 +172,8 @@ const APP_ROUTE_ELEMENTS = {
   'reorder-alerts': <ReorderAlertsPage />,
   boq: <BoqPage />,
   'boq-import': <BoqImportPage />,
-  'work-measurements': <WorkMeasurementsPage />,
+  'boq-item-editor': <BoqItemEditorPage />,
+  'boq-versions': <BoqVersionsPage />,
   users: <UsersPage />,
   documents: <DocumentsPage />,
   'audit-logs': <AuditLogsPage />,
@@ -589,19 +605,24 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="boq-versions" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/boq/versions')}
+                element={APP_ROUTE_ELEMENTS['boq-versions']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="boq-item-editor" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/boq/items/:id')}
+                element={APP_ROUTE_ELEMENTS['boq-item-editor']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="boq" />}>
               <Route
                 path={toRelativeAppPath('/project-control/boq')}
                 element={APP_ROUTE_ELEMENTS.boq}
-              />
-            </Route>
-
-            <Route
-              element={<RegistryRouteGuard routeId="work-measurements" />}
-            >
-              <Route
-                path={toRelativeAppPath('/project-control/work-measurements')}
-                element={APP_ROUTE_ELEMENTS['work-measurements']}
               />
             </Route>
 
@@ -690,8 +711,30 @@ export function AppRouter() {
               element={<RegistryRouteGuard routeId="daily-progress" />}
             >
               <Route
-                path={toRelativeAppPath('/daily-progress-reports')}
+                path={toRelativeAppPath('/project-control/dpr')}
                 element={APP_ROUTE_ELEMENTS['daily-progress']}
+              />
+            </Route>
+
+            <Route
+              element={
+                <RegistryRouteGuard routeId="daily-progress-detail" />
+              }
+            >
+              <Route
+                path={toRelativeAppPath('/project-control/dpr/:id')}
+                element={APP_ROUTE_ELEMENTS['daily-progress-detail']}
+              />
+            </Route>
+
+            <Route
+              element={
+                <RegistryRouteGuard routeId="daily-progress-legacy" />
+              }
+            >
+              <Route
+                path={toRelativeAppPath('/daily-progress-reports')}
+                element={<DailyProgressLegacyRedirect />}
               />
             </Route>
 

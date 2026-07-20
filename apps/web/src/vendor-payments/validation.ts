@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { isoDateOnlySchema } from '@/validation';
 import { isInvoicePayableForPayment } from '@/vendor-invoices/workflowActions';
-import type {
+import {
   VendorInvoiceMatchingStatus,
   VendorInvoiceStatus,
 } from '@/vendor-invoices/types';
@@ -88,8 +88,8 @@ export function filterPayableInvoices(
   return invoices.filter((inv) => {
     if (inv.remainingPayable <= 0.005) return false;
     const gate = isInvoicePayableForPayment({
-      status: inv.status as VendorInvoiceStatus,
-      matchingStatus: inv.matchingStatus as VendorInvoiceMatchingStatus,
+      status: inv.status as typeof VendorInvoiceStatus.Posted,
+      matchingStatus: inv.matchingStatus as typeof VendorInvoiceMatchingStatus.Matched,
       exceptionApproved: inv.exceptionApproved,
     });
     return gate.ok;
@@ -119,8 +119,8 @@ export const paymentFormSchema = z
     tds: nonNegativeMoney,
     retention: nonNegativeMoney,
     deductions: nonNegativeMoney,
-    paymentProof: z.string().max(200),
-    notes: z.string().max(2000),
+    paymentProof: z.string().max(200).optional().or(z.literal('')),
+    notes: z.string().max(2000).optional().or(z.literal('')),
     allocations: z
       .array(
         z.object({

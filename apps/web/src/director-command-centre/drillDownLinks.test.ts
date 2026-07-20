@@ -30,7 +30,7 @@ describe('resolveDrillDownLink', () => {
       },
       allowAll,
     );
-    expect(resolved?.to).toBe('/daily-progress-reports');
+    expect(resolved?.to).toBe('/project-control/dpr');
   });
 
   it('returns null when permission missing', () => {

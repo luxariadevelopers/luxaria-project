@@ -126,8 +126,8 @@ export function InvoiceFormDrawer({
 
   const vendorId = useWatch({ control, name: 'vendorId' });
   const purchaseOrderId = useWatch({ control, name: 'purchaseOrderId' });
-  const watchedGrnIds = useWatch({ control, name: 'grnIds' });
-  const watchedItemsRaw = useWatch({ control, name: 'items' });
+  const grnIds = useWatch({ control, name: 'grnIds' }) ?? [];
+  const watchedItems = useWatch({ control, name: 'items' }) ?? [];
   const taxableValue = useWatch({ control, name: 'taxableValue' }) ?? 0;
   const gst = useWatch({ control, name: 'gst' }) ?? 0;
   const freight = useWatch({ control, name: 'freight' }) ?? 0;
@@ -136,12 +136,6 @@ export function InvoiceFormDrawer({
   const retention = useWatch({ control, name: 'retention' }) ?? 0;
   const totalAmount = useWatch({ control, name: 'totalAmount' }) ?? 0;
   const invoiceNumber = useWatch({ control, name: 'invoiceNumber' }) ?? '';
-
-  const grnIds = useMemo(() => watchedGrnIds ?? [], [watchedGrnIds]);
-  const watchedItems = useMemo(
-    () => watchedItemsRaw ?? [],
-    [watchedItemsRaw],
-  );
 
   const vendors = useVendorOptions('', open && canViewVendors);
   const pos = useInvoiceablePurchaseOrders(
@@ -344,9 +338,7 @@ export function InvoiceFormDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 560, md: 640 } } },
-      }}
+      PaperProps={{ sx: { width: { xs: '100%', sm: 560, md: 640 } } }}
     >
       <Box
         component="form"
@@ -547,7 +539,7 @@ export function InvoiceFormDrawer({
                       p: 1.5,
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography variant="body2" fontWeight={600}>
                       {item?.materialLabel ?? field.materialLabel}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -673,11 +665,7 @@ export function InvoiceFormDrawer({
               disabled={readOnly}
             />
           </Stack>
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center' }}
-          >
+          <Stack direction="row" spacing={1} alignItems="center">
             <FormTextField
               name="totalAmount"
               control={control}

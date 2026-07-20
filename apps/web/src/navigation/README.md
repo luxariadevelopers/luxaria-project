@@ -130,14 +130,6 @@ Detail: `/:inspectionId` (`quality.view`, `showInNav: false`). Create /
 update / complete / cancel use Nest `quality.inspect` (catalog has no
 `quality_inspection.view|create|approve`).
 
-## Contractor payments nav (Phase 096)
-
-Group **Contractors** → item **Payments** (`/contractors/payments`,
-`payment.view`, `projectScope: required`). Create/update/submit/release/cancel
-use Nest `payment.release`; approve/verify/post use `payment.approve` (catalog
-has no `contractor_payment.*`). Running bills deep-link:
-`/contractors/running-bills` (parallel phase — reconcile nav there).
-
 ## Tests
 
 - `filterNav.test.ts` — representative roles (site engineer, user admin, super admin)

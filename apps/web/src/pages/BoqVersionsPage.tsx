@@ -67,10 +67,7 @@ export function BoqVersionsPage() {
 
   const enabled = caps.canView && Boolean(selectedProjectId);
   const versionsQuery = useBoqVersions(selectedProjectId, enabled);
-  const versions = useMemo(
-    () => versionsQuery.data ?? [],
-    [versionsQuery.data],
-  );
+  const versions = versionsQuery.data ?? [];
 
   const compareQuery = useBoqVersionCompare(
     selectedProjectId,
@@ -238,7 +235,7 @@ export function BoqVersionsPage() {
       )}
 
       {versionsQuery.isLoading && (
-        <Stack sx={{ alignItems: 'center', py: 4 }}>
+        <Stack alignItems="center" py={4}>
           <CircularProgress size={32} />
         </Stack>
       )}
@@ -273,11 +270,7 @@ export function BoqVersionsPage() {
 
       {compareFromId && compareToId && (
         <Stack spacing={1}>
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center' }}
-          >
+          <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="subtitle1">Comparison</Typography>
             <Button
               size="small"

@@ -6,7 +6,7 @@ import type {
   ApproveBoqVersionInput,
   BoqHierarchyBlock,
   BoqImportResult,
-  BoqProjectTotalsResult,
+  BoqTotalsValidation,
   BoqVersionComparison,
   CreateBoqItemInput,
   CreateBoqVersionInput,
@@ -79,27 +79,14 @@ export async function fetchBoqHierarchy(
 /** `POST /boq/projects/:projectId/validate-totals` — `boq.view` */
 export async function validateBoqTotals(
   projectId: string,
-): Promise<BoqProjectTotalsResult> {
-  const res = await apiPost<BoqProjectTotalsResult>(
+): Promise<BoqTotalsValidation> {
+  const res = await apiPost<BoqTotalsValidation>(
     `${BASE}/projects/${encodeURIComponent(projectId)}/validate-totals`,
   );
   if (!res.data) {
     throw new Error(res.message || 'BOQ totals validation unavailable');
   }
-  return {
-    ...res.data,
-    totals: {
-      itemCount: Number(res.data.totals.itemCount ?? 0),
-      plannedQuantity: Number(res.data.totals.plannedQuantity ?? 0),
-      materialCost: Number(res.data.totals.materialCost ?? 0),
-      labourCost: Number(res.data.totals.labourCost ?? 0),
-      subcontractCost: Number(res.data.totals.subcontractCost ?? 0),
-      otherCost: Number(res.data.totals.otherCost ?? 0),
-      plannedValue: Number(res.data.totals.plannedValue ?? 0),
-    },
-    invalidCount: Number(res.data.invalidCount ?? 0),
-    invalidItems: res.data.invalidItems ?? [],
-  };
+  return res.data;
 }
 
 /** `GET /boq/import-template` — `boq.view` (xlsx) */

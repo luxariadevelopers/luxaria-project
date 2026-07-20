@@ -106,11 +106,7 @@ export function BoqPage() {
 
   if (activeVersion.isLoading) {
     return (
-      <Stack
-        spacing={2}
-        sx={{ alignItems: 'flex-start' }}
-        data-testid="boq-page-loading"
-      >
+      <Stack spacing={2} alignItems="flex-start" data-testid="boq-page-loading">
         <CircularProgress size={28} />
         <Typography color="text.secondary">Loading active BOQ version…</Typography>
       </Stack>

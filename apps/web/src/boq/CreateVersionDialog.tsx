@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  Typography,
 } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -116,24 +115,19 @@ export function CreateVersionDialog({
             minRows={2}
           />
           {versionType !== BoqVersionType.Original && (
-            <>
-              <FormSelect
-                name="basedOnVersionId"
-                control={control}
-                label="Based on version"
-                options={[
-                  {
-                    value: '',
-                    label: 'Default (current active)',
-                  },
-                  ...basedOnOptions,
-                ]}
-              />
-              <Typography variant="caption" color="text.secondary">
-                Required by Nest for revision / variation / change order;
-                defaults to active.
-              </Typography>
-            </>
+            <FormSelect
+              name="basedOnVersionId"
+              control={control}
+              label="Based on version"
+              options={[
+                {
+                  value: '',
+                  label: 'Default (current active)',
+                },
+                ...basedOnOptions,
+              ]}
+              helperText="Required by Nest for revision / variation / change order; defaults to active."
+            />
           )}
           <FormTextField
             name="timeImpact"

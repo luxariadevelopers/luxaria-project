@@ -58,7 +58,7 @@ export function BoqImportPage() {
 
   if (activeVersion.isLoading) {
     return (
-      <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
+      <Stack spacing={2} alignItems="flex-start">
         <CircularProgress size={28} />
         <Typography color="text.secondary">
           Checking active BOQ version…

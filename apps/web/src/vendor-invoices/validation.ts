@@ -215,8 +215,8 @@ export const invoiceFormSchema = z
     freight: nonNegativeMoney,
     discount: nonNegativeMoney,
     totalAmount: nonNegativeMoney,
-    invoiceDocument: z.string().max(200),
-    notes: z.string().max(2000),
+    invoiceDocument: z.string().max(200).optional().or(z.literal('')),
+    notes: z.string().max(2000).optional().or(z.literal('')),
     items: z
       .array(
         z.object({

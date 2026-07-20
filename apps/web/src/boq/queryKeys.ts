@@ -1,7 +1,5 @@
-export const BOQ_QUERY_KEY = ['boq'] as const;
-
 export const boqKeys = {
-  all: BOQ_QUERY_KEY,
+  all: ['boq'] as const,
   hierarchy: (projectId: string) =>
     [...boqKeys.all, 'hierarchy', projectId] as const,
   totals: (projectId: string) =>
@@ -24,4 +22,6 @@ export const boqKeys = {
       fromVersionId,
       toVersionId,
     ] as const,
+  totals: (projectId: string) =>
+    [...boqKeys.all, 'totals', projectId] as const,
 };

@@ -1,3 +1,4 @@
+import { DPR_ROUTES } from '@/dpr/routes';
 import type { PermissionCode } from '@/navigation/permissionCatalog';
 import {
   NotificationEventType,
@@ -41,7 +42,7 @@ export const ENTITY_LINK_RULES: readonly EntityLinkRule[] = [
       'daily_progress_reports',
     ],
     eventTypes: [NotificationEventType.MissingDpr],
-    path: '/daily-progress-reports',
+    path: DPR_ROUTES.list,
     anyOf: ['dpr.view'],
     requiresProject: true,
     label: 'Open daily progress',

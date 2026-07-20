@@ -179,10 +179,7 @@ export type BoqHierarchyBlock = PublicBoqBlock & {
 /** Alias used by item editor / manage flows. */
 export type BoqHierarchyBlockNode = BoqHierarchyBlock;
 
-/**
- * Nest `POST …/validate-totals` project rollup.
- * Named distinctly from `calculations.BoqTotalsValidation` (per-item).
- */
+/** Nest `POST …/validate-totals` response (project rollup). */
 export type BoqProjectTotalsResult = {
   valid: boolean;
   totals: {
@@ -229,13 +226,8 @@ export type BoqTreeSelection =
   | { kind: 'item'; id: string }
   | null;
 
-export type BoqMaterialCoefficientInput = {
-  materialId?: string | null;
-  materialCode?: string | null;
-  description?: string | null;
-  coefficient: number;
-  unit?: BoqUnit | null;
-};
+/** Alias used by item editor form. */
+export type BoqHierarchyBlockNode = BoqHierarchyBlock;
 
 export type CreateBoqItemInput = {
   versionId?: string;
@@ -252,7 +244,6 @@ export type CreateBoqItemInput = {
   plannedValue?: number;
   startDate?: string | null;
   endDate?: string | null;
-  materialCoefficients?: BoqMaterialCoefficientInput[];
   status?: BoqItemStatus;
   notes?: string | null;
 };
@@ -269,7 +260,6 @@ export type UpdateBoqItemInput = {
   plannedValue?: number;
   startDate?: string | null;
   endDate?: string | null;
-  materialCoefficients?: BoqMaterialCoefficientInput[];
   status?: BoqItemStatus;
   notes?: string | null;
 };
@@ -354,5 +344,124 @@ export type BoqVersionComparison = {
   added: BoqCompareAddedItem[];
   removed: BoqCompareRemovedItem[];
   changed: BoqCompareChangedItem[];
+};
+
+export type BoqMaterialCoefficientInput = {
+  materialId?: string | null;
+  materialCode?: string | null;
+  description?: string | null;
+  coefficient: number;
+  unit?: BoqUnit | null;
+};
+
+export type CreateBoqItemInput = {
+  versionId?: string;
+  workCategoryId: string;
+  boqCode?: string;
+  description: string;
+  unit: BoqUnit;
+  plannedQuantity: number;
+  materialCost?: number;
+  labourCost?: number;
+  subcontractCost?: number;
+  otherCost?: number;
+  plannedRate?: number;
+  plannedValue?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  materialCoefficients?: BoqMaterialCoefficientInput[];
+  status?: BoqItemStatus;
+  notes?: string | null;
+};
+
+export type UpdateBoqItemInput = {
+  description?: string;
+  unit?: BoqUnit;
+  plannedQuantity?: number;
+  materialCost?: number;
+  labourCost?: number;
+  subcontractCost?: number;
+  otherCost?: number;
+  plannedRate?: number;
+  plannedValue?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  materialCoefficients?: BoqMaterialCoefficientInput[];
+  status?: BoqItemStatus;
+  notes?: string | null;
+};
+
+export type CreateBoqVersionInput = {
+  versionType: BoqVersionType;
+  effectiveDate: string;
+  reason: string;
+  basedOnVersionId?: string;
+  costImpact?: number;
+  timeImpact?: number;
+};
+
+export type UpdateBoqVersionInput = {
+  effectiveDate?: string;
+  reason?: string;
+  costImpact?: number;
+  timeImpact?: number;
+};
+
+export type ApproveBoqVersionInput = {
+  approvalReference: string;
+  comment?: string | null;
+};
+
+export type RejectBoqVersionInput = {
+  reason: string;
+};
+
+export type ActivateBoqVersionInput = {
+  approvalReference?: string | null;
+};
+
+export type BoqCompareSnapshot = {
+  plannedQuantity: number;
+  plannedRate: number;
+  plannedValue: number;
+  materialCost: number;
+  labourCost: number;
+  subcontractCost: number;
+  otherCost: number;
+};
+
+export type BoqVersionComparison = {
+  fromVersion: PublicBoqVersion;
+  toVersion: PublicBoqVersion;
+  summary: {
+    addedCount: number;
+    removedCount: number;
+    changedCount: number;
+    unchangedCount: number;
+    fromTotalPlannedValue: number;
+    toTotalPlannedValue: number;
+    costImpact: number;
+  };
+  added: Array<{
+    boqCode: string;
+    description: string;
+    plannedQuantity: number;
+    plannedRate: number;
+    plannedValue: number;
+  }>;
+  removed: Array<{
+    boqCode: string;
+    description: string;
+    plannedQuantity: number;
+    plannedRate: number;
+    plannedValue: number;
+  }>;
+  changed: Array<{
+    boqCode: string;
+    description: string;
+    from: BoqCompareSnapshot;
+    to: BoqCompareSnapshot;
+    deltas: BoqCompareSnapshot;
+  }>;
   unchanged?: Array<{ boqCode: string }>;
 };

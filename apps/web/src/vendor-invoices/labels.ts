@@ -1,15 +1,28 @@
-import { getDomainStatusLabel } from '@/status';
-import type {
+import {
+  VendorInvoiceMatchingStatus,
+  VendorInvoiceStatus,
+  vendorInvoiceMatchingStatusCatalog,
+  vendorInvoiceStatusCatalog,
+} from '@/status';
+import {
   VendorInvoiceVarianceSeverity,
   VendorInvoiceVarianceType,
 } from './types';
 
 export function invoiceStatusLabel(status: string): string {
-  return getDomainStatusLabel('vendorInvoice', status, status);
+  return (
+    vendorInvoiceStatusCatalog.labels[
+      status as VendorInvoiceStatus
+    ] ?? status
+  );
 }
 
 export function matchingStatusLabel(status: string): string {
-  return getDomainStatusLabel('vendorInvoiceMatching', status, status);
+  return (
+    vendorInvoiceMatchingStatusCatalog.labels[
+      status as VendorInvoiceMatchingStatus
+    ] ?? status
+  );
 }
 
 const VARIANCE_TYPE_LABELS: Record<VendorInvoiceVarianceType, string> = {

@@ -58,7 +58,8 @@ export function BoqItemPanel({ item }: Props) {
       <Stack
         direction="row"
         spacing={1}
-        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap' }}
+        useFlexGap
       >
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           {item.boqCode}

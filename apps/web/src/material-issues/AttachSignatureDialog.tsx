@@ -42,8 +42,7 @@ export function AttachSignatureDialog({
   const [doc, setDoc] = useState<PublicDocument | null>(null);
 
   const save = () => {
-    const checksum = doc?.checksum?.trim() ?? '';
-    if (!issue || !doc?.id || !checksum) {
+    if (!issue || !doc?.id || !doc.checksum) {
       notifyError('Upload an active signature document with checksum first');
       return;
     }
@@ -53,7 +52,7 @@ export function AttachSignatureDialog({
           id: issue.id,
           input: {
             recipientSignatureDocumentId: doc.id,
-            recipientSignatureChecksum: checksum,
+            recipientSignatureChecksum: doc.checksum,
           },
         });
         success('Recipient signature attached');

@@ -1,3 +1,4 @@
+import { DPR_ROUTES } from '@/dpr/routes';
 import type { PermissionCode } from '@/navigation/permissionCatalog';
 import type { DrillDownLink } from './types';
 
@@ -31,7 +32,7 @@ export const DRILL_DOWN_RULES: readonly DrillRule[] = [
   },
   {
     apiPrefix: '/api/v1/daily-progress-reports',
-    path: '/daily-progress-reports',
+    path: DPR_ROUTES.list,
     anyOf: ['dpr.view'],
   },
   {

@@ -45,7 +45,7 @@ describe('notification entity deep links', () => {
     );
 
     expect(link).toEqual({
-      to: '/daily-progress-reports',
+      to: '/project-control/dpr',
       label: 'Open daily progress',
       projectId: '507f1f77bcf86cd799439013',
       requiresProject: true,
@@ -59,7 +59,7 @@ describe('notification entity deep links', () => {
       }),
       { hasAnyPermission: () => true },
     );
-    expect(link?.to).toBe('/daily-progress-reports');
+    expect(link?.to).toBe('/project-control/dpr');
   });
 
   it('rejects malformed entity ids', () => {

@@ -38,7 +38,7 @@ export function AvailableStockIndicator({
 
   if (stock.isLoading) {
     return (
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <Stack direction="row" spacing={1} alignItems="center">
         <CircularProgress size={14} />
         <Typography variant="caption">Loading available stock…</Typography>
       </Stack>
@@ -67,7 +67,7 @@ export function AvailableStockIndicator({
       variant="caption"
       color={over ? 'error' : 'text.secondary'}
       data-testid="available-stock-indicator"
-      sx={{ fontWeight: over ? 600 : 400 }}
+      fontWeight={over ? 600 : 400}
     >
       Available: {available} {unit}
       {over ? ' — issue exceeds available stock' : ''}

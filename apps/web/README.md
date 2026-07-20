@@ -45,19 +45,4 @@ Print / PDF: [`src/print-pdf/README.md`](./src/print-pdf/README.md).
 Export: [`src/export/README.md`](./src/export/README.md).  
 Site Operations: [`src/site-operations-dashboard/README.md`](./src/site-operations-dashboard/README.md).  
 Notifications: [`src/notifications/README.md`](./src/notifications/README.md).  
-Petty-cash fund transfers: [`src/petty-cash-transfers/README.md`](./src/petty-cash-transfers/README.md) (`/accounting/petty-cash/transfers`).  
-Contractor payments: [`src/contractor-payments/README.md`](./src/contractor-payments/README.md) (`/contractors/payments`, Phase 096).
-Bookings: [`src/bookings/README.md`](./src/bookings/README.md) (`/sales/bookings`, Phase 101).
-
-## Feature modules (phases 051–060)
-
-| Area | Path | Notes |
-|------|------|-------|
-| Expense categories | `src/expense-categories/` | `/accounting/expense-categories` |
-| Site expenses | `src/expenses/` | List + voucher detail |
-| Bank reconciliation | `src/bank-reconciliation/` | Import/match/finalise |
-| Period close | `src/period-close/` | Checklist + lock/reopen |
-| Vendors | `src/vendors/` | Master list + 360 detail |
-| Materials | `src/materials/` | Catalogue + detail |
-| Purchase requests | `src/purchase-requests/` | Queue list (existing detail/create retained) |
-
+Petty-cash fund transfers: [`src/petty-cash-transfers/README.md`](./src/petty-cash-transfers/README.md) (`/accounting/petty-cash/transfers`).

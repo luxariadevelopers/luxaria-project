@@ -285,12 +285,32 @@ const APP_ROUTES = [
   },
   {
     id: 'daily-progress',
-    path: '/daily-progress-reports',
+    path: '/project-control/dpr',
     title: 'Daily progress',
     layout: 'app',
     showInNav: true,
-    groupId: 'projects-site',
+    groupId: 'project-control',
     icon: 'dpr',
+    anyOf: ['dpr.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'dpr',
+  },
+  {
+    id: 'daily-progress-detail',
+    path: '/project-control/dpr/:id',
+    title: 'Daily progress report',
+    layout: 'app',
+    showInNav: false,
+    anyOf: ['dpr.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'detail',
+  },
+  {
+    id: 'daily-progress-legacy',
+    path: '/daily-progress-reports',
+    title: 'Daily progress',
+    layout: 'app',
+    showInNav: false,
     anyOf: ['dpr.view'],
     projectScope: 'required',
     breadcrumbSegment: 'daily-progress-reports',
@@ -832,18 +852,6 @@ const APP_ROUTES = [
     breadcrumbSegment: 'items',
   },
   {
-    id: 'work-measurements',
-    path: '/project-control/work-measurements',
-    title: 'Work Measurements',
-    layout: 'app',
-    showInNav: true,
-    groupId: 'project-control',
-    icon: 'projects',
-    anyOf: ['measurement.view'],
-    projectScope: 'required',
-    breadcrumbSegment: 'work-measurements',
-  },
-  {
     id: 'users',
     path: '/users',
     title: 'Users',
@@ -1129,7 +1137,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   /** Parent crumb for `/project-control/*`. */
   'project-control': 'Project Control',
   boq: 'BOQ',
-  'work-measurements': 'Work Measurements',
+  dpr: 'Daily progress',
 };
 
 export function getRouteLabel(segment: string): string {

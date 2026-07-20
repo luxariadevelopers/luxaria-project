@@ -43,6 +43,6 @@ Project-scoped transaction / party lists pass the selected `projectId` when avai
 
 Target routes are registered with `showInNav: false` (header search only — no new sidebar items):
 
-`/vendors`, `/contractors`, `/customers`, `/purchase-orders`, `/procurement/purchase-requests/:id`, `/sales/bookings`
+`/vendors`, `/contractors`, `/customers`, `/purchase-orders`, `/procurement/purchase-requests/:id`, `/bookings`
 
 Each is guarded by `RegistryRouteGuard` with the matching view permission.

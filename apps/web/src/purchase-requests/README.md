@@ -58,39 +58,3 @@ Nest catalog uses `purchase.*` — **not** `purchase_request.review` / `purchase
 6. Active project required (`projectScope: required`)
 7. Route guard + Nest 403 — hiding buttons is not enough
 8. Shared types/api under `apps/web/src/purchase-requests/` for both phases
-
----
-
-## Phase 060 queue additions
-
-# Purchase requests work queue (Micro Phase 060)
-
-Route: `/procurement/purchase-requests`  
-Nav: **Procurement → Purchase Requests** (`projectScope: required`)
-
-## APIs
-
-Base: `/purchase-requests`
-
-| Endpoint | Permission |
-|----------|------------|
-| `GET /` · `GET /:id` | `purchase.view` |
-| `POST /` · `PATCH /:id` · `POST …/submit` · `POST …/cancel` | `purchase.request` |
-| `POST …/review` · `…/approve` · `…/reject` · `…/return` | `purchase.approve` |
-| `POST …/start-sourcing` · `POST …/close` | `purchase.order` |
-| `GET /materials` (create picker) | `material.view` |
-
-Catalog uses **`purchase.*`** (prompt aliases `purchase_request.view/create/review/approve` do not exist).  
-`purchase.request` covers create/submit/cancel; `purchase.approve` covers review + approve.
-
-## UI rules
-
-1. Work queue — list with priority, required-by date, project, status, workflow actions
-2. Overdue — client filter: open work statuses + `requiredByDate` before today (UTC day)
-3. Filters — Nest `status` / `priority` / `projectId` / `search`; overdue is client-only
-4. List approve — full approve (all lines at requested qty); Nest still supports partial via API
-5. Route guard + Nest 403 — hiding buttons is not enough; active project required
-
-## Components
-
-`PRTable`, `PurchaseRequestFilters`, priority/status chips, action dialog, create drawer
