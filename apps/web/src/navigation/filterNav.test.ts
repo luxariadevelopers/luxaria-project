@@ -1531,7 +1531,22 @@ describe('getPageTitle', () => {
       getPageTitle('/project-control/boq/items/507f1f77bcf86cd799439011'),
     ).toBe('BOQ Item');
     expect(getPageTitle('/approvals')).toBe('Pending');
-    expect(getPageTitle('/approvals/abc123')).toBe('Pending');
+    expect(getPageTitle('/approvals/abc123')).toBe('Approval');
+    expect(getPageTitle('/project-control/work-measurements')).toBe(
+      'Work Measurements',
+    );
+    expect(getPageTitle('/project-control/material-coefficients')).toBe(
+      'Material Coefficients',
+    );
+    expect(getPageTitle('/project-control/material-variance')).toBe(
+      'Material Variance',
+    );
+    expect(getPageTitle('/project-control/cost-forecast')).toBe(
+      'Cost Forecast',
+    );
+    expect(getPageTitle('/contractors/agreements')).toBe('Agreements');
+    expect(getPageTitle('/contractors/agreements/abc123')).toBe('Agreement');
+    expect(getPageTitle('/sales/collections')).toBe('Collections');
     expect(getPageTitle('/documents')).toBe('Documents');
     expect(getPageTitle('/administration/audit-logs')).toBe('Audit Logs');
     expect(getPageTitle('/daily-progress-reports')).toBe('Daily progress');

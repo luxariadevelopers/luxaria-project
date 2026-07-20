@@ -47,6 +47,7 @@ const ELEMENT_MAP = {
   'purchase-dashboard': 'PurchaseDashboardPage',
   notifications: 'NotificationsPage',
   approvals: 'ApprovalsPage',
+  'approval-detail': 'ApprovalDetailPage',
   projects: 'ProjectsPage',
   'project-dashboard': 'ProjectDashboardEntryPage',
   'project-dashboard-detail': 'ProjectDashboardPage',
@@ -57,9 +58,15 @@ const ELEMENT_MAP = {
   'daily-progress': 'DprListPage',
   boq: 'BoqPage',
   'boq-import': 'BoqImportPage',
+  'work-measurements': 'WorkMeasurementsPage',
+  'material-coefficients': 'MaterialCoefficientsPage',
+  'material-variance': 'MaterialVariancePage',
+  'cost-forecast': 'CostForecastPage',
   vendors: 'VendorsPage',
   'vendor-detail': 'VendorDetailPage',
   contractors: 'ContractorsPage',
+  'contractor-agreements': 'ContractorAgreementsPage',
+  'contractor-agreement-detail': 'ContractorAgreementDetailPage',
   'contractor-payments': 'ContractorPaymentsPage',
   'running-bills': 'RunningBillsPage',
   'running-bill-create': 'RunningBillCreatePage',
@@ -88,6 +95,7 @@ const ELEMENT_MAP = {
   'stock-count-detail': 'StockCountDetailPage',
   units: 'UnitsPage',
   'unit-detail': 'UnitDetailPage',
+  collections: 'CollectionsPage',
   bookings: 'BookingsPage',
   cancellations: 'CancellationsPage',
   directors: 'DirectorsPage',
@@ -207,17 +215,23 @@ const routeBlocks = appRoutes
     const elKey = /[^a-zA-Z0-9_]/.test(r.id)
       ? `APP_ROUTE_ELEMENTS['${r.id}']`
       : `APP_ROUTE_ELEMENTS.${r.id}`;
+    const wrapDevelopmentRoute = (routeBlock) =>
+      r.id.startsWith('dev-')
+        ? `            {import.meta.env.DEV ? (
+${routeBlock}
+            ) : null}`
+        : routeBlock;
     if (r.path === '/') {
-      return `            <Route element={<RegistryRouteGuard routeId="${r.id}" />}>
+      return wrapDevelopmentRoute(`            <Route element={<RegistryRouteGuard routeId="${r.id}" />}>
               <Route index element={${elKey}} />
-            </Route>`;
+            </Route>`);
     }
-    return `            <Route element={<RegistryRouteGuard routeId="${r.id}" />}>
+    return wrapDevelopmentRoute(`            <Route element={<RegistryRouteGuard routeId="${r.id}" />}>
               <Route
                 path={toRelativeAppPath('${r.path}')}
                 element={${elKey}}
               />
-            </Route>`;
+            </Route>`);
   })
   .join('\n\n');
 

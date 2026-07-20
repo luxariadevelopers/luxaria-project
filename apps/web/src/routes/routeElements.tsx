@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import type { AppRouteId } from '@/navigation/routeRegistry';
 import { AccountCreatePage } from '@/pages/AccountCreatePage';
 import { AccountEditPage } from '@/pages/AccountEditPage';
+import { ApprovalDetailPage } from '@/pages/ApprovalDetailPage';
 import { ApprovalsPage } from '@/pages/ApprovalsPage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { BankAccountDetailPage } from '@/pages/BankAccountDetailPage';
@@ -22,11 +23,15 @@ import { CancellationsPage } from '@/pages/CancellationsPage';
 import { CashAccountsPage } from '@/pages/CashAccountsPage';
 import { CashBookPage } from '@/pages/CashBookPage';
 import { ChartOfAccountsPage } from '@/pages/ChartOfAccountsPage';
+import { CollectionsPage } from '@/pages/CollectionsPage';
 import { CommitmentDetailPage } from '@/pages/CommitmentDetailPage';
 import { CommitmentsPage } from '@/pages/CommitmentsPage';
+import { ContractorAgreementDetailPage } from '@/pages/ContractorAgreementDetailPage';
+import { ContractorAgreementsPage } from '@/pages/ContractorAgreementsPage';
 import { ContractorPaymentsPage } from '@/pages/ContractorPaymentsPage';
 import { ContractorsPage } from '@/pages/ContractorsPage';
 import { ContributionReceiptsPage } from '@/pages/ContributionReceiptsPage';
+import { CostForecastPage } from '@/pages/CostForecastPage';
 import { CustomerDetailPage } from '@/pages/CustomerDetailPage';
 import { CustomersPage } from '@/pages/CustomersPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -56,10 +61,12 @@ import { JournalsPage } from '@/pages/JournalsPage';
 import { LabourAttendancePage } from '@/pages/LabourAttendancePage';
 import { LabourCategoriesPage } from '@/pages/LabourCategoriesPage';
 import { ManpowerShortfallPage } from '@/pages/ManpowerShortfallPage';
+import { MaterialCoefficientsPage } from '@/pages/MaterialCoefficientsPage';
 import { MaterialDetailPage } from '@/pages/MaterialDetailPage';
 import { MaterialIssueDetailPage } from '@/pages/MaterialIssueDetailPage';
 import { MaterialIssuesPage } from '@/pages/MaterialIssuesPage';
 import { MaterialsPage } from '@/pages/MaterialsPage';
+import { MaterialVariancePage } from '@/pages/MaterialVariancePage';
 import { NoProjectAccessPage } from '@/pages/NoProjectAccessPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { PeriodClosePage } from '@/pages/PeriodClosePage';
@@ -104,6 +111,7 @@ import { VendorInvoicesPage } from '@/pages/VendorInvoicesPage';
 import { VendorPaymentsPage } from '@/pages/VendorPaymentsPage';
 import { VendorsPage } from '@/pages/VendorsPage';
 import { WorkflowTimelineDemoPage } from '@/pages/WorkflowTimelineDemoPage';
+import { WorkMeasurementsPage } from '@/pages/WorkMeasurementsPage';
 
 export const APP_ROUTE_ELEMENTS: {
   [K in Exclude<AppRouteId, 'login'>]: ReactElement;
@@ -115,6 +123,7 @@ export const APP_ROUTE_ELEMENTS: {
   'purchase-dashboard': <PurchaseDashboardPage />,
   notifications: <NotificationsPage />,
   approvals: <ApprovalsPage />,
+  'approval-detail': <ApprovalDetailPage />,
   projects: <ProjectsPage />,
   'project-dashboard': <ProjectDashboardEntryPage />,
   'project-dashboard-detail': <ProjectDashboardPage />,
@@ -125,9 +134,15 @@ export const APP_ROUTE_ELEMENTS: {
   'daily-progress': <DprListPage />,
   boq: <BoqPage />,
   'boq-import': <BoqImportPage />,
+  'work-measurements': <WorkMeasurementsPage />,
+  'material-coefficients': <MaterialCoefficientsPage />,
+  'material-variance': <MaterialVariancePage />,
+  'cost-forecast': <CostForecastPage />,
   vendors: <VendorsPage />,
   'vendor-detail': <VendorDetailPage />,
   contractors: <ContractorsPage />,
+  'contractor-agreements': <ContractorAgreementsPage />,
+  'contractor-agreement-detail': <ContractorAgreementDetailPage />,
   'contractor-payments': <ContractorPaymentsPage />,
   'running-bills': <RunningBillsPage />,
   'running-bill-create': <RunningBillCreatePage />,
@@ -156,6 +171,7 @@ export const APP_ROUTE_ELEMENTS: {
   'stock-count-detail': <StockCountDetailPage />,
   units: <UnitsPage />,
   'unit-detail': <UnitDetailPage />,
+  collections: <CollectionsPage />,
   bookings: <BookingsPage />,
   cancellations: <CancellationsPage />,
   directors: <DirectorsPage />,

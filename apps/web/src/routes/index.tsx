@@ -101,6 +101,13 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="approval-detail" />}>
+              <Route
+                path={toRelativeAppPath('/approvals/:approvalId')}
+                element={APP_ROUTE_ELEMENTS['approval-detail']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="projects" />}>
               <Route
                 path={toRelativeAppPath('/projects')}
@@ -171,6 +178,34 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="work-measurements" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/work-measurements')}
+                element={APP_ROUTE_ELEMENTS['work-measurements']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="material-coefficients" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/material-coefficients')}
+                element={APP_ROUTE_ELEMENTS['material-coefficients']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="material-variance" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/material-variance')}
+                element={APP_ROUTE_ELEMENTS['material-variance']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="cost-forecast" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/cost-forecast')}
+                element={APP_ROUTE_ELEMENTS['cost-forecast']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="vendors" />}>
               <Route
                 path={toRelativeAppPath('/procurement/vendors')}
@@ -189,6 +224,20 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/contractors')}
                 element={APP_ROUTE_ELEMENTS.contractors}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="contractor-agreements" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/agreements')}
+                element={APP_ROUTE_ELEMENTS['contractor-agreements']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="contractor-agreement-detail" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/agreements/:agreementId')}
+                element={APP_ROUTE_ELEMENTS['contractor-agreement-detail']}
               />
             </Route>
 
@@ -385,6 +434,13 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/sales/units/:id')}
                 element={APP_ROUTE_ELEMENTS['unit-detail']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="collections" />}>
+              <Route
+                path={toRelativeAppPath('/sales/collections')}
+                element={APP_ROUTE_ELEMENTS.collections}
               />
             </Route>
 
@@ -724,54 +780,68 @@ export function AppRouter() {
               />
             </Route>
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-data-table" />}>
               <Route
                 path={toRelativeAppPath('/dev/data-table')}
                 element={APP_ROUTE_ELEMENTS['dev-data-table']}
               />
             </Route>
+            ) : null}
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-forms" />}>
               <Route
                 path={toRelativeAppPath('/dev/forms')}
                 element={APP_ROUTE_ELEMENTS['dev-forms']}
               />
             </Route>
+            ) : null}
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-documents" />}>
               <Route
                 path={toRelativeAppPath('/dev/documents')}
                 element={APP_ROUTE_ELEMENTS['dev-documents']}
               />
             </Route>
+            ) : null}
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-workflow-timeline" />}>
               <Route
                 path={toRelativeAppPath('/dev/workflow-timeline')}
                 element={APP_ROUTE_ELEMENTS['dev-workflow-timeline']}
               />
             </Route>
+            ) : null}
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-entity-detail" />}>
               <Route
                 path={toRelativeAppPath('/dev/entity-detail')}
                 element={APP_ROUTE_ELEMENTS['dev-entity-detail']}
               />
             </Route>
+            ) : null}
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-print-pdf" />}>
               <Route
                 path={toRelativeAppPath('/dev/print-pdf')}
                 element={APP_ROUTE_ELEMENTS['dev-print-pdf']}
               />
             </Route>
+            ) : null}
 
+            {import.meta.env.DEV ? (
             <Route element={<RegistryRouteGuard routeId="dev-export" />}>
               <Route
                 path={toRelativeAppPath('/dev/export')}
                 element={APP_ROUTE_ELEMENTS['dev-export']}
               />
             </Route>
+            ) : null}
             </Route>
           </Route>
         </Route>
