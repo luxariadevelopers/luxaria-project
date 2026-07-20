@@ -106,7 +106,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build backend (dev)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/backend/Dockerfile.dev
@@ -116,7 +116,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=backend-dev
 
       - name: Build web (dev)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/web/Dockerfile.dev
@@ -126,7 +126,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=web-dev
 
       - name: Build web (production)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/web/Dockerfile
@@ -136,7 +136,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=web-prod
 
       - name: Build backend (production)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/backend/Dockerfile
