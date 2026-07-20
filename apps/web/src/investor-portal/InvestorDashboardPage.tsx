@@ -1,107 +1,124 @@
-import { useQuery } from '@tanstack/react-query';
-import { Grid, Stack, Typography } from '@mui/material';
-import { fetchInvestorPortalMe, fetchInvestorPortalProjects } from './api';
+import { Grid, Paper, Stack, Typography } from '@mui/material';
 import {
-  CommitmentContributionCards,
-  ProfitShareCard,
-  ProgressCard,
-} from './components/InvestmentCards';
-import { ProjectSummaryCard } from './components/ProjectSummaryCard';
-import { QueryStatePanel } from './components/QueryStatePanel';
+  InvestorEmptyState,
+  InvestorErrorState,
+  InvestorForbiddenState,
+  InvestorLoadingState,
+} from './components/InvestorStatePanel';
+import { getErrorMessage, useInvestorPortal } from './InvestorPortalContext';
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export function InvestorDashboardPage() {
-  const meQuery = useQuery({
-    queryKey: ['investor-portal', 'me'],
-    queryFn: async () => {
-      const res = await fetchInvestorPortalMe();
-      return res.data ?? null;
-    },
-  });
+  const {
+    profile,
+    selectedProject,
+    isProfileLoading,
+    profileError,
+    isProfileForbidden,
+    refetchProfile,
+    isProjectsLoading,
+    projects,
+  } = useInvestorPortal();
 
-  const projectsQuery = useQuery({
-    queryKey: ['investor-portal', 'projects'],
-    queryFn: async () => {
-      const res = await fetchInvestorPortalProjects();
-      return res.data ?? [];
-    },
-  });
+  if (isProfileLoading || isProjectsLoading) {
+    return <InvestorLoadingState title="Loading your investor profile…" />;
+  }
 
-  const loading = meQuery.isLoading || projectsQuery.isLoading;
-  const error = meQuery.error ?? projectsQuery.error;
-  const projects = projectsQuery.data ?? [];
+  if (isProfileForbidden) {
+    return <InvestorForbiddenState />;
+  }
 
-  const totals = projects.reduce(
-    (acc, project) => ({
-      commitment: acc.commitment + project.commitmentAmount,
-      contributed: acc.contributed + project.amountContributed,
-      pending: acc.pending + project.pendingContribution,
-    }),
-    { commitment: 0, contributed: 0, pending: 0 },
-  );
+  if (profileError) {
+    return (
+      <InvestorErrorState
+        title="Unable to load profile"
+        message={getErrorMessage(profileError)}
+        onRetry={refetchProfile}
+      />
+    );
+  }
 
-  const avgProgress =
-    projects.length > 0
-      ? projects.reduce((sum, p) => sum + p.physicalProgressPercent, 0) /
-        projects.length
-      : 0;
-
-  const avgProfitShare =
-    projects.length > 0
-      ? projects.reduce((sum, p) => sum + p.approvedProfitSharePercentage, 0) /
-        projects.length
-      : 0;
+  if (!profile) {
+    return (
+      <InvestorEmptyState
+        title="No investor profile linked"
+        message="Contact Luxaria support to link your portal account."
+      />
+    );
+  }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} data-testid="investor-dashboard">
       <Stack spacing={0.5}>
-        <Typography variant="h4">Dashboard</Typography>
+        <Typography variant="h4">Welcome, {profile.legalName}</Typography>
         <Typography color="text.secondary">
-          Authorised project investment summaries for your linked investor
-          profile only.
+          Investor code {profile.investorCode} · KYC {profile.kycStatus}
         </Typography>
       </Stack>
 
-      <QueryStatePanel
-        loading={loading}
-        error={error}
-        onRetry={() => {
-          void meQuery.refetch();
-          void projectsQuery.refetch();
-        }}
-      >
-        {meQuery.data ? (
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Welcome, <strong>{meQuery.data.legalName}</strong> (
-            {meQuery.data.investorCode})
-          </Typography>
-        ) : null}
-
-        {projects.length > 0 ? (
-          <Grid container spacing={2} sx={{ mb: 1 }}>
-            <CommitmentContributionCards
-              commitmentAmount={totals.commitment}
-              amountContributed={totals.contributed}
-              pendingContribution={totals.pending}
-            />
-            <ProfitShareCard approvedProfitSharePercentage={avgProfitShare} />
-            <ProgressCard physicalProgressPercent={avgProgress} />
-          </Grid>
-        ) : null}
-
-        <Stack spacing={2}>
-          <Typography variant="h6">Your projects</Typography>
-          {projects.length === 0 ? (
-            <QueryStatePanel
-              empty
-              emptyMessage="No authorised projects are linked to your investor profile yet."
-            />
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+            <Typography variant="overline" color="text.secondary">
+              Profile status
+            </Typography>
+            <Typography variant="h6">{profile.status}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Type: {profile.investorType}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, md: 8 }}>
+          {selectedProject ? (
+            <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+              <Typography variant="overline" color="text.secondary">
+                Selected project
+              </Typography>
+              <Typography variant="h6">
+                {selectedProject.projectCode} — {selectedProject.projectName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Stage {selectedProject.projectStage} · Physical progress{' '}
+                {selectedProject.physicalProgressPercent}%
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  Commitment: {formatCurrency(selectedProject.commitmentAmount)}
+                </Typography>
+                <Typography variant="body2">
+                  Contributed: {formatCurrency(selectedProject.amountContributed)}
+                </Typography>
+                <Typography variant="body2">
+                  Pending: {formatCurrency(selectedProject.pendingContribution)}
+                </Typography>
+              </Stack>
+            </Paper>
           ) : (
-            projects.map((project) => (
-              <ProjectSummaryCard key={project.projectId} project={project} />
-            ))
+            <InvestorEmptyState
+              title="No project selected"
+              message={
+                projects.length
+                  ? 'Choose a project from the header selector.'
+                  : 'You do not have any authorised projects yet.'
+              }
+            />
           )}
-        </Stack>
-      </QueryStatePanel>
+        </Grid>
+      </Grid>
+
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="body2" color="text.secondary">
+          Phase 132 shell only — detailed investment views, documents, and reports
+          arrive in later phases.
+        </Typography>
+      </Paper>
     </Stack>
   );
 }

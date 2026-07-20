@@ -1,9 +1,18 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from './AuthContext';
+import {
+  investorHomePath,
+  investorLoginPath,
+  isInvestorOnlySession,
+} from '@/investor-portal/session';
 
-export function ProtectedRoute() {
-  const { isAuthenticated, isBootstrapping } = useAuth();
+type ProtectedRouteProps = {
+  loginPath?: string;
+};
+
+export function ProtectedRoute({ loginPath = '/login' }: ProtectedRouteProps) {
+  const { isAuthenticated, isBootstrapping, access } = useAuth();
   const location = useLocation();
 
   if (isBootstrapping) {
@@ -22,7 +31,18 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const isInvestorPath = location.pathname.startsWith('/investor');
+    const targetLogin = isInvestorPath ? investorLoginPath() : loginPath;
+    return <Navigate to={targetLogin} replace state={{ from: location }} />;
+  }
+
+  if (
+    loginPath === '/login' &&
+    access &&
+    isInvestorOnlySession(access) &&
+    !location.pathname.startsWith('/investor')
+  ) {
+    return <Navigate to={investorHomePath()} replace />;
   }
 
   return <Outlet />;

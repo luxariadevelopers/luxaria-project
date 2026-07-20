@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
-import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import {
   AppBar,
   Box,
@@ -21,12 +18,6 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { InvestorProjectSelector } from './InvestorProjectSelector';
-import {
-  INVESTOR_DASHBOARD_PATH,
-  INVESTOR_DOCUMENTS_PATH,
-  INVESTOR_PROJECTS_PATH,
-  INVESTOR_STATEMENTS_PATH,
-} from './paths';
 import { useInvestorPortal } from './InvestorPortalContext';
 
 export const INVESTOR_DRAWER_WIDTH = 240;
@@ -40,23 +31,8 @@ type NavItem = {
 const INVESTOR_NAV_ITEMS: NavItem[] = [
   {
     label: 'Dashboard',
-    to: INVESTOR_DASHBOARD_PATH,
+    to: '/investor/dashboard',
     icon: <DashboardOutlinedIcon />,
-  },
-  {
-    label: 'Projects',
-    to: INVESTOR_PROJECTS_PATH,
-    icon: <FolderOutlinedIcon />,
-  },
-  {
-    label: 'Documents',
-    to: INVESTOR_DOCUMENTS_PATH,
-    icon: <DescriptionOutlinedIcon />,
-  },
-  {
-    label: 'Statements',
-    to: INVESTOR_STATEMENTS_PATH,
-    icon: <ReceiptLongOutlinedIcon />,
   },
 ];
 

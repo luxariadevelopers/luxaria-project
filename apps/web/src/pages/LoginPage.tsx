@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getErrorMessage, useAuth } from '@/auth/AuthContext';
 import { FormTextField } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
+import { investorHomePath, isInvestorOnlySession } from '@/investor-portal/session';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Email or mobile is required'),
@@ -16,7 +17,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { login, isAuthenticated, isBootstrapping } = useAuth();
+  const { login, isAuthenticated, isBootstrapping, access } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { error, success } = useNotify();
@@ -31,6 +32,9 @@ export function LoginPage() {
   });
 
   if (!isBootstrapping && isAuthenticated) {
+    if (access && isInvestorOnlySession(access)) {
+      return <Navigate to={investorHomePath()} replace />;
+    }
     return <Navigate to="/" replace />;
   }
 
