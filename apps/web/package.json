@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
-    "test": "pnpm run test:unit",
+    "test": "pnpm run test:unit && pnpm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
@@ -39,13 +39,16 @@
     "@luxaria/eslint-config": "workspace:*",
     "@luxaria/tsconfig": "workspace:*",
     "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
+    "jsdom": "^26.1.0",
     "typescript": "6.0.3",
     "vite": "^6.2.2",
-    "vitest": "^3.0.9"
+    "vitest": "^3.2.4"
   }
 }

@@ -1,13 +1,8 @@
-export { fetchInvestorPortalMe, fetchInvestorPortalProjects, fetchInvestorPortalProject } from './api';
+export { InvestorDocumentsPage } from './InvestorDocumentsPage';
+export { InvestorStatementsPage } from './InvestorStatementsPage';
 export {
-  assertInvestorPortalApiPath,
-  getInvestorAccessDeniedMessage,
-  isInvestorPortalForbidden,
-  isProjectAccessDenied,
-  isProjectAuthorised,
-} from './access';
-export type {
-  InvestorPortalMe,
-  InvestorPortalProjectDetail,
-  InvestorPortalProjectSummary,
-} from './types';
+  INVESTOR_DOCUMENTS_PATH,
+  INVESTOR_STATEMENTS_PATH,
+} from './paths';
+export { INVESTOR_PORTAL_VIEW } from './permissions';
+export { investorPortalRouteDefinitions } from './routes';

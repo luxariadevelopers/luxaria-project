@@ -7,10 +7,11 @@ import {
 } from './api';
 
 vi.mock('@/api/client', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
+  const actual = await importOriginal<typeof import('@/api/client')>();
   return {
     ...actual,
     apiGet: vi.fn(),
+    isForbiddenError: actual.isForbiddenError,
   };
 });
 
