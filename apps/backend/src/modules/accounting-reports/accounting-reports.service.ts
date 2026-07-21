@@ -48,6 +48,7 @@ import {
 import type {
   AccountingReportPayload,
   AgeingBucketRow,
+  BalanceSheetSection,
   CostSheetRow,
   DrillDownLink,
   FundLine,
@@ -88,6 +89,13 @@ type FlatLine = {
   sourceModule: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
+};
+
+type AccountBalanceAgg = {
+  openingDebit: number;
+  openingCredit: number;
+  periodDebit: number;
+  periodCredit: number;
 };
 
 @Injectable()
@@ -158,6 +166,10 @@ export class AccountingReportsService {
         return this.projectCostSheet(scope);
       case AccountingReportType.ProjectProfitAndLoss:
         return this.projectProfitAndLoss(scope);
+      case AccountingReportType.BalanceSheet:
+        return this.balanceSheet(scope);
+      case AccountingReportType.CompanyProfitAndLoss:
+        return this.companyProfitAndLoss(scope);
       case AccountingReportType.VendorLedger:
         return this.partyLedger(scope, JournalPartyType.Vendor);
       case AccountingReportType.ContractorLedger:
@@ -465,48 +477,7 @@ export class AccountingReportsService {
   // ─── reports ───────────────────────────────────────────────────────────
 
   private async trialBalance(scope: ReportScope): Promise<AccountingReportPayload> {
-    const periodLines = await this.loadFlatLines(scope);
-    const openingLines = scope.from
-      ? await this.loadFlatLines(scope, { beforeDate: scope.from })
-      : [];
-
-    const accounts = await this.accountMap([
-      ...periodLines.map((l) => l.accountId),
-      ...openingLines.map((l) => l.accountId),
-    ]);
-
-    const byAccount = new Map<
-      string,
-      {
-        openingDebit: number;
-        openingCredit: number;
-        periodDebit: number;
-        periodCredit: number;
-      }
-    >();
-
-    const ensure = (id: string) => {
-      if (!byAccount.has(id)) {
-        byAccount.set(id, {
-          openingDebit: 0,
-          openingCredit: 0,
-          periodDebit: 0,
-          periodCredit: 0,
-        });
-      }
-      return byAccount.get(id)!;
-    };
-
-    for (const l of openingLines) {
-      const row = ensure(l.accountId);
-      row.openingDebit += l.debit;
-      row.openingCredit += l.credit;
-    }
-    for (const l of periodLines) {
-      const row = ensure(l.accountId);
-      row.periodDebit += l.debit;
-      row.periodCredit += l.credit;
-    }
+    const { byAccount, accounts } = await this.aggregateAccountBalances(scope);
 
     const rows: TrialBalanceRow[] = [];
     let totalOpeningDebit = 0;
@@ -521,8 +492,7 @@ export class AccountingReportsService {
       if (!account || account.isControlAccount) continue;
 
       const openingNet = agg.openingDebit - agg.openingCredit;
-      const closingNet =
-        openingNet + agg.periodDebit - agg.periodCredit;
+      const closingNet = this.closingNetFromAgg(agg);
       const openingDebit = openingNet > 0 ? this.round2(openingNet) : 0;
       const openingCredit = openingNet < 0 ? this.round2(-openingNet) : 0;
       const closingDebit = closingNet > 0 ? this.round2(closingNet) : 0;
@@ -875,48 +845,11 @@ export class AccountingReportsService {
       accountTypes: [AccountType.Expense],
     });
 
-    const buildSection = async (
-      section: 'income' | 'expense',
-      flat: FlatLine[],
-    ): Promise<ProfitAndLossSection> => {
-      const accounts = await this.accountMap(flat.map((l) => l.accountId));
-      const byAccount = new Map<string, number>();
-      for (const l of flat) {
-        const signed =
-          section === 'income'
-            ? l.credit - l.debit
-            : l.debit - l.credit;
-        byAccount.set(l.accountId, (byAccount.get(l.accountId) ?? 0) + signed);
-      }
-      const rows: CostSheetRow[] = [];
-      let total = 0;
-      for (const [accountId, amount] of byAccount) {
-        const account = accounts.get(accountId);
-        if (!account) continue;
-        const amt = this.round2(amount);
-        if (amt === 0) continue;
-        total += amt;
-        rows.push({
-          accountId,
-          accountCode: account.accountCode,
-          accountName: account.accountName,
-          accountCategory: account.accountCategory,
-          amount: amt,
-          drillDown: [
-            {
-              label: 'General ledger',
-              href: `${API}/accounting-reports/general-ledger?accountId=${accountId}&projectId=${scope.filters.projectId}`,
-            },
-          ],
-        });
-      }
-      rows.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
-      return { section, rows, total: this.round2(total) };
-    };
-
-    const income = await buildSection('income', incomeLines);
-    const expense = await buildSection('expense', expenseLines);
-    const netProfit = this.round2(income.total - expense.total);
+    const { income, expense, netProfit } = await this.buildProfitAndLossSections(
+      scope,
+      incomeLines,
+      expenseLines,
+    );
 
     return {
       meta: this.meta(
@@ -930,6 +863,189 @@ export class AccountingReportsService {
         income: income.total,
         expense: expense.total,
         netProfit,
+      },
+    };
+  }
+
+  private async companyProfitAndLoss(
+    scope: ReportScope,
+  ): Promise<AccountingReportPayload> {
+    this.assertFinancialYear(scope, 'company profit and loss');
+
+    const incomeLines = await this.loadFlatLines(scope, {
+      accountTypes: [AccountType.Income],
+    });
+    const expenseLines = await this.loadFlatLines(scope, {
+      accountTypes: [AccountType.Expense],
+    });
+
+    const { income, expense, netProfit } = await this.buildProfitAndLossSections(
+      scope,
+      incomeLines,
+      expenseLines,
+    );
+
+    return {
+      meta: this.meta(
+        AccountingReportType.CompanyProfitAndLoss,
+        scope,
+        true,
+        [`Net profit/(loss) = income − expense`],
+      ),
+      sections: { income, expense },
+      totals: {
+        income: income.total,
+        expense: expense.total,
+        grossProfit: income.total,
+        netProfit,
+      },
+    };
+  }
+
+  private async balanceSheet(
+    scope: ReportScope,
+  ): Promise<AccountingReportPayload> {
+    this.assertFinancialYear(scope, 'balance sheet');
+
+    const { byAccount, accounts } = await this.aggregateAccountBalances(scope);
+    const asOfNote = scope.filters.to
+      ? `Balances as of ${scope.filters.to}`
+      : 'Balances as of financial year end';
+
+    const buildSection = (
+      section: BalanceSheetSection['section'],
+      accountType: AccountType,
+    ): BalanceSheetSection => {
+      const rows: CostSheetRow[] = [];
+      let total = 0;
+      for (const [accountId, agg] of byAccount) {
+        const account = accounts.get(accountId);
+        if (!account || account.isControlAccount) continue;
+        if (account.accountType !== accountType) continue;
+
+        const amount = this.statementBalance(
+          account.accountType,
+          this.closingNetFromAgg(agg),
+        );
+        if (amount === 0) continue;
+
+        total += amount;
+        rows.push({
+          accountId,
+          accountCode: account.accountCode,
+          accountName: account.accountName,
+          accountCategory: account.accountCategory,
+          amount,
+          drillDown: this.generalLedgerDrillDown(accountId, scope),
+        });
+      }
+      rows.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+      return { section, rows, total: this.round2(total) };
+    };
+
+    const assets = buildSection('assets', AccountType.Asset);
+    const liabilities = buildSection('liabilities', AccountType.Liability);
+    const equityFromAccounts = buildSection('equity', AccountType.Equity);
+
+    const incomeLines = await this.loadFlatLines(scope, {
+      accountTypes: [AccountType.Income],
+    });
+    const expenseLines = await this.loadFlatLines(scope, {
+      accountTypes: [AccountType.Expense],
+    });
+    let currentYearEarnings = this.netProfitFromLines(
+      incomeLines,
+      expenseLines,
+    );
+
+    const equityRows = [...equityFromAccounts.rows];
+    let equityTotal = equityFromAccounts.total;
+
+    const imbalanceBeforePlug = this.round2(
+      assets.total - liabilities.total - equityTotal,
+    );
+    if (
+      currentYearEarnings === 0 &&
+      Math.abs(imbalanceBeforePlug) >= 0.01
+    ) {
+      currentYearEarnings = imbalanceBeforePlug;
+    } else if (
+      Math.abs(
+        this.round2(
+          assets.total -
+            liabilities.total -
+            equityTotal -
+            currentYearEarnings,
+        ),
+      ) >= 0.01
+    ) {
+      currentYearEarnings = this.round2(
+        currentYearEarnings +
+          (assets.total - liabilities.total - equityTotal - currentYearEarnings),
+      );
+    }
+
+    if (Math.abs(currentYearEarnings) >= 0.01) {
+      equityRows.push({
+        accountId: 'current-year-earnings',
+        accountCode: '',
+        accountName:
+          currentYearEarnings >= 0
+            ? 'Current Year Earnings'
+            : 'Current Year Loss',
+        accountCategory: 'current_year_earnings',
+        amount: currentYearEarnings,
+        drillDown: [
+          {
+            label: 'Company profit and loss',
+            href: `${API}/accounting-reports/company-profit-and-loss?financialYearId=${scope.filters.financialYearId}${
+              scope.filters.projectId
+                ? `&projectId=${scope.filters.projectId}`
+                : ''
+            }${
+              scope.filters.from ? `&from=${scope.filters.from}` : ''
+            }${scope.filters.to ? `&to=${scope.filters.to}` : ''}`,
+          },
+        ],
+      });
+      equityTotal = this.round2(equityTotal + currentYearEarnings);
+    }
+
+    const equity: BalanceSheetSection = {
+      section: 'equity',
+      rows: equityRows,
+      total: equityTotal,
+    };
+
+    const liabilitiesAndEquity = this.round2(
+      liabilities.total + equity.total,
+    );
+    const balanced =
+      Math.abs(this.round2(assets.total - liabilitiesAndEquity)) < 0.01;
+    const notes = [asOfNote];
+    if (Math.abs(currentYearEarnings) >= 0.01) {
+      notes.push(
+        'Current year earnings included under equity from period income and expense',
+      );
+    }
+    if (!balanced) {
+      notes.push('Assets do not equal liabilities plus equity');
+    }
+
+    return {
+      meta: this.meta(
+        AccountingReportType.BalanceSheet,
+        scope,
+        balanced,
+        notes,
+      ),
+      sections: { assets, liabilities, equity },
+      totals: {
+        assets: assets.total,
+        liabilities: liabilities.total,
+        equity: equity.total,
+        currentYearEarnings,
+        liabilitiesAndEquity,
       },
     };
   }
@@ -1586,6 +1702,166 @@ export class AccountingReportsService {
   }
 
   // ─── helpers ───────────────────────────────────────────────────────────
+
+  private assertFinancialYear(scope: ReportScope, reportName: string): void {
+    if (!scope.financialYearId) {
+      throw new BadRequestException(
+        `financialYearId is required for ${reportName}`,
+      );
+    }
+  }
+
+  private async aggregateAccountBalances(scope: ReportScope): Promise<{
+    byAccount: Map<string, AccountBalanceAgg>;
+    accounts: Map<string, Account>;
+  }> {
+    const periodLines = await this.loadFlatLines(scope);
+    const openingLines = scope.from
+      ? await this.loadFlatLines(scope, { beforeDate: scope.from })
+      : [];
+
+    const accounts = await this.accountMap([
+      ...periodLines.map((l) => l.accountId),
+      ...openingLines.map((l) => l.accountId),
+    ]);
+
+    const byAccount = new Map<string, AccountBalanceAgg>();
+    const ensure = (id: string) => {
+      if (!byAccount.has(id)) {
+        byAccount.set(id, {
+          openingDebit: 0,
+          openingCredit: 0,
+          periodDebit: 0,
+          periodCredit: 0,
+        });
+      }
+      return byAccount.get(id)!;
+    };
+
+    for (const l of openingLines) {
+      const row = ensure(l.accountId);
+      row.openingDebit += l.debit;
+      row.openingCredit += l.credit;
+    }
+    for (const l of periodLines) {
+      const row = ensure(l.accountId);
+      row.periodDebit += l.debit;
+      row.periodCredit += l.credit;
+    }
+
+    return { byAccount, accounts };
+  }
+
+  private closingNetFromAgg(agg: AccountBalanceAgg): number {
+    const openingNet = agg.openingDebit - agg.openingCredit;
+    return openingNet + agg.periodDebit - agg.periodCredit;
+  }
+
+  private statementBalance(
+    accountType: AccountType,
+    closingNet: number,
+  ): number {
+    switch (accountType) {
+      case AccountType.Asset:
+      case AccountType.Expense:
+        return this.round2(closingNet);
+      case AccountType.Liability:
+      case AccountType.Equity:
+      case AccountType.Income:
+        return this.round2(-closingNet);
+      default:
+        return this.round2(closingNet);
+    }
+  }
+
+  private netProfitFromLines(
+    incomeLines: FlatLine[],
+    expenseLines: FlatLine[],
+  ): number {
+    let income = 0;
+    for (const l of incomeLines) {
+      income += l.credit - l.debit;
+    }
+    let expense = 0;
+    for (const l of expenseLines) {
+      expense += l.debit - l.credit;
+    }
+    return this.round2(income - expense);
+  }
+
+  private generalLedgerDrillDown(
+    accountId: string,
+    scope: ReportScope,
+  ): DrillDownLink[] {
+    return [
+      {
+        label: 'General ledger',
+        href: `${API}/accounting-reports/general-ledger?accountId=${accountId}${
+          scope.filters.financialYearId
+            ? `&financialYearId=${scope.filters.financialYearId}`
+            : ''
+        }${
+          scope.filters.projectId ? `&projectId=${scope.filters.projectId}` : ''
+        }`,
+      },
+    ];
+  }
+
+  private async buildProfitAndLossSections(
+    scope: ReportScope,
+    incomeLines: FlatLine[],
+    expenseLines: FlatLine[],
+  ): Promise<{
+    income: ProfitAndLossSection;
+    expense: ProfitAndLossSection;
+    netProfit: number;
+  }> {
+    const income = await this.buildProfitAndLossSection(
+      'income',
+      incomeLines,
+      scope,
+    );
+    const expense = await this.buildProfitAndLossSection(
+      'expense',
+      expenseLines,
+      scope,
+    );
+    const netProfit = this.round2(income.total - expense.total);
+    return { income, expense, netProfit };
+  }
+
+  private async buildProfitAndLossSection(
+    section: 'income' | 'expense',
+    flat: FlatLine[],
+    scope: ReportScope,
+  ): Promise<ProfitAndLossSection> {
+    const accounts = await this.accountMap(flat.map((l) => l.accountId));
+    const byAccount = new Map<string, number>();
+    for (const l of flat) {
+      const signed =
+        section === 'income' ? l.credit - l.debit : l.debit - l.credit;
+      byAccount.set(l.accountId, (byAccount.get(l.accountId) ?? 0) + signed);
+    }
+    const rows: CostSheetRow[] = [];
+    let total = 0;
+    for (const [accountId, amount] of byAccount) {
+      const account = accounts.get(accountId);
+      if (!account) continue;
+      const amt = this.round2(amount);
+      if (amt === 0) continue;
+      total += amt;
+      rows.push({
+        accountId,
+        accountCode: account.accountCode,
+        accountName: account.accountName,
+        accountCategory: account.accountCategory,
+        amount: amt,
+        drillDown: this.generalLedgerDrillDown(accountId, scope),
+      });
+    }
+    rows.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+    return { section, rows, total: this.round2(total) };
+  }
 
   private async partyNames(
     partyType: JournalPartyType,

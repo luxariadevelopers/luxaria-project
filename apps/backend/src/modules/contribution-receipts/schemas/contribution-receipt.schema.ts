@@ -93,9 +93,7 @@ export class ContributionReceipt {
   @Prop({ type: String, trim: true, default: null })
   idempotencyKey!: string | null;
 
-  /**
-   * Reserved for journal module — contribution receipts must create accounting entries later.
-   */
+  /** Posted contribution journal (Dr Bank/Cash · Cr Investor/Director). */
   @Prop({ type: Types.ObjectId, default: null })
   journalEntryId!: Types.ObjectId | null;
 

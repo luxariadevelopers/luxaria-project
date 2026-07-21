@@ -471,7 +471,7 @@ describe('AccountingReportsService', () => {
 
   it('lists all accounting reports', () => {
     const list = service.listReports();
-    expect(list.data!.length).toBe(18);
+    expect(list.data!.length).toBe(20);
   });
 
   it('builds a reconciled trial balance for FY + project', async () => {
@@ -552,6 +552,35 @@ describe('AccountingReportsService', () => {
       actorId,
     );
     expect(cost.data!.totals!.cost).toBe(20_000);
+  });
+
+  it('builds company P&L for financial year', async () => {
+    const pnl = await service.getReport(
+      AccountingReportType.CompanyProfitAndLoss,
+      { financialYearId: fyId },
+      actorId,
+    );
+    expect(pnl.data!.meta.reportType).toBe(
+      AccountingReportType.CompanyProfitAndLoss,
+    );
+    expect(pnl.data!.totals!.income).toBe(10_000);
+    expect(pnl.data!.totals!.expense).toBe(20_000);
+    expect(pnl.data!.totals!.netProfit).toBe(-10_000);
+  });
+
+  it('builds a reconciled company balance sheet with current year earnings plug', async () => {
+    const result = await service.getReport(
+      AccountingReportType.BalanceSheet,
+      { financialYearId: fyId, projectId },
+      actorId,
+    );
+    const data = result.data!;
+    expect(data.meta.reconciled).toBe(true);
+    expect(data.totals!.assets).toBe(135_000);
+    expect(data.totals!.liabilities).toBe(145_000);
+    expect(data.totals!.currentYearEarnings).toBe(-10_000);
+    expect(data.totals!.liabilitiesAndEquity).toBe(135_000);
+    expect(data.totals!.assets).toBe(data.totals!.liabilitiesAndEquity);
   });
 
   it('builds AP/AR ageing with reconciling bucket totals', async () => {

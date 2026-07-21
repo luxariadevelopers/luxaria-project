@@ -44,6 +44,13 @@ import { SalesReportsModule } from './modules/sales-reports';
 import { CustomerPortalModule } from './modules/customer-portal';
 import { AccountingPeriodClosureModule } from './modules/accounting-period-closure/accounting-period-closure.module';
 import { AccountingReportsModule } from './modules/accounting-reports/accounting-reports.module';
+import { CostCentresModule } from './modules/cost-centres';
+import { OpeningBalancesModule } from './modules/opening-balances';
+import { GstModule } from './modules/gst';
+import { TdsModule } from './modules/tds';
+import { BudgetsModule } from './modules/budgets';
+import { FixedAssetsModule } from './modules/fixed-assets';
+import { CustomerInvoicesModule } from './modules/customer-invoices';
 import { BankReconciliationModule } from './modules/bank-reconciliation/bank-reconciliation.module';
 import { ConstructionReportsModule } from './modules/construction-reports/construction-reports.module';
 import { DailyDirectorDigestModule } from './modules/daily-director-digest/daily-director-digest.module';
@@ -180,6 +187,13 @@ import { ObservabilityModule } from './common/observability/observability.module
     NotificationsModule,
     DailyDirectorDigestModule,
     AccountingReportsModule,
+    CostCentresModule,
+    OpeningBalancesModule,
+    GstModule,
+    TdsModule,
+    BudgetsModule,
+    FixedAssetsModule,
+    CustomerInvoicesModule,
     ConstructionReportsModule,
     VendorsModule,
     ContractorsModule,

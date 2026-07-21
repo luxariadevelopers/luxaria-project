@@ -128,8 +128,10 @@ function requiresProject(reportType: string): boolean {
  */
 export function AccountingReportsPage() {
   const { hasPermission, access } = useAuth();
-  const canView = hasPermission('report.view');
-  const canExport = hasPermission('report.export');
+  const canView =
+    hasPermission('report.view') || hasPermission('finance_statement.view');
+  const canExport =
+    hasPermission('report.export') || hasPermission('finance_statement.export');
   const canListFy = hasPermission('financial_year.view');
   const { projects, selectedProjectId } = useProject();
 
@@ -234,7 +236,7 @@ export function AccountingReportsPage() {
     return (
       <PermissionDenied
         title="Accounting reports unavailable"
-        message="You need the report.view permission to run accounting reports."
+        message="You need report.view or finance_statement.view to run accounting reports (company balance sheet and P&L use balance-sheet / company-profit-and-loss report types)."
       />
     );
   }

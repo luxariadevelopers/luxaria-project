@@ -1,6 +1,15 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import {
+  Account,
+  AccountSchema,
+} from '../chart-of-accounts/schemas/account.schema';
+import {
+  CompanyBankAccount,
+  CompanyBankAccountSchema,
+} from '../company-bank-accounts/schemas/company-bank-account.schema';
 import { FinancialYearModule } from '../financial-year/financial-year.module';
+import { JournalModule } from '../journal/journal.module';
 import { ProjectAccessModule } from '../project-access/project-access.module';
 import { ProjectCommitmentsModule } from '../project-commitments/project-commitments.module';
 import { ProjectParticipantsModule } from '../project-participants/project-participants.module';
@@ -31,11 +40,14 @@ import {
         name: ParticipantContributionBalance.name,
         schema: ParticipantContributionBalanceSchema,
       },
+      { name: Account.name, schema: AccountSchema },
+      { name: CompanyBankAccount.name, schema: CompanyBankAccountSchema },
     ]),
     ProjectsModule,
     ProjectParticipantsModule,
     ProjectCommitmentsModule,
     FinancialYearModule,
+    JournalModule,
     ProjectAccessModule,
   ],
   controllers: [ContributionReceiptsController],

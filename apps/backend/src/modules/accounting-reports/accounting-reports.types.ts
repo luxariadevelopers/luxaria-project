@@ -96,6 +96,12 @@ export type ProfitAndLossSection = {
   total: number;
 };
 
+export type BalanceSheetSection = {
+  section: 'assets' | 'liabilities' | 'equity';
+  rows: CostSheetRow[];
+  total: number;
+};
+
 export type PartyLedgerRow = LedgerLineRow & {
   partyName: string | null;
 };

@@ -17,7 +17,18 @@ import {
   CONTRIBUTION_RECEIPT_IDEMPOTENCY_SCOPE,
   IdempotencyService,
 } from '../../database/services/idempotency.service';
+import {
+  Account,
+  AccountCategory,
+  AccountStatus,
+} from '../chart-of-accounts/schemas/account.schema';
+import { CompanyBankAccount } from '../company-bank-accounts/schemas/company-bank-account.schema';
 import { FinancialYearService } from '../financial-year/financial-year.service';
+import { JournalService } from '../journal/journal.service';
+import {
+  JournalFundingSource,
+  JournalPartyType,
+} from '../journal/schemas/journal-entry.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
@@ -28,6 +39,7 @@ import {
 } from '../project-commitments/schemas/contribution-commitment.schema';
 import {
   ParticipantApprovalStatus,
+  ParticipantType,
   ProjectParticipant,
 } from '../project-participants/schemas/project-participant.schema';
 import { Project } from '../projects/schemas/project.schema';
@@ -47,6 +59,7 @@ import {
 import {
   ContributionPaymentMode,
   ContributionReceipt,
+  ContributionReceiptDocument,
   ContributionReceiptStatus,
 } from './schemas/contribution-receipt.schema';
 
@@ -64,11 +77,16 @@ export class ContributionReceiptsService {
     private readonly participantModel: Model<ProjectParticipant>,
     @InjectModel(ContributionCommitment.name)
     private readonly commitmentModel: Model<ContributionCommitment>,
+    @InjectModel(Account.name)
+    private readonly accountModel: Model<Account>,
+    @InjectModel(CompanyBankAccount.name)
+    private readonly bankAccountModel: Model<CompanyBankAccount>,
     private readonly numberingService: NumberingService,
     private readonly idempotencyService: IdempotencyService,
     private readonly commitmentsService: ProjectCommitmentsService,
     private readonly pdfService: ContributionReceiptPdfService,
     private readonly financialYearService: FinancialYearService,
+    private readonly journalService: JournalService,
     private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
@@ -262,11 +280,8 @@ export class ContributionReceiptsService {
       row.receiptDocument = pdfPath;
     }
 
-    /**
-     * TODO(accounting): create journal entry (Dr Bank/Cash, Cr Contribution Liability)
-     * and set journalEntryId when the ledger module is available.
-     */
-    row.journalEntryId = null;
+    const journalId = await this.postContributionJournal(row, actorId);
+    row.journalEntryId = new Types.ObjectId(journalId);
     row.balancesApplied = true;
     row.status = ContributionReceiptStatus.Posted;
     row.postedBy = new Types.ObjectId(actorId);
@@ -276,7 +291,7 @@ export class ContributionReceiptsService {
 
     return createSuccessResponse(
       toPublicReceipt(row),
-      'Contribution receipt posted; balances updated (accounting entry pending)',
+      'Contribution receipt posted; balances and journal updated',
     );
   }
 
@@ -590,5 +605,115 @@ export class ContributionReceiptsService {
       );
     }
     return row;
+  }
+
+  /**
+   * Phase 8: Dr Bank/Cash · Cr Investor or Director equity/loan account.
+   */
+  private async postContributionJournal(
+    row: ContributionReceiptDocument,
+    actorId: string,
+  ): Promise<string> {
+    const participant = await this.participantModel
+      .findById(row.participantId)
+      .exec();
+    if (!participant) {
+      throw new NotFoundException('Project participant not found for journal');
+    }
+
+    const creditCategory =
+      participant.participantType === ParticipantType.Director
+        ? AccountCategory.DirectorAccount
+        : AccountCategory.InvestorAccount;
+    const creditAccount = await this.requireAccountByCategory(creditCategory);
+
+    let debitAccountId: string;
+    if (
+      row.paymentMode === ContributionPaymentMode.Cash ||
+      !row.bankAccountId
+    ) {
+      const cash = await this.requireAccountByCategory(AccountCategory.Cash);
+      debitAccountId = String(cash._id);
+    } else {
+      const bank = await this.bankAccountModel
+        .findById(row.bankAccountId)
+        .exec();
+      if (!bank?.ledgerAccountId) {
+        throw new BadRequestException(
+          'Bank account has no ledger account mapping for contribution posting',
+        );
+      }
+      debitAccountId = String(bank.ledgerAccountId);
+    }
+
+    const projectId = String(row.projectId);
+    const partyType =
+      participant.participantType === ParticipantType.Director
+        ? JournalPartyType.Director
+        : JournalPartyType.Investor;
+
+    const journal = await this.journalService.create(
+      {
+        journalDate: row.receivedDate.toISOString().slice(0, 10),
+        projectId,
+        sourceModule: 'contribution_receipt',
+        sourceEntityType: 'contribution_receipt',
+        sourceEntityId: String(row._id),
+        postingPurpose: 'capital_receipt',
+        narration:
+          `Contribution receipt ${row.receiptNumber} (ref ${row.transactionReference ?? 'n/a'})`.slice(
+            0,
+            500,
+          ),
+        lines: [
+          {
+            accountId: debitAccountId,
+            debit: row.amount,
+            credit: 0,
+            projectId,
+            description: `Contribution received ${row.receiptNumber}`,
+            fundingSource: JournalFundingSource.ProjectFunds,
+          },
+          {
+            accountId: String(creditAccount._id),
+            debit: 0,
+            credit: row.amount,
+            projectId,
+            description: `Contribution liability ${row.receiptNumber}`,
+            partyType,
+            partyId: String(participant.participantId),
+            fundingSource:
+              participant.participantType === ParticipantType.Director
+                ? JournalFundingSource.Director
+                : JournalFundingSource.Investor,
+          },
+        ],
+        post: true,
+      },
+      actorId,
+      `contribution-receipt-journal:${String(row._id)}`,
+    );
+
+    const journalId = journal.data?.id;
+    if (!journalId) {
+      throw new BadRequestException('Journal entry creation failed');
+    }
+    return journalId;
+  }
+
+  private async requireAccountByCategory(category: AccountCategory) {
+    const account = await this.accountModel
+      .findOne({
+        accountCategory: category,
+        status: AccountStatus.Active,
+        allowManualPosting: true,
+      })
+      .exec();
+    if (!account) {
+      throw new BadRequestException(
+        `No active posting account found for category ${category}`,
+      );
+    }
+    return account;
   }
 }

@@ -83,8 +83,9 @@ export function toPublicReceipt(row: ReceiptLike): PublicContributionReceipt {
     status: row.status,
     journalEntryId: row.journalEntryId ? String(row.journalEntryId) : null,
     balancesApplied: Boolean(row.balancesApplied),
-    accountingNote:
-      'Contribution receipts must create accounting entries later (journalEntryId reserved)',
+    accountingNote: row.journalEntryId
+      ? 'Posted to general ledger (Dr Bank/Cash · Cr Investor/Director account)'
+      : 'Accounting journal pending',
     submittedBy: row.submittedBy ? String(row.submittedBy) : null,
     submittedAt: row.submittedAt ?? null,
     verifiedBy: row.verifiedBy ? String(row.verifiedBy) : null,

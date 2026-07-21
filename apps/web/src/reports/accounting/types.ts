@@ -101,6 +101,8 @@ export const AccountingReportType = {
   BankBook: 'bank-book',
   ProjectCostSheet: 'project-cost-sheet',
   ProjectProfitAndLoss: 'project-profit-and-loss',
+  BalanceSheet: 'balance-sheet',
+  CompanyProfitAndLoss: 'company-profit-and-loss',
   VendorLedger: 'vendor-ledger',
   ContractorLedger: 'contractor-ledger',
   DirectorLedger: 'director-ledger',

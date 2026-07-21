@@ -19,6 +19,7 @@ import { BankReconciliationPage } from '@/pages/BankReconciliationPage';
 import { BookingCreatePage } from '@/pages/BookingCreatePage';
 import { BookingDetailPage } from '@/pages/BookingDetailPage';
 import { BookingsPage } from '@/pages/BookingsPage';
+import { BudgetsPage } from '@/pages/BudgetsPage';
 import { BoqImportPage } from '@/pages/BoqImportPage';
 import { BoqItemEditorPage } from '@/pages/BoqItemEditorPage';
 import { BoqPage } from '@/pages/BoqPage';
@@ -44,8 +45,10 @@ import { ContractorReportsPage } from '@/pages/ContractorReportsPage';
 import { ContractorsPage } from '@/pages/ContractorsPage';
 import { TenderListPage } from '@/pages/TenderListPage';
 import { ContributionReceiptsPage } from '@/pages/ContributionReceiptsPage';
+import { CostCentresPage } from '@/pages/CostCentresPage';
 import { CostForecastPage } from '@/pages/CostForecastPage';
 import { CustomerDetailPage } from '@/pages/CustomerDetailPage';
+import { CustomerInvoicesPage } from '@/pages/CustomerInvoicesPage';
 import { CustomerLoansPage } from '@/pages/CustomerLoansPage';
 import { CustomerPortalPage } from '@/pages/CustomerPortalPage';
 import { CustomerWarrantiesPage } from '@/pages/CustomerWarrantiesPage';
@@ -72,10 +75,12 @@ import { FinancialYearCreatePage } from '@/pages/FinancialYearCreatePage';
 import { FinancialYearDetailPage } from '@/pages/FinancialYearDetailPage';
 import { FinancialYearsPage } from '@/pages/FinancialYearsPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
+import { FixedAssetsPage } from '@/pages/FixedAssetsPage';
 import { FormDemoPage } from '@/pages/FormDemoPage';
 import { FundingDashboardPage } from '@/pages/FundingDashboardPage';
 import { GrnDetailPage } from '@/pages/GrnDetailPage';
 import { GrnsPage } from '@/pages/GrnsPage';
+import { GstPage } from '@/pages/GstPage';
 import { DrawingsPage } from '@/drawings';
 import { EquipmentPage } from '@/equipment/EquipmentPage';
 import { InventoryDashboardPage } from '@/pages/InventoryDashboardPage';
@@ -104,6 +109,7 @@ import { MaterialsPage } from '@/pages/MaterialsPage';
 import { MaterialVariancePage } from '@/pages/MaterialVariancePage';
 import { NoProjectAccessPage } from '@/pages/NoProjectAccessPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
+import { OpeningBalancesPage } from '@/pages/OpeningBalancesPage';
 import { PaymentScheduleDetailPage } from '@/pages/PaymentScheduleDetailPage';
 import { PaymentSchedulesPage } from '@/pages/PaymentSchedulesPage';
 import { PeriodClosePage } from '@/pages/PeriodClosePage';
@@ -162,6 +168,7 @@ import { StockCountDetailPage } from '@/pages/StockCountDetailPage';
 import { StockCountsPage } from '@/pages/StockCountsPage';
 import { StockLedgerPage } from '@/pages/StockLedgerPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
+import { TdsPage } from '@/pages/TdsPage';
 import { UnitDetailPage } from '@/pages/UnitDetailPage';
 import { UnitHandoversPage } from '@/pages/UnitHandoversPage';
 import { UnitQuotationsPage } from '@/pages/UnitQuotationsPage';
@@ -335,6 +342,13 @@ export const APP_ROUTE_ELEMENTS: {
   'financial-year-create': <FinancialYearCreatePage />,
   'financial-year-detail': <FinancialYearDetailPage />,
   'period-close': <PeriodClosePage />,
+  'cost-centres': <CostCentresPage />,
+  'opening-balances': <OpeningBalancesPage />,
+  gst: <GstPage />,
+  tds: <TdsPage />,
+  budgets: <BudgetsPage />,
+  'fixed-assets': <FixedAssetsPage />,
+  'customer-invoices': <CustomerInvoicesPage />,
   'expense-categories': <ExpenseCategoriesPage />,
   'site-expenses': <ExpensesPage />,
   'site-expense-detail': <ExpenseDetailPage />,

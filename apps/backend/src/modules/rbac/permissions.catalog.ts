@@ -117,7 +117,7 @@ export const PERMISSIONS = [
   'investor_portal.view',
   'investor_portal.manage',
 
-  // Accounting
+  // Accounting (Phase 8)
   'account.view',
   'account.manage',
   'journal.view',
@@ -134,6 +134,28 @@ export const PERMISSIONS = [
   'bank_reconciliation.post',
   'cash.view',
   'cash.manage',
+  'cost_centre.view',
+  'cost_centre.manage',
+  'gst.view',
+  'gst.manage',
+  'gst.file',
+  'tds.view',
+  'tds.manage',
+  'tds.file',
+  'budget.view',
+  'budget.manage',
+  'budget.approve',
+  'fixed_asset.view',
+  'fixed_asset.manage',
+  'fixed_asset.depreciate',
+  'finance_statement.view',
+  'finance_statement.export',
+  'customer_invoice.view',
+  'customer_invoice.manage',
+  'customer_invoice.post',
+  'opening_balance.view',
+  'opening_balance.manage',
+  'opening_balance.post',
 
   // Expenses / petty cash
   'expense_category.view',

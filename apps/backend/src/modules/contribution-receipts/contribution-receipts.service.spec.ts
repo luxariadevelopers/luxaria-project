@@ -118,6 +118,26 @@ describe('ContributionReceiptsService', () => {
       assertPostingAllowed: jest.fn().mockResolvedValue({}),
     } as unknown as FinancialYearService;
 
+    const journalId = new Types.ObjectId().toHexString();
+    const journalService = {
+      create: jest.fn().mockResolvedValue({
+        data: { id: journalId },
+      }),
+    };
+    const accountModel = {
+      findOne: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ _id: new Types.ObjectId() }),
+      }),
+    };
+    const bankAccountModel = {
+      findById: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          _id: bankAccountId,
+          ledgerAccountId: new Types.ObjectId(),
+        }),
+      }),
+    };
+
     service = new ContributionReceiptsService(
       receiptModel,
       projectBalanceModel,
@@ -125,11 +145,14 @@ describe('ContributionReceiptsService', () => {
       projectModel,
       participantModel,
       commitmentModel,
+      accountModel as never,
+      bankAccountModel as never,
       numbering,
       new IdempotencyService(idempotencyModel),
       commitmentsService,
       new ContributionReceiptPdfService(),
       financialYearService,
+      journalService as never,
       {
         assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
         assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),
@@ -254,8 +277,8 @@ describe('ContributionReceiptsService', () => {
     expect(posted.data?.status).toBe(ContributionReceiptStatus.Posted);
     expect(posted.data?.receiptNumber).toMatch(/^CTR-\d{4}-\d{6}$/);
     expect(posted.data?.balancesApplied).toBe(true);
-    expect(posted.data?.journalEntryId).toBeNull();
-    expect(posted.data?.accountingNote).toMatch(/accounting entries later/i);
+    expect(posted.data?.journalEntryId).toBeTruthy();
+    expect(posted.data?.accountingNote).toMatch(/general ledger/i);
     expect(posted.data?.receiptPdfPath).toBeTruthy();
 
     const absolute = join(process.cwd(), posted.data!.receiptPdfPath!);
