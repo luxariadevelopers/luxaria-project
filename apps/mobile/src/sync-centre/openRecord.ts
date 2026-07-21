@@ -1,7 +1,11 @@
 import type { OfflineTransaction } from '@/offline/types';
 
 export type OpenRecordTarget = {
-  screen: 'GoodsReceipt' | 'DailyProgressReport';
+  screen:
+    | 'GoodsReceipt'
+    | 'DailyProgressReport'
+    | 'SiteExpenseForm'
+    | 'PurchaseRequestForm';
   label: string;
 };
 
@@ -21,6 +25,13 @@ export function resolveOpenRecord(
       return {
         screen: 'DailyProgressReport',
         label: 'Open daily progress form',
+      };
+    case 'site_expense.create':
+      return { screen: 'SiteExpenseForm', label: 'Open site expense form' };
+    case 'purchase_request.create':
+      return {
+        screen: 'PurchaseRequestForm',
+        label: 'Open purchase request form',
       };
     default:
       return null;

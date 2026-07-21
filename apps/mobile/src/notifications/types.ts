@@ -14,6 +14,16 @@ export type NotificationDeepLinkTarget =
   | { screen: 'SiteExpenseDetail'; params: { expenseId: string } }
   | { screen: 'PettyCashDetail'; params: { requestId: string } }
   | { screen: 'PurchaseRequestDetail'; params: { requestId: string } }
+  | { screen: 'WorkMeasurementList' }
+  | { screen: 'WorkMeasurementForm' }
+  | { screen: 'StockCountList' }
+  | { screen: 'StockCountEntry'; params?: { countId?: string } }
+  | { screen: 'MaterialIssue' }
+  | { screen: 'MaterialIssueForm' }
+  | { screen: 'MaterialReturn'; params?: { issueId?: string } }
+  | { screen: 'LabourVoucherHistory' }
+  | { screen: 'LabourVoucherDetail'; params: { voucherId: string } }
+  | { screen: 'QualityInspectionList' }
   | { screen: 'Tabs'; params: { screen: 'Projects' } }
   | { screen: 'ProjectSelect' };
 

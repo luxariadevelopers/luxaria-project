@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { useOfflineSync } from '@/offline';
 import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 import {
@@ -13,6 +14,7 @@ import {
   listMaterials,
   submitPurchaseRequest,
 } from './api';
+import { buildPurchaseRequestOfflineEnqueue } from './buildPurchaseRequestOfflineEnqueue';
 import { resolvePurchaseRequestCapabilities } from './permissions';
 import type { MaterialOption } from './types';
 
@@ -23,6 +25,7 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
   const caps = resolvePurchaseRequestCapabilities(hasPermission);
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
+  const { enqueue } = useOfflineSync();
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [materialId, setMaterialId] = useState('');
   const [qty, setQty] = useState('10');
@@ -55,23 +58,37 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
 
   const submit = async () => {
     if (!selectedProject?.id) { setError('Select a project first'); return; }
-    if (!isOnline) { setError('Requires network'); return; }
     const n = Number(qty);
     if (!materialId || !(n > 0) || !justification.trim()) {
       setError('Material, quantity and justification are required');
       return;
     }
+    if (!isOnline && !materials.length) {
+      setError('Load materials while online first, then capture offline.');
+      return;
+    }
     setSaving(true); setError(null);
+    const payload = {
+      projectId: selectedProject.id,
+      requiredByDate,
+      justification: justification.trim(),
+      items: [{ materialId, requestedQuantity: n, unit }],
+      offlineCapturedAt: new Date().toISOString(),
+    };
     try {
-      const created = await createPurchaseRequest({
-        projectId: selectedProject.id,
-        requiredByDate,
-        justification: justification.trim(),
-        items: [{ materialId, requestedQuantity: n, unit }],
-      });
-      const submitted = await submitPurchaseRequest(created.id);
-      Alert.alert('Submitted', submitted.requestNumber);
-      navigation.replace('PurchaseRequestDetail', { requestId: submitted.id });
+      if (isOnline) {
+        const created = await createPurchaseRequest(payload);
+        const submitted = await submitPurchaseRequest(created.id);
+        Alert.alert('Submitted', submitted.requestNumber);
+        navigation.replace('PurchaseRequestDetail', { requestId: submitted.id });
+      } else {
+        await enqueue(buildPurchaseRequestOfflineEnqueue(payload));
+        Alert.alert(
+          'Queued',
+          'Purchase request saved offline. It will sync when you are back online.',
+        );
+        navigation.goBack();
+      }
     } catch (err) {
       setError(getErrorMessage(err, 'Could not create PR'));
     } finally {
@@ -103,7 +120,9 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
       <Text style={styles.label}>Justification</Text>
       <TextInput style={[styles.input, styles.multiline]} value={justification} onChangeText={setJustification} multiline />
       <Pressable style={[styles.submit, saving && styles.disabled]} disabled={saving} onPress={() => void submit()}>
-        <Text style={styles.submitText}>{saving ? 'Saving…' : 'Create & submit'}</Text>
+        <Text style={styles.submitText}>
+          {saving ? 'Saving…' : isOnline ? 'Create & submit' : 'Save offline & submit'}
+        </Text>
       </Pressable>
     </Screen>
   );

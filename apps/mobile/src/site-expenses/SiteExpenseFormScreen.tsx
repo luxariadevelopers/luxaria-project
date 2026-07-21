@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { useOfflineSync } from '@/offline';
 import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 import {
@@ -14,6 +15,7 @@ import {
   listExpenseCategories,
   submitSiteExpense,
 } from './api';
+import { buildSiteExpenseOfflineEnqueue } from './buildSiteExpenseOfflineEnqueue';
 import { resolveExpenseCapabilities } from './permissions';
 import {
   SiteExpensePaymentMode,
@@ -28,6 +30,7 @@ export function SiteExpenseFormScreen({ navigation }: Props) {
   const caps = resolveExpenseCapabilities(hasPermission);
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
+  const { enqueue } = useOfflineSync();
   const [accounts, setAccounts] = useState<CashAccountOption[]>([]);
   const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
   const [pettyCashAccountId, setPettyCashAccountId] = useState('');
@@ -64,28 +67,42 @@ export function SiteExpenseFormScreen({ navigation }: Props) {
 
   const submit = async () => {
     if (!selectedProject?.id) { setError('Select a project first'); return; }
-    if (!isOnline) { setError('Site expense create requires network'); return; }
     const n = Number(amount);
     if (!pettyCashAccountId || !expenseCategoryId || !paidTo.trim() || !purpose.trim() || !(n > 0)) {
       setError('Account, category, paid to, purpose and amount are required');
       return;
     }
+    if (!isOnline && (!accounts.length || !categories.length)) {
+      setError('Load cash accounts and categories while online first, then capture offline.');
+      return;
+    }
     setSaving(true);
     setError(null);
+    const payload = {
+      projectId: selectedProject.id,
+      pettyCashAccountId,
+      expenseDate,
+      expenseCategoryId,
+      amount: n,
+      paidTo: paidTo.trim(),
+      purpose: purpose.trim(),
+      paymentMode: SiteExpensePaymentMode.Cash,
+      offlineCapturedAt: new Date().toISOString(),
+    };
     try {
-      const created = await createSiteExpense({
-        projectId: selectedProject.id,
-        pettyCashAccountId,
-        expenseDate,
-        expenseCategoryId,
-        amount: n,
-        paidTo: paidTo.trim(),
-        purpose: purpose.trim(),
-        paymentMode: SiteExpensePaymentMode.Cash,
-      });
-      const submitted = await submitSiteExpense(created.id);
-      Alert.alert('Submitted', submitted.voucherNumber);
-      navigation.replace('SiteExpenseDetail', { expenseId: submitted.id });
+      if (isOnline) {
+        const created = await createSiteExpense(payload);
+        const submitted = await submitSiteExpense(created.id);
+        Alert.alert('Submitted', submitted.voucherNumber);
+        navigation.replace('SiteExpenseDetail', { expenseId: submitted.id });
+      } else {
+        await enqueue(buildSiteExpenseOfflineEnqueue(payload));
+        Alert.alert(
+          'Queued',
+          'Site expense saved offline. It will sync when you are back online.',
+        );
+        navigation.goBack();
+      }
     } catch (err) {
       setError(getErrorMessage(err, 'Could not save expense'));
     } finally {
@@ -123,7 +140,9 @@ export function SiteExpenseFormScreen({ navigation }: Props) {
       <Text style={styles.label}>Purpose</Text>
       <TextInput style={[styles.input, styles.multiline]} value={purpose} onChangeText={setPurpose} multiline />
       <Pressable style={[styles.submit, saving && styles.disabled]} disabled={saving} onPress={() => void submit()}>
-        <Text style={styles.submitText}>{saving ? 'Saving…' : 'Create & submit'}</Text>
+        <Text style={styles.submitText}>
+          {saving ? 'Saving…' : isOnline ? 'Create & submit' : 'Save offline & submit'}
+        </Text>
       </Pressable>
     </Screen>
   );

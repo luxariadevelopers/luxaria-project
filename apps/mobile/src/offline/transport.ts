@@ -2,9 +2,10 @@ import { ERROR_CODES, type ApiError } from '@luxaria/shared-types';
 import axios from 'axios';
 import { apiClient, getErrorMessage } from '@/api/client';
 import {
-  mergeStockCountItemPhotos,
-  wantsStockCountSubmitAfterCreate,
-} from '@/stock-count/mergeItemPhotos';
+  prepareCreateBody,
+  submitAfterCreatePath,
+  wantsSubmitAfterCreate,
+} from './submitAfterCreate';
 import { uploadToPresignedUrl } from '@/utils/fileUpload';
 import {
   createSyncConflictError,
@@ -112,10 +113,8 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
           ...(txn.projectId ? { 'X-Project-Id': txn.projectId } : {}),
         };
 
-        const submitAfter = wantsStockCountSubmitAfterCreate(txn.type, payload);
-        const body = submitAfter
-          ? mergeStockCountItemPhotos(payload)
-          : payload;
+        const submitAfter = wantsSubmitAfterCreate(txn.type, payload);
+        const body = submitAfter ? prepareCreateBody(txn.type, payload) : payload;
 
         const response = await apiClient.request<{
           success: boolean;
@@ -150,8 +149,10 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
 
         let responseBody: unknown = response.data;
 
-        // Nest stock counts: create is draft-only; submit is a separate POST.
-        if (submitAfter) {
+        const submitPath = submitAfter
+          ? submitAfterCreatePath(txn.type, String(serverRecordId))
+          : null;
+        if (submitAfter && submitPath) {
           const submitted = await apiClient.post<{
             success: boolean;
             message?: string;
@@ -162,7 +163,7 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
               updatedAt?: string;
               createdAt?: string;
             };
-          }>(`/stock-counts/${encodeURIComponent(String(serverRecordId))}/submit`, {}, {
+          }>(submitPath, {}, {
             headers,
           });
           const submittedData = submitted.data.data;

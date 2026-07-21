@@ -33,8 +33,13 @@ describe('mergeStockCountItemPhotos', () => {
       wantsStockCountSubmitAfterCreate('stock_count.create_submit', {}),
     ).toBe(true);
     expect(
-      wantsStockCountSubmitAfterCreate('grn.create', { submitAfterCreate: true }),
+      wantsStockCountSubmitAfterCreate('stock_count.create_submit', {
+        submitAfterCreate: true,
+      }),
     ).toBe(true);
+    expect(wantsStockCountSubmitAfterCreate('grn.create', { submitAfterCreate: true })).toBe(
+      false,
+    );
     expect(wantsStockCountSubmitAfterCreate('grn.create', {})).toBe(false);
   });
 });

@@ -163,6 +163,36 @@ export function NotificationsScreen({ navigation }: Props) {
           case 'PurchaseRequestDetail':
             navigation.navigate('PurchaseRequestDetail', target.params);
             break;
+          case 'WorkMeasurementList':
+            navigation.navigate('WorkMeasurementList');
+            break;
+          case 'WorkMeasurementForm':
+            navigation.navigate('WorkMeasurementForm');
+            break;
+          case 'StockCountList':
+            navigation.navigate('StockCountList');
+            break;
+          case 'StockCountEntry':
+            navigation.navigate('StockCountEntry', target.params);
+            break;
+          case 'MaterialIssue':
+            navigation.navigate('MaterialIssue');
+            break;
+          case 'MaterialIssueForm':
+            navigation.navigate('MaterialIssueForm');
+            break;
+          case 'MaterialReturn':
+            navigation.navigate('MaterialReturn', target.params);
+            break;
+          case 'LabourVoucherHistory':
+            navigation.navigate('LabourVoucherHistory');
+            break;
+          case 'LabourVoucherDetail':
+            navigation.navigate('LabourVoucherDetail', target.params);
+            break;
+          case 'QualityInspectionList':
+            navigation.navigate('QualityInspectionList');
+            break;
           case 'ProjectSelect':
             navigation.navigate('ProjectSelect');
             break;

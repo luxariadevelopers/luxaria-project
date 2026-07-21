@@ -61,6 +61,6 @@ export function wantsStockCountSubmitAfterCreate(
 ): boolean {
   return (
     txnType === 'stock_count.create_submit' ||
-    payload.submitAfterCreate === true
+    (txnType.startsWith('stock_count') && payload.submitAfterCreate === true)
   );
 }

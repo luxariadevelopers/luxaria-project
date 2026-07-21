@@ -1,4 +1,5 @@
 import { resolveNotificationDeepLink } from '../resolveDeepLink';
+import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers/permissions';
 
 const PROJECT_A = '507f1f77bcf86cd799439011';
 const PROJECT_B = '507f1f77bcf86cd799439012';
@@ -176,5 +177,96 @@ describe('resolveNotificationDeepLink', () => {
       requiredPermissions: ['project.view'],
       projectId: PROJECT_B,
     });
+  });
+
+  it('opens stock count entry for stock_count with entity id', () => {
+    const result = resolveNotificationDeepLink(
+      { entityType: 'stock_count', entityId: PO_ID, projectId: PROJECT_A },
+      ctx({
+        permissions: [
+          'notification.view',
+          'stock.view',
+          'project.view',
+        ],
+      }),
+    );
+    expect(result).toEqual({
+      status: 'ok',
+      target: {
+        screen: 'StockCountEntry',
+        params: { countId: PO_ID },
+      },
+      requiredPermissions: ['stock.view'],
+      projectId: PROJECT_A,
+    });
+  });
+
+  it('opens material return for material_issue detail', () => {
+    const result = resolveNotificationDeepLink(
+      { entityType: 'material_issue', entityId: PO_ID, projectId: PROJECT_A },
+      ctx({
+        permissions: [
+          'notification.view',
+          'stock.view',
+          'stock.issue',
+          'project.view',
+        ],
+      }),
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.target).toEqual({
+        screen: 'MaterialReturn',
+        params: { issueId: PO_ID },
+      });
+    }
+  });
+
+  it('opens labour voucher detail for signed_payment_voucher', () => {
+    const result = resolveNotificationDeepLink(
+      { entityType: 'signed_payment_voucher', entityId: PO_ID },
+      ctx({
+        permissions: [
+          'notification.view',
+          LABOUR_VOUCHER_PERMISSIONS.view,
+          'project.view',
+        ],
+      }),
+    );
+    expect(result).toEqual({
+      status: 'ok',
+      target: {
+        screen: 'LabourVoucherDetail',
+        params: { voucherId: PO_ID },
+      },
+      requiredPermissions: [LABOUR_VOUCHER_PERMISSIONS.view],
+      projectId: null,
+    });
+  });
+
+  it('opens quality inspection list', () => {
+    const result = resolveNotificationDeepLink(
+      { entityType: 'quality_inspection', entityId: PO_ID, projectId: PROJECT_A },
+      ctx({
+        permissions: ['notification.view', 'quality.view', 'project.view'],
+      }),
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.target).toEqual({ screen: 'QualityInspectionList' });
+    }
+  });
+
+  it('opens work measurement list when permitted', () => {
+    const result = resolveNotificationDeepLink(
+      { entityType: 'work_measurement', entityId: PO_ID, projectId: PROJECT_A },
+      ctx({
+        permissions: ['notification.view', 'measurement.view', 'project.view'],
+      }),
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.target).toEqual({ screen: 'WorkMeasurementList' });
+    }
   });
 });

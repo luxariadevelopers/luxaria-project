@@ -11,6 +11,16 @@ export type NotificationRouteTarget =
   | { screen: 'DprDetail'; params: { dprId: string } }
   | { screen: 'ApprovalsList' }
   | { screen: 'ApprovalDetail'; params: { approvalId: string } }
+  | { screen: 'WorkMeasurementList' }
+  | { screen: 'WorkMeasurementForm' }
+  | { screen: 'StockCountList' }
+  | { screen: 'StockCountEntry'; params?: AppStackParamList['StockCountEntry'] }
+  | { screen: 'MaterialIssue' }
+  | { screen: 'MaterialIssueForm' }
+  | { screen: 'MaterialReturn'; params?: AppStackParamList['MaterialReturn'] }
+  | { screen: 'LabourVoucherHistory' }
+  | { screen: 'LabourVoucherDetail'; params: { voucherId: string } }
+  | { screen: 'QualityInspectionList' }
   | {
       screen: 'Tabs';
       params: NonNullable<AppStackParamList['Tabs']>;
@@ -65,6 +75,50 @@ export function resolveNotificationRoute(
     return { screen: 'DprList' };
   }
 
+  if (entityType.includes('work_measurement')) {
+    if (
+      eventType.includes('missing_work_measurement') ||
+      eventType.includes('work_measurement_due')
+    ) {
+      return { screen: 'WorkMeasurementForm' };
+    }
+    return { screen: 'WorkMeasurementList' };
+  }
+
+  if (entityType.includes('stock_count')) {
+    if (entityId) {
+      return { screen: 'StockCountEntry', params: { countId: entityId } };
+    }
+    if (eventType.includes('stock_count') || eventType.includes('low_stock')) {
+      return { screen: 'StockCountEntry' };
+    }
+    return { screen: 'StockCountList' };
+  }
+
+  if (entityType.includes('material_issue')) {
+    if (entityId) {
+      return { screen: 'MaterialReturn', params: { issueId: entityId } };
+    }
+    if (eventType.includes('material_issue')) {
+      return { screen: 'MaterialIssueForm' };
+    }
+    return { screen: 'MaterialIssue' };
+  }
+
+  if (
+    entityType.includes('signed_payment_voucher') ||
+    entityType.includes('labour_voucher')
+  ) {
+    if (entityId) {
+      return { screen: 'LabourVoucherDetail', params: { voucherId: entityId } };
+    }
+    return { screen: 'LabourVoucherHistory' };
+  }
+
+  if (entityType.includes('quality_inspection')) {
+    return { screen: 'QualityInspectionList' };
+  }
+
   return { screen: 'Tabs', params: { screen: 'Home' } };
 }
 
@@ -95,6 +149,36 @@ export function navigateFromNotificationData(
       break;
     case 'ApprovalDetail':
       navigation.navigate('ApprovalDetail', target.params);
+      break;
+    case 'WorkMeasurementList':
+      navigation.navigate('WorkMeasurementList');
+      break;
+    case 'WorkMeasurementForm':
+      navigation.navigate('WorkMeasurementForm');
+      break;
+    case 'StockCountList':
+      navigation.navigate('StockCountList');
+      break;
+    case 'StockCountEntry':
+      navigation.navigate('StockCountEntry', target.params);
+      break;
+    case 'MaterialIssue':
+      navigation.navigate('MaterialIssue');
+      break;
+    case 'MaterialIssueForm':
+      navigation.navigate('MaterialIssueForm');
+      break;
+    case 'MaterialReturn':
+      navigation.navigate('MaterialReturn', target.params);
+      break;
+    case 'LabourVoucherHistory':
+      navigation.navigate('LabourVoucherHistory');
+      break;
+    case 'LabourVoucherDetail':
+      navigation.navigate('LabourVoucherDetail', target.params);
+      break;
+    case 'QualityInspectionList':
+      navigation.navigate('QualityInspectionList');
       break;
     case 'Tabs':
       navigation.navigate('Tabs', target.params);

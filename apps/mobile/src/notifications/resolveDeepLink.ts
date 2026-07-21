@@ -4,6 +4,11 @@ import type {
   ResolveDeepLinkInput,
   ResolveDeepLinkResult,
 } from './types';
+import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers/permissions';
+import {
+  STOCK_COUNT_CREATE_SUBMIT_PERMISSION,
+  STOCK_COUNT_VIEW_PERMISSION,
+} from '@/stock-count/permissions';
 
 const MONGO_ID = /^[a-fA-F0-9]{24}$/;
 
@@ -102,6 +107,69 @@ function candidateFromEntityType(
         requiredPermissions: ['purchase.view'],
         requireEntityId: true,
       };
+    case 'work_measurement':
+      if (entityId) {
+        return {
+          target: { screen: 'WorkMeasurementList' },
+          requiredPermissions: ['measurement.view'],
+          requireEntityId: true,
+        };
+      }
+      return {
+        target: { screen: 'WorkMeasurementList' },
+        requiredPermissions: ['measurement.view'],
+      };
+    case 'stock_count':
+      if (entityId) {
+        return {
+          target: {
+            screen: 'StockCountEntry',
+            params: { countId: entityId },
+          },
+          requiredPermissions: [STOCK_COUNT_VIEW_PERMISSION],
+          requireEntityId: true,
+        };
+      }
+      return {
+        target: { screen: 'StockCountList' },
+        requiredPermissions: [STOCK_COUNT_VIEW_PERMISSION],
+      };
+    case 'material_issue':
+      if (entityId) {
+        return {
+          target: {
+            screen: 'MaterialReturn',
+            params: { issueId: entityId },
+          },
+          requiredPermissions: ['stock.view', 'stock.issue'],
+          requireEntityId: true,
+        };
+      }
+      return {
+        target: { screen: 'MaterialIssue' },
+        requiredPermissions: ['stock.view'],
+      };
+    case 'signed_payment_voucher':
+    case 'labour_voucher':
+      if (entityId) {
+        return {
+          target: {
+            screen: 'LabourVoucherDetail',
+            params: { voucherId: entityId },
+          },
+          requiredPermissions: [LABOUR_VOUCHER_PERMISSIONS.view],
+          requireEntityId: true,
+        };
+      }
+      return {
+        target: { screen: 'LabourVoucherHistory' },
+        requiredPermissions: [LABOUR_VOUCHER_PERMISSIONS.view],
+      };
+    case 'quality_inspection':
+      return {
+        target: { screen: 'QualityInspectionList' },
+        requiredPermissions: ['quality.view'],
+      };
     case 'project':
       return {
         target: { screen: 'Tabs', params: { screen: 'Projects' } },
@@ -119,6 +187,23 @@ function candidateFromEventType(eventType: string): Candidate | null {
       return {
         target: { screen: 'DailyProgressReport' },
         requiredPermissions: ['dpr.create'],
+      };
+    case 'missing_work_measurement':
+    case 'work_measurement_due':
+      return {
+        target: { screen: 'WorkMeasurementForm' },
+        requiredPermissions: ['measurement.create'],
+      };
+    case 'stock_count_due':
+    case 'low_stock':
+      return {
+        target: { screen: 'StockCountEntry' },
+        requiredPermissions: [STOCK_COUNT_CREATE_SUBMIT_PERMISSION],
+      };
+    case 'material_issue_requested':
+      return {
+        target: { screen: 'MaterialIssueForm' },
+        requiredPermissions: ['stock.issue'],
       };
     default:
       return null;

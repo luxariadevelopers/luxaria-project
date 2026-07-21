@@ -76,4 +76,28 @@ describe('notificationNavigation', () => {
       params: { screen: 'Home' },
     });
   });
+
+  it('routes stock count notifications to entry when id present', () => {
+    expect(
+      resolveNotificationRoute({
+        entityType: 'stock_count',
+        entityId: '507f191e810c19729de860ea',
+      }),
+    ).toEqual({
+      screen: 'StockCountEntry',
+      params: { countId: '507f191e810c19729de860ea' },
+    });
+  });
+
+  it('routes labour voucher notifications', () => {
+    expect(
+      resolveNotificationRoute({
+        entityType: 'labour_voucher',
+        entityId: '507f191e810c19729de860ea',
+      }),
+    ).toEqual({
+      screen: 'LabourVoucherDetail',
+      params: { voucherId: '507f191e810c19729de860ea' },
+    });
+  });
 });
