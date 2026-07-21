@@ -36,7 +36,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-live',
-      testMatch: '**/*.smoke.spec.ts',
+      testMatch: ['**/*.smoke.spec.ts', '**/project-creation.spec.ts'],
       testIgnore: ['**/smoke.spec.ts', '**/golden-path-*.spec.ts'],
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] },
