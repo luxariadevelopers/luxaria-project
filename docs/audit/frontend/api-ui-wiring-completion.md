@@ -2,7 +2,7 @@
 
 **Overall verdict:** PASS  
 **Baseline commit:** `603c8c9`  
-**Current HEAD:** see `git rev-parse HEAD` after this commit lands  
+**Current HEAD:** `cec39d4` (wiring audit PASS + multi-actor golden paths / smokes)  
 **Audit date:** 2026-07-21  
 **Inventory:** [`api-ui-wiring-inventory.csv`](./api-ui-wiring-inventory.csv)
 
