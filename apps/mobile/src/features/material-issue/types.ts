@@ -133,3 +133,47 @@ export type MaterialIssueUserOption = {
   userCode: string;
   status: string;
 };
+
+export type MaterialIssueItemInput = {
+  materialId: string;
+  quantity: number;
+  unit: MaterialUnit;
+  batch?: string | null;
+  notes?: string | null;
+};
+
+/** Nest `CreateMaterialIssueDto` */
+export type CreateMaterialIssueInput = {
+  projectId: string;
+  issueDate: string;
+  issuedBy?: string;
+  receivedBy: string;
+  contractorId?: string | null;
+  blockId?: string | null;
+  floorId?: string | null;
+  boqItemId: string;
+  workLocation: string;
+  storeLocation?: string | null;
+  notes?: string | null;
+  items: MaterialIssueItemInput[];
+};
+
+export type MaterialIssueMaterialOption = {
+  id: string;
+  materialCode: string;
+  materialName: string;
+  baseUnit?: string;
+};
+
+export type MaterialIssueBoqItemOption = {
+  id: string;
+  boqCode: string;
+  description: string;
+  unit: string;
+};
+
+export type MaterialIssueContractorOption = {
+  id: string;
+  contractorCode: string;
+  legalName: string;
+};

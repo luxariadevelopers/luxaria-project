@@ -99,12 +99,20 @@ export function MaterialIssueScreen({ navigation }: Props) {
       }
     >
       {canReturn ? (
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate('MaterialReturn', {})}
-        >
-          <Text style={styles.primaryButtonText}>Return unused material</Text>
-        </Pressable>
+        <>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('MaterialIssueForm')}
+          >
+            <Text style={styles.primaryButtonText}>Issue material to site</Text>
+          </Pressable>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('MaterialReturn', {})}
+          >
+            <Text style={styles.secondaryButtonText}>Return unused material</Text>
+          </Pressable>
+        </>
       ) : (
         <Text style={styles.meta}>
           stock.issue is required to post material returns.
@@ -169,7 +177,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: 14,
     alignItems: 'center',
+    marginBottom: 12,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: 14,
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  secondaryButtonText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 15,
   },
   primaryButtonText: {
     color: '#F4F0E6',

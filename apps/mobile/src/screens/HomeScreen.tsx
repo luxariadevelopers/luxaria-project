@@ -45,7 +45,8 @@ export function HomeScreen() {
   const purchaseCaps = resolvePurchaseRequestCapabilities(hasPermission);
   const canViewStockCount = canViewStockCounts(hasPermission);
   const canCreateStockCount = canCreateSubmitStockCounts(hasPermission);
-  const canOpenMaterialIssue = hasPermission('stock.view');
+  const canViewMaterialIssue = hasPermission('stock.view');
+  const canCreateMaterialIssue = hasPermission('stock.issue');
   const canViewLabourVoucher = hasPermission(LABOUR_VOUCHER_PERMISSIONS.view);
   const canCreateLabourVoucher = hasPermission(
     LABOUR_VOUCHER_PERMISSIONS.createOrSubmit,
@@ -220,10 +221,16 @@ export function HomeScreen() {
           </Pressable>
         ) : null}
 
-        {canOpenMaterialIssue ? (
+        {canViewMaterialIssue || canCreateMaterialIssue ? (
           <Pressable
             style={styles.secondaryButton}
-            onPress={() => navigation.navigate('MaterialIssue')}
+            onPress={() => {
+              if (canViewMaterialIssue) {
+                navigation.navigate('MaterialIssue');
+              } else {
+                navigation.navigate('MaterialIssueForm');
+              }
+            }}
           >
             <Text style={styles.secondaryButtonText}>Material issue</Text>
           </Pressable>

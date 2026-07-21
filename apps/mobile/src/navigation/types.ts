@@ -23,6 +23,7 @@ export type AppStackParamList = {
   StockCountList: undefined;
   StockCountEntry: { countId?: string } | undefined;
   MaterialIssue: undefined;
+  MaterialIssueForm: undefined;
   MaterialReturn: { issueId?: string } | undefined;
   NewLabourVoucher: undefined;
   LabourVoucherHistory: undefined;

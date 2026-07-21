@@ -36,6 +36,7 @@ import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { MaterialIssueFormScreen } from '@/screens/MaterialIssueFormScreen';
 import { MaterialIssueScreen } from '@/screens/MaterialIssueScreen';
 import { MaterialReturnScreen } from '@/screens/MaterialReturnScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
@@ -214,6 +215,11 @@ function AppNavigator() {
         name="MaterialIssue"
         component={MaterialIssueScreen}
         options={{ title: 'Material issue' }}
+      />
+      <AppStack.Screen
+        name="MaterialIssueForm"
+        component={MaterialIssueFormScreen}
+        options={{ title: 'New material issue' }}
       />
       <AppStack.Screen
         name="MaterialReturn"

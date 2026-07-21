@@ -1,7 +1,11 @@
 import { apiGet, apiPost } from '@/api/client';
 import type {
+  CreateMaterialIssueInput,
   CreateMaterialReturnInput,
   ListMaterialIssuesQuery,
+  MaterialIssueBoqItemOption,
+  MaterialIssueContractorOption,
+  MaterialIssueMaterialOption,
   MaterialIssueUserOption,
   PublicMaterialIssue,
 } from './types';
@@ -67,6 +71,17 @@ function normaliseIssue(row: PublicMaterialIssue): PublicMaterialIssue {
   };
 }
 
+/** `POST /material-issues` — `stock.issue` */
+export async function createMaterialIssue(
+  input: CreateMaterialIssueInput,
+): Promise<PublicMaterialIssue> {
+  const res = await apiPost<PublicMaterialIssue>(BASE, input);
+  if (!res.data) {
+    throw new Error(res.message || 'Create material issue failed');
+  }
+  return normaliseIssue(res.data);
+}
+
 /** `GET /material-issues` — `stock.view` */
 export async function listMaterialIssues(
   query: ListMaterialIssuesQuery = {},
@@ -122,4 +137,61 @@ export async function listUsersForReturn(params?: {
     projectId: params?.projectId,
   });
   return res.data ?? [];
+}
+
+/** `GET /materials` — `material.view` */
+export async function listMaterialsForIssue(params?: {
+  search?: string;
+}): Promise<MaterialIssueMaterialOption[]> {
+  const res = await apiGet<Array<Record<string, unknown>>>('/materials', {
+    page: 1,
+    limit: 50,
+    search: params?.search,
+  });
+  return (res.data ?? []).map((row) => ({
+    id: String(row.id),
+    materialCode: String(row.materialCode ?? row.code ?? ''),
+    materialName: String(row.materialName ?? row.name ?? ''),
+    baseUnit: row.baseUnit ? String(row.baseUnit) : undefined,
+  }));
+}
+
+/** `GET /boq/projects/:projectId/items` — `boq.view` */
+export async function listBoqItemsForIssue(query: {
+  projectId: string;
+  search?: string;
+  limit?: number;
+}): Promise<MaterialIssueBoqItemOption[]> {
+  const res = await apiGet<MaterialIssueBoqItemOption[]>(
+    `/boq/projects/${encodeURIComponent(query.projectId)}/items`,
+    {
+      search: query.search,
+      page: 1,
+      limit: query.limit ?? 50,
+      status: 'active',
+    },
+  );
+  return (res.data ?? []).map((row) => ({
+    id: row.id,
+    boqCode: row.boqCode,
+    description: row.description,
+    unit: row.unit,
+  }));
+}
+
+/** `GET /contractors` — `contractor.view` */
+export async function listContractorsForIssue(params?: {
+  search?: string;
+  limit?: number;
+}): Promise<MaterialIssueContractorOption[]> {
+  const res = await apiGet<MaterialIssueContractorOption[]>('/contractors', {
+    search: params?.search,
+    page: 1,
+    limit: params?.limit ?? 50,
+  });
+  return (res.data ?? []).map((row) => ({
+    id: row.id,
+    contractorCode: row.contractorCode,
+    legalName: row.legalName,
+  }));
 }
