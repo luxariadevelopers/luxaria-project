@@ -5,7 +5,15 @@ export type { InboxNotification };
 /** Mobile stack / tab targets that notifications may open. */
 export type NotificationDeepLinkTarget =
   | { screen: 'DailyProgressReport' }
+  | { screen: 'DprList' }
+  | { screen: 'DprDetail'; params: { dprId: string } }
   | { screen: 'GoodsReceipt'; params?: { purchaseOrderId?: string } }
+  | { screen: 'ApprovalsList' }
+  | { screen: 'ApprovalDetail'; params: { approvalId: string } }
+  | { screen: 'LabourAttendanceDetail'; params: { attendanceId: string } }
+  | { screen: 'SiteExpenseDetail'; params: { expenseId: string } }
+  | { screen: 'PettyCashDetail'; params: { requestId: string } }
+  | { screen: 'PurchaseRequestDetail'; params: { requestId: string } }
   | { screen: 'Tabs'; params: { screen: 'Projects' } }
   | { screen: 'ProjectSelect' };
 

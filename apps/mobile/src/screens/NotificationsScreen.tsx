@@ -132,14 +132,47 @@ export function NotificationsScreen({ navigation }: Props) {
         }
 
         const { target } = resolved;
-        if (target.screen === 'GoodsReceipt') {
-          navigation.navigate('GoodsReceipt', target.params);
-        } else if (target.screen === 'DailyProgressReport') {
-          navigation.navigate('DailyProgressReport');
-        } else if (target.screen === 'ProjectSelect') {
-          navigation.navigate('ProjectSelect');
-        } else {
-          navigation.navigate('Tabs', target.params);
+        switch (target.screen) {
+          case 'GoodsReceipt':
+            navigation.navigate('GoodsReceipt', target.params);
+            break;
+          case 'DailyProgressReport':
+            navigation.navigate('DailyProgressReport');
+            break;
+          case 'DprList':
+            navigation.navigate('DprList');
+            break;
+          case 'DprDetail':
+            navigation.navigate('DprDetail', target.params);
+            break;
+          case 'ApprovalsList':
+            navigation.navigate('ApprovalsList');
+            break;
+          case 'ApprovalDetail':
+            navigation.navigate('ApprovalDetail', target.params);
+            break;
+          case 'LabourAttendanceDetail':
+            navigation.navigate('LabourAttendanceDetail', target.params);
+            break;
+          case 'SiteExpenseDetail':
+            navigation.navigate('SiteExpenseDetail', target.params);
+            break;
+          case 'PettyCashDetail':
+            navigation.navigate('PettyCashDetail', target.params);
+            break;
+          case 'PurchaseRequestDetail':
+            navigation.navigate('PurchaseRequestDetail', target.params);
+            break;
+          case 'ProjectSelect':
+            navigation.navigate('ProjectSelect');
+            break;
+          case 'Tabs':
+            navigation.navigate('Tabs', target.params);
+            break;
+          default: {
+            const _exhaustive: never = target;
+            void _exhaustive;
+          }
         }
       } catch (error) {
         if (isForbiddenError(error)) {

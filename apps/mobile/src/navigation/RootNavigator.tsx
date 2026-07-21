@@ -2,14 +2,35 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
+import {
+  ApprovalDetailScreen,
+  ApprovalsListScreen,
+} from '@/approvals';
 import { useAuth } from '@/auth/AuthContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useProject } from '@/context/ProjectContext';
+import { DprDetailScreen, DprListScreen } from '@/dpr';
+import {
+  LabourAttendanceDetailScreen,
+  LabourAttendanceFormScreen,
+  LabourAttendanceListScreen,
+} from '@/labour-attendance';
 import {
   LabourVoucherDetailScreen,
   LabourVoucherHistoryScreen,
   NewLabourVoucherScreen,
 } from '@/labour-vouchers';
+import {
+  PettyCashDetailScreen,
+  PettyCashFormScreen,
+  PettyCashListScreen,
+} from '@/petty-cash';
+import {
+  PurchaseRequestDetailScreen,
+  PurchaseRequestFormScreen,
+  PurchaseRequestListScreen,
+} from '@/purchase-requests';
+import { QualityInspectionListScreen } from '@/quality-inspections';
 import { ConflictDetailScreen } from '@/screens/ConflictDetailScreen';
 import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
@@ -27,6 +48,12 @@ import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
 import { StockCountListScreen } from '@/screens/StockCountListScreen';
 import { WorkMeasurementFormScreen } from '@/screens/WorkMeasurementFormScreen';
 import { WorkMeasurementListScreen } from '@/screens/WorkMeasurementListScreen';
+import {
+  SiteExpenseDetailScreen,
+  SiteExpenseFormScreen,
+  SiteExpenseListScreen,
+} from '@/site-expenses';
+import { StockLedgerScreen } from '@/stock-ledger';
 import { appNavigationRef } from '@/navigation/navigationRef';
 import { colors } from '@/theme/colors';
 import type {
@@ -149,9 +176,19 @@ function AppNavigator() {
         options={{ title: 'Goods receipt' }}
       />
       <AppStack.Screen
+        name="DprList"
+        component={DprListScreen}
+        options={{ title: 'Daily progress' }}
+      />
+      <AppStack.Screen
+        name="DprDetail"
+        component={DprDetailScreen}
+        options={{ title: 'DPR detail' }}
+      />
+      <AppStack.Screen
         name="DailyProgressReport"
         component={DailyProgressReportScreen}
-        options={{ title: 'Daily Progress Report' }}
+        options={{ title: 'Capture DPR' }}
       />
       <AppStack.Screen
         name="WorkMeasurementList"
@@ -197,6 +234,86 @@ function AppNavigator() {
         name="LabourVoucherDetail"
         component={LabourVoucherDetailScreen}
         options={{ title: 'Labour voucher' }}
+      />
+      <AppStack.Screen
+        name="LabourAttendanceList"
+        component={LabourAttendanceListScreen}
+        options={{ title: 'Labour attendance' }}
+      />
+      <AppStack.Screen
+        name="LabourAttendanceForm"
+        component={LabourAttendanceFormScreen}
+        options={{ title: 'New attendance' }}
+      />
+      <AppStack.Screen
+        name="LabourAttendanceDetail"
+        component={LabourAttendanceDetailScreen}
+        options={{ title: 'Attendance' }}
+      />
+      <AppStack.Screen
+        name="SiteExpenseList"
+        component={SiteExpenseListScreen}
+        options={{ title: 'Site expenses' }}
+      />
+      <AppStack.Screen
+        name="SiteExpenseForm"
+        component={SiteExpenseFormScreen}
+        options={{ title: 'New site expense' }}
+      />
+      <AppStack.Screen
+        name="SiteExpenseDetail"
+        component={SiteExpenseDetailScreen}
+        options={{ title: 'Site expense' }}
+      />
+      <AppStack.Screen
+        name="ApprovalsList"
+        component={ApprovalsListScreen}
+        options={{ title: 'Approvals' }}
+      />
+      <AppStack.Screen
+        name="ApprovalDetail"
+        component={ApprovalDetailScreen}
+        options={{ title: 'Approval' }}
+      />
+      <AppStack.Screen
+        name="PettyCashList"
+        component={PettyCashListScreen}
+        options={{ title: 'Petty cash' }}
+      />
+      <AppStack.Screen
+        name="PettyCashForm"
+        component={PettyCashFormScreen}
+        options={{ title: 'New petty cash' }}
+      />
+      <AppStack.Screen
+        name="PettyCashDetail"
+        component={PettyCashDetailScreen}
+        options={{ title: 'Petty cash' }}
+      />
+      <AppStack.Screen
+        name="PurchaseRequestList"
+        component={PurchaseRequestListScreen}
+        options={{ title: 'Purchase requests' }}
+      />
+      <AppStack.Screen
+        name="PurchaseRequestForm"
+        component={PurchaseRequestFormScreen}
+        options={{ title: 'New purchase request' }}
+      />
+      <AppStack.Screen
+        name="PurchaseRequestDetail"
+        component={PurchaseRequestDetailScreen}
+        options={{ title: 'Purchase request' }}
+      />
+      <AppStack.Screen
+        name="StockLedger"
+        component={StockLedgerScreen}
+        options={{ title: 'Stock ledger' }}
+      />
+      <AppStack.Screen
+        name="QualityInspectionList"
+        component={QualityInspectionListScreen}
+        options={{ title: 'Quality inspections' }}
       />
       <AppStack.Screen
         name="Notifications"

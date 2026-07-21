@@ -24,9 +24,16 @@ function candidateFromEntityType(
 ): Candidate | 'unknown' | null {
   switch (entityType) {
     case 'daily_progress_report':
+      if (entityId) {
+        return {
+          target: { screen: 'DprDetail', params: { dprId: entityId } },
+          requiredPermissions: ['dpr.view'],
+          requireEntityId: true,
+        };
+      }
       return {
-        target: { screen: 'DailyProgressReport' },
-        requiredPermissions: ['dpr.create'],
+        target: { screen: 'DprList' },
+        requiredPermissions: ['dpr.view'],
       };
     case 'goods_receipt':
       return {
@@ -40,6 +47,59 @@ function candidateFromEntityType(
           params: entityId ? { purchaseOrderId: entityId } : undefined,
         },
         requiredPermissions: ['purchase.order', 'grn.create'],
+        requireEntityId: true,
+      };
+    case 'approval_request':
+      if (entityId) {
+        return {
+          target: {
+            screen: 'ApprovalDetail',
+            params: { approvalId: entityId },
+          },
+          requiredPermissions: ['approval.view'],
+          requireEntityId: true,
+        };
+      }
+      return {
+        target: { screen: 'ApprovalsList' },
+        requiredPermissions: ['approval.view'],
+      };
+    case 'labour_attendance':
+      return {
+        target: {
+          screen: 'LabourAttendanceDetail',
+          params: { attendanceId: entityId ?? '' },
+        },
+        requiredPermissions: ['attendance.view'],
+        requireEntityId: true,
+      };
+    case 'site_expense':
+    case 'site_expense_voucher':
+      return {
+        target: {
+          screen: 'SiteExpenseDetail',
+          params: { expenseId: entityId ?? '' },
+        },
+        requiredPermissions: ['expense.view'],
+        requireEntityId: true,
+      };
+    case 'petty_cash_request':
+    case 'weekly_requirement':
+      return {
+        target: {
+          screen: 'PettyCashDetail',
+          params: { requestId: entityId ?? '' },
+        },
+        requiredPermissions: ['petty_cash.view'],
+        requireEntityId: true,
+      };
+    case 'purchase_request':
+      return {
+        target: {
+          screen: 'PurchaseRequestDetail',
+          params: { requestId: entityId ?? '' },
+        },
+        requiredPermissions: ['purchase.view'],
         requireEntityId: true,
       };
     case 'project':

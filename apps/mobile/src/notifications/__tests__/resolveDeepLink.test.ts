@@ -24,7 +24,7 @@ function ctx(overrides?: {
 }
 
 describe('resolveNotificationDeepLink', () => {
-  it('opens DPR for daily_progress_report when permitted', () => {
+  it('opens DPR detail for daily_progress_report when permitted', () => {
     const result = resolveNotificationDeepLink(
       {
         entityType: 'daily_progress_report',
@@ -32,11 +32,23 @@ describe('resolveNotificationDeepLink', () => {
         eventType: 'missing_dpr',
         projectId: PROJECT_A,
       },
-      ctx(),
+      ctx({
+        permissions: [
+          'notification.view',
+          'dpr.view',
+          'dpr.create',
+          'grn.create',
+          'purchase.order',
+          'project.view',
+        ],
+      }),
     );
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
-      expect(result.target).toEqual({ screen: 'DailyProgressReport' });
+      expect(result.target).toEqual({
+        screen: 'DprDetail',
+        params: { dprId: PO_ID },
+      });
       expect(result.projectId).toBe(PROJECT_A);
     }
   });
