@@ -14,8 +14,8 @@ coverage/
 !.env.example
 !.env.e2e.example
 !.env.docker.example
-# Shared non-secret local defaults (placeholder values only — never put real keys here)
-!.env.development
+# Shared non-secret fixtures (placeholder values only — never put real keys here)
+# .env.development is local/dev secrets — keep ignored; use .env.example instead
 !.env.test
 !.env.production
 *.local
