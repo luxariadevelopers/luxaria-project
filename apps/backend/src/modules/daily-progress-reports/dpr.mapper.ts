@@ -1,6 +1,7 @@
 import type { Types } from 'mongoose';
 import type {
   DprIssueSeverity,
+  DprShift,
   DprStatus,
   DprWeather,
 } from './schemas/daily-progress-report.schema';
@@ -9,11 +10,23 @@ function oid(value?: Types.ObjectId | string | null): string | null {
   return value ? String(value) : null;
 }
 
+function oidList(values?: Array<Types.ObjectId | string> | null): string[] {
+  return (values ?? []).map(String);
+}
+
 export type PublicDailyProgressReport = {
   id: string;
   dprNumber: string;
   projectId: string;
+  siteId: string | null;
+  zoneSiteId: string | null;
+  blockSiteId: string | null;
+  towerSiteId: string | null;
+  floorSiteId: string | null;
+  unitId: string | null;
+  locationSiteIds: string[];
   reportDate: Date;
+  shift: DprShift;
   weather: DprWeather;
   weatherNotes: string | null;
   staffPresent: Array<{
@@ -26,6 +39,8 @@ export type PublicDailyProgressReport = {
   skilledLabourCount: number;
   unskilledLabourCount: number;
   workPerformed: string | null;
+  plannedWork: string | null;
+  delayedWork: string | null;
   boqQuantities: Array<{
     id: string;
     boqItemId: string;
@@ -84,6 +99,16 @@ export type PublicDailyProgressReport = {
   tomorrowPlan: string | null;
   photoDocumentIds: string[];
   videoDocumentIds: string[];
+  materialIssueIds: string[];
+  stockReservationIds: string[];
+  labourAttendanceIds: string[];
+  workMeasurementIds: string[];
+  equipmentUtilizationIds: string[];
+  diaryEntryIds: string[];
+  qualityObservationIds: string[];
+  safetyIncidentIds: string[];
+  siteIssueIds: string[];
+  drawingIds: string[];
   siteCashBalance: number;
   siteCashAccountId: string | null;
   status: DprStatus;
@@ -92,9 +117,17 @@ export type PublicDailyProgressReport = {
   offlineCapturedAt: Date | null;
   submittedBy: string | null;
   submittedAt: Date | null;
+  verifiedBy: string | null;
+  verifiedAt: Date | null;
+  verifyNotes: string | null;
   reviewedBy: string | null;
   reviewedAt: Date | null;
   reviewNotes: string | null;
+  approvedBy: string | null;
+  approvedAt: Date | null;
+  approveNotes: string | null;
+  lockedBy: string | null;
+  lockedAt: Date | null;
   reopenedBy: string | null;
   reopenedAt: Date | null;
   reopenReason: string | null;
@@ -106,7 +139,15 @@ type DprLike = {
   _id: Types.ObjectId | string;
   dprNumber: string;
   projectId: Types.ObjectId | string;
+  siteId?: Types.ObjectId | string | null;
+  zoneSiteId?: Types.ObjectId | string | null;
+  blockSiteId?: Types.ObjectId | string | null;
+  towerSiteId?: Types.ObjectId | string | null;
+  floorSiteId?: Types.ObjectId | string | null;
+  unitId?: Types.ObjectId | string | null;
+  locationSiteIds?: Array<Types.ObjectId | string>;
   reportDate: Date;
+  shift?: DprShift;
   weather: DprWeather;
   weatherNotes?: string | null;
   staffPresent?: Array<{
@@ -119,6 +160,8 @@ type DprLike = {
   skilledLabourCount?: number;
   unskilledLabourCount?: number;
   workPerformed?: string | null;
+  plannedWork?: string | null;
+  delayedWork?: string | null;
   boqQuantities?: Array<{
     _id?: Types.ObjectId | string;
     boqItemId: Types.ObjectId | string;
@@ -177,6 +220,16 @@ type DprLike = {
   tomorrowPlan?: string | null;
   photoDocumentIds?: Array<Types.ObjectId | string>;
   videoDocumentIds?: Array<Types.ObjectId | string>;
+  materialIssueIds?: Array<Types.ObjectId | string>;
+  stockReservationIds?: Array<Types.ObjectId | string>;
+  labourAttendanceIds?: Array<Types.ObjectId | string>;
+  workMeasurementIds?: Array<Types.ObjectId | string>;
+  equipmentUtilizationIds?: Array<Types.ObjectId | string>;
+  diaryEntryIds?: Array<Types.ObjectId | string>;
+  qualityObservationIds?: Array<Types.ObjectId | string>;
+  safetyIncidentIds?: Array<Types.ObjectId | string>;
+  siteIssueIds?: Array<Types.ObjectId | string>;
+  drawingIds?: Array<Types.ObjectId | string>;
   siteCashBalance?: number;
   siteCashAccountId?: Types.ObjectId | string | null;
   status: DprStatus;
@@ -185,9 +238,17 @@ type DprLike = {
   offlineCapturedAt?: Date | null;
   submittedBy?: Types.ObjectId | string | null;
   submittedAt?: Date | null;
+  verifiedBy?: Types.ObjectId | string | null;
+  verifiedAt?: Date | null;
+  verifyNotes?: string | null;
   reviewedBy?: Types.ObjectId | string | null;
   reviewedAt?: Date | null;
   reviewNotes?: string | null;
+  approvedBy?: Types.ObjectId | string | null;
+  approvedAt?: Date | null;
+  approveNotes?: string | null;
+  lockedBy?: Types.ObjectId | string | null;
+  lockedAt?: Date | null;
   reopenedBy?: Types.ObjectId | string | null;
   reopenedAt?: Date | null;
   reopenReason?: string | null;
@@ -200,7 +261,15 @@ export function toPublicDpr(row: DprLike): PublicDailyProgressReport {
     id: String(row._id),
     dprNumber: row.dprNumber,
     projectId: String(row.projectId),
+    siteId: oid(row.siteId),
+    zoneSiteId: oid(row.zoneSiteId),
+    blockSiteId: oid(row.blockSiteId),
+    towerSiteId: oid(row.towerSiteId),
+    floorSiteId: oid(row.floorSiteId),
+    unitId: oid(row.unitId),
+    locationSiteIds: oidList(row.locationSiteIds),
     reportDate: row.reportDate,
+    shift: row.shift ?? ('general' as DprShift),
     weather: row.weather,
     weatherNotes: row.weatherNotes ?? null,
     staffPresent: (row.staffPresent ?? []).map((s) => ({
@@ -213,6 +282,8 @@ export function toPublicDpr(row: DprLike): PublicDailyProgressReport {
     skilledLabourCount: row.skilledLabourCount ?? 0,
     unskilledLabourCount: row.unskilledLabourCount ?? 0,
     workPerformed: row.workPerformed ?? null,
+    plannedWork: row.plannedWork ?? null,
+    delayedWork: row.delayedWork ?? null,
     boqQuantities: (row.boqQuantities ?? []).map((b) => ({
       id: b._id ? String(b._id) : '',
       boqItemId: String(b.boqItemId),
@@ -269,8 +340,18 @@ export function toPublicDpr(row: DprLike): PublicDailyProgressReport {
       dueDate: d.dueDate ?? null,
     })),
     tomorrowPlan: row.tomorrowPlan ?? null,
-    photoDocumentIds: (row.photoDocumentIds ?? []).map(String),
-    videoDocumentIds: (row.videoDocumentIds ?? []).map(String),
+    photoDocumentIds: oidList(row.photoDocumentIds),
+    videoDocumentIds: oidList(row.videoDocumentIds),
+    materialIssueIds: oidList(row.materialIssueIds),
+    stockReservationIds: oidList(row.stockReservationIds),
+    labourAttendanceIds: oidList(row.labourAttendanceIds),
+    workMeasurementIds: oidList(row.workMeasurementIds),
+    equipmentUtilizationIds: oidList(row.equipmentUtilizationIds),
+    diaryEntryIds: oidList(row.diaryEntryIds),
+    qualityObservationIds: oidList(row.qualityObservationIds),
+    safetyIncidentIds: oidList(row.safetyIncidentIds),
+    siteIssueIds: oidList(row.siteIssueIds),
+    drawingIds: oidList(row.drawingIds),
     siteCashBalance: row.siteCashBalance ?? 0,
     siteCashAccountId: oid(row.siteCashAccountId),
     status: row.status,
@@ -279,9 +360,17 @@ export function toPublicDpr(row: DprLike): PublicDailyProgressReport {
     offlineCapturedAt: row.offlineCapturedAt ?? null,
     submittedBy: oid(row.submittedBy),
     submittedAt: row.submittedAt ?? null,
+    verifiedBy: oid(row.verifiedBy),
+    verifiedAt: row.verifiedAt ?? null,
+    verifyNotes: row.verifyNotes ?? null,
     reviewedBy: oid(row.reviewedBy),
     reviewedAt: row.reviewedAt ?? null,
     reviewNotes: row.reviewNotes ?? null,
+    approvedBy: oid(row.approvedBy),
+    approvedAt: row.approvedAt ?? null,
+    approveNotes: row.approveNotes ?? null,
+    lockedBy: oid(row.lockedBy),
+    lockedAt: row.lockedAt ?? null,
     reopenedBy: oid(row.reopenedBy),
     reopenedAt: row.reopenedAt ?? null,
     reopenReason: row.reopenReason ?? null,

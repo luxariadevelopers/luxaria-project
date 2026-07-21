@@ -10,8 +10,41 @@ export type DailyProgressReportDocument =
 export enum DprStatus {
   Draft = 'draft',
   Submitted = 'submitted',
+  /** Engineer/PM sign-off between submit and approve. */
+  Verified = 'verified',
+  /**
+   * Legacy alias for approved. Keep for backward compat; treat as approved
+   * for edit/side-effect rules (`isApprovedLike`).
+   */
   Reviewed = 'reviewed',
+  Approved = 'approved',
+  Locked = 'locked',
   Reopened = 'reopened',
+}
+
+export enum DprShift {
+  Morning = 'morning',
+  Afternoon = 'afternoon',
+  Night = 'night',
+  General = 'general',
+}
+
+/** Statuses that have posted hard effects (stock, etc.) or are immutable. */
+export function isApprovedLike(status: DprStatus): boolean {
+  return (
+    status === DprStatus.Reviewed ||
+    status === DprStatus.Approved ||
+    status === DprStatus.Locked
+  );
+}
+
+/** Statuses that block content edits without reopen. */
+export function isImmutableDprStatus(status: DprStatus): boolean {
+  return (
+    status === DprStatus.Submitted ||
+    status === DprStatus.Verified ||
+    isApprovedLike(status)
+  );
 }
 
 export enum DprWeather {
@@ -178,9 +211,44 @@ export class DailyProgressReport {
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;
 
+  /**
+   * Primary site for the DPR. Optional for legacy rows; required on create
+   * going forward (validated in service).
+   */
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  siteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
+  zoneSiteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
+  blockSiteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
+  towerSiteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
+  floorSiteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, default: null })
+  unitId!: Types.ObjectId | null;
+
+  /** Extra location site refs beyond the typed zone/block/tower/floor fields. */
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Site' }], default: [] })
+  locationSiteIds!: Types.ObjectId[];
+
   /** Calendar date of the report (UTC midnight normalized). */
   @Prop({ type: Date, required: true, index: true })
   reportDate!: Date;
+
+  @Prop({
+    type: String,
+    enum: DprShift,
+    required: true,
+    default: DprShift.General,
+    index: true,
+  })
+  shift!: DprShift;
 
   @Prop({
     type: String,
@@ -207,6 +275,12 @@ export class DailyProgressReport {
 
   @Prop({ type: String, trim: true, default: null })
   workPerformed!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  plannedWork!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  delayedWork!: string | null;
 
   @Prop({ type: [DprBoqQuantitySchema], default: [] })
   boqQuantities!: DprBoqQuantity[];
@@ -240,6 +314,40 @@ export class DailyProgressReport {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Document' }], default: [] })
   videoDocumentIds!: Types.ObjectId[];
+
+  /** Linked transactional children (Phase 5 SE engine). */
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'MaterialIssue' }], default: [] })
+  materialIssueIds!: Types.ObjectId[];
+
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: 'StockReservation' }],
+    default: [],
+  })
+  stockReservationIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  labourAttendanceIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  workMeasurementIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  equipmentUtilizationIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  diaryEntryIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  qualityObservationIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  safetyIncidentIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  siteIssueIds!: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  drawingIds!: Types.ObjectId[];
 
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   siteCashBalance!: number;
@@ -275,6 +383,15 @@ export class DailyProgressReport {
   submittedAt!: Date | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  verifiedBy!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  verifiedAt!: Date | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  verifyNotes!: string | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   reviewedBy!: Types.ObjectId | null;
 
   @Prop({ type: Date, default: null })
@@ -282,6 +399,21 @@ export class DailyProgressReport {
 
   @Prop({ type: String, trim: true, default: null })
   reviewNotes!: string | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  approvedBy!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  approvedAt!: Date | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  approveNotes!: string | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  lockedBy!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  lockedAt!: Date | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   reopenedBy!: Types.ObjectId | null;
@@ -303,9 +435,27 @@ export const DailyProgressReportSchema = SchemaFactory.createForClass(
 DailyProgressReportSchema.plugin(baseSchemaPlugin);
 DailyProgressReportSchema.plugin(softDeletePlugin);
 
+/**
+ * Legacy project+date index — uniqueness removed so multi-site/shift DPRs
+ * can coexist. Name kept for migration-friendly deploy (drop unique in DB
+ * if still present: `db.daily_progress_reports.dropIndex('uniq_dpr_project_date')`
+ * then syncIndexes).
+ */
 DailyProgressReportSchema.index(
   { projectId: 1, reportDate: 1 },
-  { unique: true, name: 'uniq_dpr_project_date' },
+  { name: 'uniq_dpr_project_date' },
+);
+/** Target uniqueness: one non-deleted DPR per project + site + date + shift. */
+DailyProgressReportSchema.index(
+  { projectId: 1, siteId: 1, reportDate: 1, shift: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+      siteId: { $type: 'objectId' },
+    },
+    name: 'uniq_dpr_project_site_date_shift',
+  },
 );
 DailyProgressReportSchema.index(
   { idempotencyKey: 1 },
@@ -319,6 +469,7 @@ DailyProgressReportSchema.index(
   },
 );
 DailyProgressReportSchema.index({ projectId: 1, status: 1, reportDate: -1 });
+DailyProgressReportSchema.index({ projectId: 1, siteId: 1, reportDate: -1 });
 
 @Schema({
   collection: 'dpr_missing_alerts',

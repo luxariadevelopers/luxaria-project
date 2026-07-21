@@ -152,6 +152,39 @@ export class StockReservationsService {
     );
   }
 
+  /** Mark active reservation as consumed after material issue confirm (DPR approve). */
+  async markConsumed(id: string, actorId: string) {
+    const row = await this.requireReservation(id);
+    if (row.status === StockReservationStatus.Consumed) {
+      return createSuccessResponse(this.toPublic(row), 'Already consumed');
+    }
+    if (row.status !== StockReservationStatus.Active) {
+      throw new BadRequestException(
+        'Only active reservations can be marked consumed',
+      );
+    }
+    row.status = StockReservationStatus.Consumed;
+    row.releasedBaseQuantity = row.baseUnitQuantity;
+    row.releasedBy = new Types.ObjectId(actorId);
+    row.releasedAt = new Date();
+    await row.save();
+    return createSuccessResponse(
+      this.toPublic(row),
+      'Stock reservation marked consumed',
+    );
+  }
+
+  async listActiveBySource(sourceType: string, sourceId: string) {
+    const rows = await this.reservationModel
+      .find({
+        sourceType,
+        sourceId,
+        status: StockReservationStatus.Active,
+      })
+      .exec();
+    return rows;
+  }
+
   async getById(id: string) {
     const row = await this.requireReservation(id);
     return createSuccessResponse(

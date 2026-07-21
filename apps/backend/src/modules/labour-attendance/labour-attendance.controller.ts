@@ -67,10 +67,27 @@ export class LabourAttendanceController {
   @Get('daily-report')
   @RequirePermissions('attendance.view')
   @ApiOperation({
-    summary: 'Daily attendance report for a project (optional contractor filter)',
+    summary:
+      'Daily attendance report for a project (optional site/shift/contractor filter)',
   })
-  dailyReport(@Query() query: DailyAttendanceReportQueryDto) {
-    return this.attendanceService.dailyReport(query);
+  dailyReport(
+    @Query() query: DailyAttendanceReportQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.attendanceService.dailyReport(query, actor.id);
+  }
+
+  @Get('daily-deployment')
+  @RequirePermissions('attendance.view')
+  @ApiOperation({
+    summary:
+      'Daily labour deployment for DPR rollup (project + date, optional site/shift)',
+  })
+  dailyDeployment(
+    @Query() query: DailyAttendanceReportQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.attendanceService.dailyDeployment(query, actor.id);
   }
 
   @Get(':id')

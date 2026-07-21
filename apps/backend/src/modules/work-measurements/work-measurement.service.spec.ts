@@ -5,14 +5,6 @@ import {
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { Types, connect, disconnect } from 'mongoose';
-import { NumberingService } from '../numbering/numbering.service';
-import { Counter, CounterSchema } from '../numbering/schemas/counter.schema';
-import {
-  Project,
-  ProjectSchema,
-  ProjectStatus,
-  ProjectType,
-} from '../projects/schemas/project.schema';
 import {
   BoqItem,
   BoqItemSchema,
@@ -23,6 +15,20 @@ import {
   BoqVersionStatus,
   BoqVersionType,
 } from '../boq/schemas/boq.schema';
+import {
+  DailyProgressReport,
+  DailyProgressReportSchema,
+  DprStatus,
+  DprWeather,
+} from '../daily-progress-reports/schemas/daily-progress-report.schema';
+import { NumberingService } from '../numbering/numbering.service';
+import { Counter, CounterSchema } from '../numbering/schemas/counter.schema';
+import {
+  Project,
+  ProjectSchema,
+  ProjectStatus,
+  ProjectType,
+} from '../projects/schemas/project.schema';
 import { WorkMeasurementService } from './work-measurement.service';
 import {
   WorkMeasurement,
@@ -38,6 +44,14 @@ describe('WorkMeasurementService', () => {
   let projectModel: Model<Project>;
   let boqItemModel: Model<BoqItem>;
   let boqVersionModel: Model<BoqVersion>;
+  let dprModel: Model<DailyProgressReport>;
+  let boqService: {
+    applyCertifiedProgressQuantity: (
+      id: string,
+      progressQuantity: number,
+      actorId?: string,
+    ) => Promise<BoqItem>;
+  };
 
   let actorId: string;
   let engineerId: string;
@@ -45,6 +59,7 @@ describe('WorkMeasurementService', () => {
   let contractorId: string;
   let boqItemId: string;
   let versionId: string;
+  let dprId: string;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -67,6 +82,10 @@ describe('WorkMeasurementService', () => {
       BoqVersion.name,
       BoqVersionSchema,
     ) as Model<BoqVersion>;
+    dprModel = connection.model(
+      DailyProgressReport.name,
+      DailyProgressReportSchema,
+    ) as Model<DailyProgressReport>;
     const counterModel = connection.model(
       Counter.name,
       CounterSchema,
@@ -77,6 +96,7 @@ describe('WorkMeasurementService', () => {
       projectModel.syncIndexes(),
       boqItemModel.syncIndexes(),
       boqVersionModel.syncIndexes(),
+      dprModel.syncIndexes(),
       counterModel.syncIndexes(),
     ]);
     const mockProjectScope = {
@@ -91,14 +111,41 @@ describe('WorkMeasurementService', () => {
       authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
     } as never;
 
+    const mockSiteAccess = {
+      assertSiteAccessIfScoped: jest.fn().mockResolvedValue(undefined),
+    } as never;
+    const mockSites = {
+      findById: jest.fn().mockResolvedValue(null),
+    } as never;
+
+    boqService = {
+      applyCertifiedProgressQuantity: async (
+        id: string,
+        progressQuantity: number,
+        actorIdArg?: string,
+      ) => {
+        const row = await boqItemModel.findById(id).exec();
+        if (!row) throw new Error('BOQ item not found');
+        row.progressQuantity = progressQuantity;
+        if (actorIdArg) {
+          row.set('updatedBy', new Types.ObjectId(actorIdArg));
+        }
+        await row.save();
+        return row;
+      },
+    };
 
     service = new WorkMeasurementService(
       measurementModel,
       projectModel,
       boqItemModel,
       boqVersionModel,
+      dprModel,
       new NumberingService(counterModel),
-      mockProjectScope
+      mockProjectScope,
+      mockSiteAccess,
+      mockSites,
+      boqService as never,
     );
   }, 120_000);
 
@@ -116,6 +163,7 @@ describe('WorkMeasurementService', () => {
     await projectModel.deleteMany({}).setOptions({ withDeleted: true });
     await boqItemModel.deleteMany({}).setOptions({ withDeleted: true });
     await boqVersionModel.deleteMany({}).setOptions({ withDeleted: true });
+    await dprModel.deleteMany({}).setOptions({ withDeleted: true });
     await connection.model(Counter.name).deleteMany({});
 
     const [project] = await projectModel.create([
@@ -163,6 +211,7 @@ describe('WorkMeasurementService', () => {
         description: 'RCC Columns',
         unit: BoqUnit.CubicMetre,
         plannedQuantity: 100,
+        progressQuantity: 0,
         materialCost: 0,
         labourCost: 0,
         subcontractCost: 0,
@@ -173,6 +222,21 @@ describe('WorkMeasurementService', () => {
       },
     ]);
     boqItemId = String(item._id);
+
+    const [dpr] = await dprModel.create([
+      {
+        dprNumber: 'DPR-WM-001',
+        projectId: project._id,
+        reportDate: new Date('2026-07-17'),
+        weather: DprWeather.Clear,
+        labourCount: 0,
+        skilledLabourCount: 0,
+        unskilledLabourCount: 0,
+        siteCashBalance: 0,
+        status: DprStatus.Draft,
+      },
+    ]);
+    dprId = String(dpr._id);
   });
 
   it('creates measurement with previous/cumulative and WM number', async () => {
@@ -184,6 +248,8 @@ describe('WorkMeasurementService', () => {
         location: 'Block A / L2',
         measurementDate: '2026-07-17',
         currentQuantity: 25,
+        sheetReference: 'MB-01 / Sheet 2',
+        workDescription: 'Column casting up to +3.0m',
         drawingReference: 'DRG-COL-02',
         photoDocumentIds: [new Types.ObjectId().toHexString()],
       },
@@ -199,7 +265,35 @@ describe('WorkMeasurementService', () => {
     expect(created.data!.measuredBy).toBe(actorId);
     expect(created.data!.photos).toHaveLength(1);
     expect(created.data!.drawingReference).toBe('DRG-COL-02');
+    expect(created.data!.sheetReference).toBe('MB-01 / Sheet 2');
+    expect(created.data!.workDescription).toBe('Column casting up to +3.0m');
     expect(created.data!.verifiedBy).toBeNull();
+    expect(created.data!.dprId).toBeNull();
+    expect(created.data!.siteId).toBeNull();
+    expect(created.data!.drawingId).toBeNull();
+  });
+
+  it('links measurement to DPR and lists by dprId', async () => {
+    const created = await service.create(
+      {
+        projectId,
+        contractorId,
+        boqItemId,
+        dprId,
+        location: 'Block A',
+        measurementDate: '2026-07-17',
+        currentQuantity: 10,
+      },
+      actorId,
+    );
+    expect(created.data!.dprId).toBe(dprId);
+
+    const dpr = await dprModel.findById(dprId).lean().exec();
+    expect(dpr!.workMeasurementIds.map(String)).toContain(created.data!.id);
+
+    const listed = await service.list({ dprId, projectId }, actorId);
+    expect(listed.data).toHaveLength(1);
+    expect(listed.data![0].id).toBe(created.data!.id);
   });
 
   it('requires engineer verification by a different user', async () => {
@@ -225,6 +319,62 @@ describe('WorkMeasurementService', () => {
     expect(verified.data!.status).toBe(WorkMeasurementStatus.Verified);
     expect(verified.data!.verifiedBy).toBe(engineerId);
     expect(verified.data!.verifiedAt).toBeTruthy();
+
+    const boqAfterVerify = await boqItemModel.findById(boqItemId).lean().exec();
+    expect(boqAfterVerify!.progressQuantity).toBe(0);
+  });
+
+  it('certify updates BOQ progressQuantity from cumulative certified qty', async () => {
+    const created = await service.create(
+      {
+        projectId,
+        contractorId,
+        boqItemId,
+        location: 'Block A',
+        measurementDate: '2026-07-17',
+        currentQuantity: 40,
+        submit: true,
+      },
+      actorId,
+    );
+    await service.verify(created.data!.id, {}, engineerId);
+
+    await expect(
+      service.certify(created.data!.id, {}, actorId),
+    ).rejects.toThrow(ForbiddenException);
+
+    const certified = await service.certify(
+      created.data!.id,
+      { notes: 'Accepted for progress' },
+      engineerId,
+    );
+    expect(certified.data!.status).toBe(WorkMeasurementStatus.Certified);
+    expect(certified.data!.certifiedBy).toBe(engineerId);
+    expect(certified.data!.certifiedAt).toBeTruthy();
+
+    const boq = await boqItemModel.findById(boqItemId).lean().exec();
+    expect(boq!.progressQuantity).toBe(40);
+  });
+
+  it('approve is an alias for certify', async () => {
+    const created = await service.create(
+      {
+        projectId,
+        contractorId,
+        boqItemId,
+        location: 'Block A',
+        measurementDate: '2026-07-17',
+        currentQuantity: 15,
+        submit: true,
+      },
+      actorId,
+    );
+    await service.verify(created.data!.id, {}, engineerId);
+    const approved = await service.approve(created.data!.id, {}, engineerId);
+    expect(approved.data!.status).toBe(WorkMeasurementStatus.Certified);
+
+    const boq = await boqItemModel.findById(boqItemId).lean().exec();
+    expect(boq!.progressQuantity).toBe(15);
   });
 
   it('rejects cumulative quantity above BOQ without approved variation', async () => {
@@ -304,7 +454,7 @@ describe('WorkMeasurementService', () => {
     expect(created.data!.boqPlannedQuantity).toBe(120);
   });
 
-  it('accumulates previous from submitted/verified measurements', async () => {
+  it('accumulates previous from submitted/verified/certified measurements', async () => {
     const first = await service.create(
       {
         projectId,
@@ -318,6 +468,7 @@ describe('WorkMeasurementService', () => {
       actorId,
     );
     await service.verify(first.data!.id, {}, engineerId);
+    await service.certify(first.data!.id, {}, engineerId);
 
     const second = await service.create(
       {
@@ -335,7 +486,7 @@ describe('WorkMeasurementService', () => {
     expect(second.data!.cumulativeQuantity).toBe(70);
   });
 
-  it('follows Draft → Submitted → Verified workflow', async () => {
+  it('follows Draft → Submitted → Verified → Certified workflow', async () => {
     const created = await service.create(
       {
         projectId,
@@ -359,5 +510,8 @@ describe('WorkMeasurementService', () => {
     );
     expect(verified.data!.status).toBe(WorkMeasurementStatus.Verified);
     expect(verified.data!.verifiedBy).toBe(engineerId);
+
+    const certified = await service.certify(created.data!.id, {}, engineerId);
+    expect(certified.data!.status).toBe(WorkMeasurementStatus.Certified);
   });
 });

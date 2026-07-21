@@ -6,11 +6,15 @@ import {
 import {
   confirmLabourAttendance,
   fetchDailyAttendanceReport,
+  fetchDailyLabourDeployment,
   fetchLabourAttendance,
   fetchLabourAttendanceList,
 } from './api';
 import { labourAttendanceKeys } from './queryKeys';
-import type { ListLabourAttendanceQuery } from './types';
+import type {
+  DailyAttendanceReportQuery,
+  ListLabourAttendanceQuery,
+} from './types';
 
 export function useLabourAttendanceList(
   query: ListLabourAttendanceQuery,
@@ -39,20 +43,36 @@ export function useLabourAttendanceDetail(
 }
 
 export function useDailyAttendanceReport(
-  query: {
-    projectId: string;
-    attendanceDate: string;
-    contractorId?: string;
-  } | null,
+  query: DailyAttendanceReportQuery | null,
   enabled = true,
 ) {
   return useQuery({
     queryKey: labourAttendanceKeys.dailyReport(
-      query?.projectId ?? '',
-      query?.attendanceDate ?? '',
-      query?.contractorId,
+      query ?? {
+        projectId: '',
+        attendanceDate: '',
+      },
     ),
     queryFn: () => fetchDailyAttendanceReport(query!),
+    enabled:
+      Boolean(query?.projectId && query.attendanceDate) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useDailyLabourDeployment(
+  query: DailyAttendanceReportQuery | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: labourAttendanceKeys.dailyDeployment(
+      query ?? {
+        projectId: '',
+        attendanceDate: '',
+      },
+    ),
+    queryFn: () => fetchDailyLabourDeployment(query!),
     enabled:
       Boolean(query?.projectId && query.attendanceDate) && enabled,
     staleTime: 15_000,

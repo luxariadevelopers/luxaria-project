@@ -28,6 +28,7 @@ type Props = {
   onEdit?: (row: PublicWorkMeasurement) => void;
   onSubmit?: (row: PublicWorkMeasurement) => void;
   onVerify?: (row: PublicWorkMeasurement) => void;
+  onCertify?: (row: PublicWorkMeasurement) => void;
   onReject?: (row: PublicWorkMeasurement) => void;
   onCancel?: (row: PublicWorkMeasurement) => void;
 };
@@ -52,6 +53,7 @@ export function MeasurementTable({
   onEdit,
   onSubmit,
   onVerify,
+  onCertify,
   onReject,
   onCancel,
 }: Props) {
@@ -145,6 +147,18 @@ export function MeasurementTable({
       disabled: (row) =>
         !resolveWorkMeasurementRowActions(row, caps, currentUserId).includes(
           'verify',
+        ),
+    });
+  }
+
+  if (onCertify && caps.canCertify) {
+    rowActions.push({
+      id: 'certify',
+      label: 'Certify',
+      onClick: onCertify,
+      disabled: (row) =>
+        !resolveWorkMeasurementRowActions(row, caps, currentUserId).includes(
+          'certify',
         ),
     });
   }

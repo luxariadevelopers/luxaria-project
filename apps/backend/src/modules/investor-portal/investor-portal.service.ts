@@ -482,7 +482,12 @@ export class InvestorPortalService {
         {
           $match: {
             projectId: projectOid,
-            status: WorkMeasurementStatus.Verified,
+            status: {
+              $in: [
+                WorkMeasurementStatus.Verified,
+                WorkMeasurementStatus.Certified,
+              ],
+            },
           },
         },
         {

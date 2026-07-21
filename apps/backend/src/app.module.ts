@@ -43,6 +43,15 @@ import { ContractorsModule } from './modules/contractors/contractors.module';
 import { ContractorAgreementsModule } from './modules/contractor-agreements/contractor-agreements.module';
 import { ContractorBillsModule } from './modules/contractor-bills/contractor-bills.module';
 import { ContractorPaymentsModule } from './modules/contractor-payments/contractor-payments.module';
+import { ContractorTendersModule } from './modules/contractor-tenders';
+import { ContractorRecoveriesModule } from './modules/contractor-recoveries';
+import { ContractorRetentionModule } from './modules/contractor-retention';
+import { ContractorLedgerModule } from './modules/contractor-ledger';
+import { MaterialReconciliationModule } from './modules/contractor-material-reconciliation';
+import { RateContractsModule } from './modules/rate-contracts';
+import { WorkOrdersModule } from './modules/work-orders';
+import { ContractorDashboardModule } from './modules/contractor-dashboard';
+import { ContractorReportsModule } from './modules/contractor-reports';
 import { LabourCategoriesModule } from './modules/labour-categories/labour-categories.module';
 import { LabourAttendanceModule } from './modules/labour-attendance/labour-attendance.module';
 import { ManpowerPlanningModule } from './modules/manpower-planning/manpower-planning.module';
@@ -84,6 +93,16 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { UnitsModule } from './modules/units/units.module';
 import { BoqModule } from './modules/boq/boq.module';
 import { DailyProgressReportsModule } from './modules/daily-progress-reports/dpr.module';
+import { DrawingsModule } from './modules/drawings/drawings.module';
+import { EquipmentModule } from './modules/equipment/equipment.module';
+import { SiteDiaryModule } from './modules/site-diary';
+import { SiteExecutionDashboardModule } from './modules/site-execution-dashboard';
+import { SiteExecutionReportsModule } from './modules/site-execution-reports';
+import { SiteIssuesModule } from './modules/site-issues';
+import { SitePhotosModule } from './modules/site-photos';
+import { SiteQualityModule } from './modules/site-quality';
+import { SiteSafetyModule } from './modules/site-safety';
+import { MeasurementBookModule } from './modules/measurement-book';
 import { WorkMeasurementsModule } from './modules/work-measurements/work-measurement.module';
 import { MaterialConsumptionStandardsModule } from './modules/material-consumption-standards/material-consumption-standard.module';
 import { RbacModule } from './modules/rbac/rbac.module';
@@ -146,6 +165,15 @@ import { ObservabilityModule } from './common/observability/observability.module
     ContractorsModule,
     ContractorAgreementsModule,
     ContractorBillsModule,
+    ContractorTendersModule,
+    ContractorRecoveriesModule,
+    ContractorRetentionModule,
+    ContractorLedgerModule,
+    MaterialReconciliationModule,
+    RateContractsModule,
+    WorkOrdersModule,
+    ContractorDashboardModule,
+    ContractorReportsModule,
     ContractorPaymentsModule,
     LabourCategoriesModule,
     LabourAttendanceModule,
@@ -186,6 +214,16 @@ import { ObservabilityModule } from './common/observability/observability.module
     UnitsModule,
     BoqModule,
     DailyProgressReportsModule,
+    DrawingsModule,
+    EquipmentModule,
+    SiteIssuesModule,
+    SiteDiaryModule,
+    SitePhotosModule,
+    SiteQualityModule,
+    SiteSafetyModule,
+    SiteExecutionDashboardModule,
+    SiteExecutionReportsModule,
+    MeasurementBookModule,
     WorkMeasurementsModule,
     MaterialConsumptionStandardsModule,
     ProjectParticipantsModule,

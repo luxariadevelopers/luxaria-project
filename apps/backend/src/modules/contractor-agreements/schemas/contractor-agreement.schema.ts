@@ -121,6 +121,18 @@ export class ContractorAgreement {
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;
 
+  /** Optional schedule-of-rates source; rates snapshotted onto boqItems at activate. */
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'RateContract',
+    default: null,
+    index: true,
+  })
+  rateContractId!: Types.ObjectId | null;
+
+  @Prop({ type: Number, min: 1, default: null })
+  rateContractVersion!: number | null;
+
   @Prop({ type: String, trim: true, required: true })
   workScope!: string;
 

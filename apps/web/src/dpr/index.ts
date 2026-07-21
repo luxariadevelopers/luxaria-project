@@ -1,11 +1,14 @@
 export {
+  approveDailyProgressReport,
   fetchDailyProgressReport,
   fetchDailyProgressReports,
   fetchMissingDprAlerts,
+  lockDailyProgressReport,
   mediaCount,
   regenerateDprPdf,
   reopenDailyProgressReport,
   reviewDailyProgressReport,
+  verifyDailyProgressReport,
 } from './api';
 export {
   DprIssuesSection,
@@ -41,12 +44,14 @@ export type { DprCapabilities } from './roleAccess';
 export { resolveDprRowActions } from './workflowActions';
 export { DPR_ROUTES, dprDetailPath, dprListPath } from './routes';
 export {
+  DprShift,
   DprStatus,
   DprIssueSeverity,
   DprWeather,
   emptyDprFilters,
 } from './types';
 export type {
+  ApproveDprInput,
   DprDetailActionId,
   DprDayCompliance,
   DprFilterState,
@@ -63,11 +68,15 @@ export type {
   PublicMissingDprAlert,
   ReopenDprInput,
   ReviewDprInput,
+  VerifyDprInput,
 } from './types';
 export { useDailyProgressReportsList, useMissingDprAlerts } from './useDpr';
 export {
+  useApproveDpr,
   useDprDetail,
+  useLockDpr,
   useRegenerateDprPdf,
   useReopenDpr,
   useReviewDpr,
+  useVerifyDpr,
 } from './useDprDetail';

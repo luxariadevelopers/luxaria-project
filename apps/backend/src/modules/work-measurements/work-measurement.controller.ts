@@ -16,6 +16,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import {
+  CertifyWorkMeasurementDto,
   CreateWorkMeasurementDto,
   ListWorkMeasurementsQueryDto,
   RejectWorkMeasurementDto,
@@ -50,7 +51,9 @@ export class WorkMeasurementController {
 
   @Get()
   @RequirePermissions('measurement.view')
-  @ApiOperation({ summary: 'List work measurements' })
+  @ApiOperation({
+    summary: 'List work measurements (filter by projectId, siteId, dprId, …)',
+  })
   list(
     @Query() query: ListWorkMeasurementsQueryDto,
     @CurrentUser() actor: AuthUser,
@@ -89,7 +92,7 @@ export class WorkMeasurementController {
   @RequirePermissions('measurement.certify')
   @ApiOperation({
     summary:
-      'Engineer verification (Submitted → Verified). Verifier ≠ measuredBy.',
+      'Engineer verification (Submitted → Verified). Verifier ≠ measuredBy. Does not update BOQ progress.',
   })
   verify(
     @Param('id') id: string,
@@ -97,6 +100,33 @@ export class WorkMeasurementController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.service.verify(id, dto, actor.id);
+  }
+
+  @Post(':id/certify')
+  @RequirePermissions('measurement.certify')
+  @ApiOperation({
+    summary:
+      'Certify verified measurement (Verified → Certified) and sync BOQ progressQuantity. Certifier ≠ measuredBy.',
+  })
+  certify(
+    @Param('id') id: string,
+    @Body() dto: CertifyWorkMeasurementDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.service.certify(id, dto, actor.id);
+  }
+
+  @Post(':id/approve')
+  @RequirePermissions('measurement.certify')
+  @ApiOperation({
+    summary: 'Alias for certify (Verified → Certified + BOQ progress sync)',
+  })
+  approve(
+    @Param('id') id: string,
+    @Body() dto: CertifyWorkMeasurementDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.service.approve(id, dto, actor.id);
   }
 
   @Post(':id/reject')

@@ -1,4 +1,7 @@
-import type { ListLabourAttendanceQuery } from './types';
+import type {
+  DailyAttendanceReportQuery,
+  ListLabourAttendanceQuery,
+} from './types';
 
 export const labourAttendanceKeys = {
   all: ['labour-attendance'] as const,
@@ -7,12 +10,24 @@ export const labourAttendanceKeys = {
     [...labourAttendanceKeys.lists(), query] as const,
   details: () => [...labourAttendanceKeys.all, 'detail'] as const,
   detail: (id: string) => [...labourAttendanceKeys.details(), id] as const,
-  dailyReport: (projectId: string, attendanceDate: string, contractorId?: string) =>
+  dailyReport: (query: DailyAttendanceReportQuery) =>
     [
       ...labourAttendanceKeys.all,
       'daily-report',
-      projectId,
-      attendanceDate,
-      contractorId ?? '',
+      query.projectId,
+      query.attendanceDate,
+      query.siteId ?? '',
+      query.shift ?? '',
+      query.contractorId ?? '',
+    ] as const,
+  dailyDeployment: (query: DailyAttendanceReportQuery) =>
+    [
+      ...labourAttendanceKeys.all,
+      'daily-deployment',
+      query.projectId,
+      query.attendanceDate,
+      query.siteId ?? '',
+      query.shift ?? '',
+      query.contractorId ?? '',
     ] as const,
 };

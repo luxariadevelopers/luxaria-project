@@ -10,6 +10,7 @@ import {
 } from '../labour-categories/schemas/labour-category.schema';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { RbacModule } from '../rbac/rbac.module';
+import { SitesModule } from '../sites/sites.module';
 import { LabourAttendanceController } from './labour-attendance.controller';
 import { LabourAttendanceService } from './labour-attendance.service';
 import {
@@ -25,6 +26,7 @@ import {
       { name: Contractor.name, schema: ContractorSchema },
       { name: LabourCategory.name, schema: LabourCategorySchema },
     ]),
+    SitesModule,
     RbacModule,
   ],
   controllers: [LabourAttendanceController],

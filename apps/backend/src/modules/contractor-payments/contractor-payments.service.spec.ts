@@ -349,7 +349,7 @@ describe('ContractorPaymentsService', () => {
     const billA = await billModel.findById(billAId).lean().exec();
     const billB = await billModel.findById(billBId).lean().exec();
     expect(billA!.paidAmount).toBe(4000);
-    expect(billA!.status).toBe(ContractorBillStatus.Posted);
+    expect(billA!.status).toBe(ContractorBillStatus.PartiallyPaid);
     expect(billB!.paidAmount).toBe(3000);
     expect(billB!.status).toBe(ContractorBillStatus.Paid);
   });

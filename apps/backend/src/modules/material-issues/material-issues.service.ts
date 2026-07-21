@@ -38,6 +38,7 @@ import {
 } from './material-issues.validation';
 import {
   MaterialIssue,
+  MaterialIssueDocument,
   MaterialIssueItem,
   MaterialIssueStatus,
   MaterialIssueTarget,
@@ -124,6 +125,7 @@ export class MaterialIssuesService {
       issueSiteId: dto.issueSiteId
         ? new Types.ObjectId(dto.issueSiteId)
         : null,
+      dprId: dto.dprId ? new Types.ObjectId(dto.dprId) : null,
       issueEmployeeId: dto.issueEmployeeId
         ? new Types.ObjectId(dto.issueEmployeeId)
         : null,
@@ -196,6 +198,9 @@ export class MaterialIssuesService {
     }
     if (dto.notes !== undefined) {
       row.notes = dto.notes?.trim() ?? null;
+    }
+    if (dto.dprId !== undefined) {
+      row.dprId = dto.dprId ? new Types.ObjectId(dto.dprId) : null;
     }
     if (dto.items) {
       row.items = await this.buildItems(dto.items);
@@ -297,6 +302,63 @@ export class MaterialIssuesService {
     }
 
     assertRecipientSignaturePresent(row.signatures);
+    await this.postConfirmLedger(row, actorId);
+
+    return createSuccessResponse(
+      toPublicMaterialIssue(row),
+      'Material issue confirmed; stock reduced',
+    );
+  }
+
+  /**
+   * DPR-driven confirm: accepts draft or submitted issues linked to `dprId`,
+   * skips recipient signature (DPR approve is the control gate), posts ledger.
+   */
+  async confirmForDpr(id: string, dprId: string, actorId: string) {
+    const row = await this.requireIssue(id, actorId, 'update');
+    if (String(row.dprId ?? '') !== dprId) {
+      throw new BadRequestException(
+        'Material issue is not linked to this daily progress report',
+      );
+    }
+    if (row.status === MaterialIssueStatus.Confirmed) {
+      return createSuccessResponse(
+        toPublicMaterialIssue(row),
+        'Material issue already confirmed',
+      );
+    }
+    if (
+      row.status !== MaterialIssueStatus.Draft &&
+      row.status !== MaterialIssueStatus.Submitted
+    ) {
+      throw new BadRequestException(
+        `Cannot confirm material issue in status ${row.status}`,
+      );
+    }
+    if (!row.items?.length) {
+      throw new BadRequestException(
+        'Material issue has no items to confirm for DPR',
+      );
+    }
+
+    if (row.status === MaterialIssueStatus.Draft) {
+      row.status = MaterialIssueStatus.Submitted;
+      row.submittedBy = new Types.ObjectId(actorId);
+      row.submittedAt = new Date();
+    }
+
+    await this.postConfirmLedger(row, actorId);
+
+    return createSuccessResponse(
+      toPublicMaterialIssue(row),
+      'Material issue confirmed from DPR approve; stock reduced',
+    );
+  }
+
+  private async postConfirmLedger(
+    row: MaterialIssueDocument,
+    actorId: string,
+  ) {
     await this.assertAvailableStock(row);
 
     for (const item of row.items) {
@@ -312,7 +374,7 @@ export class MaterialIssuesService {
         transactionDate: row.issueDate,
         location: row.storeLocation || null,
         batch: item.batch,
-        notes: `Issue ${row.issueNumber} → ${row.workLocation}`,
+        notes: `Issue ${row.issueNumber} → ${row.workLocation ?? 'DPR'}`,
         allowNegative: false,
         actorId,
       });
@@ -324,11 +386,6 @@ export class MaterialIssuesService {
     row.confirmedAt = new Date();
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
-
-    return createSuccessResponse(
-      toPublicMaterialIssue(row),
-      'Material issue confirmed; stock reduced',
-    );
   }
 
   async createReturn(

@@ -27,11 +27,20 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AssignContractorProjectDto } from './dto/assign-contractor-project.dto';
-import { BlockContractorDto } from './dto/block-contractor.dto';
+import {
+  BlockContractorDto,
+  DeactivateContractorDto,
+  ReactivateContractorDto,
+  SuspendContractorDto,
+} from './dto/block-contractor.dto';
 import { CreateContractorDto } from './dto/create-contractor.dto';
 import { UpdateContractorDto } from './dto/update-contractor.dto';
+import { VerifyContractorDocumentDto } from './dto/verify-document.dto';
 import { VerifyContractorDto } from './dto/verify-contractor.dto';
-import { ContractorDocumentCategory } from './schemas/contractor-document.schema';
+import {
+  ContractorDocumentCategory,
+  ContractorDocumentVerificationStatus,
+} from './schemas/contractor-document.schema';
 import {
   ContractorStatus,
   ContractorType,
@@ -81,6 +90,24 @@ export class ContractorsController {
     return this.contractorsService.list(query);
   }
 
+  @Get('compliance/expiring')
+  @RequirePermissions('contractor.view')
+  @ApiOperation({
+    summary:
+      'List contractors with labour licence or insurance expiring within N days',
+  })
+  listComplianceExpiring(
+    @Query()
+    query: PaginationQueryDto & { withinDays?: number; companyId?: string },
+  ) {
+    return this.contractorsService.listComplianceExpiring({
+      ...query,
+      withinDays: query.withinDays
+        ? Number(query.withinDays)
+        : undefined,
+    });
+  }
+
   @Get(':id')
   @RequirePermissions('contractor.view')
   @ApiOperation({ summary: 'Get contractor by id' })
@@ -119,13 +146,48 @@ export class ContractorsController {
 
   @Post(':id/block')
   @RequirePermissions('contractor.manage')
-  @ApiOperation({ summary: 'Block contractor' })
+  @ApiOperation({ summary: 'Blacklist contractor (reason + audit required)' })
   block(
     @Param('id') id: string,
     @Body() dto: BlockContractorDto,
     @CurrentUser() actor: AuthUser,
   ) {
     return this.contractorsService.block(id, dto, actor.id);
+  }
+
+  @Post(':id/suspend')
+  @RequirePermissions('contractor.manage')
+  @ApiOperation({ summary: 'Suspend contractor (reason + audit required)' })
+  suspend(
+    @Param('id') id: string,
+    @Body() dto: SuspendContractorDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.contractorsService.suspend(id, dto, actor.id);
+  }
+
+  @Post(':id/reactivate')
+  @RequirePermissions('contractor.manage')
+  @ApiOperation({
+    summary: 'Reactivate suspended or blacklisted contractor (reason + audit)',
+  })
+  reactivate(
+    @Param('id') id: string,
+    @Body() dto: ReactivateContractorDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.contractorsService.reactivate(id, dto, actor.id);
+  }
+
+  @Post(':id/deactivate')
+  @RequirePermissions('contractor.manage')
+  @ApiOperation({ summary: 'Deactivate contractor (set inactive)' })
+  deactivate(
+    @Param('id') id: string,
+    @Body() dto: DeactivateContractorDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.contractorsService.deactivate(id, dto, actor.id);
   }
 
   @Post(':id/projects')
@@ -179,6 +241,7 @@ export class ContractorsController {
           type: 'string',
           enum: Object.values(ContractorDocumentCategory),
         },
+        expiresAt: { type: 'string', format: 'date' },
       },
       required: ['file'],
     },
@@ -196,6 +259,7 @@ export class ContractorsController {
     @Param('id') id: string,
     @UploadedFile() file: UploadedDoc | undefined,
     @Body('category') category: ContractorDocumentCategory | undefined,
+    @Body('expiresAt') expiresAt: string | undefined,
     @CurrentUser() actor: AuthUser,
   ) {
     if (!file?.buffer) {
@@ -215,9 +279,22 @@ export class ContractorsController {
         mimeType: file.mimetype ?? null,
         sizeBytes: file.size ?? file.buffer.length,
         category,
+        expiresAt: expiresAt ?? null,
       },
       actor.id,
     );
+  }
+
+  @Post(':id/documents/:docId/verify')
+  @RequirePermissions('contractor.manage')
+  @ApiOperation({ summary: 'Verify or reject a contractor document' })
+  verifyDocument(
+    @Param('id') id: string,
+    @Param('docId') docId: string,
+    @Body() dto: VerifyContractorDocumentDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.contractorsService.verifyDocument(id, docId, dto, actor.id);
   }
 
   @Get(':id/documents')
@@ -226,7 +303,10 @@ export class ContractorsController {
   listDocuments(
     @Param('id') id: string,
     @Query()
-    query: PaginationQueryDto & { category?: ContractorDocumentCategory },
+    query: PaginationQueryDto & {
+      category?: ContractorDocumentCategory;
+      verificationStatus?: ContractorDocumentVerificationStatus;
+    },
   ) {
     return this.contractorsService.listDocuments(id, query);
   }

@@ -4,16 +4,21 @@ import { validateMeasurementForm } from './validation';
 
 export type BuildMeasurementOfflineEnqueueInput = {
   projectId: string;
+  siteId?: string | null;
+  dprId?: string | null;
   contractorId: string;
   boqItemId: string;
   boqCode?: string | null;
   location: string;
+  sheetReference?: string | null;
+  workDescription?: string | null;
   measurementDate: string;
   currentQuantity: number;
   previousQuantity: number;
   boqPlannedQuantity: number;
   unit?: string | null;
   drawingReference?: string | null;
+  drawingId?: string | null;
   notes?: string | null;
   photos: LocalFile[];
   /** When true (default), create+submit in one POST. */
@@ -68,12 +73,17 @@ export function buildMeasurementOfflineEnqueue(
     method: 'POST',
     payload: {
       projectId: input.projectId,
+      siteId: input.siteId ?? null,
+      dprId: input.dprId ?? null,
       contractorId: input.contractorId,
       boqItemId: input.boqItemId,
       location: input.location.trim(),
+      sheetReference: input.sheetReference?.trim() || null,
+      workDescription: input.workDescription?.trim() || null,
       measurementDate: input.measurementDate.trim(),
       currentQuantity: input.currentQuantity,
       drawingReference: input.drawingReference?.trim() || null,
+      drawingId: input.drawingId ?? null,
       notes: input.notes?.trim() || null,
       photoDocumentIds: [] as string[],
       submit: input.submit !== false,

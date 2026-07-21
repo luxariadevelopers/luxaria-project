@@ -21,6 +21,7 @@ import type {
 import { emptyWorkMeasurementFilters } from '@/work-measurements/validation';
 import {
   useCancelWorkMeasurement,
+  useCertifyWorkMeasurement,
   useRejectWorkMeasurement,
   useSubmitWorkMeasurement,
   useVerifyWorkMeasurement,
@@ -31,7 +32,8 @@ import {
  * Work measurements list — `/project-control/work-measurements` (Micro Phase 081).
  *
  * Nest: `GET /work-measurements` (`measurement.view`).
- * Create/update/submit/cancel: `measurement.create`. Verify/reject: `measurement.certify`.
+ * Create/update/submit/cancel: `measurement.create`.
+ * Verify/certify/reject: `measurement.certify`.
  */
 export function WorkMeasurementsPage() {
   const { hasPermission, access, user } = useAuth();
@@ -69,6 +71,7 @@ export function WorkMeasurementsPage() {
   const list = useWorkMeasurementsList(listQuery, enabled);
   const submit = useSubmitWorkMeasurement();
   const verify = useVerifyWorkMeasurement();
+  const certify = useCertifyWorkMeasurement();
   const reject = useRejectWorkMeasurement();
   const cancel = useCancelWorkMeasurement();
 
@@ -162,6 +165,12 @@ export function WorkMeasurementsPage() {
           run(
             () => verify.mutateAsync({ id: row.id }),
             'Work measurement verified',
+          )
+        }
+        onCertify={(row) =>
+          run(
+            () => certify.mutateAsync({ id: row.id }),
+            'Work measurement certified; BOQ progress updated',
           )
         }
         onReject={setRejectTarget}

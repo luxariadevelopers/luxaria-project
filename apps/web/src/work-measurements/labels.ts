@@ -13,6 +13,8 @@ export function workMeasurementStatusLabel(status: string): string {
       return 'Submitted';
     case WorkMeasurementStatus.Verified:
       return 'Verified';
+    case WorkMeasurementStatus.Certified:
+      return 'Certified';
     case WorkMeasurementStatus.Rejected:
       return 'Rejected';
     case WorkMeasurementStatus.Cancelled:
@@ -42,6 +44,10 @@ export const WORK_MEASUREMENT_STATUS_OPTIONS: Array<{
   {
     value: WorkMeasurementStatus.Verified,
     label: workMeasurementStatusLabel(WorkMeasurementStatus.Verified),
+  },
+  {
+    value: WorkMeasurementStatus.Certified,
+    label: workMeasurementStatusLabel(WorkMeasurementStatus.Certified),
   },
   {
     value: WorkMeasurementStatus.Rejected,

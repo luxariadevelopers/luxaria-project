@@ -110,6 +110,13 @@ export class CreateMaterialIssueDto {
   @IsMongoId()
   issueSiteId?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Optional Daily Progress Report this issue consumes against',
+  })
+  @IsOptional()
+  @IsMongoId()
+  dprId?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsMongoId()
@@ -205,6 +212,11 @@ export class UpdateMaterialIssueDto {
   @IsString()
   @MaxLength(2000)
   notes?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  dprId?: string | null;
 
   @ApiPropertyOptional({ type: [MaterialIssueItemDto] })
   @IsOptional()

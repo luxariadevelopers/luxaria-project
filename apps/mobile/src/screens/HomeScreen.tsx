@@ -40,6 +40,7 @@ export function HomeScreen() {
 
   const workMeasurementCaps =
     resolveWorkMeasurementCapabilities(hasPermission);
+  const canViewWorkOrders = hasPermission('work_order.view');
   const attendanceCaps = resolveAttendanceCapabilities(hasPermission);
   const expenseCaps = resolveExpenseCapabilities(hasPermission);
   const approvalCaps = resolveApprovalCapabilities(hasPermission);
@@ -227,6 +228,15 @@ export function HomeScreen() {
             }}
           >
             <Text style={styles.secondaryButtonText}>Work measurement</Text>
+          </Pressable>
+        ) : null}
+
+        {canViewWorkOrders ? (
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('WorkOrderList')}
+          >
+            <Text style={styles.secondaryButtonText}>Work orders</Text>
           </Pressable>
         ) : null}
 

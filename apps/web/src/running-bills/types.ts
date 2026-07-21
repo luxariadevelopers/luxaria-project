@@ -35,17 +35,25 @@ export type PublicContractorBill = {
   previousCertifiedValue: number;
   currentCertifiedValue: number;
   cumulativeValue: number;
+  approvedExtras: number;
+  priceEscalation: number;
   advanceRecovery: number;
   materialRecovery: number;
+  equipmentRecovery: number;
+  labourRecovery: number;
   retention: number;
   tds: number;
   penalty: number;
   otherDeductions: number;
+  gst: number;
   netPayable: number;
   paidAmount: number;
   remainingPayable: number;
+  paymentCertificateNumber: string | null;
   invoiceDocument: string | null;
   status: ContractorBillStatus;
+  /** Phase 6 alias: qs_certified / payment_certified / partially_paid / closed */
+  statusAlias: string;
   notes: string | null;
   rejectionReason: string | null;
   claimedBy: string | null;
@@ -104,10 +112,15 @@ export type CreateContractorBillInput = {
   measurementIds: string[];
   advanceRecovery?: number;
   materialRecovery?: number;
+  equipmentRecovery?: number;
+  labourRecovery?: number;
   retention?: number;
   tds?: number;
   penalty?: number;
   otherDeductions?: number;
+  approvedExtras?: number;
+  priceEscalation?: number;
+  gst?: number;
   invoiceDocument?: string | null;
   notes?: string | null;
 };
@@ -117,16 +130,27 @@ export type UpdateContractorBillInput = {
   measurementIds?: string[];
   advanceRecovery?: number;
   materialRecovery?: number;
+  equipmentRecovery?: number;
+  labourRecovery?: number;
   retention?: number;
   tds?: number;
   penalty?: number;
   otherDeductions?: number;
+  approvedExtras?: number;
+  priceEscalation?: number;
+  gst?: number;
   invoiceDocument?: string | null;
   notes?: string | null;
 };
 
 export type WorkflowNoteInput = {
   notes?: string | null;
+  paymentCertificateNumber?: string | null;
+};
+
+export type PostContractorBillInput = {
+  notes?: string | null;
+  paymentCertificateNumber?: string | null;
 };
 
 export type RejectContractorBillInput = {

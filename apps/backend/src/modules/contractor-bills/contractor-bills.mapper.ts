@@ -1,6 +1,9 @@
 import type { Types } from 'mongoose';
 import type { BoqUnit } from '../boq/schemas/boq.schema';
-import { computeRemainingBillPayable } from './contractor-bills.validation';
+import {
+  computeRemainingBillPayable,
+  toPhase6BillStatusAlias,
+} from './contractor-bills.validation';
 import type { ContractorBillStatus } from './schemas/contractor-bill.schema';
 
 function oid(value?: Types.ObjectId | string | null): string | null {
@@ -34,17 +37,25 @@ export type PublicContractorBill = {
   previousCertifiedValue: number;
   currentCertifiedValue: number;
   cumulativeValue: number;
+  approvedExtras: number;
+  priceEscalation: number;
   advanceRecovery: number;
   materialRecovery: number;
+  equipmentRecovery: number;
+  labourRecovery: number;
   retention: number;
   tds: number;
   penalty: number;
   otherDeductions: number;
+  gst: number;
   netPayable: number;
   paidAmount: number;
   remainingPayable: number;
+  paymentCertificateNumber: string | null;
   invoiceDocument: string | null;
   status: ContractorBillStatus;
+  /** Phase 6 conceptual alias (qs_certified / payment_certified / …). */
+  statusAlias: string;
   notes: string | null;
   rejectionReason: string | null;
   claimedBy: string | null;
@@ -93,14 +104,20 @@ type BillLike = {
   previousCertifiedValue: number;
   currentCertifiedValue: number;
   cumulativeValue: number;
+  approvedExtras?: number;
+  priceEscalation?: number;
   advanceRecovery: number;
   materialRecovery: number;
+  equipmentRecovery?: number;
+  labourRecovery?: number;
   retention: number;
   tds: number;
   penalty: number;
   otherDeductions: number;
+  gst?: number;
   netPayable: number;
   paidAmount?: number;
+  paymentCertificateNumber?: string | null;
   invoiceDocument?: string | null;
   status: ContractorBillStatus;
   notes?: string | null;
@@ -155,20 +172,31 @@ export function toPublicContractorBill(row: BillLike): PublicContractorBill {
     previousCertifiedValue: row.previousCertifiedValue,
     currentCertifiedValue: row.currentCertifiedValue,
     cumulativeValue: row.cumulativeValue,
+    approvedExtras: row.approvedExtras ?? 0,
+    priceEscalation: row.priceEscalation ?? 0,
     advanceRecovery: row.advanceRecovery,
     materialRecovery: row.materialRecovery,
+    equipmentRecovery: row.equipmentRecovery ?? 0,
+    labourRecovery: row.labourRecovery ?? 0,
     retention: row.retention,
     tds: row.tds,
     penalty: row.penalty,
     otherDeductions: row.otherDeductions,
+    gst: row.gst ?? 0,
     netPayable: row.netPayable,
     paidAmount: row.paidAmount ?? 0,
     remainingPayable: computeRemainingBillPayable({
       netPayable: row.netPayable,
       paidAmount: row.paidAmount,
     }),
+    paymentCertificateNumber: row.paymentCertificateNumber ?? null,
     invoiceDocument: row.invoiceDocument ?? null,
     status: row.status,
+    statusAlias: toPhase6BillStatusAlias({
+      status: row.status,
+      netPayable: row.netPayable,
+      paidAmount: row.paidAmount,
+    }),
     notes: row.notes ?? null,
     rejectionReason: row.rejectionReason ?? null,
     claimedBy: oid(row.claimedBy),

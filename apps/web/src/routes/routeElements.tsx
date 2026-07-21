@@ -37,7 +37,12 @@ import { ContractorAgreementDetailPage } from '@/pages/ContractorAgreementDetail
 import { ContractorAgreementsPage } from '@/pages/ContractorAgreementsPage';
 import { ContractorDetailPage } from '@/pages/ContractorDetailPage';
 import { ContractorPaymentsPage } from '@/pages/ContractorPaymentsPage';
+import { BidComparisonPage } from '@/pages/BidComparisonPage';
+import { ContractorCompliancePage } from '@/pages/ContractorCompliancePage';
+import { ContractorDashboardPage } from '@/pages/ContractorDashboardPage';
+import { ContractorReportsPage } from '@/pages/ContractorReportsPage';
 import { ContractorsPage } from '@/pages/ContractorsPage';
+import { TenderListPage } from '@/pages/TenderListPage';
 import { ContributionReceiptsPage } from '@/pages/ContributionReceiptsPage';
 import { CostForecastPage } from '@/pages/CostForecastPage';
 import { CustomerDetailPage } from '@/pages/CustomerDetailPage';
@@ -66,8 +71,16 @@ import { FormDemoPage } from '@/pages/FormDemoPage';
 import { FundingDashboardPage } from '@/pages/FundingDashboardPage';
 import { GrnDetailPage } from '@/pages/GrnDetailPage';
 import { GrnsPage } from '@/pages/GrnsPage';
+import { DrawingsPage } from '@/drawings';
+import { EquipmentPage } from '@/equipment/EquipmentPage';
 import { InventoryDashboardPage } from '@/pages/InventoryDashboardPage';
 import { InventoryReportsPage } from '@/pages/InventoryReportsPage';
+import { SiteDiaryPage } from '@/pages/SiteDiaryPage';
+import { SiteExecutionDashboardPage } from '@/pages/SiteExecutionDashboardPage';
+import { SiteExecutionReportsPage } from '@/pages/SiteExecutionReportsPage';
+import { SiteIssuesPage } from '@/pages/SiteIssuesPage';
+import { SiteQualityPage } from '@/site-quality/SiteQualityPage';
+import { SiteSafetyPage } from '@/site-safety/SiteSafetyPage';
 import { InvestorDetailPage } from '@/pages/InvestorDetailPage';
 import { InvestorsPage } from '@/pages/InvestorsPage';
 import { JournalCreatePage } from '@/pages/JournalCreatePage';
@@ -161,7 +174,14 @@ import { VendorInvoicesPage } from '@/pages/VendorInvoicesPage';
 import { VendorPaymentsPage } from '@/pages/VendorPaymentsPage';
 import { VendorsPage } from '@/pages/VendorsPage';
 import { WorkflowTimelineDemoPage } from '@/pages/WorkflowTimelineDemoPage';
+import { MaterialReconciliationPage } from '@/contractor-material-reconciliation';
+import { MeasurementBookPage } from '@/measurement-book';
+import { ContractorLedgerPage } from '@/pages/ContractorLedgerPage';
+import { RetentionRegisterPage } from '@/pages/RetentionRegisterPage';
+import { WorkOrderDetailPage } from '@/pages/WorkOrderDetailPage';
+import { WorkOrdersPage } from '@/pages/WorkOrdersPage';
 import { WorkMeasurementsPage } from '@/pages/WorkMeasurementsPage';
+import { RateContractsPage } from '@/rate-contracts';
 
 export const APP_ROUTE_ELEMENTS: {
   [K in Exclude<AppRouteId, 'login'>]: ReactElement;
@@ -170,6 +190,8 @@ export const APP_ROUTE_ELEMENTS: {
   'director-command-centre': <DirectorCommandCentrePage />,
   'finance-dashboard': <FinanceDashboardPage />,
   'site-operations-dashboard': <SiteOperationsDashboardPage />,
+  'site-execution-dashboard': <SiteExecutionDashboardPage />,
+  'site-execution-reports': <SiteExecutionReportsPage />,
   'purchase-dashboard': <PurchaseDashboardPage />,
   notifications: <NotificationsPage />,
   approvals: <ApprovalsPage />,
@@ -196,12 +218,30 @@ export const APP_ROUTE_ELEMENTS: {
   boq: <BoqPage />,
   'boq-import': <BoqImportPage />,
   'work-measurements': <WorkMeasurementsPage />,
+  'measurement-book': <MeasurementBookPage />,
+  'material-reconciliation': <MaterialReconciliationPage />,
+  'retention-register': <RetentionRegisterPage />,
+  'contractor-ledger': <ContractorLedgerPage />,
+  drawings: <DrawingsPage />,
+  equipment: <EquipmentPage />,
+  'site-quality': <SiteQualityPage />,
+  'site-safety': <SiteSafetyPage />,
+  'site-issues': <SiteIssuesPage />,
+  'site-diary': <SiteDiaryPage />,
   'material-coefficients': <MaterialCoefficientsPage />,
   'material-variance': <MaterialVariancePage />,
   'cost-forecast': <CostForecastPage />,
   vendors: <VendorsPage />,
   'vendor-detail': <VendorDetailPage />,
   contractors: <ContractorsPage />,
+  'contractor-dashboard': <ContractorDashboardPage />,
+  'contractor-reports': <ContractorReportsPage />,
+  'contractor-compliance': <ContractorCompliancePage />,
+  'contractor-tenders': <TenderListPage />,
+  'contractor-tender-compare': <BidComparisonPage />,
+  'rate-contracts': <RateContractsPage />,
+  'work-orders': <WorkOrdersPage />,
+  'work-order-detail': <WorkOrderDetailPage />,
   'contractor-agreements': <ContractorAgreementsPage />,
   'contractor-agreement-detail': <ContractorAgreementDetailPage />,
   'contractor-payments': <ContractorPaymentsPage />,

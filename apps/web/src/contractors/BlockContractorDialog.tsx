@@ -15,7 +15,7 @@ type Props = {
   contractor: ContractorListRow | null;
   loading?: boolean;
   onClose: () => void;
-  onConfirm: (reason: string | null) => void;
+  onConfirm: (reason: string) => void;
 };
 
 export function BlockContractorDialog({
@@ -31,6 +31,9 @@ export function BlockContractorDialog({
     if (!open) setReason('');
   }, [open]);
 
+  const trimmed = reason.trim();
+  const canSubmit = trimmed.length >= 3;
+
   return (
     <Dialog
       open={open}
@@ -39,16 +42,19 @@ export function BlockContractorDialog({
       fullWidth
       data-testid="block-contractor-dialog"
     >
-      <DialogTitle>Block contractor</DialogTitle>
+      <DialogTitle>Blacklist contractor</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
-          Block {contractor?.legalName ?? 'this contractor'} from new
-          assignments. Existing agreements are unchanged.
+          Blacklist {contractor?.legalName ?? 'this contractor'} from new
+          assignments. Existing agreements are unchanged. A reason is required
+          for audit.
         </DialogContentText>
         <TextField
           autoFocus
           fullWidth
-          label="Reason (optional)"
+          required
+          label="Reason"
+          helperText="Minimum 3 characters"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
@@ -60,10 +66,10 @@ export function BlockContractorDialog({
         <Button
           color="error"
           variant="contained"
-          disabled={loading}
-          onClick={() => onConfirm(reason.trim() || null)}
+          disabled={loading || !canSubmit}
+          onClick={() => onConfirm(trimmed)}
         >
-          Block
+          Blacklist
         </Button>
       </DialogActions>
     </Dialog>

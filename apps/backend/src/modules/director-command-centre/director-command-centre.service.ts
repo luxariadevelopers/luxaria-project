@@ -1076,7 +1076,12 @@ export class DirectorCommandCentreService {
         {
           $match: {
             projectId: projectOidFilter,
-            status: WorkMeasurementStatus.Verified,
+            status: {
+              $in: [
+                WorkMeasurementStatus.Verified,
+                WorkMeasurementStatus.Certified,
+              ],
+            },
           },
         },
         {

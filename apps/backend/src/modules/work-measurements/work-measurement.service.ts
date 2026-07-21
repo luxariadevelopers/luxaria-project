@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import { BoqService } from '../boq/boq.service';
 import {
   BoqItem,
   BoqItemStatus,
@@ -14,11 +15,15 @@ import {
   BoqVersionStatus,
   BoqVersionType,
 } from '../boq/schemas/boq.schema';
+import { DailyProgressReport } from '../daily-progress-reports/schemas/daily-progress-report.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
+import { SiteAccessService } from '../sites/site-access.service';
+import { SitesService } from '../sites/sites.service';
 import {
+  CertifyWorkMeasurementDto,
   CreateWorkMeasurementDto,
   ListWorkMeasurementsQueryDto,
   RejectWorkMeasurementDto,
@@ -45,6 +50,7 @@ import {
 const COUNTING_STATUSES: WorkMeasurementStatus[] = [
   WorkMeasurementStatus.Submitted,
   WorkMeasurementStatus.Verified,
+  WorkMeasurementStatus.Certified,
 ];
 
 @Injectable()
@@ -58,8 +64,13 @@ export class WorkMeasurementService {
     private readonly boqItemModel: Model<BoqItem>,
     @InjectModel(BoqVersion.name)
     private readonly boqVersionModel: Model<BoqVersion>,
+    @InjectModel(DailyProgressReport.name)
+    private readonly dprModel: Model<DailyProgressReport>,
     private readonly numberingService: NumberingService,
     private readonly projectScope: ProjectScopedDataHelper,
+    private readonly siteAccessService: SiteAccessService,
+    private readonly sitesService: SitesService,
+    private readonly boqService: BoqService,
   ) {}
 
   async create(dto: CreateWorkMeasurementDto, actorId: string) {
@@ -70,6 +81,23 @@ export class WorkMeasurementService {
       { resourceType: 'work-measurement' },
     );
     await this.requireProject(dto.projectId);
+    const siteId = await this.resolveSiteForProject(
+      dto.siteId,
+      dto.projectId,
+      'siteId',
+    );
+    if (siteId) {
+      await this.siteAccessService.assertSiteAccessIfScoped({
+        userId: actorId,
+        projectId: dto.projectId,
+        siteId: String(siteId),
+      });
+    }
+    const dprId = await this.resolveDprForProject(
+      dto.dprId,
+      dto.projectId,
+      siteId,
+    );
     const boq = await this.requireMeasurableBoqItem(
       dto.boqItemId,
       dto.projectId,
@@ -99,6 +127,7 @@ export class WorkMeasurementService {
       attachments: dto.attachments,
     });
     const measuredBy = dto.measuredBy ?? actorId;
+    const drawingId = this.resolveOptionalObjectId(dto.drawingId, 'drawingId');
 
     const measurementNumber = await this.numberingService.nextCode(
       NumberEntityType.WORK_MEASUREMENT,
@@ -112,10 +141,14 @@ export class WorkMeasurementService {
     const row = await this.measurementModel.create({
       measurementNumber,
       projectId: new Types.ObjectId(dto.projectId),
+      siteId,
+      dprId,
       contractorId: new Types.ObjectId(dto.contractorId),
       boqItemId: new Types.ObjectId(dto.boqItemId),
       boqCode: boq.boqCode,
       location: dto.location.trim(),
+      sheetReference: dto.sheetReference?.trim() || null,
+      workDescription: dto.workDescription?.trim() || null,
       measurementDate,
       previousQuantity,
       currentQuantity,
@@ -124,12 +157,15 @@ export class WorkMeasurementService {
       measuredBy: new Types.ObjectId(measuredBy),
       photoDocumentIds: photoIds.map((id) => new Types.ObjectId(id)),
       drawingReference: dto.drawingReference?.trim() || null,
+      drawingId,
       notes: dto.notes?.trim() || null,
       boqPlannedQuantity: boq.plannedQuantity,
       status: WorkMeasurementStatus.Draft,
       createdBy: new Types.ObjectId(actorId),
       updatedBy: new Types.ObjectId(actorId),
     });
+
+    await this.linkMeasurementToDpr(dprId, row._id as Types.ObjectId);
 
     if (dto.submit) {
       return this.submit(String(row._id), actorId);
@@ -155,9 +191,37 @@ export class WorkMeasurementService {
     const projectId = dto.projectId ?? String(row.projectId);
     const contractorId = dto.contractorId ?? String(row.contractorId);
     const boqItemId = dto.boqItemId ?? String(row.boqItemId);
+    const previousDprId = row.dprId ? String(row.dprId) : null;
 
     if (dto.projectId) {
       await this.requireProject(dto.projectId);
+    }
+
+    let siteId = row.siteId;
+    if (dto.siteId !== undefined) {
+      siteId = await this.resolveSiteForProject(
+        dto.siteId,
+        projectId,
+        'siteId',
+      );
+      if (siteId) {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: actorId,
+          projectId,
+          siteId: String(siteId),
+        });
+      }
+    } else if (siteId) {
+      await this.siteAccessService.assertSiteAccessIfScoped({
+        userId: actorId,
+        projectId,
+        siteId: String(siteId),
+      });
+    }
+
+    let dprId = row.dprId;
+    if (dto.dprId !== undefined) {
+      dprId = await this.resolveDprForProject(dto.dprId, projectId, siteId);
     }
 
     const boq = await this.requireMeasurableBoqItem(boqItemId, projectId);
@@ -187,6 +251,8 @@ export class WorkMeasurementService {
     });
 
     row.projectId = new Types.ObjectId(projectId);
+    row.siteId = siteId;
+    row.dprId = dprId;
     row.contractorId = new Types.ObjectId(contractorId);
     row.boqItemId = new Types.ObjectId(boqItemId);
     row.boqCode = boq.boqCode;
@@ -198,11 +264,20 @@ export class WorkMeasurementService {
     row.unit = boq.unit;
     row.boqPlannedQuantity = boq.plannedQuantity;
 
+    if (dto.sheetReference !== undefined) {
+      row.sheetReference = dto.sheetReference?.trim() || null;
+    }
+    if (dto.workDescription !== undefined) {
+      row.workDescription = dto.workDescription?.trim() || null;
+    }
     if (dto.measuredBy) {
       row.measuredBy = new Types.ObjectId(dto.measuredBy);
     }
     if (dto.drawingReference !== undefined) {
       row.drawingReference = dto.drawingReference?.trim() || null;
+    }
+    if (dto.drawingId !== undefined) {
+      row.drawingId = this.resolveOptionalObjectId(dto.drawingId, 'drawingId');
     }
     if (dto.notes !== undefined) {
       row.notes = dto.notes?.trim() || null;
@@ -224,6 +299,15 @@ export class WorkMeasurementService {
 
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
+
+    const nextDprId = dprId ? String(dprId) : null;
+    if (previousDprId !== nextDprId) {
+      await this.unlinkMeasurementFromDpr(
+        previousDprId,
+        row._id as Types.ObjectId,
+      );
+      await this.linkMeasurementToDpr(dprId, row._id as Types.ObjectId);
+    }
 
     if (dto.submit) {
       return this.submit(String(row._id), actorId);
@@ -267,8 +351,9 @@ export class WorkMeasurementService {
   }
 
   /**
-   * Engineer verification — required before a measurement is accepted.
+   * Engineer verification — required before certify/approve.
    * Verifier cannot be the same user who measured.
+   * Does not update BOQ progress (certify does).
    */
   async verify(
     id: string,
@@ -304,6 +389,59 @@ export class WorkMeasurementService {
     );
   }
 
+  /**
+   * Certify / approve a verified measurement and sync BOQ progressQuantity.
+   * Permission: `measurement.certify` (same as verify).
+   */
+  async certify(
+    id: string,
+    dto: CertifyWorkMeasurementDto,
+    actorId: string,
+  ) {
+    const row = await this.requireMeasurement(id, actorId, 'approve');
+    if (row.status !== WorkMeasurementStatus.Verified) {
+      throw new BadRequestException(
+        'Only verified measurements can be certified',
+      );
+    }
+    if (String(row.measuredBy) === actorId) {
+      throw new ForbiddenException(
+        'Certifying engineer cannot be the same user who measured',
+      );
+    }
+
+    await this.revalidateQuantities(row);
+
+    row.status = WorkMeasurementStatus.Certified;
+    row.certifiedBy = new Types.ObjectId(actorId);
+    row.certifiedAt = new Date();
+    if (!row.verifiedBy) {
+      row.verifiedBy = new Types.ObjectId(actorId);
+      row.verifiedAt = row.certifiedAt;
+    }
+    if (dto.notes !== undefined) {
+      row.notes = dto.notes?.trim() || row.notes;
+    }
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save();
+
+    await this.syncBoqProgressQuantity(String(row.boqItemId), actorId);
+
+    return createSuccessResponse(
+      toPublicWorkMeasurement(row),
+      'Work measurement certified; BOQ progress updated',
+    );
+  }
+
+  /** Alias for certify — architecture "approve" step. */
+  async approve(
+    id: string,
+    dto: CertifyWorkMeasurementDto,
+    actorId: string,
+  ) {
+    return this.certify(id, dto, actorId);
+  }
+
   async reject(id: string, dto: RejectWorkMeasurementDto, actorId: string) {
     const row = await this.requireMeasurement(id, actorId, 'update');
     if (row.status !== WorkMeasurementStatus.Submitted) {
@@ -323,6 +461,8 @@ export class WorkMeasurementService {
     row.rejectionReason = dto.reason.trim();
     row.verifiedBy = null;
     row.verifiedAt = null;
+    row.certifiedBy = null;
+    row.certifiedAt = null;
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
 
@@ -371,6 +511,12 @@ export class WorkMeasurementService {
     let filter: Record<string, unknown> = {};
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
+    }
+    if (query.siteId) {
+      filter.siteId = new Types.ObjectId(query.siteId);
+    }
+    if (query.dprId) {
+      filter.dprId = new Types.ObjectId(query.dprId);
     }
     if (query.contractorId) {
       filter.contractorId = new Types.ObjectId(query.contractorId);
@@ -421,6 +567,36 @@ export class WorkMeasurementService {
       total,
       totalPages: Math.ceil(total / limit) || 1,
     });
+  }
+
+  /**
+   * Recompute BOQ.progressQuantity as the max cumulativeQuantity among
+   * certified measurements for the BOQ item (matches progress dashboards).
+   */
+  private async syncBoqProgressQuantity(boqItemId: string, actorId: string) {
+    const [agg] = await this.measurementModel
+      .aggregate<{ measured: number }>([
+        {
+          $match: {
+            boqItemId: new Types.ObjectId(boqItemId),
+            status: WorkMeasurementStatus.Certified,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            measured: { $max: '$cumulativeQuantity' },
+          },
+        },
+      ])
+      .exec();
+
+    const progressQuantity = roundQty(agg?.measured ?? 0);
+    await this.boqService.applyCertifiedProgressQuantity(
+      boqItemId,
+      progressQuantity,
+      actorId,
+    );
   }
 
   private async revalidateQuantities(row: WorkMeasurementDocument) {
@@ -520,6 +696,100 @@ export class WorkMeasurementService {
     return project;
   }
 
+  private async resolveSiteForProject(
+    siteId: string | null | undefined,
+    projectId: string,
+    fieldName: string,
+  ): Promise<Types.ObjectId | null> {
+    if (siteId === undefined || siteId === null || siteId === '') {
+      return null;
+    }
+    if (!Types.ObjectId.isValid(siteId)) {
+      throw new BadRequestException(`Invalid ${fieldName}`);
+    }
+    const site = await this.sitesService.findById(siteId);
+    if (!site) {
+      throw new BadRequestException(`${fieldName} site not found`);
+    }
+    if (String(site.projectId) !== projectId) {
+      throw new BadRequestException(
+        `${fieldName} does not belong to the measurement project`,
+      );
+    }
+    return site._id as Types.ObjectId;
+  }
+
+  private async resolveDprForProject(
+    dprId: string | null | undefined,
+    projectId: string,
+    siteId: Types.ObjectId | null,
+  ): Promise<Types.ObjectId | null> {
+    if (dprId === undefined || dprId === null || dprId === '') {
+      return null;
+    }
+    if (!Types.ObjectId.isValid(dprId)) {
+      throw new BadRequestException('Invalid dprId');
+    }
+    const dpr = await this.dprModel.findById(dprId).lean().exec();
+    if (!dpr) {
+      throw new NotFoundException('Daily progress report not found');
+    }
+    if (String(dpr.projectId) !== projectId) {
+      throw new BadRequestException(
+        'dprId does not belong to the measurement project',
+      );
+    }
+    if (
+      siteId &&
+      dpr.siteId &&
+      String(dpr.siteId) !== String(siteId)
+    ) {
+      throw new BadRequestException(
+        'dprId site does not match measurement siteId',
+      );
+    }
+    return dpr._id as Types.ObjectId;
+  }
+
+  private resolveOptionalObjectId(
+    value: string | null | undefined,
+    fieldName: string,
+  ): Types.ObjectId | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    if (!Types.ObjectId.isValid(value)) {
+      throw new BadRequestException(`Invalid ${fieldName}`);
+    }
+    return new Types.ObjectId(value);
+  }
+
+  private async linkMeasurementToDpr(
+    dprId: Types.ObjectId | null,
+    measurementId: Types.ObjectId,
+  ) {
+    if (!dprId) return;
+    await this.dprModel
+      .updateOne(
+        { _id: dprId },
+        { $addToSet: { workMeasurementIds: measurementId } },
+      )
+      .exec();
+  }
+
+  private async unlinkMeasurementFromDpr(
+    dprId: string | null,
+    measurementId: Types.ObjectId,
+  ) {
+    if (!dprId || !Types.ObjectId.isValid(dprId)) return;
+    await this.dprModel
+      .updateOne(
+        { _id: new Types.ObjectId(dprId) },
+        { $pull: { workMeasurementIds: measurementId } },
+      )
+      .exec();
+  }
+
   private async requireMeasurableBoqItem(
     boqItemId: string,
     projectId: string,
@@ -565,6 +835,13 @@ export class WorkMeasurementService {
         action,
         { resourceType: 'work-measurement', resourceId: id },
       );
+      if (row.siteId) {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: actorId,
+          projectId: String(row.projectId),
+          siteId: String(row.siteId),
+        });
+      }
     }
     return row;
   }

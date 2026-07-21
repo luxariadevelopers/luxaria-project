@@ -30,6 +30,8 @@ import {
   Project,
   ProjectStatus,
 } from '../projects/schemas/project.schema';
+import { SiteAccessService } from '../sites/site-access.service';
+import { SitesService } from '../sites/sites.service';
 import type {
   ConfirmLabourAttendanceDto,
   CreateLabourAttendanceDto,
@@ -47,6 +49,7 @@ import {
 import {
   assertGps,
   assertReadyForSubmit,
+  assertShift,
   attendanceDateKey,
   mergeDocumentIds,
   normalizeAttendanceDate,
@@ -55,6 +58,7 @@ import {
 import {
   LabourAttendance,
   LabourAttendanceDocument,
+  LabourAttendanceShift,
   LabourAttendanceStatus,
 } from './schemas/labour-attendance.schema';
 
@@ -73,6 +77,8 @@ export class LabourAttendanceService {
     private readonly categoryModel: Model<LabourCategory>,
     private readonly numberingService: NumberingService,
     private readonly idempotencyService: IdempotencyService,
+    private readonly sitesService: SitesService,
+    private readonly siteAccessService: SiteAccessService,
   ) {}
 
   async create(
@@ -112,11 +118,26 @@ export class LabourAttendanceService {
 
       await this.requireProject(dto.projectId);
       await this.requireContractor(dto.contractorId);
+      const siteId = await this.resolveSiteForProject(
+        dto.siteId,
+        dto.projectId,
+      );
+      if (siteId) {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: actorId,
+          projectId: dto.projectId,
+          siteId: String(siteId),
+        });
+      }
+      const dprId = this.resolveOptionalObjectId(dto.dprId, 'dprId');
       const attendanceDate = normalizeAttendanceDate(dto.attendanceDate);
+      const shift = assertShift(dto.shift);
       await this.assertUniqueSheet(
         dto.projectId,
         dto.contractorId,
         attendanceDate,
+        siteId,
+        shift,
       );
 
       const groupPhotoDocumentIds = mergeDocumentIds({
@@ -139,8 +160,11 @@ export class LabourAttendanceService {
       const row = await this.attendanceModel.create({
         attendanceNumber,
         projectId: new Types.ObjectId(dto.projectId),
+        siteId,
         contractorId: new Types.ObjectId(dto.contractorId),
+        dprId,
         attendanceDate,
+        shift,
         workLocation: dto.workLocation?.trim() || null,
         latitude: dto.latitude ?? null,
         longitude: dto.longitude ?? null,
@@ -208,6 +232,45 @@ export class LabourAttendanceService {
       dto.contractorId !== String(row.contractorId)
     ) {
       throw new BadRequestException('contractorId cannot be changed');
+    }
+
+    const projectId = String(row.projectId);
+    const previousSiteId = row.siteId;
+    const previousShift = row.shift ?? LabourAttendanceShift.General;
+    let nextSiteId = previousSiteId;
+    let nextShift = previousShift;
+
+    if (dto.siteId !== undefined) {
+      nextSiteId = await this.resolveSiteForProject(dto.siteId, projectId);
+      if (nextSiteId) {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: actorId,
+          projectId,
+          siteId: String(nextSiteId),
+        });
+      }
+      row.siteId = nextSiteId;
+    }
+    if (dto.shift !== undefined) {
+      nextShift = assertShift(dto.shift);
+      row.shift = nextShift;
+    }
+    if (dto.dprId !== undefined) {
+      row.dprId = this.resolveOptionalObjectId(dto.dprId, 'dprId');
+    }
+
+    const siteOrShiftChanged =
+      String(nextSiteId ?? '') !== String(previousSiteId ?? '') ||
+      nextShift !== previousShift;
+    if (siteOrShiftChanged) {
+      await this.assertUniqueSheet(
+        projectId,
+        String(row.contractorId),
+        row.attendanceDate,
+        nextSiteId,
+        nextShift,
+        String(row._id),
+      );
     }
 
     if (dto.workLocation !== undefined) {
@@ -321,8 +384,17 @@ export class LabourAttendanceService {
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
     }
+    if (query.siteId) {
+      filter.siteId = new Types.ObjectId(query.siteId);
+    }
     if (query.contractorId) {
       filter.contractorId = new Types.ObjectId(query.contractorId);
+    }
+    if (query.dprId) {
+      filter.dprId = new Types.ObjectId(query.dprId);
+    }
+    if (query.shift) {
+      filter.shift = assertShift(query.shift);
     }
     if (query.status) {
       filter.status = query.status;
@@ -361,20 +433,45 @@ export class LabourAttendanceService {
     );
   }
 
-  async dailyReport(query: DailyAttendanceReportQueryDto) {
+  /**
+   * Daily deployment rollup for DPR — filter by project + date (+ site/shift).
+   */
+  async dailyReport(
+    query: DailyAttendanceReportQueryDto,
+    actorId?: string,
+  ) {
     await this.requireProject(query.projectId);
     const attendanceDate = normalizeAttendanceDate(query.attendanceDate);
+    const shift = query.shift ? assertShift(query.shift) : null;
+
+    if (query.siteId) {
+      await this.resolveSiteForProject(query.siteId, query.projectId);
+      if (actorId) {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: actorId,
+          projectId: query.projectId,
+          siteId: query.siteId,
+        });
+      }
+    }
+
     const filter: FilterQuery<LabourAttendance> = {
       projectId: new Types.ObjectId(query.projectId),
       attendanceDate,
     };
+    if (query.siteId) {
+      filter.siteId = new Types.ObjectId(query.siteId);
+    }
+    if (shift) {
+      filter.shift = shift;
+    }
     if (query.contractorId) {
       filter.contractorId = new Types.ObjectId(query.contractorId);
     }
 
     const rows = await this.attendanceModel
       .find(filter)
-      .sort({ contractorId: 1 })
+      .sort({ contractorId: 1, shift: 1 })
       .lean()
       .exec();
 
@@ -383,7 +480,10 @@ export class LabourAttendanceService {
       return {
         id: publicRow.id,
         attendanceNumber: publicRow.attendanceNumber,
+        siteId: publicRow.siteId,
         contractorId: publicRow.contractorId,
+        dprId: publicRow.dprId,
+        shift: publicRow.shift,
         status: publicRow.status,
         supervisorConfirmed: publicRow.supervisorConfirmed,
         workLocation: publicRow.workLocation,
@@ -414,7 +514,9 @@ export class LabourAttendanceService {
 
     const report: PublicDailyAttendanceReport = {
       projectId: query.projectId,
+      siteId: query.siteId ?? null,
       attendanceDate: attendanceDateKey(attendanceDate),
+      shift,
       sheetCount: sheets.length,
       totalWorkers: totals.totalWorkers,
       totalOvertimeHours: totals.totalOvertimeHours,
@@ -424,6 +526,18 @@ export class LabourAttendanceService {
     };
 
     return createSuccessResponse(report, 'Daily labour attendance report');
+  }
+
+  /** Alias used by DPR labour deployment rollup. */
+  async dailyDeployment(
+    query: DailyAttendanceReportQueryDto,
+    actorId?: string,
+  ) {
+    const response = await this.dailyReport(query, actorId);
+    return createSuccessResponse(
+      response.data!,
+      'Daily labour deployment for DPR rollup',
+    );
   }
 
   private async buildLines(dtoLines: CreateLabourAttendanceDto['lines']) {
@@ -483,20 +597,61 @@ export class LabourAttendanceService {
     projectId: string,
     contractorId: string,
     attendanceDate: Date,
+    siteId: Types.ObjectId | null,
+    shift: LabourAttendanceShift,
+    excludeId?: string,
   ) {
-    const existing = await this.attendanceModel
-      .findOne({
-        projectId: new Types.ObjectId(projectId),
-        contractorId: new Types.ObjectId(contractorId),
-        attendanceDate,
-      })
-      .lean()
-      .exec();
+    const filter: FilterQuery<LabourAttendance> = {
+      projectId: new Types.ObjectId(projectId),
+      contractorId: new Types.ObjectId(contractorId),
+      attendanceDate,
+      siteId: siteId ?? null,
+      shift,
+    };
+    if (excludeId) {
+      filter._id = { $ne: new Types.ObjectId(excludeId) };
+    }
+    const existing = await this.attendanceModel.findOne(filter).lean().exec();
     if (existing) {
       throw new ConflictException(
-        `Attendance already exists for this contractor on ${attendanceDateKey(attendanceDate)} (${existing.attendanceNumber})`,
+        `Attendance already exists for this contractor/site/shift on ${attendanceDateKey(attendanceDate)} (${existing.attendanceNumber})`,
       );
     }
+  }
+
+  private async resolveSiteForProject(
+    siteId: string | null | undefined,
+    projectId: string,
+  ): Promise<Types.ObjectId | null> {
+    if (siteId === undefined || siteId === null || siteId === '') {
+      return null;
+    }
+    if (!Types.ObjectId.isValid(siteId)) {
+      throw new BadRequestException('Invalid siteId');
+    }
+    const site = await this.sitesService.findById(siteId);
+    if (!site) {
+      throw new BadRequestException('siteId site not found');
+    }
+    if (String(site.projectId) !== projectId) {
+      throw new BadRequestException(
+        'siteId does not belong to the attendance project',
+      );
+    }
+    return site._id as Types.ObjectId;
+  }
+
+  private resolveOptionalObjectId(
+    value: string | null | undefined,
+    field: string,
+  ): Types.ObjectId | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    if (!Types.ObjectId.isValid(value)) {
+      throw new BadRequestException(`Invalid ${field}`);
+    }
+    return new Types.ObjectId(value);
   }
 
   private async requireAttendance(id: string) {

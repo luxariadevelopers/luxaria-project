@@ -12,6 +12,7 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { WorkMeasurementStatus } from '../schemas/work-measurement.schema';
@@ -20,6 +21,22 @@ export class CreateWorkMeasurementDto {
   @ApiProperty()
   @IsMongoId()
   projectId!: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional site for SE hierarchy / site-scoped access',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined && v !== '')
+  @IsMongoId()
+  siteId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Optional Daily Progress Report link',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined && v !== '')
+  @IsMongoId()
+  dprId?: string | null;
 
   @ApiProperty()
   @IsMongoId()
@@ -33,6 +50,23 @@ export class CreateWorkMeasurementDto {
   @IsString()
   @MaxLength(240)
   location!: string;
+
+  @ApiPropertyOptional({
+    description: 'Measurement book / sheet reference',
+    example: 'MB-12 / Sheet 3',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  sheetReference?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Work description on the measurement sheet',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  workDescription?: string | null;
 
   @ApiProperty({ example: '2026-07-17' })
   @IsDateString()
@@ -71,6 +105,14 @@ export class CreateWorkMeasurementDto {
   @IsString()
   @MaxLength(200)
   drawingReference?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Optional drawing register ObjectId (future W8)',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined && v !== '')
+  @IsMongoId()
+  drawingId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -114,6 +156,18 @@ export class ListWorkMeasurementsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsMongoId()
+  siteId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter measurements linked to a DPR',
+  })
+  @IsOptional()
+  @IsMongoId()
+  dprId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
   contractorId?: string;
 
   @ApiPropertyOptional()
@@ -145,6 +199,14 @@ export class RejectWorkMeasurementDto {
 }
 
 export class VerifyWorkMeasurementDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string | null;
+}
+
+export class CertifyWorkMeasurementDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

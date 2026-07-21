@@ -18,6 +18,12 @@ export enum ContractorDocumentCategory {
   Other = 'other',
 }
 
+export enum ContractorDocumentVerificationStatus {
+  Pending = 'pending',
+  Verified = 'verified',
+  Rejected = 'rejected',
+}
+
 @Schema({
   collection: 'contractor_documents',
   timestamps: true,
@@ -45,6 +51,27 @@ export class ContractorFile {
   })
   category!: ContractorDocumentCategory;
 
+  @Prop({
+    type: String,
+    enum: ContractorDocumentVerificationStatus,
+    default: ContractorDocumentVerificationStatus.Pending,
+    index: true,
+  })
+  verificationStatus!: ContractorDocumentVerificationStatus;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  verifiedBy!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  verifiedAt!: Date | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  verificationNotes!: string | null;
+
+  /** Optional document expiry (licence / insurance scans). */
+  @Prop({ type: Date, default: null })
+  expiresAt!: Date | null;
+
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   uploadedBy!: Types.ObjectId | null;
 
@@ -58,3 +85,4 @@ ContractorFileSchema.plugin(softDeletePlugin);
 
 ContractorFileSchema.index({ contractorId: 1, createdAt: -1 });
 ContractorFileSchema.index({ contractorId: 1, category: 1 });
+ContractorFileSchema.index({ contractorId: 1, verificationStatus: 1 });

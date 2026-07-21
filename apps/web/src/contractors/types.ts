@@ -7,6 +7,7 @@ export const ContractorStatus = {
   Draft: 'draft',
   PendingVerification: 'pending_verification',
   Active: 'active',
+  Suspended: 'suspended',
   Blocked: 'blocked',
   Inactive: 'inactive',
 } as const;
@@ -141,7 +142,8 @@ export type CreateContractorInput = {
 export type UpdateContractorInput = Partial<CreateContractorInput>;
 
 export type BlockContractorInput = {
-  reason?: string | null;
+  /** Required for blacklist / suspend / reactivate (min 3 chars). */
+  reason: string;
 };
 
 export type VerifyContractorInput = {

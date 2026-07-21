@@ -80,8 +80,43 @@ export const RESOURCE_OWNERSHIP_REGISTRY: Record<
     projectIdField: 'projectId',
     companyIdField: null,
   },
+  'contractor-tender': {
+    modelName: 'ContractorTender',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'contractor-recovery': {
+    modelName: 'ContractorRecovery',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'contractor-material-reconciliation': {
+    modelName: 'ContractorMaterialReconciliation',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'contractor-retention': {
+    modelName: 'ContractorRetention',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'rate-contract': {
+    modelName: 'RateContract',
+    projectIdField: 'projectId',
+    companyIdField: 'companyId',
+  },
+  'work-order': {
+    modelName: 'WorkOrder',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
   'work-measurement': {
     modelName: 'WorkMeasurement',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'measurement-book': {
+    modelName: 'MeasurementBookEntry',
     projectIdField: 'projectId',
     companyIdField: null,
   },
@@ -150,6 +185,31 @@ export const RESOURCE_OWNERSHIP_REGISTRY: Record<
     projectIdField: 'projectId',
     companyIdField: null,
   },
+  drawing: {
+    modelName: 'Drawing',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  equipment: {
+    modelName: 'Equipment',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'equipment-utilization': {
+    modelName: 'EquipmentUtilization',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'site-quality': {
+    modelName: 'SiteQuality',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'site-safety': {
+    modelName: 'SiteSafety',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
   'labour-attendance': {
     modelName: 'LabourAttendance',
     projectIdField: 'projectId',
@@ -207,6 +267,21 @@ export const RESOURCE_OWNERSHIP_REGISTRY: Record<
   },
   'investor-visible-report': {
     modelName: 'InvestorVisibleReport',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'site-issue': {
+    modelName: 'SiteIssue',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'site-diary': {
+    modelName: 'SiteDiaryEntry',
+    projectIdField: 'projectId',
+    companyIdField: null,
+  },
+  'site-photo': {
+    modelName: 'SitePhoto',
     projectIdField: 'projectId',
     companyIdField: null,
   },

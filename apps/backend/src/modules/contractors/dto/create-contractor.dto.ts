@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -56,6 +57,89 @@ export class ContractorContactDto {
   @IsOptional()
   @IsString()
   addressLine2?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  state?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  pincode?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string | null;
+}
+
+export class ContractorContactEntryDto {
+  @ApiPropertyOptional({ example: 'Site supervisor' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  label?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
+
+  @ApiPropertyOptional()
+  @ValidateIf((o: ContractorContactEntryDto) => !!o.email)
+  @IsOptional()
+  @IsEmail()
+  email?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  alternatePhone?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactPerson?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  designation?: string | null;
+}
+
+export class ContractorAddressDto {
+  @ApiPropertyOptional({ example: 'Registered office' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  label?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  line1?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  line2?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -140,6 +224,42 @@ export class ContractorLabourLicenceDto {
   notes?: string | null;
 }
 
+export class ContractorInsuranceDto {
+  @ApiPropertyOptional({ example: 'POL-WC-2026-001' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  policyNumber?: string | null;
+
+  @ApiPropertyOptional({ example: 'New India Assurance' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  insurer?: string | null;
+
+  @ApiPropertyOptional({ example: 'workmen_compensation' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  coverageType?: string | null;
+
+  @ApiPropertyOptional({ example: '2026-01-01' })
+  @IsOptional()
+  @IsDateString()
+  validFrom?: string | null;
+
+  @ApiPropertyOptional({ example: '2027-12-31' })
+  @IsOptional()
+  @IsDateString()
+  validTo?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string | null;
+}
+
 export class CreateContractorDto {
   @ApiProperty({ example: 'Sunrise Civil Contractors Pvt Ltd' })
   @IsString()
@@ -177,6 +297,22 @@ export class CreateContractorDto {
   @Type(() => ContractorContactDto)
   contact?: ContractorContactDto;
 
+  @ApiPropertyOptional({ type: [ContractorContactEntryDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ContractorContactEntryDto)
+  contacts?: ContractorContactEntryDto[];
+
+  @ApiPropertyOptional({ type: [ContractorAddressDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ContractorAddressDto)
+  addresses?: ContractorAddressDto[];
+
   @ApiPropertyOptional({ type: ContractorBankDetailsDto })
   @IsOptional()
   @ValidateNested()
@@ -189,9 +325,16 @@ export class CreateContractorDto {
   @Type(() => ContractorLabourLicenceDto)
   labourLicence?: ContractorLabourLicenceDto;
 
+  @ApiPropertyOptional({ type: ContractorInsuranceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ContractorInsuranceDto)
+  insurance?: ContractorInsuranceDto;
+
   @ApiPropertyOptional({
     type: [String],
     example: ['brickwork', 'plastering', 'rcc'],
+    description: 'Trade / work-category slugs',
   })
   @IsOptional()
   @IsArray()

@@ -21,6 +21,7 @@ export type AppStackParamList = {
   DprDetail: { dprId: string };
   WorkMeasurementList: undefined;
   WorkMeasurementForm: undefined;
+  WorkOrderList: undefined;
   StockCountList: undefined;
   StockCountEntry: { countId?: string } | undefined;
   MaterialIssue: undefined;

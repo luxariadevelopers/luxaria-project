@@ -2,7 +2,7 @@
  * Nest RBAC for Daily Progress Reports (exact catalog):
  * - `dpr.view` — list/get, missing alerts
  * - `dpr.create` — create, update, submit
- * - `dpr.review` — review, reopen, regenerate PDF, evaluate alerts
+ * - `dpr.review` — verify, approve, lock, review (legacy), reopen, PDF, alerts
  */
 export type DprCapabilities = {
   canView: boolean;

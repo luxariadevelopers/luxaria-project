@@ -71,6 +71,10 @@ export type PublicBoqItem = {
   description: string;
   unit: BoqUnit;
   plannedQuantity: number;
+  /** Certified executed quantity from work measurements. */
+  progressQuantity: number;
+  /** progressQuantity / plannedQuantity × 100 (0 when planned is 0). */
+  progressPercent: number;
   materialCost: number;
   labourCost: number;
   subcontractCost: number;
@@ -137,6 +141,7 @@ type ItemLike = {
   description: string;
   unit: BoqUnit;
   plannedQuantity: number;
+  progressQuantity?: number;
   materialCost?: number;
   labourCost?: number;
   subcontractCost?: number;
@@ -158,6 +163,11 @@ type ItemLike = {
   createdAt?: Date;
   updatedAt?: Date;
 };
+
+function progressPercentOf(planned: number, progress: number): number {
+  if (!planned || planned <= 0) return 0;
+  return Math.round((progress / planned) * 10000) / 100;
+}
 
 export function toPublicBoqBlock(row: BlockLike): PublicBoqBlock {
   return {
@@ -208,6 +218,7 @@ export function toPublicBoqWorkCategory(
 }
 
 export function toPublicBoqItem(row: ItemLike): PublicBoqItem {
+  const progressQuantity = row.progressQuantity ?? 0;
   return {
     id: String(row._id),
     projectId: String(row.projectId),
@@ -219,6 +230,8 @@ export function toPublicBoqItem(row: ItemLike): PublicBoqItem {
     description: row.description,
     unit: row.unit,
     plannedQuantity: row.plannedQuantity,
+    progressQuantity,
+    progressPercent: progressPercentOf(row.plannedQuantity, progressQuantity),
     materialCost: row.materialCost ?? 0,
     labourCost: row.labourCost ?? 0,
     subcontractCost: row.subcontractCost ?? 0,

@@ -710,6 +710,7 @@ const [items, total] = await Promise.all([
     }
     if (
       bill.status !== ContractorBillStatus.Posted &&
+      bill.status !== ContractorBillStatus.PartiallyPaid &&
       bill.status !== ContractorBillStatus.Paid
     ) {
       throw new BadRequestException(

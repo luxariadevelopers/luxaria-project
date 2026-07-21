@@ -12,6 +12,7 @@ const STATUS_COLOR: Record<
   [WorkMeasurementStatus.Draft]: 'default',
   [WorkMeasurementStatus.Submitted]: 'info',
   [WorkMeasurementStatus.Verified]: 'success',
+  [WorkMeasurementStatus.Certified]: 'success',
   [WorkMeasurementStatus.Rejected]: 'error',
   [WorkMeasurementStatus.Cancelled]: 'default',
 };

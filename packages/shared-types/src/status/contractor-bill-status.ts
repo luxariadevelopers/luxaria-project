@@ -2,6 +2,7 @@
  * Source: `apps/backend/src/modules/contractor-bills/schemas/contractor-bill.schema.ts`
  * Editable: `contractor-bills.validation.ts` (`EDITABLE_BILL_STATUSES`).
  * Transitions: `contractor-bills.service.ts`.
+ * Phase 6 aliases: see `contractor-bills/CTR-INTEGRATION.md`.
  */
 import { createStatusCatalog } from './create-status-catalog';
 
@@ -13,7 +14,9 @@ export const ContractorBillStatus = {
   FinanceVerified: 'finance_verified',
   DirectorApproved: 'director_approved',
   Posted: 'posted',
+  PartiallyPaid: 'partially_paid',
   Paid: 'paid',
+  Closed: 'closed',
   Rejected: 'rejected',
   Cancelled: 'cancelled',
 } as const;
@@ -34,7 +37,9 @@ export const contractorBillStatusCatalog = createStatusCatalog({
     finance_verified: 'Finance Verified',
     director_approved: 'Director Approved',
     posted: 'Posted',
+    partially_paid: 'Partially Paid',
     paid: 'Paid',
+    closed: 'Closed',
     rejected: 'Rejected',
     cancelled: 'Cancelled',
   },
@@ -46,7 +51,9 @@ export const contractorBillStatusCatalog = createStatusCatalog({
     finance_verified: 'warning',
     director_approved: 'warning',
     posted: 'success',
+    partially_paid: 'warning',
     paid: 'success',
+    closed: 'muted',
     rejected: 'danger',
     cancelled: 'muted',
   },
@@ -57,11 +64,13 @@ export const contractorBillStatusCatalog = createStatusCatalog({
     pm_certified: ['finance_verified', 'rejected', 'cancelled'],
     finance_verified: ['director_approved', 'rejected', 'cancelled'],
     director_approved: ['posted', 'rejected', 'cancelled'],
-    posted: ['paid'],
-    paid: [],
+    posted: ['partially_paid', 'paid'],
+    partially_paid: ['paid'],
+    paid: ['closed'],
+    closed: [],
     rejected: ['draft', 'cancelled'],
     cancelled: [],
   },
   editable: EDITABLE_CONTRACTOR_BILL_STATUSES,
-  immutable: ['posted', 'paid', 'cancelled'],
+  immutable: ['posted', 'partially_paid', 'paid', 'closed', 'cancelled'],
 });

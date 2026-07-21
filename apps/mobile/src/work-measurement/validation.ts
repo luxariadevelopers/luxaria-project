@@ -21,9 +21,10 @@ export function isDateOnly(value: string): boolean {
 const COUNTING_STATUSES: WorkMeasurementStatus[] = [
   WorkMeasurementStatus.Submitted,
   WorkMeasurementStatus.Verified,
+  WorkMeasurementStatus.Certified,
 ];
 
-/** Sum prior submitted/verified quantities (client mirror of Nest). */
+/** Sum prior submitted/verified/certified quantities (client mirror of Nest). */
 export function computePreviousQuantity(
   rows: readonly Pick<
     PublicWorkMeasurement,

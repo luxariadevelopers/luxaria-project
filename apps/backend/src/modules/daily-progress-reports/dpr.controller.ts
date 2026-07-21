@@ -20,11 +20,13 @@ import { RequirePermissions } from '../rbac/decorators/require-permissions.decor
 import { DprService } from './dpr.service';
 import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import {
+  ApproveDailyProgressReportDto,
   CreateDailyProgressReportDto,
   ListDailyProgressReportsQueryDto,
   ReopenDailyProgressReportDto,
   ReviewDailyProgressReportDto,
   UpdateDailyProgressReportDto,
+  VerifyDailyProgressReportDto,
 } from './dto/dpr.dto';
 
 @ProjectScoped({
@@ -114,9 +116,46 @@ export class DprController {
     return this.dprService.submit(id, actor.id);
   }
 
+  @Post(':id/verify')
+  @RequirePermissions('dpr.review')
+  @ApiOperation({ summary: 'Verify submitted DPR (Submitted → Verified)' })
+  verify(
+    @Param('id') id: string,
+    @Body() dto: VerifyDailyProgressReportDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.dprService.verify(id, dto, actor.id);
+  }
+
+  @Post(':id/approve')
+  @RequirePermissions('dpr.review')
+  @ApiOperation({
+    summary:
+      'Approve DPR (Submitted/Verified → Approved); confirms linked material issues',
+  })
+  approve(
+    @Param('id') id: string,
+    @Body() dto: ApproveDailyProgressReportDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.dprService.approve(id, dto, actor.id);
+  }
+
+  @Post(':id/lock')
+  @RequirePermissions('dpr.review')
+  @ApiOperation({
+    summary: 'Lock approved/reviewed DPR (immutable snapshot)',
+  })
+  lock(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.dprService.lock(id, actor.id);
+  }
+
   @Post(':id/review')
   @RequirePermissions('dpr.review')
-  @ApiOperation({ summary: 'Review submitted DPR (Submitted → Reviewed)' })
+  @ApiOperation({
+    summary:
+      'Legacy review (alias of approve → status reviewed). Prefer /approve.',
+  })
   review(
     @Param('id') id: string,
     @Body() dto: ReviewDailyProgressReportDto,
@@ -128,7 +167,8 @@ export class DprController {
   @Post(':id/reopen')
   @RequirePermissions('dpr.review')
   @ApiOperation({
-    summary: 'Reopen submitted/reviewed DPR for corrections (one per date)',
+    summary:
+      'Reopen for corrections, or reject-to-draft from submitted (rejectToDraft=true)',
   })
   reopen(
     @Param('id') id: string,

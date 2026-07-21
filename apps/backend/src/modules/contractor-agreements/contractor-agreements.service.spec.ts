@@ -133,7 +133,10 @@ describe('ContractorAgreementsService', () => {
           work(null),
       } as never,
       configService,
-      mockProjectScope
+      mockProjectScope,
+      {
+        getById: jest.fn().mockResolvedValue({ data: null }),
+      } as never,
     );
   }, 60_000);
 

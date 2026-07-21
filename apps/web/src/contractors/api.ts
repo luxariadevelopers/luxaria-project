@@ -123,17 +123,47 @@ export async function activateContractor(
   return normaliseContractor(res.data);
 }
 
-/** `POST /contractors/:id/block` — `contractor.manage` */
+/** `POST /contractors/:id/block` — `contractor.manage` (blacklist) */
 export async function blockContractor(
   id: string,
-  input?: BlockContractorInput,
+  input: BlockContractorInput,
 ): Promise<PublicContractor> {
   const res = await apiPost<PublicContractor>(
     `/contractors/${id}/block`,
-    input ?? {},
+    input,
   );
   if (!res.data) {
     throw new Error(res.message || 'Contractor block failed');
+  }
+  return normaliseContractor(res.data);
+}
+
+/** `POST /contractors/:id/suspend` — `contractor.manage` */
+export async function suspendContractor(
+  id: string,
+  input: BlockContractorInput,
+): Promise<PublicContractor> {
+  const res = await apiPost<PublicContractor>(
+    `/contractors/${id}/suspend`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Contractor suspend failed');
+  }
+  return normaliseContractor(res.data);
+}
+
+/** `POST /contractors/:id/reactivate` — `contractor.manage` */
+export async function reactivateContractor(
+  id: string,
+  input: BlockContractorInput,
+): Promise<PublicContractor> {
+  const res = await apiPost<PublicContractor>(
+    `/contractors/${id}/reactivate`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Contractor reactivate failed');
   }
   return normaliseContractor(res.data);
 }

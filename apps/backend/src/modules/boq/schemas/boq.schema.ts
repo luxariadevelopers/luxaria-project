@@ -344,6 +344,13 @@ export class BoqItem {
   @Prop({ type: Number, required: true, min: 0 })
   plannedQuantity!: number;
 
+  /**
+   * Certified executed quantity (driven by work-measurement certify).
+   * Not editable via BOQ item CRUD — synced from certified measurements.
+   */
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  progressQuantity!: number;
+
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   materialCost!: number;
 

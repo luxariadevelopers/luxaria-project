@@ -15,6 +15,8 @@ import {
 } from '../../common/utils/crypto.util';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
+import { AuditAction } from '../audit-log/schemas/audit-log.schema';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { normalizeOptionalCode } from '../company/company.validation';
 import { Company } from '../company/schemas/company.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
@@ -25,9 +27,15 @@ import {
   WorkMeasurementStatus,
 } from '../work-measurements/schemas/work-measurement.schema';
 import type { AssignContractorProjectDto } from './dto/assign-contractor-project.dto';
-import type { BlockContractorDto } from './dto/block-contractor.dto';
+import type {
+  BlockContractorDto,
+  DeactivateContractorDto,
+  ReactivateContractorDto,
+  SuspendContractorDto,
+} from './dto/block-contractor.dto';
 import type { CreateContractorDto } from './dto/create-contractor.dto';
 import type { UpdateContractorDto } from './dto/update-contractor.dto';
+import type { VerifyContractorDocumentDto } from './dto/verify-document.dto';
 import type { VerifyContractorDto } from './dto/verify-contractor.dto';
 import {
   toPublicContractor,
@@ -35,16 +43,20 @@ import {
   toPublicContractorProjectAssignment,
 } from './contractors.mapper';
 import {
+  assertContractorStatusTransition,
+  assertInsuranceDates,
   assertLabourLicenceDates,
   assertOptionalPanGstin,
   assertRating,
   assertValidAccountNumber,
   assertValidIfsc,
   assertWorkCategories,
+  complianceIsValid,
   labourLicenceIsValid,
 } from './contractors.validation';
 import {
   ContractorDocumentCategory,
+  ContractorDocumentVerificationStatus,
   ContractorFile,
 } from './schemas/contractor-document.schema';
 import {
@@ -54,6 +66,7 @@ import {
 import {
   Contractor,
   ContractorStatus,
+  ContractorStatusAction,
   ContractorType,
   ContractorVerificationStatus,
 } from './schemas/contractor.schema';
@@ -73,6 +86,7 @@ export class ContractorsService {
     private readonly measurementModel: Model<WorkMeasurement>,
     private readonly numberingService: NumberingService,
     private readonly configService: ConfigService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async create(dto: CreateContractorDto, actorId: string) {
@@ -85,12 +99,17 @@ export class ContractorsService {
       rating: dto.rating,
       bankDetails: dto.bankDetails,
       labourLicence: dto.labourLicence,
+      insurance: dto.insurance,
     });
 
     const companyId = await this.resolveCompanyId(dto.companyId);
     const contractorCode = await this.numberingService.nextCode(
       NumberEntityType.CONTRACTOR,
     );
+
+    const contacts = this.normalizeContacts(dto.contacts, dto.contact);
+    const contact = this.primaryContactFrom(contacts, dto.contact);
+    const addresses = this.normalizeAddresses(dto.addresses, dto.contact);
 
     try {
       const contractor = await this.contractorModel.create({
@@ -101,14 +120,18 @@ export class ContractorsService {
         contractorType: dto.contractorType,
         pan,
         gstin,
-        contact: this.normalizeContact(dto.contact),
+        contact,
+        contacts,
+        addresses,
         bankDetails: this.buildBankDetailsForWrite(dto.bankDetails),
         labourLicence: this.normalizeLabourLicence(dto.labourLicence),
+        insurance: this.normalizeInsurance(dto.insurance),
         workCategories: assertWorkCategories(dto.workCategories),
         rating: dto.rating ?? null,
         notes: dto.notes?.trim() || null,
         verificationStatus: ContractorVerificationStatus.Pending,
         status: ContractorStatus.PendingVerification,
+        statusEvents: [],
         createdBy: new Types.ObjectId(actorId),
       });
 
@@ -141,6 +164,7 @@ export class ContractorsService {
       rating: dto.rating !== undefined ? dto.rating : contractor.rating,
       bankDetails: dto.bankDetails,
       labourLicence: dto.labourLicence,
+      insurance: dto.insurance,
     });
 
     const update: Record<string, unknown> = {
@@ -156,11 +180,17 @@ export class ContractorsService {
     }
     if (dto.pan !== undefined) update.pan = pan;
     if (dto.gstin !== undefined) update.gstin = gstin;
-    if (dto.contact !== undefined) {
-      update.contact = {
-        ...this.contactToPlain(contractor.contact),
-        ...this.normalizeContact(dto.contact),
-      };
+    if (dto.contacts !== undefined || dto.contact !== undefined) {
+      const contacts = this.normalizeContacts(
+        dto.contacts ??
+          (contractor.contacts as CreateContractorDto['contacts']),
+        dto.contact,
+      );
+      update.contacts = contacts;
+      update.contact = this.primaryContactFrom(contacts, dto.contact);
+    }
+    if (dto.addresses !== undefined) {
+      update.addresses = this.normalizeAddresses(dto.addresses);
     }
     if (dto.bankDetails !== undefined) {
       update.bankDetails = {
@@ -175,6 +205,12 @@ export class ContractorsService {
       update.labourLicence = {
         ...this.labourLicenceToPlain(contractor.labourLicence),
         ...this.normalizeLabourLicence(dto.labourLicence),
+      };
+    }
+    if (dto.insurance !== undefined) {
+      update.insurance = {
+        ...this.insuranceToPlain(contractor.insurance),
+        ...this.normalizeInsurance(dto.insurance),
       };
     }
     if (dto.workCategories !== undefined) {
@@ -261,6 +297,8 @@ export class ContractorsService {
         { gstin: { $regex: search, $options: 'i' } },
         { 'contact.email': { $regex: search, $options: 'i' } },
         { 'contact.phone': { $regex: search, $options: 'i' } },
+        { 'contacts.email': { $regex: search, $options: 'i' } },
+        { 'contacts.phone': { $regex: search, $options: 'i' } },
         { 'bankDetails.accountNumberLast4': search.slice(-4) },
       ];
     }
@@ -291,33 +329,123 @@ export class ContractorsService {
     );
   }
 
-  async verify(id: string, dto: VerifyContractorDto, actorId: string) {
-    await this.requireContractor(id);
+  /**
+   * Contractors with labour licence or insurance expiring within `withinDays`.
+   */
+  async listComplianceExpiring(query: {
+    withinDays?: number;
+    page?: number;
+    limit?: number;
+    companyId?: string;
+  }) {
+    const withinDays = Math.min(Math.max(query.withinDays ?? 30, 1), 365);
     const now = new Date();
+    const until = new Date(now);
+    until.setUTCDate(until.getUTCDate() + withinDays);
 
-    const updated = await this.contractorModel
-      .findByIdAndUpdate(
-        id,
+    const filter: FilterQuery<Contractor> = {
+      status: {
+        $in: [
+          ContractorStatus.Active,
+          ContractorStatus.Suspended,
+          ContractorStatus.PendingVerification,
+        ],
+      },
+      $or: [
         {
-          verificationStatus: dto.verified
-            ? ContractorVerificationStatus.Verified
-            : ContractorVerificationStatus.Rejected,
-          verifiedBy: new Types.ObjectId(actorId),
-          verifiedAt: now,
-          verificationNotes: dto.notes?.trim() ?? null,
-          status: dto.verified
-            ? ContractorStatus.Active
-            : ContractorStatus.PendingVerification,
-          blockReason: null,
-          updatedBy: new Types.ObjectId(actorId),
+          'labourLicence.validTo': { $ne: null, $lte: until },
         },
-        { new: true },
-      )
-      .select('+bankDetails.accountNumberEncrypted')
-      .exec();
+        {
+          'insurance.validTo': { $ne: null, $lte: until },
+        },
+      ],
+    };
+    if (query.companyId) {
+      if (!Types.ObjectId.isValid(query.companyId)) {
+        throw new BadRequestException('Invalid companyId');
+      }
+      filter.companyId = new Types.ObjectId(query.companyId);
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+
+    const [items, total] = await Promise.all([
+      this.contractorModel
+        .find(filter)
+        .sort({ 'labourLicence.validTo': 1, 'insurance.validTo': 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.contractorModel.countDocuments(filter).exec(),
+    ]);
+
+    const rows = items.map((c) => {
+      const licenceTo = c.labourLicence?.validTo ?? null;
+      const insuranceTo = c.insurance?.validTo ?? null;
+      return {
+        contractorId: String(c._id),
+        contractorCode: c.contractorCode,
+        legalName: c.legalName,
+        status: c.status,
+        labourLicence: {
+          licenceNumber: c.labourLicence?.licenceNumber ?? null,
+          validTo: licenceTo,
+          isValid: complianceIsValid({ validTo: licenceTo, asOf: now }),
+          daysRemaining: this.daysRemaining(licenceTo, now),
+        },
+        insurance: {
+          policyNumber: c.insurance?.policyNumber ?? null,
+          validTo: insuranceTo,
+          isValid: complianceIsValid({ validTo: insuranceTo, asOf: now }),
+          daysRemaining: this.daysRemaining(insuranceTo, now),
+        },
+      };
+    });
 
     return createSuccessResponse(
-      await this.toPublic(updated!, true),
+      {
+        withinDays,
+        asOf: now.toISOString(),
+        rows,
+      },
+      'Expiring contractor compliance fetched',
+      buildPaginationMeta(page, limit, total),
+    );
+  }
+
+  async verify(id: string, dto: VerifyContractorDto, actorId: string) {
+    const contractor = await this.requireContractor(id);
+    const now = new Date();
+    const action = dto.verified
+      ? ContractorStatusAction.Verify
+      : ContractorStatusAction.Reject;
+    const nextStatus = assertContractorStatusTransition(
+      action,
+      contractor.status,
+    );
+
+    const updated = await this.applyStatusTransition({
+      contractor,
+      action,
+      toStatus: nextStatus,
+      reason: dto.notes?.trim() || null,
+      actorId,
+      at: now,
+      extra: {
+        verificationStatus: dto.verified
+          ? ContractorVerificationStatus.Verified
+          : ContractorVerificationStatus.Rejected,
+        verifiedBy: new Types.ObjectId(actorId),
+        verifiedAt: now,
+        verificationNotes: dto.notes?.trim() ?? null,
+        blockReason: null,
+        statusReason: null,
+      },
+    });
+
+    return createSuccessResponse(
+      await this.toPublic(updated, true),
       dto.verified
         ? 'Contractor verified successfully'
         : 'Contractor verification rejected',
@@ -333,50 +461,88 @@ export class ContractorsService {
         'Contractor must be verified before activation',
       );
     }
-    if (contractor.status === ContractorStatus.Blocked) {
+    if (
+      contractor.status === ContractorStatus.Blocked ||
+      contractor.status === ContractorStatus.Suspended
+    ) {
       throw new BadRequestException(
-        'Blocked contractors cannot be activated; clear the block first',
+        'Suspended/blacklisted contractors must be reactivated with a reason',
       );
     }
 
-    const updated = await this.contractorModel
-      .findByIdAndUpdate(
-        id,
-        {
-          status: ContractorStatus.Active,
-          blockReason: null,
-          updatedBy: new Types.ObjectId(actorId),
-        },
-        { new: true },
-      )
-      .select('+bankDetails.accountNumberEncrypted')
-      .exec();
+    const nextStatus = assertContractorStatusTransition(
+      ContractorStatusAction.Activate,
+      contractor.status,
+    );
+    const updated = await this.applyStatusTransition({
+      contractor,
+      action: ContractorStatusAction.Activate,
+      toStatus: nextStatus,
+      reason: null,
+      actorId,
+      extra: { blockReason: null, statusReason: null },
+    });
 
     return createSuccessResponse(
-      await this.toPublic(updated!, true),
+      await this.toPublic(updated, true),
       'Contractor activated successfully',
     );
   }
 
   async block(id: string, dto: BlockContractorDto, actorId: string) {
-    await this.requireContractor(id);
+    return this.transitionWithReason(
+      id,
+      ContractorStatusAction.Blacklist,
+      dto.reason,
+      actorId,
+      'Contractor blacklisted successfully',
+    );
+  }
 
-    const updated = await this.contractorModel
-      .findByIdAndUpdate(
-        id,
-        {
-          status: ContractorStatus.Blocked,
-          blockReason: dto.reason?.trim() || null,
-          updatedBy: new Types.ObjectId(actorId),
-        },
-        { new: true },
-      )
-      .select('+bankDetails.accountNumberEncrypted')
-      .exec();
+  async suspend(id: string, dto: SuspendContractorDto, actorId: string) {
+    return this.transitionWithReason(
+      id,
+      ContractorStatusAction.Suspend,
+      dto.reason,
+      actorId,
+      'Contractor suspended successfully',
+    );
+  }
 
-    return createSuccessResponse(
-      await this.toPublic(updated!, true),
-      'Contractor blocked successfully',
+  async reactivate(
+    id: string,
+    dto: ReactivateContractorDto,
+    actorId: string,
+  ) {
+    const contractor = await this.requireContractor(id);
+    if (
+      contractor.verificationStatus !== ContractorVerificationStatus.Verified
+    ) {
+      throw new BadRequestException(
+        'Contractor must be verified before reactivation',
+      );
+    }
+    return this.transitionWithReason(
+      id,
+      ContractorStatusAction.Reactivate,
+      dto.reason,
+      actorId,
+      'Contractor reactivated successfully',
+      { blockReason: null, statusReason: null },
+    );
+  }
+
+  async deactivate(
+    id: string,
+    dto: DeactivateContractorDto,
+    actorId: string,
+  ) {
+    return this.transitionWithReason(
+      id,
+      ContractorStatusAction.Deactivate,
+      dto.reason?.trim() || null,
+      actorId,
+      'Contractor deactivated successfully',
     );
   }
 
@@ -495,38 +661,39 @@ export class ContractorsService {
     const contractor = await this.requireContractor(id);
     const contractorOid = new Types.ObjectId(id);
 
-    const [
-      activeProjectCount,
-      measurementAgg,
-      documentCounts,
-    ] = await Promise.all([
-      this.assignmentModel.countDocuments({
-        contractorId: contractorOid,
-        status: ContractorProjectAssignmentStatus.Active,
-      }),
-      this.measurementModel
-        .aggregate<{
-          _id: WorkMeasurementStatus;
-          count: number;
-          totalQuantity: number;
-        }>([
-          { $match: { contractorId: contractorOid, isDeleted: { $ne: true } } },
-          {
-            $group: {
-              _id: '$status',
-              count: { $sum: 1 },
-              totalQuantity: { $sum: '$currentQuantity' },
+    const [activeProjectCount, measurementAgg, documentCounts] =
+      await Promise.all([
+        this.assignmentModel.countDocuments({
+          contractorId: contractorOid,
+          status: ContractorProjectAssignmentStatus.Active,
+        }),
+        this.measurementModel
+          .aggregate<{
+            _id: WorkMeasurementStatus;
+            count: number;
+            totalQuantity: number;
+          }>([
+            {
+              $match: { contractorId: contractorOid, isDeleted: { $ne: true } },
             },
-          },
-        ])
-        .exec(),
-      this.documentModel
-        .aggregate<{ _id: ContractorDocumentCategory; count: number }>([
-          { $match: { contractorId: contractorOid, isDeleted: { $ne: true } } },
-          { $group: { _id: '$category', count: { $sum: 1 } } },
-        ])
-        .exec(),
-    ]);
+            {
+              $group: {
+                _id: '$status',
+                count: { $sum: 1 },
+                totalQuantity: { $sum: '$currentQuantity' },
+              },
+            },
+          ])
+          .exec(),
+        this.documentModel
+          .aggregate<{ _id: ContractorDocumentCategory; count: number }>([
+            {
+              $match: { contractorId: contractorOid, isDeleted: { $ne: true } },
+            },
+            { $group: { _id: '$category', count: { $sum: 1 } } },
+          ])
+          .exec(),
+      ]);
 
     const byStatus = Object.fromEntries(
       measurementAgg.map((row) => [row._id, row]),
@@ -541,6 +708,7 @@ export class ContractorsService {
     ) as Partial<Record<ContractorDocumentCategory, number>>;
 
     const labourLicence = contractor.labourLicence ?? {};
+    const insurance = contractor.insurance ?? {};
 
     return createSuccessResponse(
       {
@@ -556,6 +724,13 @@ export class ContractorsService {
           validTo: labourLicence.validTo ?? null,
           isValid: labourLicenceIsValid({
             validTo: labourLicence.validTo ?? null,
+          }),
+        },
+        insurance: {
+          policyNumber: insurance.policyNumber ?? null,
+          validTo: insurance.validTo ?? null,
+          isValid: complianceIsValid({
+            validTo: insurance.validTo ?? null,
           }),
         },
         workMeasurements: {
@@ -585,6 +760,7 @@ export class ContractorsService {
       mimeType: string | null;
       sizeBytes: number;
       category?: ContractorDocumentCategory;
+      expiresAt?: string | null;
     },
     actorId: string,
   ) {
@@ -597,6 +773,8 @@ export class ContractorsService {
       mimeType: input.mimeType,
       sizeBytes: input.sizeBytes,
       category: input.category ?? ContractorDocumentCategory.General,
+      verificationStatus: ContractorDocumentVerificationStatus.Pending,
+      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
       uploadedBy: new Types.ObjectId(actorId),
       createdBy: new Types.ObjectId(actorId),
     });
@@ -607,12 +785,69 @@ export class ContractorsService {
     );
   }
 
+  async verifyDocument(
+    contractorId: string,
+    documentId: string,
+    dto: VerifyContractorDocumentDto,
+    actorId: string,
+  ) {
+    await this.requireContractor(contractorId);
+    if (!Types.ObjectId.isValid(documentId)) {
+      throw new BadRequestException('Invalid document id');
+    }
+
+    const doc = await this.documentModel
+      .findOne({
+        _id: new Types.ObjectId(documentId),
+        contractorId: new Types.ObjectId(contractorId),
+      })
+      .exec();
+    if (!doc) {
+      throw new NotFoundException('Contractor document not found');
+    }
+
+    const now = new Date();
+    doc.verificationStatus = dto.verified
+      ? ContractorDocumentVerificationStatus.Verified
+      : ContractorDocumentVerificationStatus.Rejected;
+    doc.verifiedBy = new Types.ObjectId(actorId);
+    doc.verifiedAt = now;
+    doc.verificationNotes = dto.notes?.trim() ?? null;
+    if (dto.expiresAt !== undefined) {
+      doc.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+    }
+    doc.set('updatedBy', new Types.ObjectId(actorId));
+    await doc.save();
+
+    await this.safeAudit({
+      userId: actorId,
+      action: dto.verified ? AuditAction.APPROVE : AuditAction.REJECT,
+      module: 'contractor',
+      entityType: 'contractor_document',
+      entityId: String(doc._id),
+      beforeData: { verificationStatus: 'pending' },
+      afterData: {
+        verificationStatus: doc.verificationStatus,
+        notes: doc.verificationNotes,
+        expiresAt: doc.expiresAt,
+      },
+    });
+
+    return createSuccessResponse(
+      toPublicContractorDocument(doc),
+      dto.verified
+        ? 'Contractor document verified'
+        : 'Contractor document rejected',
+    );
+  }
+
   async listDocuments(
     id: string,
     query: {
       page?: number;
       limit?: number;
       category?: ContractorDocumentCategory;
+      verificationStatus?: ContractorDocumentVerificationStatus;
     },
   ) {
     await this.requireContractor(id);
@@ -622,6 +857,9 @@ export class ContractorsService {
       contractorId: new Types.ObjectId(id),
     };
     if (query.category) filter.category = query.category;
+    if (query.verificationStatus) {
+      filter.verificationStatus = query.verificationStatus;
+    }
 
     const [items, total] = await Promise.all([
       this.documentModel
@@ -640,6 +878,108 @@ export class ContractorsService {
     );
   }
 
+  private async transitionWithReason(
+    id: string,
+    action: ContractorStatusAction,
+    reason: string | null,
+    actorId: string,
+    successMessage: string,
+    extra: Record<string, unknown> = {},
+  ) {
+    const contractor = await this.requireContractor(id);
+    const trimmed = reason?.trim() || null;
+    if (
+      (action === ContractorStatusAction.Blacklist ||
+        action === ContractorStatusAction.Suspend ||
+        action === ContractorStatusAction.Reactivate) &&
+      (!trimmed || trimmed.length < 3)
+    ) {
+      throw new BadRequestException('reason is required (min 3 characters)');
+    }
+
+    const nextStatus = assertContractorStatusTransition(
+      action,
+      contractor.status,
+    );
+    const updated = await this.applyStatusTransition({
+      contractor,
+      action,
+      toStatus: nextStatus,
+      reason: trimmed,
+      actorId,
+      extra: {
+        blockReason:
+          action === ContractorStatusAction.Blacklist ||
+          action === ContractorStatusAction.Suspend
+            ? trimmed
+            : (extra.blockReason as string | null | undefined) ??
+              contractor.blockReason,
+        statusReason: trimmed,
+        ...extra,
+      },
+    });
+
+    return createSuccessResponse(
+      await this.toPublic(updated, true),
+      successMessage,
+    );
+  }
+
+  private async applyStatusTransition(input: {
+    contractor: Contractor & { _id: Types.ObjectId };
+    action: ContractorStatusAction;
+    toStatus: ContractorStatus;
+    reason: string | null;
+    actorId: string;
+    at?: Date;
+    extra?: Record<string, unknown>;
+  }) {
+    const at = input.at ?? new Date();
+    const fromStatus = input.contractor.status;
+    const event = {
+      fromStatus,
+      toStatus: input.toStatus,
+      action: input.action,
+      reason: input.reason,
+      actorId: new Types.ObjectId(input.actorId),
+      at,
+    };
+
+    const updated = await this.contractorModel
+      .findByIdAndUpdate(
+        input.contractor._id,
+        {
+          status: input.toStatus,
+          updatedBy: new Types.ObjectId(input.actorId),
+          $push: { statusEvents: event },
+          ...(input.extra ?? {}),
+        },
+        { new: true },
+      )
+      .select('+bankDetails.accountNumberEncrypted')
+      .exec();
+
+    if (!updated) {
+      throw new NotFoundException('Contractor not found');
+    }
+
+    await this.safeAudit({
+      userId: input.actorId,
+      action: AuditAction.UPDATE,
+      module: 'contractor',
+      entityType: 'contractor',
+      entityId: String(input.contractor._id),
+      beforeData: { status: fromStatus },
+      afterData: {
+        status: input.toStatus,
+        action: input.action,
+        reason: input.reason,
+      },
+    });
+
+    return updated;
+  }
+
   private assertWriteRules(input: {
     pan?: string | null;
     gstin?: string | null;
@@ -647,6 +987,7 @@ export class ContractorsService {
     rating?: number | null;
     bankDetails?: CreateContractorDto['bankDetails'];
     labourLicence?: CreateContractorDto['labourLicence'];
+    insurance?: CreateContractorDto['insurance'];
   }) {
     assertOptionalPanGstin(input.pan, input.gstin);
     assertWorkCategories(input.workCategories);
@@ -663,6 +1004,12 @@ export class ContractorsService {
       assertLabourLicenceDates({
         validFrom: input.labourLicence.validFrom,
         validTo: input.labourLicence.validTo,
+      });
+    }
+    if (input.insurance) {
+      assertInsuranceDates({
+        validFrom: input.insurance.validFrom,
+        validTo: input.insurance.validTo,
       });
     }
   }
@@ -774,6 +1121,107 @@ export class ContractorsService {
     };
   }
 
+  private normalizeContacts(
+    contacts?: CreateContractorDto['contacts'],
+    legacy?: CreateContractorDto['contact'],
+  ) {
+    if (contacts?.length) {
+      let sawPrimary = false;
+      return contacts.map((c, index) => {
+        const isPrimary = c.isPrimary === true || (!sawPrimary && index === 0);
+        if (isPrimary) sawPrimary = true;
+        return {
+          label: c.label?.trim() || (isPrimary ? 'Primary' : `Contact ${index + 1}`),
+          isPrimary,
+          email: c.email?.trim().toLowerCase() || null,
+          phone: c.phone?.trim() || null,
+          alternatePhone: c.alternatePhone?.trim() || null,
+          contactPerson: c.contactPerson?.trim() || null,
+          designation: c.designation?.trim() || null,
+        };
+      });
+    }
+    if (legacy) {
+      const n = this.normalizeContact(legacy);
+      return [
+        {
+          label: 'Primary',
+          isPrimary: true,
+          email: n.email,
+          phone: n.phone,
+          alternatePhone: n.alternatePhone,
+          contactPerson: n.contactPerson,
+          designation: null as string | null,
+        },
+      ];
+    }
+    return [];
+  }
+
+  private primaryContactFrom(
+    contacts: ReturnType<ContractorsService['normalizeContacts']>,
+    legacy?: CreateContractorDto['contact'],
+  ) {
+    const primary = contacts.find((c) => c.isPrimary) ?? contacts[0];
+    if (primary) {
+      return {
+        email: primary.email,
+        phone: primary.phone,
+        alternatePhone: primary.alternatePhone,
+        contactPerson: primary.contactPerson,
+        addressLine1: legacy?.addressLine1?.trim() || null,
+        addressLine2: legacy?.addressLine2?.trim() || null,
+        city: legacy?.city?.trim() || null,
+        state: legacy?.state?.trim() || null,
+        pincode: legacy?.pincode?.trim() || null,
+        country: legacy?.country?.trim() || 'India',
+      };
+    }
+    return this.normalizeContact(legacy);
+  }
+
+  private normalizeAddresses(
+    addresses?: CreateContractorDto['addresses'],
+    legacyContact?: CreateContractorDto['contact'],
+  ) {
+    if (addresses?.length) {
+      let sawPrimary = false;
+      return addresses.map((a, index) => {
+        const isPrimary = a.isPrimary === true || (!sawPrimary && index === 0);
+        if (isPrimary) sawPrimary = true;
+        return {
+          label: a.label?.trim() || (isPrimary ? 'Primary' : `Address ${index + 1}`),
+          isPrimary,
+          line1: a.line1?.trim() || null,
+          line2: a.line2?.trim() || null,
+          city: a.city?.trim() || null,
+          state: a.state?.trim() || null,
+          pincode: a.pincode?.trim() || null,
+          country: a.country?.trim() || 'India',
+        };
+      });
+    }
+    if (
+      legacyContact?.addressLine1 ||
+      legacyContact?.city ||
+      legacyContact?.state
+    ) {
+      return [
+        {
+          label: 'Registered',
+          isPrimary: true,
+          line1: legacyContact.addressLine1?.trim() || null,
+          line2: legacyContact.addressLine2?.trim() || null,
+          city: legacyContact.city?.trim() || null,
+          state: legacyContact.state?.trim() || null,
+          pincode: legacyContact.pincode?.trim() || null,
+          country: legacyContact.country?.trim() || 'India',
+        },
+      ];
+    }
+    return [];
+  }
+
   private normalizeLabourLicence(
     input?: CreateContractorDto['labourLicence'],
   ) {
@@ -795,18 +1243,24 @@ export class ContractorsService {
     };
   }
 
-  private contactToPlain(contact: Contractor['contact']) {
+  private normalizeInsurance(input?: CreateContractorDto['insurance']) {
+    if (!input) {
+      return {
+        policyNumber: null,
+        insurer: null,
+        coverageType: null,
+        validFrom: null,
+        validTo: null,
+        notes: null,
+      };
+    }
     return {
-      email: contact?.email ?? null,
-      phone: contact?.phone ?? null,
-      alternatePhone: contact?.alternatePhone ?? null,
-      contactPerson: contact?.contactPerson ?? null,
-      addressLine1: contact?.addressLine1 ?? null,
-      addressLine2: contact?.addressLine2 ?? null,
-      city: contact?.city ?? null,
-      state: contact?.state ?? null,
-      pincode: contact?.pincode ?? null,
-      country: contact?.country ?? null,
+      policyNumber: input.policyNumber?.trim() || null,
+      insurer: input.insurer?.trim() || null,
+      coverageType: input.coverageType?.trim() || null,
+      validFrom: input.validFrom ? new Date(input.validFrom) : null,
+      validTo: input.validTo ? new Date(input.validTo) : null,
+      notes: input.notes?.trim() || null,
     };
   }
 
@@ -829,6 +1283,23 @@ export class ContractorsService {
       validTo: licence?.validTo ?? null,
       notes: licence?.notes ?? null,
     };
+  }
+
+  private insuranceToPlain(insurance: Contractor['insurance']) {
+    return {
+      policyNumber: insurance?.policyNumber ?? null,
+      insurer: insurance?.insurer ?? null,
+      coverageType: insurance?.coverageType ?? null,
+      validFrom: insurance?.validFrom ?? null,
+      validTo: insurance?.validTo ?? null,
+      notes: insurance?.notes ?? null,
+    };
+  }
+
+  private daysRemaining(validTo: Date | null, asOf: Date): number | null {
+    if (!validTo) return null;
+    const ms = validTo.getTime() - asOf.getTime();
+    return Math.ceil(ms / (24 * 60 * 60 * 1000));
   }
 
   private async resolveCompanyId(companyId?: string | null) {
@@ -856,6 +1327,16 @@ export class ContractorsService {
       throw new BadRequestException('FIELD_ENCRYPTION_KEY is not configured');
     }
     return key;
+  }
+
+  private async safeAudit(
+    input: Parameters<AuditLogService['record']>[0],
+  ): Promise<void> {
+    try {
+      await this.auditLogService.record(input);
+    } catch {
+      // Audit must not roll back business writes.
+    }
   }
 
   private rethrowDuplicateKey(

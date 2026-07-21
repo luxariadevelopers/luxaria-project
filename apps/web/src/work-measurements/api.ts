@@ -1,6 +1,7 @@
 import { apiGet, apiPatch, apiPost } from '@/api/client';
 import { searchContractors } from '@/api/searchLists';
 import type {
+  CertifyWorkMeasurementInput,
   CreateWorkMeasurementInput,
   ListWorkMeasurementsQuery,
   PaginatedWorkMeasurements,
@@ -28,6 +29,7 @@ function normaliseMeasurement(
     ...row,
     measurementDate: toIso(row.measurementDate) ?? row.measurementDate,
     verifiedAt: toIso(row.verifiedAt),
+    certifiedAt: toIso(row.certifiedAt),
     submittedAt: toIso(row.submittedAt),
     rejectedAt: toIso(row.rejectedAt),
     createdAt: row.createdAt
@@ -37,9 +39,15 @@ function normaliseMeasurement(
       ? (toIso(row.updatedAt) ?? undefined)
       : undefined,
     boqCode: row.boqCode ?? null,
+    siteId: row.siteId ?? null,
+    dprId: row.dprId ?? null,
+    sheetReference: row.sheetReference ?? null,
+    workDescription: row.workDescription ?? null,
     drawingReference: row.drawingReference ?? null,
+    drawingId: row.drawingId ?? null,
     notes: row.notes ?? null,
     verifiedBy: row.verifiedBy ?? null,
+    certifiedBy: row.certifiedBy ?? null,
     submittedBy: row.submittedBy ?? null,
     rejectedBy: row.rejectedBy ?? null,
     rejectionReason: row.rejectionReason ?? null,
@@ -77,6 +85,8 @@ export async function fetchWorkMeasurements(
     page,
     limit,
     projectId: query.projectId,
+    siteId: query.siteId,
+    dprId: query.dprId,
     contractorId: query.contractorId,
     boqItemId: query.boqItemId,
     status: query.status,
@@ -156,6 +166,36 @@ export async function verifyWorkMeasurement(
   );
   if (!res.data) {
     throw new Error(res.message || 'Failed to verify work measurement');
+  }
+  return normaliseMeasurement(res.data);
+}
+
+/** `POST /work-measurements/:id/certify` — `measurement.certify` */
+export async function certifyWorkMeasurement(
+  id: string,
+  input: CertifyWorkMeasurementInput = {},
+): Promise<PublicWorkMeasurement> {
+  const res = await apiPost<PublicWorkMeasurement>(
+    `${BASE}/${encodeURIComponent(id)}/certify`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to certify work measurement');
+  }
+  return normaliseMeasurement(res.data);
+}
+
+/** `POST /work-measurements/:id/approve` — alias for certify */
+export async function approveWorkMeasurement(
+  id: string,
+  input: CertifyWorkMeasurementInput = {},
+): Promise<PublicWorkMeasurement> {
+  const res = await apiPost<PublicWorkMeasurement>(
+    `${BASE}/${encodeURIComponent(id)}/approve`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to approve work measurement');
   }
   return normaliseMeasurement(res.data);
 }

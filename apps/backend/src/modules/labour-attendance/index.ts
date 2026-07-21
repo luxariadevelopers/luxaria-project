@@ -5,4 +5,5 @@ export {
   LabourAttendanceSchema,
   LabourAttendanceStatus,
   LabourAttendanceEntryMode,
+  LabourAttendanceShift,
 } from './schemas/labour-attendance.schema';

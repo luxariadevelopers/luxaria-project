@@ -22,41 +22,64 @@ export function roundQty(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
 }
 
-/** Mirrors Nest `computeBillAmounts`. */
+/**
+ * Mirrors Nest `computeBillAmounts` / CTR period formula:
+ * current + extras + escalation − recoveries − retention − tds − other + gst.
+ */
 export type BillAmountsInput = {
   currentCertifiedValue: number;
+  approvedExtras?: number;
+  priceEscalation?: number;
   advanceRecovery?: number;
   materialRecovery?: number;
+  equipmentRecovery?: number;
+  labourRecovery?: number;
   retention?: number;
   tds?: number;
   penalty?: number;
   otherDeductions?: number;
+  gst?: number;
 };
 
 export type BillAmounts = {
   currentCertifiedValue: number;
+  approvedExtras: number;
+  priceEscalation: number;
   advanceRecovery: number;
   materialRecovery: number;
+  equipmentRecovery: number;
+  labourRecovery: number;
   retention: number;
   tds: number;
   penalty: number;
   otherDeductions: number;
+  gst: number;
   totalDeductions: number;
   netPayable: number;
 };
 
 export function computeBillAmounts(input: BillAmountsInput): BillAmounts {
   const currentCertifiedValue = roundMoney(input.currentCertifiedValue);
+  const approvedExtras = roundMoney(input.approvedExtras ?? 0);
+  const priceEscalation = roundMoney(input.priceEscalation ?? 0);
   const advanceRecovery = roundMoney(input.advanceRecovery ?? 0);
   const materialRecovery = roundMoney(input.materialRecovery ?? 0);
+  const equipmentRecovery = roundMoney(input.equipmentRecovery ?? 0);
+  const labourRecovery = roundMoney(input.labourRecovery ?? 0);
   const retention = roundMoney(input.retention ?? 0);
   const tds = roundMoney(input.tds ?? 0);
   const penalty = roundMoney(input.penalty ?? 0);
   const otherDeductions = roundMoney(input.otherDeductions ?? 0);
+  const gst = roundMoney(input.gst ?? 0);
 
+  const currentGross = roundMoney(
+    currentCertifiedValue + approvedExtras + priceEscalation,
+  );
   const totalDeductions = roundMoney(
     advanceRecovery +
       materialRecovery +
+      equipmentRecovery +
+      labourRecovery +
       retention +
       tds +
       penalty +
@@ -65,14 +88,19 @@ export function computeBillAmounts(input: BillAmountsInput): BillAmounts {
 
   return {
     currentCertifiedValue,
+    approvedExtras,
+    priceEscalation,
     advanceRecovery,
     materialRecovery,
+    equipmentRecovery,
+    labourRecovery,
     retention,
     tds,
     penalty,
     otherDeductions,
+    gst,
     totalDeductions,
-    netPayable: roundMoney(currentCertifiedValue - totalDeductions),
+    netPayable: roundMoney(currentGross - totalDeductions + gst),
   };
 }
 

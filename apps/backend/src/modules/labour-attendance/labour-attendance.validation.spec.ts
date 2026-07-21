@@ -1,14 +1,20 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import {
   assertGps,
+  assertOvertimeHours,
   assertReadyForSubmit,
+  assertShift,
   assertWorkerTimes,
   attendanceDateKey,
+  MAX_WORKER_OVERTIME_HOURS,
   mergeDocumentIds,
   normalizeAttendanceDate,
   normalizeAttendanceLines,
 } from './labour-attendance.validation';
-import { LabourAttendanceEntryMode } from './schemas/labour-attendance.schema';
+import {
+  LabourAttendanceEntryMode,
+  LabourAttendanceShift,
+} from './schemas/labour-attendance.schema';
 
 describe('labour-attendance.validation', () => {
   it('normalizes attendanceDate to UTC midnight', () => {
@@ -142,5 +148,63 @@ describe('labour-attendance.validation', () => {
         groupPhotoDocumentIds: [],
       }),
     ).toThrow(BadRequestException);
+  });
+
+  it('validates shift enum and defaults to general', () => {
+    expect(assertShift(undefined)).toBe(LabourAttendanceShift.General);
+    expect(assertShift(LabourAttendanceShift.Night)).toBe(
+      LabourAttendanceShift.Night,
+    );
+    expect(() => assertShift('swing')).toThrow(BadRequestException);
+  });
+
+  it('rejects overtime above per-worker ceiling', () => {
+    expect(() =>
+      assertOvertimeHours(
+        MAX_WORKER_OVERTIME_HOURS + 0.1,
+        'overtimeHours',
+        MAX_WORKER_OVERTIME_HOURS,
+      ),
+    ).toThrow(BadRequestException);
+
+    const categoryId = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+    expect(() =>
+      normalizeAttendanceLines([
+        {
+          labourCategoryId: categoryId,
+          entryMode: LabourAttendanceEntryMode.Individual,
+          workers: [
+            {
+              workerName: 'Ravi',
+              overtimeHours: MAX_WORKER_OVERTIME_HOURS + 1,
+            },
+          ],
+        },
+      ]),
+    ).toThrow(BadRequestException);
+  });
+
+  it('accepts checkInAt / checkOutAt aliases', () => {
+    const categoryId = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+    const [line] = normalizeAttendanceLines([
+      {
+        labourCategoryId: categoryId,
+        entryMode: LabourAttendanceEntryMode.Individual,
+        workers: [
+          {
+            workerName: 'Ravi',
+            checkInAt: '2026-07-20T08:00:00.000Z',
+            checkOutAt: '2026-07-20T17:00:00.000Z',
+            overtimeHours: 1,
+          },
+        ],
+      },
+    ]);
+    expect(line.workers[0].checkIn?.toISOString()).toBe(
+      '2026-07-20T08:00:00.000Z',
+    );
+    expect(line.workers[0].checkOut?.toISOString()).toBe(
+      '2026-07-20T17:00:00.000Z',
+    );
   });
 });

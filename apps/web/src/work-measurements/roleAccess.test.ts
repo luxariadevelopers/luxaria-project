@@ -17,6 +17,7 @@ describe('resolveWorkMeasurementCapabilities', () => {
       canUpdate: true,
       canSubmit: true,
       canVerify: true,
+      canCertify: true,
       canReject: true,
       canCancel: true,
       canViewBoq: false,

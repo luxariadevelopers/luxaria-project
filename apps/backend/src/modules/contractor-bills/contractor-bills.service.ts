@@ -54,6 +54,7 @@ import {
 import type {
   CreateContractorBillDto,
   ListContractorBillsQueryDto,
+  PostContractorBillDto,
   RejectContractorBillDto,
   UpdateContractorBillDto,
   WorkflowNoteDto,
@@ -65,11 +66,13 @@ import {
 import {
   assertBillingPeriod,
   assertTransition,
+  CERTIFIED_BILL_STATUSES,
   computeAdvanceRecovery,
   computeBillAmounts,
   computeRemainingBillPayable,
   computeRetentionAmount,
   EDITABLE_BILL_STATUSES,
+  MEASUREMENT_BLOCKING_BILL_STATUSES,
   normalizePeriodDate,
   roundMoney,
   roundQty,
@@ -141,10 +144,15 @@ export class ContractorBillsService {
       periodTo,
       advanceRecoveryOverride: dto.advanceRecovery,
       materialRecovery: dto.materialRecovery,
+      equipmentRecovery: dto.equipmentRecovery,
+      labourRecovery: dto.labourRecovery,
       retentionOverride: dto.retention,
       tds: dto.tds,
       penalty: dto.penalty,
       otherDeductions: dto.otherDeductions,
+      approvedExtras: dto.approvedExtras,
+      priceEscalation: dto.priceEscalation,
+      gst: dto.gst,
       excludeBillId: null,
     });
 
@@ -169,14 +177,20 @@ export class ContractorBillsService {
       previousCertifiedValue: built.previousCertifiedValue,
       currentCertifiedValue: built.amounts.currentCertifiedValue,
       cumulativeValue: built.cumulativeValue,
+      approvedExtras: built.amounts.approvedExtras,
+      priceEscalation: built.amounts.priceEscalation,
       advanceRecovery: built.amounts.advanceRecovery,
       materialRecovery: built.amounts.materialRecovery,
+      equipmentRecovery: built.amounts.equipmentRecovery,
+      labourRecovery: built.amounts.labourRecovery,
       retention: built.amounts.retention,
       tds: built.amounts.tds,
       penalty: built.amounts.penalty,
       otherDeductions: built.amounts.otherDeductions,
+      gst: built.amounts.gst,
       netPayable: built.amounts.netPayable,
       paidAmount: 0,
+      paymentCertificateNumber: null,
       journalEntryId: null,
       invoiceDocument: dto.invoiceDocument?.trim() || null,
       notes: dto.notes?.trim() || null,
@@ -227,6 +241,14 @@ export class ContractorBillsService {
         dto.materialRecovery !== undefined
           ? dto.materialRecovery
           : row.materialRecovery,
+      equipmentRecovery:
+        dto.equipmentRecovery !== undefined
+          ? dto.equipmentRecovery
+          : (row.equipmentRecovery ?? 0),
+      labourRecovery:
+        dto.labourRecovery !== undefined
+          ? dto.labourRecovery
+          : (row.labourRecovery ?? 0),
       retentionOverride:
         dto.retention !== undefined ? dto.retention : row.retention,
       tds: dto.tds !== undefined ? dto.tds : row.tds,
@@ -235,6 +257,15 @@ export class ContractorBillsService {
         dto.otherDeductions !== undefined
           ? dto.otherDeductions
           : row.otherDeductions,
+      approvedExtras:
+        dto.approvedExtras !== undefined
+          ? dto.approvedExtras
+          : (row.approvedExtras ?? 0),
+      priceEscalation:
+        dto.priceEscalation !== undefined
+          ? dto.priceEscalation
+          : (row.priceEscalation ?? 0),
+      gst: dto.gst !== undefined ? dto.gst : (row.gst ?? 0),
       excludeBillId: String(row._id),
     });
 
@@ -243,12 +274,17 @@ export class ContractorBillsService {
     row.previousCertifiedValue = built.previousCertifiedValue;
     row.currentCertifiedValue = built.amounts.currentCertifiedValue;
     row.cumulativeValue = built.cumulativeValue;
+    row.approvedExtras = built.amounts.approvedExtras;
+    row.priceEscalation = built.amounts.priceEscalation;
     row.advanceRecovery = built.amounts.advanceRecovery;
     row.materialRecovery = built.amounts.materialRecovery;
+    row.equipmentRecovery = built.amounts.equipmentRecovery;
+    row.labourRecovery = built.amounts.labourRecovery;
     row.retention = built.amounts.retention;
     row.tds = built.amounts.tds;
     row.penalty = built.amounts.penalty;
     row.otherDeductions = built.amounts.otherDeductions;
+    row.gst = built.amounts.gst;
     row.netPayable = built.amounts.netPayable;
 
     if (dto.invoiceDocument !== undefined) {
@@ -371,6 +407,7 @@ export class ContractorBillsService {
     row.directorApprovedBy = new Types.ObjectId(actorId);
     row.directorApprovedAt = new Date();
     if (dto.notes !== undefined) row.notes = dto.notes?.trim() || row.notes;
+    this.applyPaymentCertificateNumber(row, dto.paymentCertificateNumber);
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
 
@@ -380,19 +417,13 @@ export class ContractorBillsService {
     );
   }
 
-  async post(id: string, actorId: string) {
+  async post(id: string, actorId: string, dto: PostContractorBillDto = {}) {
     const existing = await this.requireBill(id, actorId, 'update');
     if (
-      existing.status === ContractorBillStatus.Posted &&
-      existing.journalEntryId
-    ) {
-      return createSuccessResponse(
-        toPublicContractorBill(existing),
-        'Running bill already posted',
-      );
-    }
-    if (
-      existing.status === ContractorBillStatus.Paid &&
+      (existing.status === ContractorBillStatus.Posted ||
+        existing.status === ContractorBillStatus.PartiallyPaid ||
+        existing.status === ContractorBillStatus.Paid ||
+        existing.status === ContractorBillStatus.Closed) &&
       existing.journalEntryId
     ) {
       return createSuccessResponse(
@@ -405,6 +436,7 @@ export class ContractorBillsService {
     const requestHash = this.idempotencyService.hashRequest({
       billId: String(existing._id),
       action: 'post',
+      paymentCertificateNumber: dto.paymentCertificateNumber ?? null,
     });
 
     const begin = await this.idempotencyService.begin({
@@ -418,7 +450,7 @@ export class ContractorBillsService {
     }
 
     try {
-      const response = await this.executePost(id, actorId);
+      const response = await this.executePost(id, actorId, dto);
       await this.idempotencyService.complete(
         postKey,
         CONTRACTOR_BILL_IDEMPOTENCY_SCOPE,
@@ -434,12 +466,18 @@ export class ContractorBillsService {
     }
   }
 
-  private async executePost(id: string, actorId: string) {
+  private async executePost(
+    id: string,
+    actorId: string,
+    dto: PostContractorBillDto = {},
+  ) {
     const existing = await this.requireBill(id, actorId, 'update');
 
     if (
       (existing.status === ContractorBillStatus.Posted ||
-        existing.status === ContractorBillStatus.Paid) &&
+        existing.status === ContractorBillStatus.PartiallyPaid ||
+        existing.status === ContractorBillStatus.Paid ||
+        existing.status === ContractorBillStatus.Closed) &&
       existing.journalEntryId
     ) {
       return createSuccessResponse(
@@ -455,7 +493,7 @@ export class ContractorBillsService {
     const previousStatus = existing.status;
 
     const posted = await this.databaseService.withTransaction(async (session) =>
-      this.postBillInTransaction(id, actorId, session),
+      this.postBillInTransaction(id, actorId, session, dto),
     );
 
     await this.auditLogService.record({
@@ -496,6 +534,7 @@ export class ContractorBillsService {
     id: string,
     actorId: string,
     session: ClientSession,
+    dto: PostContractorBillDto = {},
   ): Promise<ContractorBillDocument> {
     const lockedQuery = this.billModel.findById(id).session(session);
     const row = await lockedQuery.exec();
@@ -505,7 +544,9 @@ export class ContractorBillsService {
 
     if (
       (row.status === ContractorBillStatus.Posted ||
-        row.status === ContractorBillStatus.Paid) &&
+        row.status === ContractorBillStatus.PartiallyPaid ||
+        row.status === ContractorBillStatus.Paid ||
+        row.status === ContractorBillStatus.Closed) &&
       row.journalEntryId
     ) {
       return row;
@@ -518,6 +559,10 @@ export class ContractorBillsService {
     }
 
     this.assertPostableAmounts(row);
+    this.applyPaymentCertificateNumber(row, dto.paymentCertificateNumber);
+    if (dto.notes !== undefined) {
+      row.notes = dto.notes?.trim() || row.notes;
+    }
 
     const project = await this.requireProject(String(row.projectId));
     await this.requireContractor(String(row.contractorId));
@@ -531,12 +576,17 @@ export class ContractorBillsService {
 
     const amounts = computeBillAmounts({
       currentCertifiedValue: row.currentCertifiedValue,
+      approvedExtras: row.approvedExtras ?? 0,
+      priceEscalation: row.priceEscalation ?? 0,
       advanceRecovery: row.advanceRecovery,
       materialRecovery: row.materialRecovery,
+      equipmentRecovery: row.equipmentRecovery ?? 0,
+      labourRecovery: row.labourRecovery ?? 0,
       retention: row.retention,
       tds: row.tds,
       penalty: row.penalty,
       otherDeductions: row.otherDeductions,
+      gst: row.gst ?? 0,
     });
     if (Math.abs(amounts.netPayable - row.netPayable) > 0.005) {
       throw new BadRequestException(
@@ -676,15 +726,34 @@ export class ContractorBillsService {
       partyId?: string;
     };
 
+    const wipDebit = roundMoney(
+      amounts.currentCertifiedValue +
+        amounts.approvedExtras +
+        amounts.priceEscalation,
+    );
+
     const lines: Line[] = [
       {
         accountId: String(wip._id),
-        debit: amounts.currentCertifiedValue,
+        debit: wipDebit,
         credit: 0,
         projectId,
         description: `Contractor RA ${row.billNumber} certified work`,
       },
     ];
+
+    if (amounts.gst > 0) {
+      const inputGst = await this.requireAccountByCategory(
+        AccountCategory.InputGst,
+      );
+      lines.push({
+        accountId: String(inputGst._id),
+        debit: amounts.gst,
+        credit: 0,
+        projectId,
+        description: `GST on contractor RA ${row.billNumber}`,
+      });
+    }
 
     if (amounts.retention > 0) {
       lines.push({
@@ -730,6 +799,34 @@ export class ContractorBillsService {
         credit: amounts.materialRecovery,
         projectId,
         description: `Material recovery ${row.billNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: contractorId,
+      });
+    }
+    if (amounts.equipmentRecovery > 0) {
+      const otherDeduction = await this.requireAccountByCategory(
+        AccountCategory.OtherContractorDeduction,
+      );
+      lines.push({
+        accountId: String(otherDeduction._id),
+        debit: 0,
+        credit: amounts.equipmentRecovery,
+        projectId,
+        description: `Equipment recovery ${row.billNumber}`,
+        partyType: JournalPartyType.Contractor,
+        partyId: contractorId,
+      });
+    }
+    if (amounts.labourRecovery > 0) {
+      const otherDeduction = await this.requireAccountByCategory(
+        AccountCategory.OtherContractorDeduction,
+      );
+      lines.push({
+        accountId: String(otherDeduction._id),
+        debit: 0,
+        credit: amounts.labourRecovery,
+        projectId,
+        description: `Labour recovery ${row.billNumber}`,
         partyType: JournalPartyType.Contractor,
         partyId: contractorId,
       });
@@ -900,9 +997,7 @@ export class ContractorBillsService {
       .find({
         agreementId: new Types.ObjectId(agreementId),
         _id: { $ne: new Types.ObjectId(excludeBillId) },
-        status: {
-          $in: [ContractorBillStatus.Posted, ContractorBillStatus.Paid],
-        },
+        status: { $in: [...CERTIFIED_BILL_STATUSES] },
         isDeleted: { $ne: true },
       })
       .session(session)
@@ -970,6 +1065,7 @@ export class ContractorBillsService {
     const row = await this.requireBill(id, actorId, 'update');
     assertTransition(row.status, ContractorBillStatus.Paid, [
       ContractorBillStatus.Posted,
+      ContractorBillStatus.PartiallyPaid,
     ]);
 
     const remaining = computeRemainingBillPayable({
@@ -996,7 +1092,7 @@ export class ContractorBillsService {
 
   /**
    * Increments paidAmount from a posted contractor payment allocation.
-   * Marks bill Paid when remaining payable is cleared.
+   * Sets PartiallyPaid when remaining > 0; Paid when cleared.
    */
   async applyPaymentAllocation(
     billId: string,
@@ -1006,6 +1102,7 @@ export class ContractorBillsService {
     const row = await this.requireBill(billId, actorId, 'update');
     if (
       row.status !== ContractorBillStatus.Posted &&
+      row.status !== ContractorBillStatus.PartiallyPaid &&
       row.status !== ContractorBillStatus.Paid
     ) {
       throw new BadRequestException(
@@ -1038,10 +1135,29 @@ export class ContractorBillsService {
       row.status = ContractorBillStatus.Paid;
       row.paidBy = new Types.ObjectId(actorId);
       row.paidAt = new Date();
+    } else {
+      row.status = ContractorBillStatus.PartiallyPaid;
     }
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return row;
+  }
+
+  /** Paid → Closed (terminal commercial close). */
+  async close(id: string, actorId: string) {
+    const row = await this.requireBill(id, actorId, 'update');
+    assertTransition(row.status, ContractorBillStatus.Closed, [
+      ContractorBillStatus.Paid,
+    ]);
+
+    row.status = ContractorBillStatus.Closed;
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save();
+
+    return createSuccessResponse(
+      toPublicContractorBill(row),
+      'Running bill closed',
+    );
   }
 
   async reject(id: string, dto: RejectContractorBillDto, actorId: string) {
@@ -1141,6 +1257,19 @@ export class ContractorBillsService {
     );
   }
 
+  private applyPaymentCertificateNumber(
+    row: ContractorBillDocument,
+    value?: string | null,
+  ) {
+    if (value === undefined) return;
+    const trimmed = value?.trim() || null;
+    if (!trimmed) {
+      // Do not clear an existing certificate number once set.
+      return;
+    }
+    row.paymentCertificateNumber = trimmed.toUpperCase();
+  }
+
   private async buildFromMeasurements(input: {
     projectId: string;
     contractorId: string;
@@ -1150,10 +1279,15 @@ export class ContractorBillsService {
     periodTo: Date;
     advanceRecoveryOverride?: number | null;
     materialRecovery?: number | null;
+    equipmentRecovery?: number | null;
+    labourRecovery?: number | null;
     retentionOverride?: number | null;
     tds?: number | null;
     penalty?: number | null;
     otherDeductions?: number | null;
+    approvedExtras?: number | null;
+    priceEscalation?: number | null;
+    gst?: number | null;
     excludeBillId: string | null;
   }) {
     if (!input.measurementIds?.length) {
@@ -1207,6 +1341,17 @@ export class ContractorBillsService {
 
     await this.assertMeasurementsNotBilled(uniqueIds, input.excludeBillId);
 
+    const priorFilter: FilterQuery<ContractorBill> = {
+      agreementId: input.agreement._id,
+      status: { $in: [...CERTIFIED_BILL_STATUSES] },
+    };
+    if (input.excludeBillId) {
+      priorFilter._id = { $ne: new Types.ObjectId(input.excludeBillId) };
+    }
+
+    const priorBills = await this.billModel.find(priorFilter).lean().exec();
+    this.assertBoqQuantitiesNotDoubleBilled(measurements, priorBills);
+
     const rateByBoq = new Map<string, number>();
     for (const line of input.agreement.boqItems ?? []) {
       if (line.boqItemId) {
@@ -1250,20 +1395,6 @@ export class ContractorBillsService {
       lines.reduce((sum, line) => sum + line.amount, 0),
     );
 
-    const priorFilter: FilterQuery<ContractorBill> = {
-      agreementId: input.agreement._id,
-      status: {
-        $in: [
-          ContractorBillStatus.Posted,
-          ContractorBillStatus.Paid,
-        ],
-      },
-    };
-    if (input.excludeBillId) {
-      priorFilter._id = { $ne: new Types.ObjectId(input.excludeBillId) };
-    }
-
-    const priorBills = await this.billModel.find(priorFilter).lean().exec();
     const previousCertifiedValue = roundMoney(
       priorBills.reduce((sum, bill) => sum + bill.currentCertifiedValue, 0),
     );
@@ -1289,12 +1420,17 @@ export class ContractorBillsService {
 
     const amounts = computeBillAmounts({
       currentCertifiedValue,
+      approvedExtras: input.approvedExtras ?? 0,
+      priceEscalation: input.priceEscalation ?? 0,
       advanceRecovery,
       materialRecovery: input.materialRecovery ?? 0,
+      equipmentRecovery: input.equipmentRecovery ?? 0,
+      labourRecovery: input.labourRecovery ?? 0,
       retention,
       tds: input.tds ?? 0,
       penalty: input.penalty ?? 0,
       otherDeductions: input.otherDeductions ?? 0,
+      gst: input.gst ?? 0,
     });
 
     return {
@@ -1307,24 +1443,100 @@ export class ContractorBillsService {
     };
   }
 
+  /**
+   * Blocks re-use of a measurement on any non-rejected/cancelled bill.
+   * Also surfaces already-certified measurements with an explicit conflict.
+   */
   private async assertMeasurementsNotBilled(
     measurementIds: string[],
     excludeBillId: string | null,
   ) {
+    const objectIds = measurementIds.map((id) => new Types.ObjectId(id));
     const filter: FilterQuery<ContractorBill> = {
-      'measurements.measurementId': {
-        $in: measurementIds.map((id) => new Types.ObjectId(id)),
-      },
-      status: { $nin: [ContractorBillStatus.Cancelled, ContractorBillStatus.Rejected] },
+      'measurements.measurementId': { $in: objectIds },
+      status: { $in: [...MEASUREMENT_BLOCKING_BILL_STATUSES] },
     };
     if (excludeBillId) {
       filter._id = { $ne: new Types.ObjectId(excludeBillId) };
     }
     const existing = await this.billModel.findOne(filter).lean().exec();
     if (existing) {
-      throw new ConflictException(
-        `One or more measurements are already on bill ${existing.billNumber}`,
+      const certified = CERTIFIED_BILL_STATUSES.includes(
+        existing.status as (typeof CERTIFIED_BILL_STATUSES)[number],
       );
+      throw new ConflictException(
+        certified
+          ? `One or more measurements were already certified on bill ${existing.billNumber}`
+          : `One or more measurements are already on bill ${existing.billNumber}`,
+      );
+    }
+  }
+
+  /**
+   * Prevents double-billing of previously certified BOQ quantities.
+   * For each BOQ item: priorCertifiedQty + Σ current on this bill
+   * must equal the max cumulativeQuantity among selected measurements.
+   */
+  private assertBoqQuantitiesNotDoubleBilled(
+    measurements: Array<{
+      measurementNumber?: string | null;
+      boqItemId: Types.ObjectId | string;
+      currentQuantity: number;
+      cumulativeQuantity: number;
+    }>,
+    priorBills: Array<{
+      billNumber: string;
+      measurements?: Array<{
+        boqItemId: Types.ObjectId | string;
+        currentQuantity: number;
+      }>;
+    }>,
+  ) {
+    const priorQtyByBoq = new Map<string, number>();
+    for (const bill of priorBills) {
+      for (const line of bill.measurements ?? []) {
+        const key = String(line.boqItemId);
+        priorQtyByBoq.set(
+          key,
+          roundQty((priorQtyByBoq.get(key) ?? 0) + line.currentQuantity),
+        );
+      }
+    }
+
+    const selectedByBoq = new Map<
+      string,
+      { currentSum: number; maxCumulative: number; sampleNumber: string }
+    >();
+    for (const measurement of measurements) {
+      const key = String(measurement.boqItemId);
+      const existing = selectedByBoq.get(key) ?? {
+        currentSum: 0,
+        maxCumulative: 0,
+        sampleNumber: measurement.measurementNumber ?? key,
+      };
+      existing.currentSum = roundQty(
+        existing.currentSum + measurement.currentQuantity,
+      );
+      existing.maxCumulative = Math.max(
+        existing.maxCumulative,
+        roundQty(measurement.cumulativeQuantity),
+      );
+      selectedByBoq.set(key, existing);
+    }
+
+    for (const [boqItemId, selected] of selectedByBoq) {
+      const priorQty = priorQtyByBoq.get(boqItemId) ?? 0;
+      const expectedCumulative = roundQty(priorQty + selected.currentSum);
+      if (Math.abs(expectedCumulative - selected.maxCumulative) > 0.000001) {
+        throw new ConflictException(
+          `BOQ item on measurement ${selected.sampleNumber} would double-bill certified quantity (prior ${priorQty} + current ${selected.currentSum} ≠ cumulative ${selected.maxCumulative})`,
+        );
+      }
+      if (priorQty > 0 && selected.currentSum <= 0) {
+        throw new ConflictException(
+          `BOQ item on measurement ${selected.sampleNumber} has no current quantity to bill`,
+        );
+      }
     }
   }
 

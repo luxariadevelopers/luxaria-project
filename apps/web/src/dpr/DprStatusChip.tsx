@@ -8,21 +8,30 @@ type Props = {
 
 export function DprStatusChip({ status }: Props) {
   const color =
-    status === DprStatus.Reviewed
+    status === DprStatus.Approved ||
+    status === DprStatus.Reviewed ||
+    status === DprStatus.Locked
       ? 'success'
-      : status === DprStatus.Submitted
-        ? 'info'
-        : status === DprStatus.Reopened
-          ? 'warning'
-          : status === DprStatus.Draft
-            ? 'default'
-            : 'default';
+      : status === DprStatus.Verified
+        ? 'secondary'
+        : status === DprStatus.Submitted
+          ? 'info'
+          : status === DprStatus.Reopened
+            ? 'warning'
+            : status === DprStatus.Draft
+              ? 'default'
+              : 'default';
+
+  const filled =
+    status === DprStatus.Approved ||
+    status === DprStatus.Reviewed ||
+    status === DprStatus.Locked;
 
   return (
     <Chip
       size="small"
       color={color}
-      variant={status === DprStatus.Reviewed ? 'filled' : 'outlined'}
+      variant={filled ? 'filled' : 'outlined'}
       label={dprStatusLabel(status)}
       data-testid="dpr-status-chip"
     />

@@ -114,6 +114,13 @@ export class CreateContractorAgreementDto {
   @IsMongoId()
   projectId!: string;
 
+  @ApiPropertyOptional({
+    description: 'Active rate contract (SOR) to snapshot rates from on approve',
+  })
+  @IsOptional()
+  @IsMongoId()
+  rateContractId?: string | null;
+
   @ApiProperty({ example: 'Civil finishing works for Block A' })
   @IsString()
   @MaxLength(4000)

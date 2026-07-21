@@ -17,6 +17,7 @@ import {
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import {
   DprIssueSeverity,
+  DprShift,
   DprStatus,
   DprWeather,
 } from '../schemas/daily-progress-report.schema';
@@ -166,9 +167,54 @@ export class CreateDailyProgressReportDto {
   @IsMongoId()
   projectId!: string;
 
+  @ApiProperty({
+    description: 'Primary site (required for new DPRs)',
+  })
+  @IsMongoId()
+  siteId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  zoneSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  blockSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  towerSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  floorSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  unitId?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  locationSiteIds?: string[];
+
   @ApiProperty({ example: '2026-07-17' })
   @IsDateString()
   reportDate!: string;
+
+  @ApiPropertyOptional({
+    enum: DprShift,
+    default: DprShift.General,
+  })
+  @IsOptional()
+  @IsEnum(DprShift)
+  shift?: DprShift;
 
   @ApiProperty({ enum: DprWeather })
   @IsEnum(DprWeather)
@@ -214,6 +260,18 @@ export class CreateDailyProgressReportDto {
   @MaxLength(5000)
   workPerformed?: string | null;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  plannedWork?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  delayedWork?: string | null;
+
   @ApiPropertyOptional({ type: [DprBoqQuantityDto] })
   @IsOptional()
   @IsArray()
@@ -287,6 +345,66 @@ export class CreateDailyProgressReportDto {
   @IsArray()
   @IsMongoId({ each: true })
   videoDocumentIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  materialIssueIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  stockReservationIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  labourAttendanceIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  workMeasurementIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  equipmentUtilizationIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  diaryEntryIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  qualityObservationIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  safetyIncidentIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  siteIssueIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  drawingIds?: string[];
 
   @ApiPropertyOptional({ example: 12500.5 })
   @IsOptional()
@@ -332,6 +450,47 @@ export class CreateDailyProgressReportDto {
 }
 
 export class UpdateDailyProgressReportDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  siteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  zoneSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  blockSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  towerSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  floorSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  unitId?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  locationSiteIds?: string[];
+
+  @ApiPropertyOptional({ enum: DprShift })
+  @IsOptional()
+  @IsEnum(DprShift)
+  shift?: DprShift;
+
   @ApiPropertyOptional({ enum: DprWeather })
   @IsOptional()
   @IsEnum(DprWeather)
@@ -376,6 +535,18 @@ export class UpdateDailyProgressReportDto {
   @IsString()
   @MaxLength(5000)
   workPerformed?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  plannedWork?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  delayedWork?: string | null;
 
   @ApiPropertyOptional({ type: [DprBoqQuantityDto] })
   @IsOptional()
@@ -451,6 +622,66 @@ export class UpdateDailyProgressReportDto {
   @IsMongoId({ each: true })
   videoDocumentIds?: string[];
 
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  materialIssueIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  stockReservationIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  labourAttendanceIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  workMeasurementIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  equipmentUtilizationIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  diaryEntryIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  qualityObservationIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  safetyIncidentIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  siteIssueIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  drawingIds?: string[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)
@@ -472,11 +703,36 @@ export class ReviewDailyProgressReportDto {
   reviewNotes?: string | null;
 }
 
+export class VerifyDailyProgressReportDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  verifyNotes?: string | null;
+}
+
+export class ApproveDailyProgressReportDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  approveNotes?: string | null;
+}
+
 export class ReopenDailyProgressReportDto {
   @ApiProperty({ example: 'Incorrect labour count' })
   @IsString()
   @MaxLength(2000)
   reason!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true and status is submitted, reject back to draft instead of reopened',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  rejectToDraft?: boolean;
 }
 
 export class ListDailyProgressReportsQueryDto extends PaginationQueryDto {
@@ -484,6 +740,16 @@ export class ListDailyProgressReportsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsMongoId()
   projectId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  siteId?: string;
+
+  @ApiPropertyOptional({ enum: DprShift })
+  @IsOptional()
+  @IsEnum(DprShift)
+  shift?: DprShift;
 
   @ApiPropertyOptional({ enum: DprStatus })
   @IsOptional()

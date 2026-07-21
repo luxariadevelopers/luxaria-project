@@ -5,18 +5,32 @@
  * Nest permissions:
  * - `dpr.view` — list/get, missing alerts
  * - `dpr.create` — create, update, submit
- * - `dpr.review` — review, reopen, regenerate PDF, evaluate alerts
+ * - `dpr.review` — verify, approve, lock, review (legacy), reopen, regenerate PDF
  */
 
 /** Nest `DprStatus` */
 export const DprStatus = {
   Draft: 'draft',
   Submitted: 'submitted',
+  Verified: 'verified',
+  /** Legacy alias for approved — treat as approved-like in UI. */
   Reviewed: 'reviewed',
+  Approved: 'approved',
+  Locked: 'locked',
   Reopened: 'reopened',
 } as const;
 
 export type DprStatus = (typeof DprStatus)[keyof typeof DprStatus];
+
+/** Nest `DprShift` */
+export const DprShift = {
+  Morning: 'morning',
+  Afternoon: 'afternoon',
+  Night: 'night',
+  General: 'general',
+} as const;
+
+export type DprShift = (typeof DprShift)[keyof typeof DprShift];
 
 /** Nest `DprWeather` */
 export const DprWeather = {
@@ -100,7 +114,15 @@ export type PublicDailyProgressReport = {
   id: string;
   dprNumber: string;
   projectId: string;
+  siteId: string | null;
+  zoneSiteId: string | null;
+  blockSiteId: string | null;
+  towerSiteId: string | null;
+  floorSiteId: string | null;
+  unitId: string | null;
+  locationSiteIds: string[];
   reportDate: string;
+  shift: DprShift;
   weather: DprWeather;
   weatherNotes: string | null;
   staffPresent: PublicDprStaffPresent[];
@@ -108,6 +130,8 @@ export type PublicDailyProgressReport = {
   skilledLabourCount: number;
   unskilledLabourCount: number;
   workPerformed: string | null;
+  plannedWork: string | null;
+  delayedWork: string | null;
   boqQuantities: PublicDprBoqQuantity[];
   materialsReceived: PublicDprMaterialLine[];
   materialsIssued: PublicDprMaterialLine[];
@@ -119,6 +143,16 @@ export type PublicDailyProgressReport = {
   tomorrowPlan: string | null;
   photoDocumentIds: string[];
   videoDocumentIds: string[];
+  materialIssueIds: string[];
+  stockReservationIds: string[];
+  labourAttendanceIds: string[];
+  workMeasurementIds: string[];
+  equipmentUtilizationIds: string[];
+  diaryEntryIds: string[];
+  qualityObservationIds: string[];
+  safetyIncidentIds: string[];
+  siteIssueIds: string[];
+  drawingIds: string[];
   siteCashBalance: number;
   siteCashAccountId: string | null;
   status: DprStatus;
@@ -127,9 +161,17 @@ export type PublicDailyProgressReport = {
   offlineCapturedAt: string | null;
   submittedBy: string | null;
   submittedAt: string | null;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  verifyNotes: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  approveNotes: string | null;
+  lockedBy: string | null;
+  lockedAt: string | null;
   reopenedBy: string | null;
   reopenedAt: string | null;
   reopenReason: string | null;
@@ -148,6 +190,9 @@ export type ReopenDprInput = {
 };
 
 export type DprDetailActionId =
+  | 'verify'
+  | 'approve'
+  | 'lock'
   | 'review'
   | 'reopen'
   | 'regenerate_pdf';
@@ -164,9 +209,19 @@ export type ListDailyProgressReportsQuery = {
   page?: number;
   limit?: number;
   projectId?: string;
+  siteId?: string;
+  shift?: DprShift | '';
   status?: DprStatus | '';
   fromDate?: string;
   toDate?: string;
+};
+
+export type VerifyDprInput = {
+  verifyNotes?: string | null;
+};
+
+export type ApproveDprInput = {
+  approveNotes?: string | null;
 };
 
 export type PaginatedDailyProgressReports = {

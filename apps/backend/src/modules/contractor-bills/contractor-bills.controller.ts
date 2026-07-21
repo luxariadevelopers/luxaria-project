@@ -18,6 +18,7 @@ import { RequirePermissions } from '../rbac/decorators/require-permissions.decor
 import {
   CreateContractorBillDto,
   ListContractorBillsQueryDto,
+  PostContractorBillDto,
   RejectContractorBillDto,
   UpdateContractorBillDto,
   WorkflowNoteDto,
@@ -137,17 +138,28 @@ export class ContractorBillsController {
   @RequirePermissions('running_bill.post')
   @ApiOperation({
     summary:
-      'Post bill (Director Approved → Posted; balanced AP journal; idempotent)',
+      'Post bill (Director Approved → Posted / payment-certified; balanced AP journal; idempotent)',
   })
-  post(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
-    return this.billsService.post(id, actor.id);
+  post(
+    @Param('id') id: string,
+    @Body() dto: PostContractorBillDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.billsService.post(id, actor.id, dto ?? {});
   }
 
   @Post(':id/mark-paid')
   @RequirePermissions('running_bill.pay')
-  @ApiOperation({ summary: 'Mark bill paid (Posted → Paid)' })
+  @ApiOperation({ summary: 'Mark bill paid (Posted / Partially Paid → Paid)' })
   markPaid(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
     return this.billsService.markPaid(id, actor.id);
+  }
+
+  @Post(':id/close')
+  @RequirePermissions('running_bill.pay')
+  @ApiOperation({ summary: 'Close bill (Paid → Closed)' })
+  close(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.billsService.close(id, actor.id);
   }
 
   @Post(':id/reject')

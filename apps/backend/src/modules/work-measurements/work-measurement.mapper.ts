@@ -10,10 +10,14 @@ export type PublicWorkMeasurement = {
   id: string;
   measurementNumber: string;
   projectId: string;
+  siteId: string | null;
+  dprId: string | null;
   contractorId: string;
   boqItemId: string;
   boqCode: string | null;
   location: string;
+  sheetReference: string | null;
+  workDescription: string | null;
   measurementDate: Date;
   previousQuantity: number;
   currentQuantity: number;
@@ -22,8 +26,11 @@ export type PublicWorkMeasurement = {
   measuredBy: string;
   verifiedBy: string | null;
   verifiedAt: Date | null;
+  certifiedBy: string | null;
+  certifiedAt: Date | null;
   photos: string[];
   drawingReference: string | null;
+  drawingId: string | null;
   status: WorkMeasurementStatus;
   submittedBy: string | null;
   submittedAt: Date | null;
@@ -40,10 +47,14 @@ type Measurable = {
   _id: Types.ObjectId;
   measurementNumber: string;
   projectId: Types.ObjectId;
+  siteId?: Types.ObjectId | null;
+  dprId?: Types.ObjectId | null;
   contractorId: Types.ObjectId;
   boqItemId: Types.ObjectId;
   boqCode?: string | null;
   location: string;
+  sheetReference?: string | null;
+  workDescription?: string | null;
   measurementDate: Date;
   previousQuantity: number;
   currentQuantity: number;
@@ -52,8 +63,11 @@ type Measurable = {
   measuredBy: Types.ObjectId;
   verifiedBy?: Types.ObjectId | null;
   verifiedAt?: Date | null;
+  certifiedBy?: Types.ObjectId | null;
+  certifiedAt?: Date | null;
   photoDocumentIds?: Types.ObjectId[];
   drawingReference?: string | null;
+  drawingId?: Types.ObjectId | null;
   status: WorkMeasurementStatus;
   submittedBy?: Types.ObjectId | null;
   submittedAt?: Date | null;
@@ -73,10 +87,14 @@ export function toPublicWorkMeasurement(
     id: String(row._id),
     measurementNumber: row.measurementNumber,
     projectId: String(row.projectId),
+    siteId: oid(row.siteId),
+    dprId: oid(row.dprId),
     contractorId: String(row.contractorId),
     boqItemId: String(row.boqItemId),
     boqCode: row.boqCode ?? null,
     location: row.location,
+    sheetReference: row.sheetReference ?? null,
+    workDescription: row.workDescription ?? null,
     measurementDate: row.measurementDate,
     previousQuantity: row.previousQuantity,
     currentQuantity: row.currentQuantity,
@@ -85,8 +103,11 @@ export function toPublicWorkMeasurement(
     measuredBy: String(row.measuredBy),
     verifiedBy: oid(row.verifiedBy),
     verifiedAt: row.verifiedAt ?? null,
+    certifiedBy: oid(row.certifiedBy),
+    certifiedAt: row.certifiedAt ?? null,
     photos: (row.photoDocumentIds ?? []).map((id) => String(id)),
     drawingReference: row.drawingReference ?? null,
+    drawingId: oid(row.drawingId),
     status: row.status,
     submittedBy: oid(row.submittedBy),
     submittedAt: row.submittedAt ?? null,

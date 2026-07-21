@@ -50,6 +50,7 @@ import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
 import { StockCountListScreen } from '@/screens/StockCountListScreen';
 import { WorkMeasurementFormScreen } from '@/screens/WorkMeasurementFormScreen';
 import { WorkMeasurementListScreen } from '@/screens/WorkMeasurementListScreen';
+import { WorkOrderListScreen } from '@/screens/WorkOrderListScreen';
 import {
   SiteExpenseDetailScreen,
   SiteExpenseFormScreen,
@@ -206,6 +207,11 @@ function AppNavigator() {
         name="WorkMeasurementForm"
         component={WorkMeasurementFormScreen}
         options={{ title: 'New measurement' }}
+      />
+      <AppStack.Screen
+        name="WorkOrderList"
+        component={WorkOrderListScreen}
+        options={{ title: 'Work orders' }}
       />
       <AppStack.Screen
         name="StockCountList"

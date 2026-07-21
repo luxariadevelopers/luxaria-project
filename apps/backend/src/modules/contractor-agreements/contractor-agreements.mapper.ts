@@ -28,6 +28,8 @@ export type PublicContractorAgreement = {
   supersedesId: string | null;
   contractorId: string;
   projectId: string;
+  rateContractId: string | null;
+  rateContractVersion: number | null;
   workScope: string;
   boqItems: PublicAgreementBoqItem[];
   agreedRates: number;
@@ -91,6 +93,8 @@ type AgreementLike = {
   supersedesId?: Types.ObjectId | string | null;
   contractorId: Types.ObjectId | string;
   projectId: Types.ObjectId | string;
+  rateContractId?: Types.ObjectId | string | null;
+  rateContractVersion?: number | null;
   workScope: string;
   boqItems?: Array<{
     _id?: Types.ObjectId | string;
@@ -150,6 +154,8 @@ export function toPublicContractorAgreement(
     supersedesId: oid(row.supersedesId),
     contractorId: String(row.contractorId),
     projectId: String(row.projectId),
+    rateContractId: oid(row.rateContractId),
+    rateContractVersion: row.rateContractVersion ?? null,
     workScope: row.workScope,
     boqItems: (row.boqItems ?? []).map((item) => ({
       id: item._id ? String(item._id) : '',

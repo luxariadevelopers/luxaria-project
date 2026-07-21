@@ -55,6 +55,7 @@ import {
   WorkMeasurementSchema,
   WorkMeasurementStatus,
 } from '../work-measurements/schemas/work-measurement.schema';
+import { toPublicContractorBill } from './contractor-bills.mapper';
 import { ContractorBillsService } from './contractor-bills.service';
 import {
   ContractorBill,
@@ -776,6 +777,41 @@ describe('ContractorBillsService', () => {
         actorId,
       ),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it('stores payment certificate number on approve/post and exposes statusAlias', async () => {
+    const id = await createDirectorApproved();
+    const approved = await service.getById(id, actorId);
+    expect(approved.data!.statusAlias).toBe('director_approved');
+
+    const posted = await service.post(id, actorId, {
+      paymentCertificateNumber: 'pc-2026-001',
+    });
+    expect(posted.data!.paymentCertificateNumber).toBe('PC-2026-001');
+    expect(posted.data!.status).toBe(ContractorBillStatus.Posted);
+    expect(posted.data!.statusAlias).toBe('payment_certified');
+  });
+
+  it('moves to partially_paid then paid on allocations; supports close', async () => {
+    const id = await createDirectorApproved();
+    const posted = await service.post(id, actorId);
+    const half = Math.round((posted.data!.netPayable / 2) * 100) / 100;
+    const partial = await service.applyPaymentAllocation(id, half, actorId);
+    expect(partial.status).toBe(ContractorBillStatus.PartiallyPaid);
+    expect(toPublicContractorBill(partial).statusAlias).toBe('partially_paid');
+
+    const remaining =
+      Math.round((posted.data!.netPayable - half) * 100) / 100;
+    const settled = await service.applyPaymentAllocation(
+      id,
+      remaining,
+      actorId,
+    );
+    expect(settled.status).toBe(ContractorBillStatus.Paid);
+
+    const closed = await service.close(id, actorId);
+    expect(closed.data!.status).toBe(ContractorBillStatus.Closed);
+    expect(closed.data!.statusAlias).toBe('closed');
   });
 
   it('rejects claim without invoice document', async () => {

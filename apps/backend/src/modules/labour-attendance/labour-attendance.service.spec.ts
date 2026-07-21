@@ -89,6 +89,13 @@ describe('LabourAttendanceService', () => {
       idempotencyModel.syncIndexes(),
     ]);
 
+    const sitesService = {
+      findById: jest.fn().mockResolvedValue(null),
+    };
+    const siteAccessService = {
+      assertSiteAccessIfScoped: jest.fn().mockResolvedValue(undefined),
+    };
+
     service = new LabourAttendanceService(
       attendanceModel,
       projectModel,
@@ -96,6 +103,8 @@ describe('LabourAttendanceService', () => {
       categoryModel,
       new NumberingService(counterModel),
       new IdempotencyService(idempotencyModel),
+      sitesService as never,
+      siteAccessService as never,
     );
   }, 120_000);
 
@@ -317,5 +326,60 @@ describe('LabourAttendanceService', () => {
     expect(report.data!.sheets[0].byCategory[0].labourCategoryName).toBe(
       'Mason',
     );
+    expect(report.data!.sheets[0].shift).toBe('general');
+
+    const deployment = await service.dailyDeployment({
+      projectId,
+      attendanceDate: '2026-07-22',
+      shift: 'general' as never,
+    });
+    expect(deployment.data!.sheetCount).toBe(1);
+    expect(deployment.data!.shift).toBe('general');
+  });
+
+  it('allows same contractor on same day for different shifts', async () => {
+    await service.create(
+      {
+        projectId,
+        contractorId,
+        attendanceDate: '2026-07-23',
+        shift: 'morning' as never,
+        latitude: 13.08,
+        longitude: 80.27,
+        lines: [
+          {
+            labourCategoryId: masonId,
+            entryMode: LabourAttendanceEntryMode.Group,
+            workerCount: 4,
+            overtimeHours: 0.5,
+          },
+        ],
+        groupPhotoDocumentIds: [photoId],
+      },
+      actorId,
+    );
+
+    const second = await service.create(
+      {
+        projectId,
+        contractorId,
+        attendanceDate: '2026-07-23',
+        shift: 'night' as never,
+        latitude: 13.08,
+        longitude: 80.27,
+        lines: [
+          {
+            labourCategoryId: helperId,
+            entryMode: LabourAttendanceEntryMode.Group,
+            workerCount: 3,
+          },
+        ],
+        groupPhotoDocumentIds: [photoId],
+      },
+      actorId,
+    );
+
+    expect(second.data!.shift).toBe('night');
+    expect(second.data!.totalWorkers).toBe(3);
   });
 });

@@ -9,7 +9,12 @@ export type ContractorBillDocument = HydratedDocument<ContractorBill>;
 
 /**
  * Contractor Claim → Engineer Verification → PM Certification →
- * Finance Verification → Director Approval → Posted → Paid
+ * Finance Verification → Director Approval → Posted →
+ * (Partially Paid) → Paid → Closed
+ *
+ * Phase 6 aliases (see CTR-INTEGRATION.md):
+ * - qs_certified → engineer_verified
+ * - payment_certified → posted
  */
 export enum ContractorBillStatus {
   Draft = 'draft',
@@ -19,7 +24,11 @@ export enum ContractorBillStatus {
   FinanceVerified = 'finance_verified',
   DirectorApproved = 'director_approved',
   Posted = 'posted',
+  /** Additive: posted RA with partial settlement applied. */
+  PartiallyPaid = 'partially_paid',
   Paid = 'paid',
+  /** Additive: paid RA closed for further commercial activity. */
+  Closed = 'closed',
   Rejected = 'rejected',
   Cancelled = 'cancelled',
 }
@@ -128,11 +137,25 @@ export class ContractorBill {
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   cumulativeValue!: number;
 
+  /** Approved extras added to this RA (CTR formula). */
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  approvedExtras!: number;
+
+  /** Price escalation added to this RA (CTR formula). */
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  priceEscalation!: number;
+
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   advanceRecovery!: number;
 
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   materialRecovery!: number;
+
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  equipmentRecovery!: number;
+
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  labourRecovery!: number;
 
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   retention!: number;
@@ -146,8 +169,19 @@ export class ContractorBill {
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   otherDeductions!: number;
 
+  /** GST amount added to net payable (CTR formula). */
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  gst!: number;
+
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   netPayable!: number;
+
+  /**
+   * Optional payment certificate number assigned on director approve / post.
+   * Immutable once the bill is posted.
+   */
+  @Prop({ type: String, trim: true, uppercase: true, default: null })
+  paymentCertificateNumber!: string | null;
 
   /**
    * Cumulative payments applied against netPayable.
@@ -259,7 +293,9 @@ ContractorBillSchema.index(
           ContractorBillStatus.FinanceVerified,
           ContractorBillStatus.DirectorApproved,
           ContractorBillStatus.Posted,
+          ContractorBillStatus.PartiallyPaid,
           ContractorBillStatus.Paid,
+          ContractorBillStatus.Closed,
         ],
       },
     },

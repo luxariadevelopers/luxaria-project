@@ -1,6 +1,12 @@
 import type { DprDayCompliance } from './types';
 
-const DPR_COMPLETE = new Set(['submitted', 'reviewed']);
+const DPR_COMPLETE = new Set([
+  'submitted',
+  'verified',
+  'reviewed',
+  'approved',
+  'locked',
+]);
 const DPR_PENDING = new Set(['draft', 'reopened']);
 
 /**

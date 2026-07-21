@@ -17,6 +17,7 @@ import type {
   EligibleWorkMeasurement,
   ListContractorBillsQuery,
   PaginatedContractorBills,
+  PostContractorBillInput,
   PublicContractorBill,
   RejectContractorBillInput,
   UpdateContractorBillInput,
@@ -44,8 +45,15 @@ function normaliseBill(row: PublicContractorBill): PublicContractorBill {
       to: toDateOnly(row.billingPeriod?.to) || String(row.billingPeriod?.to ?? ''),
     },
     measurements: (row.measurements ?? []).map((line) => ({ ...line })),
+    approvedExtras: Number(row.approvedExtras ?? 0),
+    priceEscalation: Number(row.priceEscalation ?? 0),
+    equipmentRecovery: Number(row.equipmentRecovery ?? 0),
+    labourRecovery: Number(row.labourRecovery ?? 0),
+    gst: Number(row.gst ?? 0),
     paidAmount: Number(row.paidAmount ?? 0),
     remainingPayable: Number(row.remainingPayable ?? 0),
+    paymentCertificateNumber: row.paymentCertificateNumber ?? null,
+    statusAlias: row.statusAlias ?? row.status,
     claimedAt: toIso(row.claimedAt),
     engineerVerifiedAt: toIso(row.engineerVerifiedAt),
     pmCertifiedAt: toIso(row.pmCertifiedAt),
@@ -214,6 +222,49 @@ export async function directorApproveContractorBill(
   );
   if (!res.data) {
     throw new Error(res.message || 'Director approval failed');
+  }
+  return normaliseBill(res.data);
+}
+
+/** `POST …/post` — Nest `running_bill.post` (payment certificate optional) */
+export async function postContractorBill(
+  id: string,
+  input: PostContractorBillInput = {},
+): Promise<PublicContractorBill> {
+  const res = await apiPost<PublicContractorBill>(
+    `${BASE}/${encodeURIComponent(id)}/post`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Post failed');
+  }
+  return normaliseBill(res.data);
+}
+
+/** `POST …/mark-paid` — Nest `running_bill.pay` */
+export async function markContractorBillPaid(
+  id: string,
+): Promise<PublicContractorBill> {
+  const res = await apiPost<PublicContractorBill>(
+    `${BASE}/${encodeURIComponent(id)}/mark-paid`,
+    {},
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Mark paid failed');
+  }
+  return normaliseBill(res.data);
+}
+
+/** `POST …/close` — Nest `running_bill.pay` */
+export async function closeContractorBill(
+  id: string,
+): Promise<PublicContractorBill> {
+  const res = await apiPost<PublicContractorBill>(
+    `${BASE}/${encodeURIComponent(id)}/close`,
+    {},
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Close failed');
   }
   return normaliseBill(res.data);
 }

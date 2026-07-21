@@ -1,13 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
+import {
+  computePeriodBillPayable,
+  roundMoney,
+  roundQty,
+} from './contractor-bills.calculation';
 import { ContractorBillStatus } from './schemas/contractor-bill.schema';
 
-export function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-export function roundQty(value: number): number {
-  return Math.round(value * 1_000_000) / 1_000_000;
-}
+export { roundMoney, roundQty };
 
 export function normalizePeriodDate(value: string | Date, field: string): Date {
   const date = value instanceof Date ? value : new Date(value);
@@ -33,73 +32,74 @@ export function assertNonNegative(value: number, field: string): void {
 
 export type BillAmountsInput = {
   currentCertifiedValue: number;
+  approvedExtras?: number;
+  priceEscalation?: number;
   advanceRecovery?: number;
   materialRecovery?: number;
+  equipmentRecovery?: number;
+  labourRecovery?: number;
   retention?: number;
   tds?: number;
   penalty?: number;
   otherDeductions?: number;
+  gst?: number;
 };
 
 export type BillAmounts = {
   currentCertifiedValue: number;
+  approvedExtras: number;
+  priceEscalation: number;
   advanceRecovery: number;
   materialRecovery: number;
+  equipmentRecovery: number;
+  labourRecovery: number;
   retention: number;
   tds: number;
   penalty: number;
   otherDeductions: number;
+  gst: number;
   netPayable: number;
   totalDeductions: number;
 };
 
+/**
+ * Period RA amounts (backward-compatible). Delegates to
+ * {@link computePeriodBillPayable} / full CTR formula with previous = 0.
+ */
 export function computeBillAmounts(input: BillAmountsInput): BillAmounts {
   const currentCertifiedValue = roundMoney(input.currentCertifiedValue);
   assertNonNegative(currentCertifiedValue, 'currentCertifiedValue');
 
-  const advanceRecovery = roundMoney(input.advanceRecovery ?? 0);
-  const materialRecovery = roundMoney(input.materialRecovery ?? 0);
-  const retention = roundMoney(input.retention ?? 0);
-  const tds = roundMoney(input.tds ?? 0);
-  const penalty = roundMoney(input.penalty ?? 0);
-  const otherDeductions = roundMoney(input.otherDeductions ?? 0);
-
-  for (const [field, value] of Object.entries({
-    advanceRecovery,
-    materialRecovery,
-    retention,
-    tds,
-    penalty,
-    otherDeductions,
-  })) {
-    assertNonNegative(value, field);
-  }
-
-  const totalDeductions = roundMoney(
-    advanceRecovery +
-      materialRecovery +
-      retention +
-      tds +
-      penalty +
-      otherDeductions,
-  );
-
-  if (totalDeductions > currentCertifiedValue + 0.001) {
-    throw new BadRequestException(
-      'Total deductions cannot exceed currentCertifiedValue',
-    );
-  }
+  const result = computePeriodBillPayable({
+    currentCertifiedValue,
+    approvedExtras: input.approvedExtras,
+    priceEscalation: input.priceEscalation,
+    advanceRecovery: input.advanceRecovery,
+    materialRecovery: input.materialRecovery,
+    equipmentRecovery: input.equipmentRecovery,
+    labourRecovery: input.labourRecovery,
+    retention: input.retention,
+    penalty: input.penalty,
+    tds: input.tds,
+    otherDeductions: input.otherDeductions,
+    gst: input.gst,
+  });
 
   return {
     currentCertifiedValue,
-    advanceRecovery,
-    materialRecovery,
-    retention,
-    tds,
-    penalty,
-    otherDeductions,
-    totalDeductions,
-    netPayable: roundMoney(currentCertifiedValue - totalDeductions),
+    approvedExtras: result.approvedExtras,
+    priceEscalation: result.priceEscalation,
+    advanceRecovery: result.advanceRecovery,
+    materialRecovery: result.materialRecovery,
+    equipmentRecovery: result.equipmentRecovery,
+    labourRecovery: result.labourRecovery,
+    retention: result.retention,
+    tds: result.tds,
+    penalty: result.penalties,
+    otherDeductions: result.otherDeductions,
+    gst: result.gst,
+    totalDeductions: result.totalDeductions,
+    netPayable: result.netPayable,
   };
 }
 
@@ -169,6 +169,84 @@ export const EDITABLE_BILL_STATUSES = [
   ContractorBillStatus.Draft,
   ContractorBillStatus.Rejected,
 ] as const;
+
+/** Statuses that block re-use of a measurement (open or certified). */
+export const MEASUREMENT_BLOCKING_BILL_STATUSES: readonly ContractorBillStatus[] =
+  [
+    ContractorBillStatus.Draft,
+    ContractorBillStatus.Claimed,
+    ContractorBillStatus.EngineerVerified,
+    ContractorBillStatus.PmCertified,
+    ContractorBillStatus.FinanceVerified,
+    ContractorBillStatus.DirectorApproved,
+    ContractorBillStatus.Posted,
+    ContractorBillStatus.PartiallyPaid,
+    ContractorBillStatus.Paid,
+    ContractorBillStatus.Closed,
+  ];
+
+/** Prior RAs that contribute to previousCertifiedValue / advance recovered. */
+export const CERTIFIED_BILL_STATUSES: readonly ContractorBillStatus[] = [
+  ContractorBillStatus.Posted,
+  ContractorBillStatus.PartiallyPaid,
+  ContractorBillStatus.Paid,
+  ContractorBillStatus.Closed,
+];
+
+/**
+ * Phase 6 conceptual status names → persisted `ContractorBillStatus`.
+ * `qs_certified` / `payment_certified` are aliases (not stored separately).
+ * `partially_paid` / `closed` are additive persisted statuses.
+ */
+export const PHASE6_BILL_STATUS_ALIASES = {
+  qs_certified: ContractorBillStatus.EngineerVerified,
+  payment_certified: ContractorBillStatus.Posted,
+  partially_paid: ContractorBillStatus.PartiallyPaid,
+  closed: ContractorBillStatus.Closed,
+} as const;
+
+export type Phase6BillStatusAlias = keyof typeof PHASE6_BILL_STATUS_ALIASES;
+
+export function resolvePersistedBillStatus(
+  aliasOrStatus: string,
+): ContractorBillStatus | null {
+  if (
+    Object.values(ContractorBillStatus).includes(
+      aliasOrStatus as ContractorBillStatus,
+    )
+  ) {
+    return aliasOrStatus as ContractorBillStatus;
+  }
+  if (aliasOrStatus in PHASE6_BILL_STATUS_ALIASES) {
+    return PHASE6_BILL_STATUS_ALIASES[
+      aliasOrStatus as Phase6BillStatusAlias
+    ];
+  }
+  return null;
+}
+
+/**
+ * Display / integration alias for a persisted bill status (+ payment progress).
+ * Does not change the stored status string.
+ */
+export function toPhase6BillStatusAlias(input: {
+  status: ContractorBillStatus;
+  netPayable: number;
+  paidAmount?: number;
+}): string {
+  const { status } = input;
+  if (status === ContractorBillStatus.Closed) return 'closed';
+  if (status === ContractorBillStatus.PartiallyPaid) return 'partially_paid';
+  if (status === ContractorBillStatus.Paid) return 'paid';
+  if (status === ContractorBillStatus.Posted) {
+    const paid = roundMoney(input.paidAmount ?? 0);
+    const remaining = roundMoney(Math.max(0, roundMoney(input.netPayable) - paid));
+    if (paid > 0.005 && remaining > 0.005) return 'partially_paid';
+    return 'payment_certified';
+  }
+  if (status === ContractorBillStatus.EngineerVerified) return 'qs_certified';
+  return status;
+}
 
 /** Remaining payable on a posted RA bill. */
 export function computeRemainingBillPayable(input: {

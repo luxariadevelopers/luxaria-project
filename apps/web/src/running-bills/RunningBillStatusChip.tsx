@@ -9,13 +9,15 @@ type Props = {
 export function RunningBillStatusChip({ status }: Props) {
   const color =
     status === ContractorBillStatus.Posted ||
-    status === ContractorBillStatus.Paid
+    status === ContractorBillStatus.Paid ||
+    status === ContractorBillStatus.Closed
       ? 'success'
       : status === ContractorBillStatus.Rejected ||
           status === ContractorBillStatus.Cancelled
         ? 'default'
         : status === ContractorBillStatus.FinanceVerified ||
-            status === ContractorBillStatus.DirectorApproved
+            status === ContractorBillStatus.DirectorApproved ||
+            status === ContractorBillStatus.PartiallyPaid
           ? 'warning'
           : status === ContractorBillStatus.Claimed ||
               status === ContractorBillStatus.EngineerVerified ||
@@ -29,7 +31,8 @@ export function RunningBillStatusChip({ status }: Props) {
       color={color}
       variant={
         status === ContractorBillStatus.Paid ||
-        status === ContractorBillStatus.Posted
+        status === ContractorBillStatus.Posted ||
+        status === ContractorBillStatus.Closed
           ? 'filled'
           : 'outlined'
       }

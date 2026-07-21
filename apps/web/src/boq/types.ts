@@ -124,6 +124,9 @@ export type PublicBoqItem = {
   description: string;
   unit: BoqUnit;
   plannedQuantity: number;
+  /** Certified executed quantity from work measurements (W4). */
+  progressQuantity?: number;
+  progressPercent?: number;
   materialCost: number;
   labourCost: number;
   subcontractCost: number;

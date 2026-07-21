@@ -9,6 +9,25 @@ export type StandardLabourCategorySeed = {
 
 /** Standard site labour categories for Luxaria. */
 export const STANDARD_LABOUR_CATEGORIES: StandardLabourCategorySeed[] = [
+  /** Generic skill buckets for DPR / deployment rollups (SE W3). */
+  {
+    name: 'Skilled Labour',
+    skillLevel: LabourSkillLevel.Skilled,
+    defaultDailyRate: 900,
+    overtimeRate: 1350,
+  },
+  {
+    name: 'Semi-skilled Labour',
+    skillLevel: LabourSkillLevel.SemiSkilled,
+    defaultDailyRate: 700,
+    overtimeRate: 1050,
+  },
+  {
+    name: 'Unskilled Labour',
+    skillLevel: LabourSkillLevel.Unskilled,
+    defaultDailyRate: 550,
+    overtimeRate: 825,
+  },
   {
     name: 'Mason',
     skillLevel: LabourSkillLevel.Skilled,

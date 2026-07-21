@@ -737,6 +737,7 @@ export class BoqService {
       description: dto.description.trim(),
       unit: dto.unit,
       plannedQuantity: costs.plannedQuantity,
+      progressQuantity: 0,
       materialCost: costs.materialCost,
       labourCost: costs.labourCost,
       subcontractCost: costs.subcontractCost,
@@ -808,6 +809,36 @@ export class BoqService {
       toPublicBoqItem(row),
       'BOQ item fetched successfully',
     );
+  }
+
+  /**
+   * Sync BOQ progress from certified work measurements.
+   * Does not mutate planned rates/values or version totals.
+   * Callers should pass the recomputed aggregate (typically max cumulative
+   * certified quantity for the item).
+   */
+  async applyCertifiedProgressQuantity(
+    boqItemId: string,
+    progressQuantity: number,
+    actorId?: string,
+  ) {
+    if (!Types.ObjectId.isValid(boqItemId)) {
+      throw new BadRequestException('Invalid boqItemId');
+    }
+    if (!Number.isFinite(progressQuantity) || progressQuantity < 0) {
+      throw new BadRequestException('progressQuantity must be ≥ 0');
+    }
+    const qty = Math.round(progressQuantity * 1_000_000) / 1_000_000;
+    const row = await this.itemModel.findById(boqItemId).exec();
+    if (!row) {
+      throw new NotFoundException('BOQ item not found');
+    }
+    row.progressQuantity = qty;
+    if (actorId && Types.ObjectId.isValid(actorId)) {
+      row.set('updatedBy', new Types.ObjectId(actorId));
+    }
+    await row.save();
+    return row;
   }
 
   async listItems(projectId: string, query: ListBoqItemsQueryDto, actorId: string) {
@@ -1151,6 +1182,7 @@ export class BoqService {
       description: row.description,
       unit: row.unit,
       plannedQuantity: costs.plannedQuantity,
+      progressQuantity: 0,
       materialCost: costs.materialCost,
       labourCost: costs.labourCost,
       subcontractCost: costs.subcontractCost,

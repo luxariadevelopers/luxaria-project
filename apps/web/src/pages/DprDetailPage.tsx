@@ -27,15 +27,19 @@ import {
   dprStatusLabel,
   dprWeatherLabel,
   resolveDprCapabilities,
+  useApproveDpr,
   useDprDetail,
+  useLockDpr,
   useRegenerateDprPdf,
   useReopenDpr,
   useReviewDpr,
+  useVerifyDpr,
 } from '@/dpr';
 
 /**
  * DPR detail — `/project-control/dpr/:id`.
- * Nest: GET detail · review · reopen · regenerate-pdf (`dpr.view` / `dpr.review`).
+ * Nest: GET detail · verify · approve · lock · review · reopen · regenerate-pdf
+ * (`dpr.view` / `dpr.review`).
  */
 export function DprDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -49,6 +53,9 @@ export function DprDetailPage() {
   const canView = Boolean(access) && caps.canView;
   const detailQuery = useDprDetail(id || undefined, canView);
   const dpr = detailQuery.data;
+  const verify = useVerifyDpr();
+  const approve = useApproveDpr();
+  const lock = useLockDpr();
   const review = useReviewDpr();
   const reopen = useReopenDpr();
   const regeneratePdf = useRegenerateDprPdf();
@@ -57,11 +64,63 @@ export function DprDetailPage() {
     if (!dpr) return [];
     return [
       {
-        id: 'review',
-        label: 'Review',
+        id: 'verify',
+        label: 'Verify',
         permission: 'dpr.review',
         allowedStatuses: [DprStatus.Submitted],
         variant: 'contained',
+        onClick: () => {
+          void (async () => {
+            try {
+              await verify.mutateAsync({ id: dpr.id });
+              success('DPR verified');
+            } catch (err) {
+              notifyError(getErrorMessage(err));
+            }
+          })();
+        },
+        loading: verify.isPending,
+      },
+      {
+        id: 'approve',
+        label: 'Approve',
+        permission: 'dpr.review',
+        allowedStatuses: [DprStatus.Submitted, DprStatus.Verified],
+        variant: 'contained',
+        onClick: () => {
+          void (async () => {
+            try {
+              await approve.mutateAsync({ id: dpr.id });
+              success('DPR approved — material consumption posted');
+            } catch (err) {
+              notifyError(getErrorMessage(err));
+            }
+          })();
+        },
+        loading: approve.isPending,
+      },
+      {
+        id: 'lock',
+        label: 'Lock',
+        permission: 'dpr.review',
+        allowedStatuses: [DprStatus.Approved, DprStatus.Reviewed],
+        onClick: () => {
+          void (async () => {
+            try {
+              await lock.mutateAsync(dpr.id);
+              success('DPR locked');
+            } catch (err) {
+              notifyError(getErrorMessage(err));
+            }
+          })();
+        },
+        loading: lock.isPending,
+      },
+      {
+        id: 'review',
+        label: 'Review (legacy)',
+        permission: 'dpr.review',
+        allowedStatuses: [DprStatus.Submitted],
         onClick: () => setReviewOpen(true),
         loading: review.isPending,
       },
@@ -69,7 +128,13 @@ export function DprDetailPage() {
         id: 'reopen',
         label: 'Reopen',
         permission: 'dpr.review',
-        allowedStatuses: [DprStatus.Submitted, DprStatus.Reviewed],
+        allowedStatuses: [
+          DprStatus.Submitted,
+          DprStatus.Verified,
+          DprStatus.Approved,
+          DprStatus.Reviewed,
+          DprStatus.Locked,
+        ],
         onClick: () => setReopenOpen(true),
         loading: reopen.isPending,
       },
@@ -77,7 +142,13 @@ export function DprDetailPage() {
         id: 'regenerate_pdf',
         label: 'Regenerate PDF',
         permission: 'dpr.review',
-        allowedStatuses: [DprStatus.Submitted, DprStatus.Reviewed],
+        allowedStatuses: [
+          DprStatus.Submitted,
+          DprStatus.Verified,
+          DprStatus.Approved,
+          DprStatus.Reviewed,
+          DprStatus.Locked,
+        ],
         onClick: () => {
           void (async () => {
             try {
@@ -91,12 +162,32 @@ export function DprDetailPage() {
         loading: regeneratePdf.isPending,
       },
     ];
-  }, [dpr, notifyError, regeneratePdf, reopen.isPending, review.isPending, success]);
+  }, [
+    approve,
+    dpr,
+    lock,
+    notifyError,
+    regeneratePdf,
+    reopen.isPending,
+    review.isPending,
+    success,
+    verify,
+  ]);
 
   const summaryFields = useMemo(() => {
     if (!dpr) return [];
     return [
       { id: 'date', label: 'Report date', value: formatDate(dpr.reportDate) },
+      {
+        id: 'site',
+        label: 'Site',
+        value: dpr.siteId ? String(dpr.siteId) : '—',
+      },
+      {
+        id: 'shift',
+        label: 'Shift',
+        value: dpr.shift ? String(dpr.shift) : '—',
+      },
       {
         id: 'weather',
         label: 'Weather',
@@ -114,9 +205,13 @@ export function DprDetailPage() {
         value: dpr.submittedAt ? formatDate(dpr.submittedAt) : '—',
       },
       {
-        id: 'reviewed',
-        label: 'Reviewed',
-        value: dpr.reviewedAt ? formatDate(dpr.reviewedAt) : '—',
+        id: 'approved',
+        label: 'Approved',
+        value: dpr.approvedAt
+          ? formatDate(dpr.approvedAt)
+          : dpr.reviewedAt
+            ? formatDate(dpr.reviewedAt)
+            : '—',
       },
     ];
   }, [dpr]);
@@ -165,6 +260,8 @@ export function DprDetailPage() {
           <Stack spacing={3}>
             <Typography variant="body2" color="text.secondary">
               Status: {dprStatusLabel(dpr.status)}
+              {dpr.verifyNotes ? ` · Verify notes: ${dpr.verifyNotes}` : ''}
+              {dpr.approveNotes ? ` · Approve notes: ${dpr.approveNotes}` : ''}
               {dpr.reviewNotes ? ` · Review notes: ${dpr.reviewNotes}` : ''}
               {dpr.reopenReason ? ` · Reopen reason: ${dpr.reopenReason}` : ''}
             </Typography>

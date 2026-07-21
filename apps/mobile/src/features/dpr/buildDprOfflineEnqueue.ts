@@ -3,7 +3,10 @@ import type { LocalFile } from '@/utils/fileUpload';
 
 export type BuildDprOfflineEnqueueInput = {
   projectId: string;
+  /** Required for new DPRs (Phase 5 site-scoped uniqueness). */
+  siteId: string;
   reportDate: string;
+  shift?: 'morning' | 'afternoon' | 'night' | 'general';
   weather: string;
   weatherNotes?: string | null;
   labourCount: number;
@@ -88,7 +91,9 @@ export function buildDprOfflineEnqueue(
     method: 'POST',
     payload: {
       projectId: input.projectId,
+      siteId: input.siteId,
       reportDate: input.reportDate,
+      shift: input.shift ?? 'general',
       weather: input.weather,
       weatherNotes: input.weatherNotes ?? null,
       labourCount: input.labourCount,

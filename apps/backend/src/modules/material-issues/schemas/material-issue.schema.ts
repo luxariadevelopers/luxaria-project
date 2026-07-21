@@ -201,6 +201,15 @@ export class MaterialIssue {
   @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
   issueSiteId!: Types.ObjectId | null;
 
+  /** Optional link to Daily Progress Report (Phase 5 SE material consumption). */
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'DailyProgressReport',
+    default: null,
+    index: true,
+  })
+  dprId!: Types.ObjectId | null;
+
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   issueEmployeeId!: Types.ObjectId | null;
 

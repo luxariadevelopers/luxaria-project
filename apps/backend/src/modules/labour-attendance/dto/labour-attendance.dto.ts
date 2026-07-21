@@ -18,6 +18,7 @@ import {
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import {
   LabourAttendanceEntryMode,
+  LabourAttendanceShift,
   LabourAttendanceStatus,
 } from '../schemas/labour-attendance.schema';
 
@@ -33,21 +34,40 @@ export class LabourAttendanceWorkerDto {
   @MaxLength(120)
   workerName!: string;
 
-  @ApiPropertyOptional({ example: '2026-07-20T08:00:00.000Z' })
+  @ApiPropertyOptional({
+    example: '2026-07-20T08:00:00.000Z',
+    description: 'Check-in timestamp (alias: checkInAt)',
+  })
   @IsOptional()
   @IsDateString()
   checkIn?: string | null;
 
-  @ApiPropertyOptional({ example: '2026-07-20T17:30:00.000Z' })
+  /** SE alias for checkIn — accepted interchangeably. */
+  @ApiPropertyOptional({ example: '2026-07-20T08:00:00.000Z' })
+  @IsOptional()
+  @IsDateString()
+  checkInAt?: string | null;
+
+  @ApiPropertyOptional({
+    example: '2026-07-20T17:30:00.000Z',
+    description: 'Check-out timestamp (alias: checkOutAt)',
+  })
   @IsOptional()
   @IsDateString()
   checkOut?: string | null;
 
-  @ApiPropertyOptional({ example: 1.5, minimum: 0 })
+  /** SE alias for checkOut — accepted interchangeably. */
+  @ApiPropertyOptional({ example: '2026-07-20T17:30:00.000Z' })
+  @IsOptional()
+  @IsDateString()
+  checkOutAt?: string | null;
+
+  @ApiPropertyOptional({ example: 1.5, minimum: 0, maximum: 16 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(16)
   overtimeHours?: number;
 
   @ApiPropertyOptional()
@@ -76,11 +96,12 @@ export class LabourAttendanceLineDto {
   @Min(0)
   workerCount?: number;
 
-  @ApiPropertyOptional({ example: 3, minimum: 0 })
+  @ApiPropertyOptional({ example: 3, minimum: 0, maximum: 160 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(160)
   overtimeHours?: number;
 
   @ApiPropertyOptional({ type: [LabourAttendanceWorkerDto] })
@@ -102,13 +123,35 @@ export class CreateLabourAttendanceDto {
   @IsMongoId()
   projectId!: string;
 
+  @ApiPropertyOptional({
+    description: 'Site for DPR daily deployment rollup; site ACL enforced when set',
+  })
+  @IsOptional()
+  @IsMongoId()
+  siteId?: string | null;
+
   @ApiProperty()
   @IsMongoId()
   contractorId!: string;
 
+  @ApiPropertyOptional({
+    description: 'Optional Daily Progress Report link for labour rollup',
+  })
+  @IsOptional()
+  @IsMongoId()
+  dprId?: string | null;
+
   @ApiProperty({ example: '2026-07-20' })
   @IsDateString()
   attendanceDate!: string;
+
+  @ApiPropertyOptional({
+    enum: LabourAttendanceShift,
+    default: LabourAttendanceShift.General,
+  })
+  @IsOptional()
+  @IsEnum(LabourAttendanceShift)
+  shift?: LabourAttendanceShift;
 
   @ApiPropertyOptional({ example: 'Block A podium' })
   @IsOptional()
@@ -209,7 +252,17 @@ export class ListLabourAttendanceQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsMongoId()
+  siteId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
   contractorId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  dprId?: string;
 
   @ApiPropertyOptional({ example: '2026-07-20' })
   @IsOptional()
@@ -226,6 +279,11 @@ export class ListLabourAttendanceQueryDto extends PaginationQueryDto {
   @IsDateString()
   toDate?: string;
 
+  @ApiPropertyOptional({ enum: LabourAttendanceShift })
+  @IsOptional()
+  @IsEnum(LabourAttendanceShift)
+  shift?: LabourAttendanceShift;
+
   @ApiPropertyOptional({ enum: LabourAttendanceStatus })
   @IsOptional()
   @IsEnum(LabourAttendanceStatus)
@@ -240,6 +298,18 @@ export class DailyAttendanceReportQueryDto {
   @ApiProperty({ example: '2026-07-20' })
   @IsDateString()
   attendanceDate!: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter deployment sheets for a site (DPR rollup)',
+  })
+  @IsOptional()
+  @IsMongoId()
+  siteId?: string;
+
+  @ApiPropertyOptional({ enum: LabourAttendanceShift })
+  @IsOptional()
+  @IsEnum(LabourAttendanceShift)
+  shift?: LabourAttendanceShift;
 
   @ApiPropertyOptional()
   @IsOptional()

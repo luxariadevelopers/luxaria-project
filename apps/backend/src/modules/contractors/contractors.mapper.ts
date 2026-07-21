@@ -1,12 +1,16 @@
 import type { Types } from 'mongoose';
-import type { ContractorDocumentCategory } from './schemas/contractor-document.schema';
+import type {
+  ContractorDocumentCategory,
+  ContractorDocumentVerificationStatus,
+} from './schemas/contractor-document.schema';
 import type { ContractorProjectAssignmentStatus } from './schemas/contractor-project-assignment.schema';
 import type {
   ContractorStatus,
+  ContractorStatusAction,
   ContractorType,
   ContractorVerificationStatus,
 } from './schemas/contractor.schema';
-import { labourLicenceIsValid } from './contractors.validation';
+import { complianceIsValid } from './contractors.validation';
 
 export type PublicContractorContact = {
   email: string | null;
@@ -15,6 +19,27 @@ export type PublicContractorContact = {
   contactPerson: string | null;
   addressLine1: string | null;
   addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  country: string | null;
+};
+
+export type PublicContractorContactEntry = {
+  label: string;
+  isPrimary: boolean;
+  email: string | null;
+  phone: string | null;
+  alternatePhone: string | null;
+  contactPerson: string | null;
+  designation: string | null;
+};
+
+export type PublicContractorAddress = {
+  label: string;
+  isPrimary: boolean;
+  line1: string | null;
+  line2: string | null;
   city: string | null;
   state: string | null;
   pincode: string | null;
@@ -39,6 +64,25 @@ export type PublicContractorLabourLicence = {
   isValid: boolean | null;
 };
 
+export type PublicContractorInsurance = {
+  policyNumber: string | null;
+  insurer: string | null;
+  coverageType: string | null;
+  validFrom: Date | null;
+  validTo: Date | null;
+  notes: string | null;
+  isValid: boolean | null;
+};
+
+export type PublicContractorStatusEvent = {
+  fromStatus: string;
+  toStatus: string;
+  action: ContractorStatusAction;
+  reason: string | null;
+  actorId: string;
+  at: Date;
+};
+
 export type PublicContractor = {
   id: string;
   companyId: string | null;
@@ -49,8 +93,11 @@ export type PublicContractor = {
   pan: string | null;
   gstin: string | null;
   contact: PublicContractorContact;
+  contacts: PublicContractorContactEntry[];
+  addresses: PublicContractorAddress[];
   bankDetails: PublicContractorBankDetails;
   labourLicence: PublicContractorLabourLicence;
+  insurance: PublicContractorInsurance;
   workCategories: string[];
   rating: number | null;
   verificationStatus: ContractorVerificationStatus;
@@ -59,6 +106,8 @@ export type PublicContractor = {
   verificationNotes: string | null;
   status: ContractorStatus;
   blockReason: string | null;
+  statusReason: string | null;
+  statusEvents: PublicContractorStatusEvent[];
   notes: string | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -72,6 +121,11 @@ export type PublicContractorDocument = {
   mimeType: string | null;
   sizeBytes: number;
   category: ContractorDocumentCategory;
+  verificationStatus: ContractorDocumentVerificationStatus;
+  verifiedBy: string | null;
+  verifiedAt: Date | null;
+  verificationNotes: string | null;
+  expiresAt: Date | null;
   uploadedBy: string | null;
   createdAt?: Date;
 };
@@ -98,6 +152,8 @@ type ContractorLike = {
   pan?: string | null;
   gstin?: string | null;
   contact?: Partial<PublicContractorContact> | null;
+  contacts?: Partial<PublicContractorContactEntry>[] | null;
+  addresses?: Partial<PublicContractorAddress>[] | null;
   bankDetails?: {
     bankName?: string | null;
     branchName?: string | null;
@@ -112,6 +168,14 @@ type ContractorLike = {
     validTo?: Date | null;
     notes?: string | null;
   } | null;
+  insurance?: {
+    policyNumber?: string | null;
+    insurer?: string | null;
+    coverageType?: string | null;
+    validFrom?: Date | null;
+    validTo?: Date | null;
+    notes?: string | null;
+  } | null;
   workCategories?: string[];
   rating?: number | null;
   verificationStatus: ContractorVerificationStatus;
@@ -120,6 +184,15 @@ type ContractorLike = {
   verificationNotes?: string | null;
   status: ContractorStatus;
   blockReason?: string | null;
+  statusReason?: string | null;
+  statusEvents?: {
+    fromStatus: string;
+    toStatus: string;
+    action: ContractorStatusAction;
+    reason?: string | null;
+    actorId: Types.ObjectId | string;
+    at: Date;
+  }[];
   notes?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -132,6 +205,7 @@ export function toPublicContractor(
   const contact = contractor.contact ?? {};
   const bank = contractor.bankDetails ?? {};
   const licence = contractor.labourLicence ?? {};
+  const insurance = contractor.insurance ?? {};
 
   return {
     id: String(contractor._id),
@@ -154,6 +228,25 @@ export function toPublicContractor(
       pincode: contact.pincode ?? null,
       country: contact.country ?? null,
     },
+    contacts: (contractor.contacts ?? []).map((c) => ({
+      label: c.label ?? 'Contact',
+      isPrimary: Boolean(c.isPrimary),
+      email: c.email ?? null,
+      phone: c.phone ?? null,
+      alternatePhone: c.alternatePhone ?? null,
+      contactPerson: c.contactPerson ?? null,
+      designation: c.designation ?? null,
+    })),
+    addresses: (contractor.addresses ?? []).map((a) => ({
+      label: a.label ?? 'Address',
+      isPrimary: Boolean(a.isPrimary),
+      line1: a.line1 ?? null,
+      line2: a.line2 ?? null,
+      city: a.city ?? null,
+      state: a.state ?? null,
+      pincode: a.pincode ?? null,
+      country: a.country ?? null,
+    })),
     bankDetails: {
       bankName: bank.bankName ?? null,
       branchName: bank.branchName ?? null,
@@ -168,7 +261,16 @@ export function toPublicContractor(
       validFrom: licence.validFrom ?? null,
       validTo: licence.validTo ?? null,
       notes: licence.notes ?? null,
-      isValid: labourLicenceIsValid({ validTo: licence.validTo ?? null }),
+      isValid: complianceIsValid({ validTo: licence.validTo ?? null }),
+    },
+    insurance: {
+      policyNumber: insurance.policyNumber ?? null,
+      insurer: insurance.insurer ?? null,
+      coverageType: insurance.coverageType ?? null,
+      validFrom: insurance.validFrom ?? null,
+      validTo: insurance.validTo ?? null,
+      notes: insurance.notes ?? null,
+      isValid: complianceIsValid({ validTo: insurance.validTo ?? null }),
     },
     workCategories: contractor.workCategories ?? [],
     rating: contractor.rating ?? null,
@@ -178,6 +280,15 @@ export function toPublicContractor(
     verificationNotes: contractor.verificationNotes ?? null,
     status: contractor.status,
     blockReason: contractor.blockReason ?? null,
+    statusReason: contractor.statusReason ?? null,
+    statusEvents: (contractor.statusEvents ?? []).map((e) => ({
+      fromStatus: e.fromStatus,
+      toStatus: e.toStatus,
+      action: e.action,
+      reason: e.reason ?? null,
+      actorId: String(e.actorId),
+      at: e.at,
+    })),
     notes: contractor.notes ?? null,
     createdAt: contractor.createdAt,
     updatedAt: contractor.updatedAt,
@@ -192,6 +303,11 @@ export function toPublicContractorDocument(doc: {
   mimeType?: string | null;
   sizeBytes: number;
   category: ContractorDocumentCategory;
+  verificationStatus?: ContractorDocumentVerificationStatus;
+  verifiedBy?: Types.ObjectId | string | null;
+  verifiedAt?: Date | null;
+  verificationNotes?: string | null;
+  expiresAt?: Date | null;
   uploadedBy?: Types.ObjectId | string | null;
   createdAt?: Date;
 }): PublicContractorDocument {
@@ -203,6 +319,13 @@ export function toPublicContractorDocument(doc: {
     mimeType: doc.mimeType ?? null,
     sizeBytes: doc.sizeBytes,
     category: doc.category,
+    verificationStatus:
+      doc.verificationStatus ??
+      ('pending' as ContractorDocumentVerificationStatus),
+    verifiedBy: doc.verifiedBy ? String(doc.verifiedBy) : null,
+    verifiedAt: doc.verifiedAt ?? null,
+    verificationNotes: doc.verificationNotes ?? null,
+    expiresAt: doc.expiresAt ?? null,
     uploadedBy: doc.uploadedBy ? String(doc.uploadedBy) : null,
     createdAt: doc.createdAt,
   };

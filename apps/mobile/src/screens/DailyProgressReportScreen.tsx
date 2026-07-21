@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useProject } from '@/context/ProjectContext';
+import { useSite } from '@/context/SiteContext';
 import { useOfflineSync } from '@/offline/OfflineSyncContext';
 import { buildDprOfflineEnqueue } from '@/features/dpr/buildDprOfflineEnqueue';
 import type { AppStackParamList } from '@/navigation/types';
@@ -35,6 +36,7 @@ const WEATHER_OPTIONS = [
 
 export function DailyProgressReportScreen({ navigation }: Props) {
   const { selectedProject } = useProject();
+  const { selectedSite } = useSite();
   const { enqueue } = useOfflineSync();
   const [reportDate, setReportDate] = useState(
     new Date().toISOString().slice(0, 10),
@@ -73,10 +75,15 @@ export function DailyProgressReportScreen({ navigation }: Props) {
       Alert.alert('Select a project first');
       return;
     }
+    if (!selectedSite?.id) {
+      Alert.alert('Select a site first');
+      return;
+    }
     try {
       setSaving(true);
       const entry = buildDprOfflineEnqueue({
         projectId: selectedProject.id,
+        siteId: selectedSite.id,
         reportDate,
         weather,
         labourCount: Number(labourCount) || 0,

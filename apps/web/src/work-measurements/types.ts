@@ -9,6 +9,7 @@ export const WorkMeasurementStatus = {
   Draft: 'draft',
   Submitted: 'submitted',
   Verified: 'verified',
+  Certified: 'certified',
   Rejected: 'rejected',
   Cancelled: 'cancelled',
 } as const;
@@ -20,10 +21,14 @@ export type PublicWorkMeasurement = {
   id: string;
   measurementNumber: string;
   projectId: string;
+  siteId: string | null;
+  dprId: string | null;
   contractorId: string;
   boqItemId: string;
   boqCode: string | null;
   location: string;
+  sheetReference: string | null;
+  workDescription: string | null;
   measurementDate: string;
   previousQuantity: number;
   currentQuantity: number;
@@ -32,8 +37,11 @@ export type PublicWorkMeasurement = {
   measuredBy: string;
   verifiedBy: string | null;
   verifiedAt: string | null;
+  certifiedBy: string | null;
+  certifiedAt: string | null;
   photos: string[];
   drawingReference: string | null;
+  drawingId: string | null;
   status: WorkMeasurementStatus;
   submittedBy: string | null;
   submittedAt: string | null;
@@ -48,15 +56,20 @@ export type PublicWorkMeasurement = {
 
 export type CreateWorkMeasurementInput = {
   projectId: string;
+  siteId?: string | null;
+  dprId?: string | null;
   contractorId: string;
   boqItemId: string;
   location: string;
+  sheetReference?: string | null;
+  workDescription?: string | null;
   measurementDate: string;
   currentQuantity: number;
   measuredBy?: string;
   photoDocumentIds?: string[];
   attachments?: Record<string, string>;
   drawingReference?: string | null;
+  drawingId?: string | null;
   notes?: string | null;
   submit?: boolean;
 };
@@ -71,10 +84,16 @@ export type VerifyWorkMeasurementInput = {
   notes?: string | null;
 };
 
+export type CertifyWorkMeasurementInput = {
+  notes?: string | null;
+};
+
 export type ListWorkMeasurementsQuery = {
   page?: number;
   limit?: number;
   projectId?: string;
+  siteId?: string;
+  dprId?: string;
   contractorId?: string;
   boqItemId?: string;
   status?: WorkMeasurementStatus;
@@ -109,6 +128,7 @@ export type WorkMeasurementBoqItemOption = {
   description: string;
   status: string;
   plannedQuantity: number;
+  progressQuantity?: number;
   unit: BoqUnit;
 };
 

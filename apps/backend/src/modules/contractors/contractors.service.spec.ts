@@ -103,6 +103,10 @@ describe('ContractorsService', () => {
           : undefined,
     } as unknown as ConfigService;
 
+    const auditLogService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    };
+
     service = new ContractorsService(
       contractorModel,
       documentModel,
@@ -112,6 +116,7 @@ describe('ContractorsService', () => {
       measurementModel,
       numbering,
       configService,
+      auditLogService as never,
     );
   }, 60_000);
 
@@ -318,11 +323,27 @@ describe('ContractorsService', () => {
     );
     expect(blocked.data?.status).toBe(ContractorStatus.Blocked);
     expect(blocked.data?.blockReason).toBe('Safety issues');
+    expect(blocked.data?.statusEvents?.length).toBeGreaterThan(0);
 
     await expect(service.activate(id, actorId)).rejects.toThrow(
       BadRequestException,
     );
+
+    const reactivated = await service.reactivate(
+      id,
+      { reason: 'Corrective action closed' },
+      actorId,
+    );
+    expect(reactivated.data?.status).toBe(ContractorStatus.Active);
+
+    const suspended = await service.suspend(
+      id,
+      { reason: 'Pending licence renewal' },
+      actorId,
+    );
+    expect(suspended.data?.status).toBe(ContractorStatus.Suspended);
   });
+
 
   it('assigns contractor to project and filters list by project', async () => {
     const created = await service.create(

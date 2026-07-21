@@ -15,12 +15,25 @@ export const LabourAttendanceEntryMode = {
 export type LabourAttendanceEntryMode =
   (typeof LabourAttendanceEntryMode)[keyof typeof LabourAttendanceEntryMode];
 
+export const LabourAttendanceShift = {
+  Morning: 'morning',
+  Afternoon: 'afternoon',
+  Night: 'night',
+  General: 'general',
+} as const;
+
+export type LabourAttendanceShift =
+  (typeof LabourAttendanceShift)[keyof typeof LabourAttendanceShift];
+
 export type PublicLabourAttendance = {
   id: string;
   attendanceNumber: string;
   projectId: string;
+  siteId?: string | null;
   contractorId: string;
+  dprId?: string | null;
   attendanceDate: string;
+  shift?: LabourAttendanceShift;
   workLocation: string | null;
   status: LabourAttendanceStatus;
   totalWorkers: number;
@@ -31,8 +44,11 @@ export type PublicLabourAttendance = {
 
 export type CreateLabourAttendanceInput = {
   projectId: string;
+  siteId?: string | null;
   contractorId: string;
+  dprId?: string | null;
   attendanceDate: string;
+  shift?: LabourAttendanceShift;
   workLocation?: string | null;
   lines: Array<{
     labourCategoryId: string;

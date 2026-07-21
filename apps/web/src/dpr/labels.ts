@@ -10,8 +10,14 @@ export function dprStatusLabel(status: string): string {
       return 'Draft';
     case DprStatus.Submitted:
       return 'Submitted';
+    case DprStatus.Verified:
+      return 'Verified';
     case DprStatus.Reviewed:
       return 'Reviewed';
+    case DprStatus.Approved:
+      return 'Approved';
+    case DprStatus.Locked:
+      return 'Locked';
     case DprStatus.Reopened:
       return 'Reopened';
     default:

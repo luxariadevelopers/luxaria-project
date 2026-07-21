@@ -37,13 +37,16 @@ describe('resolveDprRowActions — reopen flow gating', () => {
   const reviewer = resolveDprCapabilities((code) => code === 'dpr.review');
   const viewer = resolveDprCapabilities((code) => code === 'dpr.view');
 
-  it('allows review only on submitted DPRs', () => {
+  it('allows verify/approve/review on submitted DPRs', () => {
     expect(
       resolveDprRowActions({ status: DprStatus.Submitted }, reviewer),
-    ).toEqual(['review', 'reopen', 'regenerate_pdf']);
+    ).toEqual(['verify', 'approve', 'review', 'reopen', 'regenerate_pdf']);
     expect(
       resolveDprRowActions({ status: DprStatus.Reviewed }, reviewer),
-    ).toEqual(['reopen', 'regenerate_pdf']);
+    ).toEqual(['lock', 'reopen', 'regenerate_pdf']);
+    expect(
+      resolveDprRowActions({ status: DprStatus.Verified }, reviewer),
+    ).toEqual(['approve', 'reopen', 'regenerate_pdf']);
     expect(
       resolveDprRowActions({ status: DprStatus.Draft }, reviewer),
     ).toEqual([]);

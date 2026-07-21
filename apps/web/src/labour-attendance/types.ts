@@ -19,12 +19,24 @@ export const LabourAttendanceEntryMode = {
 export type LabourAttendanceEntryMode =
   (typeof LabourAttendanceEntryMode)[keyof typeof LabourAttendanceEntryMode];
 
+export const LabourAttendanceShift = {
+  Morning: 'morning',
+  Afternoon: 'afternoon',
+  Night: 'night',
+  General: 'general',
+} as const;
+
+export type LabourAttendanceShift =
+  (typeof LabourAttendanceShift)[keyof typeof LabourAttendanceShift];
+
 export type PublicLabourAttendanceWorker = {
   id: string;
   workerCode: string | null;
   workerName: string;
   checkIn: string | null;
   checkOut: string | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
   overtimeHours: number;
   remarks: string | null;
 };
@@ -45,8 +57,11 @@ export type PublicLabourAttendance = {
   id: string;
   attendanceNumber: string;
   projectId: string;
+  siteId: string | null;
   contractorId: string;
+  dprId: string | null;
   attendanceDate: string;
+  shift: LabourAttendanceShift;
   workLocation: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -70,7 +85,9 @@ export type PublicLabourAttendance = {
 
 export type PublicDailyAttendanceReport = {
   projectId: string;
+  siteId: string | null;
   attendanceDate: string;
+  shift: LabourAttendanceShift | null;
   sheetCount: number;
   totalWorkers: number;
   totalOvertimeHours: number;
@@ -79,7 +96,10 @@ export type PublicDailyAttendanceReport = {
   sheets: Array<{
     id: string;
     attendanceNumber: string;
+    siteId: string | null;
     contractorId: string;
+    dprId: string | null;
+    shift: LabourAttendanceShift;
     status: LabourAttendanceStatus;
     supervisorConfirmed: boolean;
     workLocation: string | null;
@@ -102,11 +122,22 @@ export type ListLabourAttendanceQuery = {
   page?: number;
   limit?: number;
   projectId?: string;
+  siteId?: string;
   contractorId?: string;
+  dprId?: string;
   attendanceDate?: string;
   fromDate?: string;
   toDate?: string;
+  shift?: LabourAttendanceShift;
   status?: LabourAttendanceStatus;
+};
+
+export type DailyAttendanceReportQuery = {
+  projectId: string;
+  attendanceDate: string;
+  siteId?: string;
+  shift?: LabourAttendanceShift;
+  contractorId?: string;
 };
 
 export type ListPaginationMeta = {

@@ -34,6 +34,8 @@ import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
+import { RateContractsService } from '../rate-contracts/rate-contracts.service';
+import { RateContractStatus } from '../rate-contracts/schemas/rate-contract.schema';
 import {
   CONTRACTOR_AGREEMENT_APPROVAL_ENTITY,
   CONTRACTOR_AGREEMENT_APPROVAL_MODULE,
@@ -99,6 +101,7 @@ export class ContractorAgreementsService {
     private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService<AppConfig, true>,
     private readonly projectScope: ProjectScopedDataHelper,
+    private readonly rateContractsService: RateContractsService,
   ) {}
 
   async create(dto: CreateContractorAgreementDto, actorId: string) {
@@ -136,6 +139,11 @@ export class ContractorAgreementsService {
         supersedesId: null,
         contractorId: new Types.ObjectId(dto.contractorId),
         projectId: new Types.ObjectId(dto.projectId),
+        rateContractId:
+          dto.rateContractId && Types.ObjectId.isValid(dto.rateContractId)
+            ? new Types.ObjectId(dto.rateContractId)
+            : null,
+        rateContractVersion: null,
         workScope: dto.workScope.trim(),
         boqItems,
         agreedRatesTotal: summary.agreedRatesTotal,
@@ -870,6 +878,8 @@ export class ContractorAgreementsService {
         .exec();
     }
 
+    await this.applyRateContractSnapshot(row);
+
     row.status = ContractorAgreementStatus.Active;
     row.approvedBy = new Types.ObjectId(actorId);
     row.approvedAt = new Date();
@@ -878,6 +888,55 @@ export class ContractorAgreementsService {
     row.rejectionReason = null;
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
+  }
+
+  /** Snapshot active SOR rates onto agreement BOQ lines (immutable after activate). */
+  private async applyRateContractSnapshot(
+    row: HydratedDocument<ContractorAgreement>,
+  ) {
+    if (!row.rateContractId) return;
+
+    const rcRes = await this.rateContractsService.getById(
+      String(row.rateContractId),
+    );
+    const rc = rcRes.data;
+    if (!rc) {
+      throw new BadRequestException('Linked rate contract not found');
+    }
+    if (rc.status !== RateContractStatus.Active) {
+      throw new BadRequestException(
+        'Linked rate contract must be active to snapshot rates',
+      );
+    }
+
+    const rateByBoq = new Map(
+      (rc.boqItemRates ?? [])
+        .filter((line) => line.boqItemId)
+        .map((line) => [String(line.boqItemId), line.rate] as const),
+    );
+
+    let changed = false;
+    for (const item of row.boqItems ?? []) {
+      const key = item.boqItemId ? String(item.boqItemId) : null;
+      if (!key || !rateByBoq.has(key)) continue;
+      const nextRate = rateByBoq.get(key)!;
+      if (item.agreedRate !== nextRate) {
+        item.agreedRate = nextRate;
+        item.agreedValue = computeBoqLineValue(
+          item.agreedQuantity,
+          item.agreedRate,
+        );
+        changed = true;
+      }
+    }
+
+    row.rateContractVersion = rc.version ?? null;
+    if (changed) {
+      const summary = summarizeBoqItems(row.boqItems);
+      row.agreedQuantity = summary.agreedQuantity;
+      row.agreedRatesTotal = summary.agreedRatesTotal;
+      row.markModified('boqItems');
+    }
   }
 
   private applyEditableFields(
@@ -893,6 +952,13 @@ export class ContractorAgreementsService {
       throw new BadRequestException(
         'projectId cannot be changed after create; amend instead',
       );
+    }
+    if (dto.rateContractId !== undefined) {
+      row.rateContractId =
+        dto.rateContractId && Types.ObjectId.isValid(dto.rateContractId)
+          ? new Types.ObjectId(dto.rateContractId)
+          : null;
+      row.rateContractVersion = null;
     }
     if (dto.workScope !== undefined) row.workScope = dto.workScope.trim();
     if (dto.boqItems !== undefined) {

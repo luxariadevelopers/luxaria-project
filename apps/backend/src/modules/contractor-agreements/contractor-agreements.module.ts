@@ -19,6 +19,7 @@ import {
 import { FinancialYearModule } from '../financial-year/financial-year.module';
 import { JournalModule } from '../journal/journal.module';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
+import { RateContractsModule } from '../rate-contracts/rate-contracts.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { Role, RoleSchema } from '../rbac/schemas/role.schema';
 import { ContractorAgreementsController } from './contractor-agreements.controller';
@@ -50,8 +51,9 @@ import {
     ]),
     ApprovalsModule,
     JournalModule,
-    FinancialYearModule,    ProjectAccessModule,
-
+    FinancialYearModule,
+    ProjectAccessModule,
+    RateContractsModule,
     RbacModule,
   ],
   controllers: [ContractorAgreementsController],

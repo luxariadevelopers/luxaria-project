@@ -17,6 +17,14 @@ export enum LabourAttendanceEntryMode {
   Individual = 'individual',
 }
 
+/** Site-execution shift key (aligns with DPR day/shift uniqueness). */
+export enum LabourAttendanceShift {
+  Morning = 'morning',
+  Afternoon = 'afternoon',
+  Night = 'night',
+  General = 'general',
+}
+
 @Schema({ _id: true })
 export class LabourAttendanceWorker {
   _id?: Types.ObjectId;
@@ -94,6 +102,10 @@ export class LabourAttendance {
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;
 
+  /** Optional site scope for DPR daily deployment rollup. */
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  siteId!: Types.ObjectId | null;
+
   @Prop({
     type: Types.ObjectId,
     ref: 'Contractor',
@@ -102,9 +114,27 @@ export class LabourAttendance {
   })
   contractorId!: Types.ObjectId;
 
+  /** Optional link to the DPR that rolls up this deployment. */
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'DailyProgressReport',
+    default: null,
+    index: true,
+  })
+  dprId!: Types.ObjectId | null;
+
   /** Calendar date of attendance (UTC midnight). */
   @Prop({ type: Date, required: true, index: true })
   attendanceDate!: Date;
+
+  @Prop({
+    type: String,
+    enum: LabourAttendanceShift,
+    required: true,
+    default: LabourAttendanceShift.General,
+    index: true,
+  })
+  shift!: LabourAttendanceShift;
 
   @Prop({ type: String, trim: true, default: null })
   workLocation!: string | null;
@@ -171,11 +201,11 @@ LabourAttendanceSchema.plugin(baseSchemaPlugin);
 LabourAttendanceSchema.plugin(softDeletePlugin);
 
 LabourAttendanceSchema.index(
-  { projectId: 1, contractorId: 1, attendanceDate: 1 },
+  { projectId: 1, contractorId: 1, attendanceDate: 1, siteId: 1, shift: 1 },
   {
     unique: true,
     partialFilterExpression: { isDeleted: false },
-    name: 'uniq_labour_attendance_project_contractor_date',
+    name: 'uniq_labour_attendance_project_contractor_date_site_shift',
   },
 );
 LabourAttendanceSchema.index(
@@ -194,3 +224,10 @@ LabourAttendanceSchema.index({
   attendanceDate: -1,
   status: 1,
 });
+LabourAttendanceSchema.index({
+  projectId: 1,
+  siteId: 1,
+  attendanceDate: 1,
+  shift: 1,
+});
+LabourAttendanceSchema.index({ dprId: 1, attendanceDate: -1 });

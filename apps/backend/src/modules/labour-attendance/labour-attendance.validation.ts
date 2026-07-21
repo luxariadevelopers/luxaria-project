@@ -1,5 +1,16 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { LabourAttendanceEntryMode } from './schemas/labour-attendance.schema';
+import {
+  LabourAttendanceEntryMode,
+  LabourAttendanceShift,
+} from './schemas/labour-attendance.schema';
+
+/** Per-worker overtime ceiling (hours). */
+export const MAX_WORKER_OVERTIME_HOURS = 16;
+
+/** Per-line aggregate overtime ceiling (hours). */
+export const MAX_LINE_OVERTIME_HOURS = 160;
+
+export const LABOUR_ATTENDANCE_SHIFTS = Object.values(LabourAttendanceShift);
 
 export function roundHours(value: number): number {
   return Math.round(value * 100) / 100;
@@ -24,6 +35,30 @@ export function assertNonNegative(value: number, field: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new BadRequestException(`${field} must be ≥ 0`);
   }
+}
+
+export function assertOvertimeHours(
+  value: number,
+  field: string,
+  max: number,
+): void {
+  assertNonNegative(value, field);
+  if (value > max) {
+    throw new BadRequestException(`${field} must be ≤ ${max}`);
+  }
+}
+
+export function assertShift(
+  value: string | null | undefined,
+  field = 'shift',
+): LabourAttendanceShift {
+  const shift = (value ?? LabourAttendanceShift.General) as LabourAttendanceShift;
+  if (!LABOUR_ATTENDANCE_SHIFTS.includes(shift)) {
+    throw new BadRequestException(
+      `${field} must be one of: ${LABOUR_ATTENDANCE_SHIFTS.join(', ')}`,
+    );
+  }
+  return shift;
 }
 
 export function assertGps(latitude: number, longitude: number): void {
@@ -59,6 +94,10 @@ export type AttendanceWorkerInput = {
   workerName: string;
   checkIn?: string | Date | null;
   checkOut?: string | Date | null;
+  /** SE alias for checkIn */
+  checkInAt?: string | Date | null;
+  /** SE alias for checkOut */
+  checkOutAt?: string | Date | null;
   overtimeHours?: number;
   remarks?: string | null;
 };
@@ -175,10 +214,20 @@ export function normalizeAttendanceLines(lines: AttendanceLineInput[]): Array<{
       workerNames.add(nameKey);
 
       const overtimeHours = roundHours(worker.overtimeHours ?? 0);
-      assertNonNegative(overtimeHours, `${wLabel}.overtimeHours`);
+      assertOvertimeHours(
+        overtimeHours,
+        `${wLabel}.overtimeHours`,
+        MAX_WORKER_OVERTIME_HOURS,
+      );
 
-      const checkIn = parseOptionalDate(worker.checkIn, `${wLabel}.checkIn`);
-      const checkOut = parseOptionalDate(worker.checkOut, `${wLabel}.checkOut`);
+      const checkIn = parseOptionalDate(
+        worker.checkIn ?? worker.checkInAt,
+        `${wLabel}.checkIn`,
+      );
+      const checkOut = parseOptionalDate(
+        worker.checkOut ?? worker.checkOutAt,
+        `${wLabel}.checkOut`,
+      );
       assertWorkerTimes({ checkIn, checkOut, label: wLabel });
 
       return {
@@ -225,7 +274,11 @@ export function normalizeAttendanceLines(lines: AttendanceLineInput[]): Array<{
       );
     }
 
-    assertNonNegative(overtimeHours, `${label}.overtimeHours`);
+    assertOvertimeHours(
+      overtimeHours,
+      `${label}.overtimeHours`,
+      MAX_LINE_OVERTIME_HOURS,
+    );
 
     return {
       labourCategoryId: categoryId,

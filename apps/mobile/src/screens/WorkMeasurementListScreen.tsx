@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -14,7 +15,10 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
-import { fetchWorkMeasurements } from '@/work-measurement/api';
+import {
+  acknowledgeWorkMeasurement,
+  fetchWorkMeasurements,
+} from '@/work-measurement/api';
 import { MeasurementRow } from '@/work-measurement/components/MeasurementRow';
 import {
   EmptyPanel,
@@ -37,6 +41,36 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
+
+  const onAcknowledge = useCallback(
+    async (id: string) => {
+      if (!caps.canAcknowledge || !isOnline) {
+        Alert.alert(
+          'Acknowledge unavailable',
+          !isOnline
+            ? 'Measurement acknowledgment requires a network connection.'
+            : 'Missing permission measurement.certify',
+        );
+        return;
+      }
+      setAcknowledgingId(id);
+      try {
+        const updated = await acknowledgeWorkMeasurement(id);
+        setItems((prev) =>
+          prev.map((row) => (row.id === id ? updated : row)),
+        );
+      } catch (err) {
+        Alert.alert(
+          'Acknowledge failed',
+          err instanceof Error ? err.message : 'Unable to acknowledge',
+        );
+      } finally {
+        setAcknowledgingId(null);
+      }
+    },
+    [caps.canAcknowledge, isOnline],
+  );
 
   const load = useCallback(
     async (mode: 'initial' | 'refresh' = 'initial') => {
@@ -147,7 +181,17 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
               }
             />
           }
-          renderItem={({ item }) => <MeasurementRow item={item} />}
+          renderItem={({ item }) => (
+            <MeasurementRow
+              item={item}
+              acknowledging={acknowledgingId === item.id}
+              onAcknowledge={
+                caps.canAcknowledge && item.status === 'submitted'
+                  ? () => void onAcknowledge(item.id)
+                  : undefined
+              }
+            />
+          )}
           ListFooterComponent={
             caps.canCreate ? (
               <View style={styles.footer}>

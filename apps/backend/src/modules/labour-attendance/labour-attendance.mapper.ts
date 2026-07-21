@@ -1,6 +1,7 @@
 import type { Types } from 'mongoose';
 import type {
   LabourAttendanceEntryMode,
+  LabourAttendanceShift,
   LabourAttendanceStatus,
 } from './schemas/labour-attendance.schema';
 
@@ -12,8 +13,14 @@ export type PublicLabourAttendanceWorker = {
   id: string;
   workerCode: string | null;
   workerName: string;
+  /** Canonical check-in timestamp */
   checkIn: Date | null;
+  /** Canonical check-out timestamp */
   checkOut: Date | null;
+  /** SE alias of checkIn */
+  checkInAt: Date | null;
+  /** SE alias of checkOut */
+  checkOutAt: Date | null;
   overtimeHours: number;
   remarks: string | null;
 };
@@ -34,8 +41,11 @@ export type PublicLabourAttendance = {
   id: string;
   attendanceNumber: string;
   projectId: string;
+  siteId: string | null;
   contractorId: string;
+  dprId: string | null;
   attendanceDate: Date;
+  shift: LabourAttendanceShift;
   workLocation: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -59,7 +69,9 @@ export type PublicLabourAttendance = {
 
 export type PublicDailyAttendanceReport = {
   projectId: string;
+  siteId: string | null;
   attendanceDate: string;
+  shift: LabourAttendanceShift | null;
   sheetCount: number;
   totalWorkers: number;
   totalOvertimeHours: number;
@@ -68,7 +80,10 @@ export type PublicDailyAttendanceReport = {
   sheets: Array<{
     id: string;
     attendanceNumber: string;
+    siteId: string | null;
     contractorId: string;
+    dprId: string | null;
+    shift: LabourAttendanceShift;
     status: LabourAttendanceStatus;
     supervisorConfirmed: boolean;
     workLocation: string | null;
@@ -91,8 +106,11 @@ export type AttendanceLike = {
   _id: Types.ObjectId | string;
   attendanceNumber: string;
   projectId: Types.ObjectId | string;
+  siteId?: Types.ObjectId | string | null;
   contractorId: Types.ObjectId | string;
+  dprId?: Types.ObjectId | string | null;
   attendanceDate: Date;
+  shift?: LabourAttendanceShift;
   workLocation?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -139,12 +157,16 @@ function mapWorker(worker: {
   overtimeHours: number;
   remarks?: string | null;
 }): PublicLabourAttendanceWorker {
+  const checkIn = worker.checkIn ?? null;
+  const checkOut = worker.checkOut ?? null;
   return {
     id: worker._id ? String(worker._id) : '',
     workerCode: worker.workerCode ?? null,
     workerName: worker.workerName,
-    checkIn: worker.checkIn ?? null,
-    checkOut: worker.checkOut ?? null,
+    checkIn,
+    checkOut,
+    checkInAt: checkIn,
+    checkOutAt: checkOut,
     overtimeHours: worker.overtimeHours ?? 0,
     remarks: worker.remarks ?? null,
   };
@@ -186,8 +208,11 @@ export function toPublicLabourAttendance(
     id: String(row._id),
     attendanceNumber: row.attendanceNumber,
     projectId: String(row.projectId),
+    siteId: oid(row.siteId),
     contractorId: String(row.contractorId),
+    dprId: oid(row.dprId),
     attendanceDate: row.attendanceDate,
+    shift: row.shift ?? ('general' as LabourAttendanceShift),
     workLocation: row.workLocation ?? null,
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,

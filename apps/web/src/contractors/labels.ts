@@ -12,8 +12,10 @@ export function contractorStatusLabel(status: string): string {
       return 'Pending verification';
     case ContractorStatus.Active:
       return 'Active';
+    case ContractorStatus.Suspended:
+      return 'Suspended';
     case ContractorStatus.Blocked:
-      return 'Blocked';
+      return 'Blacklisted';
     case ContractorStatus.Inactive:
       return 'Inactive';
     default:

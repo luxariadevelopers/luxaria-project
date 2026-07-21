@@ -20,9 +20,16 @@ function statusColor(status: string): string {
 type Props = {
   item: PublicWorkMeasurement;
   onPress?: () => void;
+  onAcknowledge?: () => void;
+  acknowledging?: boolean;
 };
 
-export function MeasurementRow({ item, onPress }: Props) {
+export function MeasurementRow({
+  item,
+  onPress,
+  onAcknowledge,
+  acknowledging,
+}: Props) {
   const date = String(item.measurementDate).slice(0, 10);
   const content = (
     <View style={styles.card}>
@@ -50,6 +57,19 @@ export function MeasurementRow({ item, onPress }: Props) {
         Photos {item.photos.length}
         {item.rejectionReason ? ` · ${item.rejectionReason}` : ''}
       </Text>
+      {onAcknowledge ? (
+        <Pressable
+          style={[styles.ackBtn, acknowledging ? styles.ackBtnDisabled : null]}
+          disabled={acknowledging}
+          onPress={onAcknowledge}
+          accessibilityRole="button"
+          accessibilityLabel="Acknowledge measurement"
+        >
+          <Text style={styles.ackBtnText}>
+            {acknowledging ? 'Acknowledging…' : 'Acknowledge'}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -104,5 +124,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginTop: 4,
+  },
+  ackBtn: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  ackBtnDisabled: {
+    opacity: 0.6,
+  },
+  ackBtnText: {
+    color: '#F4F0E6',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

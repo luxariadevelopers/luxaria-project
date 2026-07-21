@@ -65,6 +65,7 @@ export type PublicMaterialIssue = {
   workLocation: string | null;
   issueTarget: MaterialIssueTarget;
   issueSiteId: string | null;
+  dprId: string | null;
   issueEmployeeId: string | null;
   issueDepartment: string | null;
   issueEquipmentRef: string | null;
@@ -139,6 +140,7 @@ type IssueLike = {
   workLocation?: string | null;
   issueTarget?: MaterialIssueTarget;
   issueSiteId?: Types.ObjectId | string | null;
+  dprId?: Types.ObjectId | string | null;
   issueEmployeeId?: Types.ObjectId | string | null;
   issueDepartment?: string | null;
   issueEquipmentRef?: string | null;
@@ -181,6 +183,7 @@ export function toPublicMaterialIssue(row: IssueLike): PublicMaterialIssue {
     workLocation: row.workLocation ?? null,
     issueTarget: row.issueTarget ?? ('boq_work' as MaterialIssueTarget),
     issueSiteId: oid(row.issueSiteId),
+    dprId: oid(row.dprId),
     issueEmployeeId: oid(row.issueEmployeeId),
     issueDepartment: row.issueDepartment ?? null,
     issueEquipmentRef: row.issueEquipmentRef ?? null,

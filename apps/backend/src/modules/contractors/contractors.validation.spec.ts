@@ -1,5 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  assertContractorStatusTransition,
+  assertInsuranceDates,
   assertLabourLicenceDates,
   assertRating,
   assertValidAccountNumber,
@@ -7,6 +9,10 @@ import {
   assertWorkCategories,
   labourLicenceIsValid,
 } from './contractors.validation';
+import {
+  ContractorStatus,
+  ContractorStatusAction,
+} from './schemas/contractor.schema';
 
 describe('contractors.validation', () => {
   it('validates IFSC and account number', () => {
@@ -60,5 +66,47 @@ describe('contractors.validation', () => {
       }),
     ).toBe(true);
     expect(labourLicenceIsValid({ validTo: null })).toBeNull();
+  });
+
+  it('validates insurance date order', () => {
+    expect(() =>
+      assertInsuranceDates({
+        validFrom: '2026-01-01',
+        validTo: '2027-01-01',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertInsuranceDates({
+        validFrom: '2027-01-01',
+        validTo: '2026-01-01',
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('enforces status transitions for suspend / blacklist / reactivate', () => {
+    expect(
+      assertContractorStatusTransition(
+        ContractorStatusAction.Suspend,
+        ContractorStatus.Active,
+      ),
+    ).toBe(ContractorStatus.Suspended);
+    expect(
+      assertContractorStatusTransition(
+        ContractorStatusAction.Blacklist,
+        ContractorStatus.Suspended,
+      ),
+    ).toBe(ContractorStatus.Blocked);
+    expect(
+      assertContractorStatusTransition(
+        ContractorStatusAction.Reactivate,
+        ContractorStatus.Blocked,
+      ),
+    ).toBe(ContractorStatus.Active);
+    expect(() =>
+      assertContractorStatusTransition(
+        ContractorStatusAction.Suspend,
+        ContractorStatus.Blocked,
+      ),
+    ).toThrow(BadRequestException);
   });
 });

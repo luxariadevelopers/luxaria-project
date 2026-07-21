@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import {
   cancelWorkMeasurement,
+  certifyWorkMeasurement,
   createWorkMeasurement,
   fetchBoqItemsForMeasurement,
   fetchContractorsForMeasurement,
@@ -18,6 +19,7 @@ import {
 import { workMeasurementsKeys } from './queryKeys';
 import { computePreviousQuantity } from './validation';
 import type {
+  CertifyWorkMeasurementInput,
   CreateWorkMeasurementInput,
   ListWorkMeasurementsQuery,
   RejectWorkMeasurementInput,
@@ -153,6 +155,15 @@ export function useVerifyWorkMeasurement() {
   return useMutation({
     mutationFn: (args: { id: string; input?: VerifyWorkMeasurementInput }) =>
       verifyWorkMeasurement(args.id, args.input ?? {}),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCertifyWorkMeasurement() {
+  const invalidate = useInvalidateWorkMeasurements();
+  return useMutation({
+    mutationFn: (args: { id: string; input?: CertifyWorkMeasurementInput }) =>
+      certifyWorkMeasurement(args.id, args.input ?? {}),
     onSuccess: invalidate,
   });
 }

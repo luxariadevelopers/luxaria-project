@@ -1,12 +1,15 @@
 import { apiGet, apiPost } from '@/api/client';
 import type {
+  ApproveDprInput,
   ListDailyProgressReportsQuery,
   PaginatedDailyProgressReports,
   PublicDailyProgressReport,
   PublicMissingDprAlert,
   ReopenDprInput,
   ReviewDprInput,
+  VerifyDprInput,
 } from './types';
+import { DprShift } from './types';
 
 function toIso(value: unknown): string | null {
   if (value == null) return null;
@@ -21,7 +24,15 @@ function normaliseDpr(row: PublicDailyProgressReport): PublicDailyProgressReport
     id: String(row.id),
     dprNumber: row.dprNumber,
     projectId: String(row.projectId),
+    siteId: row.siteId == null ? null : String(row.siteId),
+    zoneSiteId: row.zoneSiteId == null ? null : String(row.zoneSiteId),
+    blockSiteId: row.blockSiteId == null ? null : String(row.blockSiteId),
+    towerSiteId: row.towerSiteId == null ? null : String(row.towerSiteId),
+    floorSiteId: row.floorSiteId == null ? null : String(row.floorSiteId),
+    unitId: row.unitId == null ? null : String(row.unitId),
+    locationSiteIds: (row.locationSiteIds ?? []).map(String),
     reportDate: toIso(row.reportDate) ?? String(row.reportDate),
+    shift: row.shift ?? DprShift.General,
     weatherNotes: row.weatherNotes ?? null,
     staffPresent: (row.staffPresent ?? []).map((entry) => ({
       id: String(entry.id ?? ''),
@@ -33,6 +44,8 @@ function normaliseDpr(row: PublicDailyProgressReport): PublicDailyProgressReport
     skilledLabourCount: Number(row.skilledLabourCount ?? 0),
     unskilledLabourCount: Number(row.unskilledLabourCount ?? 0),
     workPerformed: row.workPerformed ?? null,
+    plannedWork: row.plannedWork ?? null,
+    delayedWork: row.delayedWork ?? null,
     boqQuantities: (row.boqQuantities ?? []).map((entry) => ({
       id: String(entry.id ?? ''),
       boqItemId: String(entry.boqItemId),
@@ -93,6 +106,16 @@ function normaliseDpr(row: PublicDailyProgressReport): PublicDailyProgressReport
     tomorrowPlan: row.tomorrowPlan ?? null,
     photoDocumentIds: (row.photoDocumentIds ?? []).map(String),
     videoDocumentIds: (row.videoDocumentIds ?? []).map(String),
+    materialIssueIds: (row.materialIssueIds ?? []).map(String),
+    stockReservationIds: (row.stockReservationIds ?? []).map(String),
+    labourAttendanceIds: (row.labourAttendanceIds ?? []).map(String),
+    workMeasurementIds: (row.workMeasurementIds ?? []).map(String),
+    equipmentUtilizationIds: (row.equipmentUtilizationIds ?? []).map(String),
+    diaryEntryIds: (row.diaryEntryIds ?? []).map(String),
+    qualityObservationIds: (row.qualityObservationIds ?? []).map(String),
+    safetyIncidentIds: (row.safetyIncidentIds ?? []).map(String),
+    siteIssueIds: (row.siteIssueIds ?? []).map(String),
+    drawingIds: (row.drawingIds ?? []).map(String),
     siteCashBalance: Number(row.siteCashBalance ?? 0),
     siteCashAccountId:
       row.siteCashAccountId == null ? null : String(row.siteCashAccountId),
@@ -101,9 +124,17 @@ function normaliseDpr(row: PublicDailyProgressReport): PublicDailyProgressReport
     offlineCapturedAt: toIso(row.offlineCapturedAt),
     submittedBy: row.submittedBy == null ? null : String(row.submittedBy),
     submittedAt: toIso(row.submittedAt),
+    verifiedBy: row.verifiedBy == null ? null : String(row.verifiedBy),
+    verifiedAt: toIso(row.verifiedAt),
+    verifyNotes: row.verifyNotes ?? null,
     reviewedBy: row.reviewedBy == null ? null : String(row.reviewedBy),
     reviewedAt: toIso(row.reviewedAt),
     reviewNotes: row.reviewNotes ?? null,
+    approvedBy: row.approvedBy == null ? null : String(row.approvedBy),
+    approvedAt: toIso(row.approvedAt),
+    approveNotes: row.approveNotes ?? null,
+    lockedBy: row.lockedBy == null ? null : String(row.lockedBy),
+    lockedAt: toIso(row.lockedAt),
     reopenedBy: row.reopenedBy == null ? null : String(row.reopenedBy),
     reopenedAt: toIso(row.reopenedAt),
     reopenReason: row.reopenReason ?? null,
@@ -153,6 +184,8 @@ export async function fetchDailyProgressReports(
       page,
       limit,
       projectId: query.projectId,
+      siteId: query.siteId || undefined,
+      shift: query.shift || undefined,
       status: query.status || undefined,
       fromDate: query.fromDate || undefined,
       toDate: query.toDate || undefined,
@@ -192,7 +225,50 @@ export async function fetchDailyProgressReport(
   return normaliseDpr(res.data);
 }
 
-/** `POST /daily-progress-reports/:id/review` — `dpr.review` */
+/** `POST /daily-progress-reports/:id/verify` — `dpr.review` */
+export async function verifyDailyProgressReport(
+  id: string,
+  input: VerifyDprInput = {},
+): Promise<PublicDailyProgressReport> {
+  const res = await apiPost<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}/verify`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to verify daily progress report');
+  }
+  return normaliseDpr(res.data);
+}
+
+/** `POST /daily-progress-reports/:id/approve` — `dpr.review` */
+export async function approveDailyProgressReport(
+  id: string,
+  input: ApproveDprInput = {},
+): Promise<PublicDailyProgressReport> {
+  const res = await apiPost<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}/approve`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to approve daily progress report');
+  }
+  return normaliseDpr(res.data);
+}
+
+/** `POST /daily-progress-reports/:id/lock` — `dpr.review` */
+export async function lockDailyProgressReport(
+  id: string,
+): Promise<PublicDailyProgressReport> {
+  const res = await apiPost<PublicDailyProgressReport>(
+    `/daily-progress-reports/${encodeURIComponent(id)}/lock`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Failed to lock daily progress report');
+  }
+  return normaliseDpr(res.data);
+}
+
+/** `POST /daily-progress-reports/:id/review` — `dpr.review` (legacy → approved-like) */
 export async function reviewDailyProgressReport(
   id: string,
   input: ReviewDprInput,

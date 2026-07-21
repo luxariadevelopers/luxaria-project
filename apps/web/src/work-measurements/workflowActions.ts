@@ -9,6 +9,7 @@ export type WorkMeasurementRowActionId =
   | 'edit'
   | 'submit'
   | 'verify'
+  | 'certify'
   | 'reject'
   | 'cancel';
 
@@ -38,6 +39,12 @@ export function resolveWorkMeasurementRowActions(
   if (row.status === WorkMeasurementStatus.Submitted && caps.canVerify) {
     if (!currentUserId || row.measuredBy !== currentUserId) {
       actions.push('verify');
+    }
+  }
+
+  if (row.status === WorkMeasurementStatus.Verified && caps.canCertify) {
+    if (!currentUserId || row.measuredBy !== currentUserId) {
+      actions.push('certify');
     }
   }
 

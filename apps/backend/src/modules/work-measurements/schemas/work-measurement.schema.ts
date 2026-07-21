@@ -11,6 +11,8 @@ export enum WorkMeasurementStatus {
   Draft = 'draft',
   Submitted = 'submitted',
   Verified = 'verified',
+  /** Engineer-approved / certified — drives BOQ progressQuantity. */
+  Certified = 'certified',
   Rejected = 'rejected',
   Cancelled = 'cancelled',
 }
@@ -26,6 +28,19 @@ export class WorkMeasurement {
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;
 
+  /** Optional site scope (SE hierarchy). */
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  siteId!: Types.ObjectId | null;
+
+  /** Optional link to the daily progress report that owns this measurement. */
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'DailyProgressReport',
+    default: null,
+    index: true,
+  })
+  dprId!: Types.ObjectId | null;
+
   @Prop({ type: Types.ObjectId, ref: 'Contractor', required: true, index: true })
   contractorId!: Types.ObjectId;
 
@@ -37,6 +52,14 @@ export class WorkMeasurement {
 
   @Prop({ type: String, trim: true, required: true })
   location!: string;
+
+  /** Measurement sheet / MB reference (e.g. MB-12 / Sheet 3). */
+  @Prop({ type: String, trim: true, default: null })
+  sheetReference!: string | null;
+
+  /** Free-text description of work measured on the sheet. */
+  @Prop({ type: String, trim: true, default: null })
+  workDescription!: string | null;
 
   @Prop({ type: Date, required: true, index: true })
   measurementDate!: Date;
@@ -64,11 +87,22 @@ export class WorkMeasurement {
   @Prop({ type: Date, default: null })
   verifiedAt!: Date | null;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
+  certifiedBy!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  certifiedAt!: Date | null;
+
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Document' }], default: [] })
   photoDocumentIds!: Types.ObjectId[];
 
+  /** Legacy / free-text drawing ref (kept for PDF and offline). */
   @Prop({ type: String, trim: true, default: null })
   drawingReference!: string | null;
+
+  /** Future drawing register link (nullable until W8 register is wired). */
+  @Prop({ type: Types.ObjectId, ref: 'Drawing', default: null, index: true })
+  drawingId!: Types.ObjectId | null;
 
   @Prop({
     type: String,
@@ -112,3 +146,5 @@ WorkMeasurementSchema.plugin(softDeletePlugin);
 WorkMeasurementSchema.index({ projectId: 1, measurementDate: -1 });
 WorkMeasurementSchema.index({ projectId: 1, boqItemId: 1, status: 1 });
 WorkMeasurementSchema.index({ contractorId: 1, status: 1 });
+WorkMeasurementSchema.index({ dprId: 1, status: 1 });
+WorkMeasurementSchema.index({ projectId: 1, siteId: 1, measurementDate: -1 });

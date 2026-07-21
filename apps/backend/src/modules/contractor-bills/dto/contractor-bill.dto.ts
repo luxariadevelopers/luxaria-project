@@ -68,6 +68,20 @@ export class CreateContractorBillDto {
   @Min(0)
   materialRecovery?: number;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  equipmentRecovery?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  labourRecovery?: number;
+
   @ApiPropertyOptional({
     description: 'Override retention; default = agreement % of current value',
   })
@@ -97,6 +111,27 @@ export class CreateContractorBillDto {
   @IsNumber()
   @Min(0)
   otherDeductions?: number;
+
+  @ApiPropertyOptional({ description: 'Approved extras (CTR formula)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  approvedExtras?: number;
+
+  @ApiPropertyOptional({ description: 'Price escalation (CTR formula)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  priceEscalation?: number;
+
+  @ApiPropertyOptional({ description: 'GST added to net payable' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  gst?: number;
 
   @ApiPropertyOptional({ description: 'Document id / path for invoice' })
   @IsOptional()
@@ -143,6 +178,20 @@ export class UpdateContractorBillDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  equipmentRecovery?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  labourRecovery?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   retention?: number;
 
   @ApiPropertyOptional()
@@ -165,6 +214,27 @@ export class UpdateContractorBillDto {
   @IsNumber()
   @Min(0)
   otherDeductions?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  approvedExtras?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  priceEscalation?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  gst?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -193,6 +263,31 @@ export class WorkflowNoteDto {
   @IsString()
   @MaxLength(1000)
   notes?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional payment certificate number (director approve / post)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  paymentCertificateNumber?: string | null;
+}
+
+export class PostContractorBillDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Optional payment certificate number assigned on post',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  paymentCertificateNumber?: string | null;
 }
 
 export class ListContractorBillsQueryDto extends PaginationQueryDto {

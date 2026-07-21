@@ -17,6 +17,17 @@ import {
   IdempotencyService,
 } from '../../database/services/idempotency.service';
 import { DocumentsService } from '../documents/documents.service';
+import { MaterialIssuesService } from '../material-issues/material-issues.service';
+import {
+  MaterialIssue,
+  MaterialIssueStatus,
+  MaterialIssueTarget,
+} from '../material-issues/schemas/material-issue.schema';
+import {
+  Material,
+  MaterialStatus,
+  MaterialUnit,
+} from '../material-master/schemas/material.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import {
@@ -24,6 +35,10 @@ import {
   ProjectStatus,
 } from '../projects/schemas/project.schema';
 import { BoqItem } from '../boq/schemas/boq.schema';
+import { SiteAccessService } from '../sites/site-access.service';
+import { Site, SiteStatus } from '../sites/schemas/site.schema';
+import { StockReservationsService } from '../stock-reservations/stock-reservations.service';
+import { StockReservationSourceType } from '../stock-reservations/schemas/stock-reservation.schema';
 import { DprPdfService } from './dpr-pdf.service';
 import {
   type PublicDailyProgressReport,
@@ -37,6 +52,7 @@ import {
   roundQty,
 } from './dpr.validation';
 import type {
+  ApproveDailyProgressReportDto,
   CreateDailyProgressReportDto,
   DprBoqQuantityDto,
   DprDecisionRequiredDto,
@@ -49,13 +65,16 @@ import type {
   ReopenDailyProgressReportDto,
   ReviewDailyProgressReportDto,
   UpdateDailyProgressReportDto,
+  VerifyDailyProgressReportDto,
 } from './dto/dpr.dto';
 import {
   DailyProgressReport,
   DailyProgressReportDocument,
   DprIssueSeverity,
   DprMissingAlert,
+  DprShift,
   DprStatus,
+  isApprovedLike,
 } from './schemas/daily-progress-report.schema';
 
 const EDITABLE_STATUSES = [DprStatus.Draft, DprStatus.Reopened];
@@ -71,10 +90,19 @@ export class DprService {
     private readonly projectModel: Model<Project>,
     @InjectModel(BoqItem.name)
     private readonly boqItemModel: Model<BoqItem>,
+    @InjectModel(Site.name)
+    private readonly siteModel: Model<Site>,
+    @InjectModel(MaterialIssue.name)
+    private readonly materialIssueModel: Model<MaterialIssue>,
+    @InjectModel(Material.name)
+    private readonly materialModel: Model<Material>,
     private readonly numberingService: NumberingService,
     private readonly idempotencyService: IdempotencyService,
     private readonly documentsService: DocumentsService,
     private readonly pdfService: DprPdfService,
+    private readonly siteAccessService: SiteAccessService,
+    private readonly materialIssuesService: MaterialIssuesService,
+    private readonly stockReservationsService: StockReservationsService,
   ) {}
 
   async create(
@@ -113,8 +141,24 @@ export class DprService {
       }
 
       await this.requireProject(dto.projectId);
+      if (!dto.siteId?.trim()) {
+        throw new BadRequestException('siteId is required for new DPRs');
+      }
+      await this.requireSiteInProject(dto.siteId, dto.projectId);
+      await this.siteAccessService.assertSiteAccessIfScoped({
+        userId: actorId,
+        projectId: dto.projectId,
+        siteId: dto.siteId,
+      });
+
       const reportDate = normalizeReportDate(dto.reportDate);
-      await this.assertUniqueProjectDate(dto.projectId, reportDate);
+      const shift = dto.shift ?? DprShift.General;
+      await this.assertUniqueProjectSiteDateShift(
+        dto.projectId,
+        dto.siteId,
+        reportDate,
+        shift,
+      );
 
       const photoDocumentIds = mergeDocumentIds({
         ids: dto.photoDocumentIds,
@@ -143,7 +187,9 @@ export class DprService {
       const row = await this.dprModel.create({
         dprNumber,
         projectId: new Types.ObjectId(dto.projectId),
+        siteId: new Types.ObjectId(dto.siteId),
         reportDate,
+        shift,
         ...payload,
         status: DprStatus.Draft,
         idempotencyKey: idempotencyKey?.trim() || null,
@@ -190,7 +236,8 @@ export class DprService {
   ) {
     const row = await this.requireDpr(id);
     this.assertEditable(row);
-    await this.applyPartialUpdate(row, dto);
+    await this.assertSiteAccessForRow(row, actorId);
+    await this.applyPartialUpdate(row, dto, actorId);
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
 
@@ -200,8 +247,14 @@ export class DprService {
   async submit(id: string, actorId: string) {
     const row = await this.requireDpr(id);
     this.assertEditable(row);
+    await this.assertSiteAccessForRow(row, actorId);
     if (!row.workPerformed?.trim()) {
       throw new BadRequestException('workPerformed is required before submit');
+    }
+    if (!row.siteId) {
+      throw new BadRequestException(
+        'siteId is required before submit; set siteId on the DPR first',
+      );
     }
 
     const pdfBuffer = await this.pdfService.buildPdfBuffer(row);
@@ -226,6 +279,7 @@ export class DprService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
 
+    await this.softReserveMaterialsOnSubmit(row, actorId);
     await this.clearMissingAlert(String(row.projectId), row.reportDate);
 
     return createSuccessResponse(
@@ -234,25 +288,109 @@ export class DprService {
     );
   }
 
-  async review(
+  async verify(
     id: string,
-    dto: ReviewDailyProgressReportDto,
+    dto: VerifyDailyProgressReportDto,
     actorId: string,
   ) {
     const row = await this.requireDpr(id);
+    await this.assertSiteAccessForRow(row, actorId);
     if (row.status !== DprStatus.Submitted) {
-      throw new BadRequestException('Only submitted DPRs can be reviewed');
+      throw new BadRequestException('Only submitted DPRs can be verified');
     }
-    row.status = DprStatus.Reviewed;
-    row.reviewedBy = new Types.ObjectId(actorId);
-    row.reviewedAt = new Date();
-    row.reviewNotes = dto.reviewNotes?.trim() || null;
+    row.status = DprStatus.Verified;
+    row.verifiedBy = new Types.ObjectId(actorId);
+    row.verifiedAt = new Date();
+    row.verifyNotes = dto.verifyNotes?.trim() || null;
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
 
     return createSuccessResponse(
       toPublicDpr(row),
-      'Daily progress report reviewed',
+      'Daily progress report verified',
+    );
+  }
+
+  /**
+   * Legacy review endpoint — maps to approve behaviour (reviewed kept as alias).
+   * Prefer `/approve` for new clients.
+   */
+  async review(
+    id: string,
+    dto: ReviewDailyProgressReportDto,
+    actorId: string,
+  ) {
+    return this.approve(
+      id,
+      { approveNotes: dto.reviewNotes },
+      actorId,
+      { legacyReviewedAlias: true },
+    );
+  }
+
+  async approve(
+    id: string,
+    dto: ApproveDailyProgressReportDto,
+    actorId: string,
+    options?: { legacyReviewedAlias?: boolean },
+  ) {
+    const row = await this.requireDpr(id);
+    await this.assertSiteAccessForRow(row, actorId);
+
+    const approvable =
+      row.status === DprStatus.Submitted || row.status === DprStatus.Verified;
+    if (!approvable) {
+      throw new BadRequestException(
+        'Only submitted or verified DPRs can be approved',
+      );
+    }
+
+    await this.ensureMaterialIssuesForApprove(row, actorId);
+    await this.confirmLinkedMaterialIssues(row, actorId);
+    await this.consumeLinkedReservations(row, actorId);
+
+    if (options?.legacyReviewedAlias) {
+      row.status = DprStatus.Reviewed;
+      row.reviewedBy = new Types.ObjectId(actorId);
+      row.reviewedAt = new Date();
+      row.reviewNotes = dto.approveNotes?.trim() || null;
+    } else {
+      row.status = DprStatus.Approved;
+    }
+    row.approvedBy = new Types.ObjectId(actorId);
+    row.approvedAt = new Date();
+    row.approveNotes = dto.approveNotes?.trim() || null;
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save();
+
+    return createSuccessResponse(
+      toPublicDpr(row),
+      options?.legacyReviewedAlias
+        ? 'Daily progress report reviewed'
+        : 'Daily progress report approved; material issues confirmed',
+    );
+  }
+
+  async lock(id: string, actorId: string) {
+    const row = await this.requireDpr(id);
+    await this.assertSiteAccessForRow(row, actorId);
+    if (!isApprovedLike(row.status) || row.status === DprStatus.Locked) {
+      if (row.status === DprStatus.Locked) {
+        throw new BadRequestException('DPR is already locked');
+      }
+      throw new BadRequestException(
+        'Only approved or reviewed DPRs can be locked',
+      );
+    }
+    row.status = DprStatus.Locked;
+    row.lockedBy = new Types.ObjectId(actorId);
+    row.lockedAt = new Date();
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save();
+
+    return createSuccessResponse(
+      toPublicDpr(row),
+      'Daily progress report locked',
     );
   }
 
@@ -262,14 +400,34 @@ export class DprService {
     actorId: string,
   ) {
     const row = await this.requireDpr(id);
-    if (
-      row.status !== DprStatus.Submitted &&
-      row.status !== DprStatus.Reviewed
-    ) {
-      throw new BadRequestException(
-        'Only submitted or reviewed DPRs can be reopened',
+    await this.assertSiteAccessForRow(row, actorId);
+
+    if (dto.rejectToDraft && row.status === DprStatus.Submitted) {
+      row.status = DprStatus.Draft;
+      row.reopenedBy = new Types.ObjectId(actorId);
+      row.reopenedAt = new Date();
+      row.reopenReason = dto.reason.trim();
+      row.set('updatedBy', new Types.ObjectId(actorId));
+      await row.save();
+      return createSuccessResponse(
+        toPublicDpr(row),
+        'Daily progress report rejected to draft',
       );
     }
+
+    const reopenable =
+      row.status === DprStatus.Submitted ||
+      row.status === DprStatus.Verified ||
+      isApprovedLike(row.status);
+    if (!reopenable) {
+      throw new BadRequestException(
+        'Only submitted, verified, approved, reviewed, or locked DPRs can be reopened',
+      );
+    }
+    if (row.status === DprStatus.Locked) {
+      // Controlled unlock path — reopen for amend; stock corrections via returns.
+    }
+
     row.status = DprStatus.Reopened;
     row.reopenedBy = new Types.ObjectId(actorId);
     row.reopenedAt = new Date();
@@ -295,6 +453,10 @@ export class DprService {
     if (query.projectId) {
       filter.projectId = new Types.ObjectId(query.projectId);
     }
+    if (query.siteId) {
+      filter.siteId = new Types.ObjectId(query.siteId);
+    }
+    if (query.shift) filter.shift = query.shift;
     if (query.status) filter.status = query.status;
     if (query.fromDate || query.toDate) {
       filter.reportDate = {};
@@ -326,12 +488,14 @@ export class DprService {
 
   async regeneratePdf(id: string, actorId: string) {
     const row = await this.requireDpr(id);
+    await this.assertSiteAccessForRow(row, actorId);
     if (
       row.status !== DprStatus.Submitted &&
-      row.status !== DprStatus.Reviewed
+      row.status !== DprStatus.Verified &&
+      !isApprovedLike(row.status)
     ) {
       throw new BadRequestException(
-        'PDF can be regenerated only for submitted or reviewed DPRs',
+        'PDF can be regenerated only for submitted, verified, approved, reviewed, or locked DPRs',
       );
     }
     const pdfBuffer = await this.pdfService.buildPdfBuffer(row);
@@ -380,7 +544,13 @@ export class DprService {
           projectId: project._id,
           reportDate,
           status: {
-            $in: [DprStatus.Submitted, DprStatus.Reviewed],
+            $in: [
+              DprStatus.Submitted,
+              DprStatus.Verified,
+              DprStatus.Reviewed,
+              DprStatus.Approved,
+              DprStatus.Locked,
+            ],
           },
         })
         .lean()
@@ -464,12 +634,260 @@ export class DprService {
     );
   }
 
+  // ── Material consumption (W2) ──────────────────────────────────────
+
+  private async softReserveMaterialsOnSubmit(
+    row: DailyProgressReportDocument,
+    actorId: string,
+  ) {
+    const dprId = String(row._id);
+    const projectId = String(row.projectId);
+    const reservationIds = [...(row.stockReservationIds ?? [])];
+
+    for (const line of row.materialsIssued ?? []) {
+      if (!line.materialId || !(line.quantity > 0)) continue;
+      const unit = this.resolveMaterialUnit(line.unit);
+      if (!unit) continue;
+
+      try {
+        const created = await this.stockReservationsService.create(
+          {
+            projectId,
+            materialId: String(line.materialId),
+            quantity: line.quantity,
+            unit,
+            sourceType: StockReservationSourceType.Dpr,
+            sourceId: dprId,
+            notes: `Soft reserve from DPR ${row.dprNumber}`,
+          },
+          actorId,
+        );
+        if (created.data?.id) {
+          reservationIds.push(new Types.ObjectId(created.data.id));
+        }
+      } catch {
+        // Soft-reserve is best-effort; insufficient stock should not block submit.
+      }
+    }
+
+    row.stockReservationIds = reservationIds;
+    await row.save();
+  }
+
+  private async ensureMaterialIssuesForApprove(
+    row: DailyProgressReportDocument,
+    actorId: string,
+  ) {
+    const linkedIds = new Set(
+      (row.materialIssueIds ?? []).map((id) => String(id)),
+    );
+    const dprId = String(row._id);
+    const projectId = String(row.projectId);
+
+    // Link any draft issues already tagged with this dprId.
+    const tagged = await this.materialIssueModel
+      .find({
+        dprId: row._id,
+        status: {
+          $in: [MaterialIssueStatus.Draft, MaterialIssueStatus.Submitted],
+        },
+      })
+      .select('_id')
+      .lean()
+      .exec();
+    for (const issue of tagged) {
+      linkedIds.add(String(issue._id));
+    }
+
+    // Create draft issues from materialsIssued lines that have materialId
+    // and are not already covered by a linked issue.
+    const linesWithMaterial = (row.materialsIssued ?? []).filter(
+      (l) => l.materialId && l.quantity > 0,
+    );
+    if (linesWithMaterial.length && linkedIds.size === 0) {
+      const itemsByUnit = new Map<
+        string,
+        Array<{ materialId: string; quantity: number; unit: MaterialUnit }>
+      >();
+      for (const line of linesWithMaterial) {
+        const unit =
+          this.resolveMaterialUnit(line.unit) ??
+          (await this.lookupMaterialBaseUnit(String(line.materialId)));
+        if (!unit) continue;
+        const key = unit;
+        const list = itemsByUnit.get(key) ?? [];
+        list.push({
+          materialId: String(line.materialId),
+          quantity: line.quantity,
+          unit,
+        });
+        itemsByUnit.set(key, list);
+      }
+
+      const allItems = [...itemsByUnit.values()].flat();
+      if (allItems.length) {
+        const created = await this.materialIssuesService.create(
+          {
+            projectId,
+            issueDate: row.reportDate.toISOString(),
+            receivedBy: actorId,
+            issuedBy: actorId,
+            issueTarget: MaterialIssueTarget.Site,
+            issueSiteId: row.siteId ? String(row.siteId) : null,
+            dprId,
+            workLocation: `DPR ${row.dprNumber}`,
+            notes: `Auto-created from DPR ${row.dprNumber} approve`,
+            items: allItems,
+          },
+          actorId,
+        );
+        if (created.data?.id) {
+          linkedIds.add(created.data.id);
+        }
+      }
+    }
+
+    row.materialIssueIds = [...linkedIds].map((id) => new Types.ObjectId(id));
+    await row.save();
+  }
+
+  private async confirmLinkedMaterialIssues(
+    row: DailyProgressReportDocument,
+    actorId: string,
+  ) {
+    const dprId = String(row._id);
+    for (const issueId of row.materialIssueIds ?? []) {
+      const issue = await this.materialIssueModel.findById(issueId).exec();
+      if (!issue) continue;
+      if (issue.status === MaterialIssueStatus.Confirmed) continue;
+      if (issue.status === MaterialIssueStatus.Cancelled) continue;
+
+      if (!issue.dprId) {
+        issue.dprId = row._id as Types.ObjectId;
+        await issue.save();
+      }
+
+      await this.materialIssuesService.confirmForDpr(
+        String(issue._id),
+        dprId,
+        actorId,
+      );
+    }
+  }
+
+  private async consumeLinkedReservations(
+    row: DailyProgressReportDocument,
+    actorId: string,
+  ) {
+    const dprId = String(row._id);
+    const fromIds = (row.stockReservationIds ?? []).map(String);
+    const fromSource = await this.stockReservationsService.listActiveBySource(
+      StockReservationSourceType.Dpr,
+      dprId,
+    );
+    const allIds = new Set([
+      ...fromIds,
+      ...fromSource.map((r) => String(r._id)),
+    ]);
+
+    for (const reservationId of allIds) {
+      try {
+        await this.stockReservationsService.markConsumed(
+          reservationId,
+          actorId,
+        );
+      } catch {
+        // Already released/cancelled — ignore.
+      }
+    }
+  }
+
+  private resolveMaterialUnit(unit?: string | null): MaterialUnit | null {
+    if (!unit?.trim()) return null;
+    const normalized = unit.trim().toLowerCase().replace(/\s+/g, '_');
+    const values = Object.values(MaterialUnit) as string[];
+    if (values.includes(normalized)) {
+      return normalized as MaterialUnit;
+    }
+    return null;
+  }
+
+  private async lookupMaterialBaseUnit(
+    materialId: string,
+  ): Promise<MaterialUnit | null> {
+    if (!Types.ObjectId.isValid(materialId)) return null;
+    const material = await this.materialModel.findById(materialId).lean().exec();
+    if (!material || material.status !== MaterialStatus.Active) return null;
+    return material.baseUnit;
+  }
+
   // ── Internals ──────────────────────────────────────────────────────
 
   private async applyPartialUpdate(
     row: DailyProgressReportDocument,
     dto: UpdateDailyProgressReportDto,
+    actorId: string,
   ) {
+    if (dto.siteId !== undefined) {
+      if (!dto.siteId) {
+        throw new BadRequestException('siteId cannot be cleared');
+      }
+      await this.requireSiteInProject(dto.siteId, String(row.projectId));
+      await this.siteAccessService.assertSiteAccessIfScoped({
+        userId: actorId,
+        projectId: String(row.projectId),
+        siteId: dto.siteId,
+      });
+      const nextShift = dto.shift ?? row.shift ?? DprShift.General;
+      await this.assertUniqueProjectSiteDateShift(
+        String(row.projectId),
+        dto.siteId,
+        row.reportDate,
+        nextShift,
+        String(row._id),
+      );
+      row.siteId = new Types.ObjectId(dto.siteId);
+    }
+    if (dto.zoneSiteId !== undefined) {
+      row.zoneSiteId = dto.zoneSiteId
+        ? new Types.ObjectId(dto.zoneSiteId)
+        : null;
+    }
+    if (dto.blockSiteId !== undefined) {
+      row.blockSiteId = dto.blockSiteId
+        ? new Types.ObjectId(dto.blockSiteId)
+        : null;
+    }
+    if (dto.towerSiteId !== undefined) {
+      row.towerSiteId = dto.towerSiteId
+        ? new Types.ObjectId(dto.towerSiteId)
+        : null;
+    }
+    if (dto.floorSiteId !== undefined) {
+      row.floorSiteId = dto.floorSiteId
+        ? new Types.ObjectId(dto.floorSiteId)
+        : null;
+    }
+    if (dto.unitId !== undefined) {
+      row.unitId = dto.unitId ? new Types.ObjectId(dto.unitId) : null;
+    }
+    if (dto.locationSiteIds !== undefined) {
+      row.locationSiteIds = dto.locationSiteIds.map(
+        (id) => new Types.ObjectId(id),
+      );
+    }
+    if (dto.shift !== undefined) {
+      if (row.siteId) {
+        await this.assertUniqueProjectSiteDateShift(
+          String(row.projectId),
+          String(row.siteId),
+          row.reportDate,
+          dto.shift,
+          String(row._id),
+        );
+      }
+      row.shift = dto.shift;
+    }
     if (dto.weather !== undefined) row.weather = dto.weather;
     if (dto.weatherNotes !== undefined) {
       row.weatherNotes = dto.weatherNotes?.trim() || null;
@@ -486,6 +904,12 @@ export class DprService {
     }
     if (dto.workPerformed !== undefined) {
       row.workPerformed = dto.workPerformed?.trim() || null;
+    }
+    if (dto.plannedWork !== undefined) {
+      row.plannedWork = dto.plannedWork?.trim() || null;
+    }
+    if (dto.delayedWork !== undefined) {
+      row.delayedWork = dto.delayedWork?.trim() || null;
     }
     if (dto.boqQuantities !== undefined) {
       row.boqQuantities = await this.mapBoqQuantities(dto.boqQuantities);
@@ -522,6 +946,7 @@ export class DprService {
         (id) => new Types.ObjectId(id),
       );
     }
+    this.applyRefArrays(row, dto);
     if (dto.siteCashBalance !== undefined) {
       row.siteCashBalance = roundMoney(dto.siteCashBalance);
     }
@@ -541,6 +966,50 @@ export class DprService {
     }
   }
 
+  private applyRefArrays(
+    row: DailyProgressReportDocument,
+    dto: UpdateDailyProgressReportDto | CreateDailyProgressReportDto,
+  ) {
+    const map = (
+      ids: string[] | undefined,
+      setter: (oids: Types.ObjectId[]) => void,
+    ) => {
+      if (ids !== undefined) {
+        setter(ids.map((id) => new Types.ObjectId(id)));
+      }
+    };
+    map(dto.materialIssueIds, (v) => {
+      row.materialIssueIds = v;
+    });
+    map(dto.stockReservationIds, (v) => {
+      row.stockReservationIds = v;
+    });
+    map(dto.labourAttendanceIds, (v) => {
+      row.labourAttendanceIds = v;
+    });
+    map(dto.workMeasurementIds, (v) => {
+      row.workMeasurementIds = v;
+    });
+    map(dto.equipmentUtilizationIds, (v) => {
+      row.equipmentUtilizationIds = v;
+    });
+    map(dto.diaryEntryIds, (v) => {
+      row.diaryEntryIds = v;
+    });
+    map(dto.qualityObservationIds, (v) => {
+      row.qualityObservationIds = v;
+    });
+    map(dto.safetyIncidentIds, (v) => {
+      row.safetyIncidentIds = v;
+    });
+    map(dto.siteIssueIds, (v) => {
+      row.siteIssueIds = v;
+    });
+    map(dto.drawingIds, (v) => {
+      row.drawingIds = v;
+    });
+  }
+
   private async buildPayload(dto: CreateDailyProgressReportDto) {
     const skilled = dto.skilledLabourCount ?? 0;
     const unskilled = dto.unskilledLabourCount ?? 0;
@@ -549,6 +1018,14 @@ export class DprService {
       (skilled + unskilled > 0 ? skilled + unskilled : dto.labourCount ?? 0);
 
     return {
+      zoneSiteId: dto.zoneSiteId ? new Types.ObjectId(dto.zoneSiteId) : null,
+      blockSiteId: dto.blockSiteId ? new Types.ObjectId(dto.blockSiteId) : null,
+      towerSiteId: dto.towerSiteId ? new Types.ObjectId(dto.towerSiteId) : null,
+      floorSiteId: dto.floorSiteId ? new Types.ObjectId(dto.floorSiteId) : null,
+      unitId: dto.unitId ? new Types.ObjectId(dto.unitId) : null,
+      locationSiteIds: (dto.locationSiteIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
       weather: dto.weather,
       weatherNotes: dto.weatherNotes?.trim() || null,
       staffPresent: this.mapStaff(dto.staffPresent),
@@ -556,6 +1033,8 @@ export class DprService {
       skilledLabourCount: skilled,
       unskilledLabourCount: unskilled,
       workPerformed: dto.workPerformed?.trim() || null,
+      plannedWork: dto.plannedWork?.trim() || null,
+      delayedWork: dto.delayedWork?.trim() || null,
       boqQuantities: await this.mapBoqQuantities(dto.boqQuantities),
       materialsReceived: this.mapMaterials(dto.materialsReceived),
       materialsIssued: this.mapMaterials(dto.materialsIssued),
@@ -571,6 +1050,34 @@ export class DprService {
       videoDocumentIds: (dto.videoDocumentIds ?? []).map(
         (id) => new Types.ObjectId(id),
       ),
+      materialIssueIds: (dto.materialIssueIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      stockReservationIds: (dto.stockReservationIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      labourAttendanceIds: (dto.labourAttendanceIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      workMeasurementIds: (dto.workMeasurementIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      equipmentUtilizationIds: (dto.equipmentUtilizationIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      diaryEntryIds: (dto.diaryEntryIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      qualityObservationIds: (dto.qualityObservationIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      safetyIncidentIds: (dto.safetyIncidentIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      siteIssueIds: (dto.siteIssueIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      drawingIds: (dto.drawingIds ?? []).map((id) => new Types.ObjectId(id)),
       siteCashBalance: roundMoney(dto.siteCashBalance ?? 0),
       siteCashAccountId: dto.siteCashAccountId
         ? new Types.ObjectId(dto.siteCashAccountId)
@@ -655,17 +1162,26 @@ export class DprService {
     }
   }
 
-  private async assertUniqueProjectDate(projectId: string, reportDate: Date) {
-    const existing = await this.dprModel
-      .findOne({
-        projectId: new Types.ObjectId(projectId),
-        reportDate,
-      })
-      .lean()
-      .exec();
+  private async assertUniqueProjectSiteDateShift(
+    projectId: string,
+    siteId: string,
+    reportDate: Date,
+    shift: DprShift,
+    excludeId?: string,
+  ) {
+    const filter: FilterQuery<DailyProgressReport> = {
+      projectId: new Types.ObjectId(projectId),
+      siteId: new Types.ObjectId(siteId),
+      reportDate,
+      shift,
+    };
+    if (excludeId) {
+      filter._id = { $ne: new Types.ObjectId(excludeId) };
+    }
+    const existing = await this.dprModel.findOne(filter).lean().exec();
     if (existing) {
       throw new ConflictException(
-        `A DPR already exists for this project on ${reportDateKey(reportDate)}. Reopen it to make changes.`,
+        `A DPR already exists for this project/site on ${reportDateKey(reportDate)} (${shift}). Reopen it to make changes.`,
       );
     }
   }
@@ -695,6 +1211,33 @@ export class DprService {
     const project = await this.projectModel.findById(projectId).exec();
     if (!project) throw new NotFoundException('Project not found');
     return project;
+  }
+
+  private async requireSiteInProject(siteId: string, projectId: string) {
+    if (!Types.ObjectId.isValid(siteId)) {
+      throw new BadRequestException('Invalid siteId');
+    }
+    const site = await this.siteModel.findById(siteId).exec();
+    if (!site) throw new NotFoundException('Site not found');
+    if (String(site.projectId) !== projectId) {
+      throw new BadRequestException('siteId does not belong to projectId');
+    }
+    if (site.status !== SiteStatus.Active) {
+      throw new BadRequestException('Site is not active');
+    }
+    return site;
+  }
+
+  private async assertSiteAccessForRow(
+    row: DailyProgressReportDocument,
+    actorId: string,
+  ) {
+    if (!row.siteId) return;
+    await this.siteAccessService.assertSiteAccessIfScoped({
+      userId: actorId,
+      projectId: String(row.projectId),
+      siteId: String(row.siteId),
+    });
   }
 
   private async requireDpr(id: string): Promise<DailyProgressReportDocument> {
