@@ -21,6 +21,7 @@ import {
   listMaterialsForIssue,
   listUsersForReturn,
 } from '@/features/material-issue/api';
+import { buildMaterialIssueOfflineEnqueue } from '@/features/material-issue/buildMaterialIssueOfflineEnqueue';
 import {
   MaterialUnit,
   type MaterialIssueBoqItemOption,
@@ -33,6 +34,7 @@ import {
   type IssueLineDraft,
 } from '@/features/material-issue/validation';
 import type { AppStackParamList } from '@/navigation/types';
+import { useOfflineSync } from '@/offline';
 import { colors } from '@/theme/colors';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MaterialIssueForm'>;
@@ -52,6 +54,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
   const { user, hasPermission } = useAuth();
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
+  const { enqueue } = useOfflineSync();
 
   const canCreate = hasPermission('stock.issue');
   const canViewMaterials = hasPermission('material.view');
@@ -94,7 +97,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
     }
     if (!isOnline) {
       setLookupError(
-        'Load materials and BOQ items while online, then create the issue.',
+        'Load materials and BOQ items while online, then capture offline.',
       );
       return;
     }
@@ -187,11 +190,6 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
       Alert.alert('Project', 'Select a project first');
       return;
     }
-    if (!isOnline) {
-      Alert.alert('Offline', 'Material issue creation requires a network connection.');
-      return;
-    }
-
     const validated = validateIssueForm({
       projectId,
       issueDate,
@@ -212,22 +210,38 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
 
     setSaving(true);
     setError(null);
+    const issueItems = validated.payload.items.map((item) => ({
+      materialId: item.materialId,
+      quantity: item.quantity,
+      unit: item.unit as MaterialUnit,
+      batch: item.batch,
+      notes: item.notes,
+    }));
     try {
-      const created = await createMaterialIssue({
-        ...validated.payload,
-        items: validated.payload.items.map((item) => ({
-          materialId: item.materialId,
-          quantity: item.quantity,
-          unit: item.unit as MaterialUnit,
-          batch: item.batch,
-          notes: item.notes,
-        })),
-      });
-      Alert.alert(
-        'Draft created',
-        `${created.issueNumber} saved as draft. Add signatures and submit from the web app.`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
-      );
+      if (isOnline) {
+        const created = await createMaterialIssue({
+          ...validated.payload,
+          items: issueItems,
+        });
+        Alert.alert(
+          'Draft created',
+          `${created.issueNumber} saved as draft. Add signatures and submit from the web app.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
+      } else {
+        await enqueue(
+          buildMaterialIssueOfflineEnqueue({
+            ...validated.payload,
+            items: issueItems,
+            offlineCapturedAt: new Date().toISOString(),
+          }),
+        );
+        Alert.alert(
+          'Queued',
+          'Material issue draft saved offline. It will sync when you are back online.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
+      }
     } catch (err) {
       if (isForbiddenError(err)) {
         setError('Permission denied — stock.issue is required.');
@@ -242,6 +256,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
     boqItemId,
     canCreate,
     contractorId,
+    enqueue,
     floorId,
     isOnline,
     issueDate,
