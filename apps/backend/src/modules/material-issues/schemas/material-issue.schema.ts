@@ -14,6 +14,23 @@ export enum MaterialIssueStatus {
   Cancelled = 'cancelled',
 }
 
+export enum MaterialIssueTarget {
+  Site = 'site',
+  Contractor = 'contractor',
+  Labour = 'labour',
+  Equipment = 'equipment',
+  Department = 'department',
+  Employee = 'employee',
+  BoqWork = 'boq_work',
+}
+
+export enum MaterialReturnType {
+  Good = 'good_return',
+  Damaged = 'damaged_return',
+  Excess = 'excess_return',
+  Unused = 'unused_return',
+}
+
 @Schema({ _id: false })
 export class MaterialIssueSignatures {
   @Prop({ type: Types.ObjectId, ref: 'StoredDocument', default: null })
@@ -97,6 +114,13 @@ export class MaterialReturnItem {
   @Prop({ type: String, trim: true, default: null })
   reason!: string | null;
 
+  @Prop({
+    type: String,
+    enum: MaterialReturnType,
+    default: MaterialReturnType.Good,
+  })
+  returnType!: MaterialReturnType;
+
   @Prop({ type: Types.ObjectId, ref: 'MaterialStockTransaction', default: null })
   stockLedgerEntryId!: Types.ObjectId | null;
 }
@@ -159,11 +183,35 @@ export class MaterialIssue {
   @Prop({ type: String, trim: true, default: null })
   floorId!: string | null;
 
-  @Prop({ type: Types.ObjectId, required: true, index: true })
-  boqItemId!: Types.ObjectId;
+  /** Legacy BOQ link — optional when issueTarget is not boq_work. */
+  @Prop({ type: Types.ObjectId, default: null, index: true })
+  boqItemId!: Types.ObjectId | null;
 
-  @Prop({ type: String, trim: true, required: true })
-  workLocation!: string;
+  @Prop({ type: String, trim: true, default: null })
+  workLocation!: string | null;
+
+  @Prop({
+    type: String,
+    enum: MaterialIssueTarget,
+    default: MaterialIssueTarget.BoqWork,
+    index: true,
+  })
+  issueTarget!: MaterialIssueTarget;
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
+  issueSiteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
+  issueEmployeeId!: Types.ObjectId | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  issueDepartment!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  issueEquipmentRef!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  issueLabourRef!: string | null;
 
   /** Store / yard location used for stock balance (matches ledger location). */
   @Prop({ type: String, trim: true, default: '', index: true })

@@ -66,6 +66,8 @@ import { FormDemoPage } from '@/pages/FormDemoPage';
 import { FundingDashboardPage } from '@/pages/FundingDashboardPage';
 import { GrnDetailPage } from '@/pages/GrnDetailPage';
 import { GrnsPage } from '@/pages/GrnsPage';
+import { InventoryDashboardPage } from '@/pages/InventoryDashboardPage';
+import { InventoryReportsPage } from '@/pages/InventoryReportsPage';
 import { InvestorDetailPage } from '@/pages/InvestorDetailPage';
 import { InvestorsPage } from '@/pages/InvestorsPage';
 import { JournalCreatePage } from '@/pages/JournalCreatePage';
@@ -135,6 +137,7 @@ import { SignedPaymentVoucherDetailPage } from '@/pages/SignedPaymentVoucherDeta
 import { SignedPaymentVouchersPage } from '@/pages/SignedPaymentVouchersPage';
 import { SiteOperationsDashboardPage } from '@/pages/SiteOperationsDashboardPage';
 import { StockBalancesPage } from '@/pages/StockBalancesPage';
+import { StockTransfersPage } from '@/pages/StockTransfersPage';
 import { StockCountDetailPage } from '@/pages/StockCountDetailPage';
 import { StockCountsPage } from '@/pages/StockCountsPage';
 import { StockLedgerPage } from '@/pages/StockLedgerPage';
@@ -230,12 +233,15 @@ export const APP_ROUTE_ELEMENTS: {
   'vendor-invoices': <VendorInvoicesPage />,
   'vendor-invoice-match': <VendorInvoiceMatchPage />,
   'vendor-payments': <VendorPaymentsPage />,
+  'inventory-dashboard': <InventoryDashboardPage />,
   materials: <MaterialsPage />,
   'material-detail': <MaterialDetailPage />,
   'stock-balances': <StockBalancesPage />,
   'stock-ledger': <StockLedgerPage />,
   'stock-counts': <StockCountsPage />,
   'stock-count-detail': <StockCountDetailPage />,
+  'stock-transfers': <StockTransfersPage />,
+  'inventory-reports': <InventoryReportsPage />,
   units: <UnitsPage />,
   'unit-detail': <UnitDetailPage />,
   collections: <CollectionsPage />,

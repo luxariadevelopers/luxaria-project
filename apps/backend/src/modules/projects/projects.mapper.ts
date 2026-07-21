@@ -82,6 +82,7 @@ const EMPTY_SETTINGS: ProjectSettingsEmbed = {
   dprEnabled: true,
   labourEnabled: true,
   inventoryEnabled: true,
+  inventoryCostingMethod: 'weighted_average',
   equipmentEnabled: false,
   procurementEnabled: true,
   pettyCashEnabled: true,

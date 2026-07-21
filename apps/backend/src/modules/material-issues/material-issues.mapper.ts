@@ -1,6 +1,10 @@
 import type { Types } from 'mongoose';
 import type { MaterialUnit } from '../material-master/schemas/material.schema';
-import type { MaterialIssueStatus } from './schemas/material-issue.schema';
+import type {
+  MaterialIssueStatus,
+  MaterialIssueTarget,
+  MaterialReturnType,
+} from './schemas/material-issue.schema';
 
 export type PublicMaterialIssueSignatures = {
   recipientSignatureDocumentId: string | null;
@@ -33,6 +37,7 @@ export type PublicMaterialReturnItem = {
   quantity: number;
   baseUnitQuantity: number;
   reason: string | null;
+  returnType: MaterialReturnType | null;
   stockLedgerEntryId: string | null;
 };
 
@@ -56,8 +61,14 @@ export type PublicMaterialIssue = {
   contractorId: string | null;
   blockId: string | null;
   floorId: string | null;
-  boqItemId: string;
-  workLocation: string;
+  boqItemId: string | null;
+  workLocation: string | null;
+  issueTarget: MaterialIssueTarget;
+  issueSiteId: string | null;
+  issueEmployeeId: string | null;
+  issueDepartment: string | null;
+  issueEquipmentRef: string | null;
+  issueLabourRef: string | null;
   storeLocation: string;
   items: PublicMaterialIssueItem[];
   signatures: PublicMaterialIssueSignatures;
@@ -100,6 +111,7 @@ type ReturnItemLike = {
   quantity: number;
   baseUnitQuantity: number;
   reason?: string | null;
+  returnType?: MaterialReturnType | null;
   stockLedgerEntryId?: Types.ObjectId | string | null;
 };
 
@@ -123,8 +135,14 @@ type IssueLike = {
   contractorId?: Types.ObjectId | string | null;
   blockId?: Types.ObjectId | string | null;
   floorId?: string | null;
-  boqItemId: Types.ObjectId | string;
-  workLocation: string;
+  boqItemId?: Types.ObjectId | string | null;
+  workLocation?: string | null;
+  issueTarget?: MaterialIssueTarget;
+  issueSiteId?: Types.ObjectId | string | null;
+  issueEmployeeId?: Types.ObjectId | string | null;
+  issueDepartment?: string | null;
+  issueEquipmentRef?: string | null;
+  issueLabourRef?: string | null;
   storeLocation?: string;
   items: ItemLike[];
   signatures?: {
@@ -159,8 +177,14 @@ export function toPublicMaterialIssue(row: IssueLike): PublicMaterialIssue {
     contractorId: oid(row.contractorId),
     blockId: oid(row.blockId),
     floorId: row.floorId ?? null,
-    boqItemId: String(row.boqItemId),
-    workLocation: row.workLocation,
+    boqItemId: oid(row.boqItemId),
+    workLocation: row.workLocation ?? null,
+    issueTarget: row.issueTarget ?? ('boq_work' as MaterialIssueTarget),
+    issueSiteId: oid(row.issueSiteId),
+    issueEmployeeId: oid(row.issueEmployeeId),
+    issueDepartment: row.issueDepartment ?? null,
+    issueEquipmentRef: row.issueEquipmentRef ?? null,
+    issueLabourRef: row.issueLabourRef ?? null,
     storeLocation: row.storeLocation ?? '',
     items: (row.items ?? []).map((item) => {
       const returned = item.returnedBaseQuantity ?? 0;
@@ -208,6 +232,7 @@ export function toPublicMaterialIssue(row: IssueLike): PublicMaterialIssue {
         quantity: item.quantity,
         baseUnitQuantity: item.baseUnitQuantity,
         reason: item.reason ?? null,
+        returnType: item.returnType ?? null,
         stockLedgerEntryId: item.stockLedgerEntryId
           ? String(item.stockLedgerEntryId)
           : null,

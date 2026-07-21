@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
@@ -14,7 +15,12 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { MaterialStatus, MaterialUnit } from '../schemas/material.schema';
+import {
+  AbcClassification,
+  MaterialStatus,
+  MaterialType,
+  MaterialUnit,
+} from '../schemas/material.schema';
 
 export class UnitConversionFactorDto {
   @ApiProperty({ enum: MaterialUnit })
@@ -117,6 +123,70 @@ export class CreateMaterialDto {
   @ApiProperty({ description: 'Chart of accounts ledger for material postings' })
   @IsMongoId()
   ledgerAccountId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  materialCategoryId?: string | null;
+
+  @ApiPropertyOptional({ example: 'structural' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  materialGroup?: string | null;
+
+  @ApiPropertyOptional({ example: '25232930' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  hsnCode?: string | null;
+
+  @ApiPropertyOptional({ example: 18 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  gstRate?: number | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  preferredVendorIds?: string[];
+
+  @ApiPropertyOptional({ example: 180 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  shelfLifeDays?: number | null;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  batchControlled?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  serialControlled?: boolean;
+
+  @ApiPropertyOptional({ enum: MaterialType })
+  @IsOptional()
+  @IsEnum(MaterialType)
+  materialType?: MaterialType;
+
+  @ApiPropertyOptional({ enum: AbcClassification })
+  @IsOptional()
+  @IsEnum(AbcClassification)
+  abcClassification?: AbcClassification | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  barcode?: string | null;
 
   @ApiPropertyOptional({ enum: MaterialStatus })
   @IsOptional()

@@ -64,6 +64,13 @@ import { StockCountsModule } from './modules/stock-counts/stock-counts.module';
 import { MaterialIssuesModule } from './modules/material-issues/material-issues.module';
 import { MaterialConsumptionModule } from './modules/material-consumption/material-consumption.module';
 import { StockReorderModule } from './modules/stock-reorder/stock-reorder.module';
+import { WarehouseLocationsModule } from './modules/warehouse-locations/warehouse-locations.module';
+import { InventoryCostingModule } from './modules/inventory-costing/inventory-costing.module';
+import { StockTransfersModule } from './modules/stock-transfers/stock-transfers.module';
+import { StockReservationsModule } from './modules/stock-reservations/stock-reservations.module';
+import { InventoryBarcodeModule } from './modules/inventory-barcode/inventory-barcode.module';
+import { InventoryDashboardModule } from './modules/inventory-dashboard/inventory-dashboard.module';
+import { InventoryReportsModule } from './modules/inventory-reports/inventory-reports.module';
 import { JournalModule } from './modules/journal/journal.module';
 import { NumberingModule } from './modules/numbering/numbering.module';
 import { PettyCashFundTransfersModule } from './modules/petty-cash-fund-transfers/petty-cash-fund-transfers.module';
@@ -144,11 +151,18 @@ import { ObservabilityModule } from './common/observability/observability.module
     LabourAttendanceModule,
     ManpowerPlanningModule,
     MaterialMasterModule,
+    InventoryCostingModule,
     StockLedgerModule,
     StockCountsModule,
     MaterialIssuesModule,
     MaterialConsumptionModule,
     StockReorderModule,
+    WarehouseLocationsModule,
+    StockTransfersModule,
+    StockReservationsModule,
+    InventoryBarcodeModule,
+    InventoryDashboardModule,
+    InventoryReportsModule,
     ProcurementMastersModule,
     PurchaseRequestsModule,
     RfqModule,

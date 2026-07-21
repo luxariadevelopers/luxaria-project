@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class ProjectSettingsDto {
   @ApiPropertyOptional()
@@ -16,6 +16,15 @@ export class ProjectSettingsDto {
   @IsOptional()
   @IsBoolean()
   inventoryEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    enum: ['weighted_average', 'fifo', 'moving_average'],
+    description: 'Inventory costing method for the project',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['weighted_average', 'fifo', 'moving_average'])
+  inventoryCostingMethod?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

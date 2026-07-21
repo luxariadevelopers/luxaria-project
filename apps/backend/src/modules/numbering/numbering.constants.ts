@@ -23,6 +23,8 @@ export enum NumberEntityType {
   STOCK_COUNT = 'STOCK_COUNT',
   MATERIAL_ISSUE = 'MATERIAL_ISSUE',
   MATERIAL_RETURN = 'MATERIAL_RETURN',
+  STOCK_TRANSFER = 'STOCK_TRANSFER',
+  STOCK_RESERVATION = 'STOCK_RESERVATION',
   VENDOR_INVOICE = 'VENDOR_INVOICE',
   VENDOR_PAYMENT = 'VENDOR_PAYMENT',
   BOQ = 'BOQ',
@@ -206,6 +208,18 @@ export const NUMBER_FORMATS: Record<NumberEntityType, NumberFormatConfig> = {
   },
   [NumberEntityType.MATERIAL_RETURN]: {
     prefix: 'MR',
+    padLength: 6,
+    useFinancialYear: true,
+    allowProjectScope: true,
+  },
+  [NumberEntityType.STOCK_TRANSFER]: {
+    prefix: 'ST',
+    padLength: 6,
+    useFinancialYear: true,
+    allowProjectScope: true,
+  },
+  [NumberEntityType.STOCK_RESERVATION]: {
+    prefix: 'RSV',
     padLength: 6,
     useFinancialYear: true,
     allowProjectScope: true,

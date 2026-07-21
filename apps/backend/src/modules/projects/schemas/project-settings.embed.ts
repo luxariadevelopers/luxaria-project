@@ -11,6 +11,13 @@ export class ProjectSettingsEmbed {
   @Prop({ type: Boolean, default: true })
   inventoryEnabled!: boolean;
 
+  /**
+   * Inventory valuation method for the project.
+   * weighted_average | fifo | moving_average
+   */
+  @Prop({ type: String, default: 'weighted_average' })
+  inventoryCostingMethod!: string;
+
   @Prop({ type: Boolean, default: false })
   equipmentEnabled!: boolean;
 
@@ -38,6 +45,7 @@ export function defaultProjectSettings(): ProjectSettingsEmbed {
     dprEnabled: true,
     labourEnabled: true,
     inventoryEnabled: true,
+    inventoryCostingMethod: 'weighted_average',
     equipmentEnabled: false,
     procurementEnabled: true,
     pettyCashEnabled: true,

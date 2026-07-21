@@ -26,6 +26,8 @@ export enum WarehouseKind {
   SiteStore = 'site_store',
   TemporaryStore = 'temporary_store',
   ScrapYard = 'scrap_yard',
+  ReturnStore = 'return_store',
+  QuarantineStore = 'quarantine_store',
 }
 
 @Schema({

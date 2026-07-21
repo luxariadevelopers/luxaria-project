@@ -24,6 +24,17 @@ export enum MaterialStatus {
   Inactive = 'inactive',
 }
 
+export enum MaterialType {
+  Consumable = 'consumable',
+  Asset = 'asset',
+}
+
+export enum AbcClassification {
+  A = 'A',
+  B = 'B',
+  C = 'C',
+}
+
 /**
  * Conversion: 1 × `unit` = `factorToBase` × baseUnit.
  * Example: baseUnit=kilogram, unit=ton, factorToBase=1000.
@@ -90,6 +101,51 @@ export class Material {
 
   @Prop({ type: Types.ObjectId, ref: 'Account', required: true, index: true })
   ledgerAccountId!: Types.ObjectId;
+
+  /** Optional link to company material category catalog. */
+  @Prop({ type: Types.ObjectId, ref: 'MaterialCategory', default: null, index: true })
+  materialCategoryId!: Types.ObjectId | null;
+
+  @Prop({ type: String, trim: true, lowercase: true, default: null, index: true })
+  materialGroup!: string | null;
+
+  @Prop({ type: String, trim: true, uppercase: true, default: null, index: true })
+  hsnCode!: string | null;
+
+  @Prop({ type: Number, min: 0, max: 100, default: null })
+  gstRate!: number | null;
+
+  @Prop({ type: [Types.ObjectId], ref: 'Vendor', default: [] })
+  preferredVendorIds!: Types.ObjectId[];
+
+  @Prop({ type: Number, min: 0, default: null })
+  shelfLifeDays!: number | null;
+
+  @Prop({ type: Boolean, default: false })
+  batchControlled!: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  serialControlled!: boolean;
+
+  @Prop({
+    type: String,
+    enum: MaterialType,
+    default: MaterialType.Consumable,
+    index: true,
+  })
+  materialType!: MaterialType;
+
+  @Prop({
+    type: String,
+    enum: AbcClassification,
+    default: null,
+    index: true,
+  })
+  abcClassification!: AbcClassification | null;
+
+  /** Stable barcode / QR payload key (defaults to materialCode). */
+  @Prop({ type: String, trim: true, uppercase: true, default: null, index: true })
+  barcode!: string | null;
 
   @Prop({
     type: String,

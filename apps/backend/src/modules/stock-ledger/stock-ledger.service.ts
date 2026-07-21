@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -12,12 +14,14 @@ import type { AppConfig } from '../../config/configuration';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
 import { DatabaseService } from '../../database/services/database.service';
+import { InventoryCostingService } from '../inventory-costing/inventory-costing.service';
 import { convertToBaseUnit } from '../material-master/materials.validation';
 import {
   Material,
   MaterialStatus,
 } from '../material-master/schemas/material.schema';
 import {
+  InventoryCostingMethod,
   MaterialStockTransaction,
   StockTransactionType,
 } from '../material-master/schemas/material-stock-transaction.schema';
@@ -56,12 +60,20 @@ export type PostStockLedgerInput = {
   transactionDate: Date | string;
   location?: string | null;
   batch?: string | null;
+  serialNumbers?: string[];
   notes?: string | null;
   allowNegative?: boolean;
   actorId: string;
   session?: ClientSession;
   /** When posting a reversal row */
   reversalOfId?: string | null;
+  unitCostHint?: number;
+  warehouseId?: string | null;
+  siteId?: string | null;
+  zoneId?: string | null;
+  rackId?: string | null;
+  binId?: string | null;
+  approvedBy?: string | null;
 };
 
 @Injectable()
@@ -76,6 +88,8 @@ export class StockLedgerService {
     private readonly numberingService: NumberingService,
     private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService<AppConfig, true>,
+    @Inject(forwardRef(() => InventoryCostingService))
+    private readonly costingService: InventoryCostingService,
   ) {}
 
   async post(dto: PostStockLedgerEntryDto, actorId: string) {
@@ -159,6 +173,13 @@ export class StockLedgerService {
       this.configService.get('stockAllowNegative', { infer: true });
 
     const work = async (session: ClientSession) => {
+      const beforeQty = await this.readBalanceQty({
+        materialId: material._id as Types.ObjectId,
+        projectId: new Types.ObjectId(input.projectId),
+        location,
+        session,
+      });
+
       await this.applyBalanceDelta({
         materialId: material._id as Types.ObjectId,
         projectId: new Types.ObjectId(input.projectId),
@@ -170,6 +191,8 @@ export class StockLedgerService {
         session,
       });
 
+      const afterQty = roundQty(beforeQty + baseUnitQuantity);
+
       const transactionNumber = await this.numberingService.nextCode(
         NumberEntityType.STOCK_LEDGER,
         {
@@ -179,6 +202,33 @@ export class StockLedgerService {
         },
         session,
       );
+
+      const unitCostHint =
+        input.unitCostHint ??
+        (baseUnitQuantity > 0 ? (material.standardRate ?? 0) : undefined);
+
+      const skipCost =
+        input.transactionType === StockTransactionType.Reservation ||
+        input.transactionType === StockTransactionType.ReleaseReservation;
+
+      const cost = skipCost
+        ? {
+            unitCost: 0,
+            totalValue: 0,
+            costingMethod: InventoryCostingMethod.WeightedAverage,
+            costLayerIds: [] as Types.ObjectId[],
+          }
+        : await this.costingService.applyMovement({
+            projectId: input.projectId,
+            materialId: String(material._id),
+            location,
+            baseQtyDelta: baseUnitQuantity,
+            unitCostHint,
+            sourceLedgerId: null,
+            batch: input.batch?.trim() || null,
+            session,
+            transactionDate,
+          });
 
       const [row] = await this.ledgerModel.create(
         [
@@ -198,6 +248,23 @@ export class StockLedgerService {
             transactionDate,
             location: location || null,
             batch: input.batch?.trim() || null,
+            serialNumbers: input.serialNumbers ?? [],
+            beforeQty,
+            afterQty,
+            unitCost: cost.unitCost,
+            totalValue: cost.totalValue,
+            costingMethod: cost.costingMethod,
+            costLayerIds: cost.costLayerIds,
+            warehouseId: input.warehouseId
+              ? new Types.ObjectId(input.warehouseId)
+              : null,
+            siteId: input.siteId ? new Types.ObjectId(input.siteId) : null,
+            zoneId: input.zoneId ? new Types.ObjectId(input.zoneId) : null,
+            rackId: input.rackId ? new Types.ObjectId(input.rackId) : null,
+            binId: input.binId ? new Types.ObjectId(input.binId) : null,
+            approvedBy: input.approvedBy
+              ? new Types.ObjectId(input.approvedBy)
+              : null,
             createdBy: new Types.ObjectId(input.actorId),
             reversalOfId: input.reversalOfId
               ? new Types.ObjectId(input.reversalOfId)
@@ -408,6 +475,24 @@ export class StockLedgerService {
       .countDocuments({ materialId: new Types.ObjectId(materialId) })
       .exec();
     return count > 0;
+  }
+
+  private async readBalanceQty(input: {
+    materialId: Types.ObjectId;
+    projectId: Types.ObjectId;
+    location: string;
+    session: ClientSession;
+  }): Promise<number> {
+    const row = await this.balanceModel
+      .findOne({
+        materialId: input.materialId,
+        projectId: input.projectId,
+        location: input.location,
+      })
+      .session(input.session)
+      .lean()
+      .exec();
+    return row?.quantityInBaseUnit ?? 0;
   }
 
   private async applyBalanceDelta(input: {

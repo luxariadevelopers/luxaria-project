@@ -4,9 +4,13 @@ import { StockTransactionType } from '../material-master/schemas/material-stock-
 const IN_TYPES = new Set<StockTransactionType>([
   StockTransactionType.OpeningStock,
   StockTransactionType.PurchaseReceipt,
+  StockTransactionType.ManualReceipt,
   StockTransactionType.TransferIn,
   StockTransactionType.ReturnFromWork,
   StockTransactionType.Adjustment,
+  StockTransactionType.PhysicalCount,
+  StockTransactionType.CycleCount,
+  StockTransactionType.ReleaseReservation,
 ]);
 
 const OUT_TYPES = new Set<StockTransactionType>([
@@ -15,8 +19,14 @@ const OUT_TYPES = new Set<StockTransactionType>([
   StockTransactionType.ReturnToVendor,
   StockTransactionType.Wastage,
   StockTransactionType.Damage,
+  StockTransactionType.Scrap,
+  StockTransactionType.Consumption,
   StockTransactionType.TheftOrShortage,
   StockTransactionType.Adjustment,
+  StockTransactionType.ClosingStock,
+  StockTransactionType.PhysicalCount,
+  StockTransactionType.CycleCount,
+  StockTransactionType.Reservation,
 ]);
 
 export function roundQty(value: number): number {
@@ -35,13 +45,17 @@ export function assertQuantities(input: {
     throw new BadRequestException('quantityOut must be ≥ 0');
   }
 
-  if (input.transactionType === StockTransactionType.Adjustment) {
+  if (
+    input.transactionType === StockTransactionType.Adjustment ||
+    input.transactionType === StockTransactionType.PhysicalCount ||
+    input.transactionType === StockTransactionType.CycleCount
+  ) {
     if (
       (input.quantityIn > 0 && input.quantityOut > 0) ||
       (input.quantityIn === 0 && input.quantityOut === 0)
     ) {
       throw new BadRequestException(
-        'Adjustment requires exactly one of quantityIn or quantityOut > 0',
+        `${input.transactionType} requires exactly one of quantityIn or quantityOut > 0`,
       );
     }
     return;

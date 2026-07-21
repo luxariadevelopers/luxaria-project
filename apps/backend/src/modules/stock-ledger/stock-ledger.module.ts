@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { InventoryCostingModule } from '../inventory-costing/inventory-costing.module';
 import {
   Material,
   MaterialSchema,
@@ -29,6 +30,7 @@ import { StockLedgerService } from './stock-ledger.service';
       },
       { name: Material.name, schema: MaterialSchema },
     ]),
+    forwardRef(() => InventoryCostingModule),
     RbacModule,
   ],
   controllers: [StockLedgerController],

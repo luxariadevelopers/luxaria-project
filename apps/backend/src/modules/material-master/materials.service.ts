@@ -35,6 +35,7 @@ import {
 import {
   Material,
   MaterialStatus,
+  MaterialType,
   MaterialUnit,
 } from './schemas/material.schema';
 
@@ -92,6 +93,21 @@ export class MaterialsService {
       maximumStock: dto.maximumStock ?? 0,
       standardWastagePercentage: dto.standardWastagePercentage ?? 0,
       ledgerAccountId: new Types.ObjectId(dto.ledgerAccountId),
+      materialCategoryId: dto.materialCategoryId
+        ? new Types.ObjectId(dto.materialCategoryId)
+        : null,
+      materialGroup: dto.materialGroup?.trim().toLowerCase() || null,
+      hsnCode: dto.hsnCode?.trim().toUpperCase() || null,
+      gstRate: dto.gstRate ?? null,
+      preferredVendorIds: (dto.preferredVendorIds ?? []).map(
+        (id) => new Types.ObjectId(id),
+      ),
+      shelfLifeDays: dto.shelfLifeDays ?? null,
+      batchControlled: dto.batchControlled ?? false,
+      serialControlled: dto.serialControlled ?? false,
+      materialType: dto.materialType ?? MaterialType.Consumable,
+      abcClassification: dto.abcClassification ?? null,
+      barcode: dto.barcode?.trim().toUpperCase() || materialCode,
       status: dto.status ?? MaterialStatus.Active,
       createdBy: new Types.ObjectId(actorId),
     });
@@ -185,6 +201,39 @@ export class MaterialsService {
       update.ledgerAccountId = new Types.ObjectId(dto.ledgerAccountId);
     }
     if (dto.status !== undefined) update.status = dto.status;
+    if (dto.materialCategoryId !== undefined) {
+      update.materialCategoryId = dto.materialCategoryId
+        ? new Types.ObjectId(dto.materialCategoryId)
+        : null;
+    }
+    if (dto.materialGroup !== undefined) {
+      update.materialGroup = dto.materialGroup?.trim().toLowerCase() || null;
+    }
+    if (dto.hsnCode !== undefined) {
+      update.hsnCode = dto.hsnCode?.trim().toUpperCase() || null;
+    }
+    if (dto.gstRate !== undefined) update.gstRate = dto.gstRate;
+    if (dto.preferredVendorIds !== undefined) {
+      update.preferredVendorIds = dto.preferredVendorIds.map(
+        (vid) => new Types.ObjectId(vid),
+      );
+    }
+    if (dto.shelfLifeDays !== undefined) {
+      update.shelfLifeDays = dto.shelfLifeDays;
+    }
+    if (dto.batchControlled !== undefined) {
+      update.batchControlled = dto.batchControlled;
+    }
+    if (dto.serialControlled !== undefined) {
+      update.serialControlled = dto.serialControlled;
+    }
+    if (dto.materialType !== undefined) update.materialType = dto.materialType;
+    if (dto.abcClassification !== undefined) {
+      update.abcClassification = dto.abcClassification;
+    }
+    if (dto.barcode !== undefined) {
+      update.barcode = dto.barcode?.trim().toUpperCase() || null;
+    }
 
     const updated = await this.materialModel
       .findByIdAndUpdate(id, update, { new: true })

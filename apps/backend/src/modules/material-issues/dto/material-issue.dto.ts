@@ -16,7 +16,11 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { MaterialUnit } from '../../material-master/schemas/material.schema';
-import { MaterialIssueStatus } from '../schemas/material-issue.schema';
+import {
+  MaterialIssueStatus,
+  MaterialIssueTarget,
+  MaterialReturnType,
+} from '../schemas/material-issue.schema';
 
 export class MaterialIssueItemDto {
   @ApiProperty()
@@ -80,14 +84,54 @@ export class CreateMaterialIssueDto {
   @MaxLength(40)
   floorId?: string | null;
 
-  @ApiProperty({ description: 'BOQ item the issue is charged against' })
+  @ApiPropertyOptional({
+    description: 'BOQ item (required when issueTarget is boq_work)',
+  })
+  @IsOptional()
   @IsMongoId()
-  boqItemId!: string;
+  boqItemId?: string | null;
 
-  @ApiProperty({ example: 'Block A – Column casting' })
+  @ApiPropertyOptional({ example: 'Block A – Column casting' })
+  @IsOptional()
   @IsString()
   @MaxLength(240)
-  workLocation!: string;
+  workLocation?: string | null;
+
+  @ApiPropertyOptional({
+    enum: MaterialIssueTarget,
+    default: MaterialIssueTarget.BoqWork,
+  })
+  @IsOptional()
+  @IsEnum(MaterialIssueTarget)
+  issueTarget?: MaterialIssueTarget;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  issueSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  issueEmployeeId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  issueDepartment?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  issueEquipmentRef?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  issueLabourRef?: string | null;
 
   @ApiPropertyOptional({
     example: 'Main Store',
@@ -222,6 +266,11 @@ export class MaterialReturnItemDto {
   @IsString()
   @MaxLength(500)
   reason?: string | null;
+
+  @ApiPropertyOptional({ enum: MaterialReturnType })
+  @IsOptional()
+  @IsEnum(MaterialReturnType)
+  returnType?: MaterialReturnType;
 }
 
 export class CreateMaterialReturnDto {

@@ -9,6 +9,7 @@ export type MaterialStockTransactionDocument =
 export enum StockTransactionType {
   OpeningStock = 'opening_stock',
   PurchaseReceipt = 'purchase_receipt',
+  ManualReceipt = 'manual_receipt',
   TransferIn = 'transfer_in',
   TransferOut = 'transfer_out',
   MaterialIssue = 'material_issue',
@@ -16,9 +17,22 @@ export enum StockTransactionType {
   ReturnToVendor = 'return_to_vendor',
   Wastage = 'wastage',
   Damage = 'damage',
+  Scrap = 'scrap',
+  Consumption = 'consumption',
   TheftOrShortage = 'theft_or_shortage',
   Adjustment = 'adjustment',
+  ClosingStock = 'closing_stock',
+  PhysicalCount = 'physical_count',
+  CycleCount = 'cycle_count',
+  Reservation = 'reservation',
+  ReleaseReservation = 'release_reservation',
   Reversal = 'reversal',
+}
+
+export enum InventoryCostingMethod {
+  WeightedAverage = 'weighted_average',
+  Fifo = 'fifo',
+  MovingAverage = 'moving_average',
 }
 
 /**
@@ -85,6 +99,49 @@ export class MaterialStockTransaction {
 
   @Prop({ type: String, trim: true, default: null, index: true })
   batch!: string | null;
+
+  @Prop({ type: [String], default: [] })
+  serialNumbers!: string[];
+
+  @Prop({ type: Number, default: 0 })
+  beforeQty!: number;
+
+  @Prop({ type: Number, default: 0 })
+  afterQty!: number;
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  unitCost!: number;
+
+  @Prop({ type: Number, default: 0 })
+  totalValue!: number;
+
+  @Prop({
+    type: String,
+    enum: InventoryCostingMethod,
+    default: InventoryCostingMethod.WeightedAverage,
+  })
+  costingMethod!: InventoryCostingMethod;
+
+  @Prop({ type: [Types.ObjectId], default: [] })
+  costLayerIds!: Types.ObjectId[];
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  warehouseId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  siteId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'WarehouseLocation', default: null })
+  zoneId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'WarehouseLocation', default: null })
+  rackId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'WarehouseLocation', default: null })
+  binId!: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  approvedBy!: Types.ObjectId | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   createdBy!: Types.ObjectId;

@@ -1137,6 +1137,10 @@ export class ProjectsService {
       dprEnabled: dto.dprEnabled ?? base.dprEnabled,
       labourEnabled: dto.labourEnabled ?? base.labourEnabled,
       inventoryEnabled: dto.inventoryEnabled ?? base.inventoryEnabled,
+      inventoryCostingMethod:
+        dto.inventoryCostingMethod ??
+        base.inventoryCostingMethod ??
+        'weighted_average',
       equipmentEnabled: dto.equipmentEnabled ?? base.equipmentEnabled,
       procurementEnabled: dto.procurementEnabled ?? base.procurementEnabled,
       pettyCashEnabled: dto.pettyCashEnabled ?? base.pettyCashEnabled,

@@ -1,6 +1,9 @@
 import type { Types } from 'mongoose';
 import type { MaterialUnit } from '../material-master/schemas/material.schema';
-import type { StockTransactionType } from '../material-master/schemas/material-stock-transaction.schema';
+import type {
+  InventoryCostingMethod,
+  StockTransactionType,
+} from '../material-master/schemas/material-stock-transaction.schema';
 
 export type PublicStockLedgerEntry = {
   id: string;
@@ -18,7 +21,16 @@ export type PublicStockLedgerEntry = {
   transactionDate: Date;
   location: string | null;
   batch: string | null;
+  serialNumbers: string[];
+  beforeQty: number;
+  afterQty: number;
+  unitCost: number;
+  totalValue: number;
+  costingMethod: InventoryCostingMethod | null;
+  warehouseId: string | null;
+  siteId: string | null;
   createdBy: string;
+  approvedBy: string | null;
   reversalOfId: string | null;
   reversedById: string | null;
   notes: string | null;
@@ -52,7 +64,16 @@ type EntryLike = {
   transactionDate: Date;
   location?: string | null;
   batch?: string | null;
+  serialNumbers?: string[];
+  beforeQty?: number;
+  afterQty?: number;
+  unitCost?: number;
+  totalValue?: number;
+  costingMethod?: InventoryCostingMethod | null;
+  warehouseId?: Types.ObjectId | string | null;
+  siteId?: Types.ObjectId | string | null;
   createdBy: Types.ObjectId | string;
+  approvedBy?: Types.ObjectId | string | null;
   reversalOfId?: Types.ObjectId | string | null;
   reversedById?: Types.ObjectId | string | null;
   notes?: string | null;
@@ -89,7 +110,16 @@ export function toPublicStockLedgerEntry(
     transactionDate: row.transactionDate,
     location: row.location ?? null,
     batch: row.batch ?? null,
+    serialNumbers: row.serialNumbers ?? [],
+    beforeQty: row.beforeQty ?? 0,
+    afterQty: row.afterQty ?? row.baseUnitQuantity ?? 0,
+    unitCost: row.unitCost ?? 0,
+    totalValue: row.totalValue ?? 0,
+    costingMethod: row.costingMethod ?? null,
+    warehouseId: row.warehouseId ? String(row.warehouseId) : null,
+    siteId: row.siteId ? String(row.siteId) : null,
     createdBy: String(row.createdBy),
+    approvedBy: row.approvedBy ? String(row.approvedBy) : null,
     reversalOfId: row.reversalOfId ? String(row.reversalOfId) : null,
     reversedById: row.reversedById ? String(row.reversedById) : null,
     notes: row.notes ?? null,

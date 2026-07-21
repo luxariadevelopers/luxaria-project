@@ -40,7 +40,9 @@ import {
   MaterialIssue,
   MaterialIssueItem,
   MaterialIssueStatus,
+  MaterialIssueTarget,
   MaterialReturnItem,
+  MaterialReturnType,
 } from './schemas/material-issue.schema';
 
 @Injectable()
@@ -79,10 +81,18 @@ export class MaterialIssuesService {
       throw new BadRequestException('Invalid issueDate');
     }
 
-    const workLocation = assertWorkLocation(dto.workLocation);
-    const boqItemId = assertBoqItemId(dto.boqItemId);
-    if (!Types.ObjectId.isValid(boqItemId)) {
-      throw new BadRequestException('Invalid boqItemId');
+    const issueTarget = dto.issueTarget ?? MaterialIssueTarget.BoqWork;
+    let workLocation: string | null = null;
+    let boqItemId: string | null = null;
+    if (issueTarget === MaterialIssueTarget.BoqWork) {
+      workLocation = assertWorkLocation(dto.workLocation ?? '');
+      boqItemId = assertBoqItemId(dto.boqItemId ?? '');
+      if (!Types.ObjectId.isValid(boqItemId)) {
+        throw new BadRequestException('Invalid boqItemId');
+      }
+    } else {
+      workLocation = dto.workLocation?.trim() || null;
+      boqItemId = dto.boqItemId ?? null;
     }
 
     const storeLocation = normalizeLocation(dto.storeLocation);
@@ -108,8 +118,18 @@ export class MaterialIssuesService {
         : null,
       blockId: dto.blockId ? new Types.ObjectId(dto.blockId) : null,
       floorId: dto.floorId?.trim() || null,
-      boqItemId: new Types.ObjectId(boqItemId),
+      boqItemId: boqItemId ? new Types.ObjectId(boqItemId) : null,
       workLocation,
+      issueTarget,
+      issueSiteId: dto.issueSiteId
+        ? new Types.ObjectId(dto.issueSiteId)
+        : null,
+      issueEmployeeId: dto.issueEmployeeId
+        ? new Types.ObjectId(dto.issueEmployeeId)
+        : null,
+      issueDepartment: dto.issueDepartment?.trim() || null,
+      issueEquipmentRef: dto.issueEquipmentRef?.trim() || null,
+      issueLabourRef: dto.issueLabourRef?.trim() || null,
       storeLocation,
       items,
       signatures: {
@@ -390,6 +410,7 @@ export class MaterialIssuesService {
         quantity: roundQty(dtoItem.quantity),
         baseUnitQuantity,
         reason: dtoItem.reason?.trim() ?? null,
+        returnType: dtoItem.returnType ?? MaterialReturnType.Good,
         stockLedgerEntryId: entry._id as Types.ObjectId,
       });
     }
