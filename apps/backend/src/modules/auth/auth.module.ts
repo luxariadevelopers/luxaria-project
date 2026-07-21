@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
@@ -12,6 +12,7 @@ import { ProjectAccessModule } from '../project-access/project-access.module';
 import { PermissionsGuard } from '../rbac/guards/permissions.guard';
 import { RbacModule } from '../rbac/rbac.module';
 import { SessionModule } from '../sessions/session.module';
+import { SitesModule } from '../sites/sites.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -25,6 +26,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     EmployeesModule,
     RbacModule,
     ProjectAccessModule,
+    forwardRef(() => SitesModule),
     SessionModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

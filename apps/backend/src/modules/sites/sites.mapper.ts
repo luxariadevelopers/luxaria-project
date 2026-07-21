@@ -1,14 +1,22 @@
 import type { Types } from 'mongoose';
-import type { SiteStatus, SiteType } from './schemas/site.schema';
+import type {
+  SiteStatus,
+  SiteType,
+  WarehouseKind,
+} from './schemas/site.schema';
 import type { SiteAssignmentStatus } from './schemas/site-assignment.schema';
 
 export type PublicSite = {
   id: string;
   companyId: string;
   projectId: string;
+  parentSiteId: string | null;
   siteCode: string;
   siteName: string;
   type: SiteType;
+  warehouseKind: WarehouseKind | null;
+  contactName: string | null;
+  contactPhone: string | null;
   address: string | null;
   status: SiteStatus;
   startDate: Date | null;
@@ -18,6 +26,10 @@ export type PublicSite = {
   geo: Record<string, unknown> | null;
   createdAt?: Date;
   updatedAt?: Date;
+};
+
+export type PublicSiteNode = PublicSite & {
+  children: PublicSiteNode[];
 };
 
 export type PublicSiteAssignment = {
@@ -43,9 +55,13 @@ type SiteLike = {
   _id: Types.ObjectId | string;
   companyId: Types.ObjectId | string;
   projectId: Types.ObjectId | string;
+  parentSiteId?: Types.ObjectId | string | null;
   siteCode: string;
   siteName: string;
   type: SiteType;
+  warehouseKind?: WarehouseKind | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
   address?: string | null;
   status: SiteStatus;
   startDate?: Date | null;
@@ -81,9 +97,13 @@ export function toPublicSite(site: SiteLike): PublicSite {
     id: String(site._id),
     companyId: String(site.companyId),
     projectId: String(site.projectId),
+    parentSiteId: site.parentSiteId ? String(site.parentSiteId) : null,
     siteCode: site.siteCode,
     siteName: site.siteName,
     type: site.type,
+    warehouseKind: site.warehouseKind ?? null,
+    contactName: site.contactName ?? null,
+    contactPhone: site.contactPhone ?? null,
     address: site.address ?? null,
     status: site.status,
     startDate: site.startDate ?? null,
@@ -121,4 +141,20 @@ export function toPublicSiteAssignment(
     createdAt: assignment.createdAt,
     updatedAt: assignment.updatedAt,
   };
+}
+
+export function buildSiteTree(sites: PublicSite[]): PublicSiteNode[] {
+  const byId = new Map<string, PublicSiteNode>();
+  for (const site of sites) {
+    byId.set(site.id, { ...site, children: [] });
+  }
+  const roots: PublicSiteNode[] = [];
+  for (const node of byId.values()) {
+    if (node.parentSiteId && byId.has(node.parentSiteId)) {
+      byId.get(node.parentSiteId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
 }

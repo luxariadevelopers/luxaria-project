@@ -22,6 +22,7 @@ import { toPublicAssignment } from './project-access.mapper';
 import {
   ProjectAccessStatus,
   ProjectAssignment,
+  ProjectTeamRole,
 } from './schemas/project-assignment.schema';
 import type { ProjectAccessOperation } from './schemas/unauthorized-project-access.schema';
 import { UnauthorizedProjectAccess } from './schemas/unauthorized-project-access.schema';
@@ -706,6 +707,104 @@ export class ProjectAccessService {
         `Failed to audit unauthorized project access: ${(error as Error).message}`,
       );
     }
+  }
+
+  /**
+   * Upsert a project-scoped assignment with optional teamRole (Phase 2 PLM team API).
+   */
+  async upsertTeamAssignment(input: {
+    userId: string;
+    projectId: string;
+    teamRole: ProjectTeamRole;
+    accessStartDate: Date;
+    accessEndDate?: Date | null;
+    actorId?: string;
+  }) {
+    await this.assertUserExists(input.userId);
+    if (!Types.ObjectId.isValid(input.projectId)) {
+      throw new BadRequestException('Invalid project id');
+    }
+    this.assertDateWindow(
+      input.accessStartDate,
+      input.accessEndDate ?? null,
+    );
+
+    const existing = await this.assignmentModel
+      .findOne({
+        userId: new Types.ObjectId(input.userId),
+        projectId: new Types.ObjectId(input.projectId),
+        globalAccess: false,
+      })
+      .exec();
+
+    if (existing) {
+      const updated = await this.assignmentModel
+        .findByIdAndUpdate(
+          existing._id,
+          {
+            status: ProjectAccessStatus.Active,
+            teamRole: input.teamRole,
+            accessStartDate: input.accessStartDate,
+            accessEndDate: input.accessEndDate ?? null,
+            updatedBy: input.actorId
+              ? new Types.ObjectId(input.actorId)
+              : null,
+          },
+          { new: true },
+        )
+        .exec();
+      await this.syncUserAssignedProjects(input.userId);
+      return updated!;
+    }
+
+    const created = await this.assignmentModel.create({
+      userId: new Types.ObjectId(input.userId),
+      projectId: new Types.ObjectId(input.projectId),
+      globalAccess: false,
+      accessStartDate: input.accessStartDate,
+      accessEndDate: input.accessEndDate ?? null,
+      status: ProjectAccessStatus.Active,
+      teamRole: input.teamRole,
+      notes: null,
+      createdBy: input.actorId ? new Types.ObjectId(input.actorId) : null,
+    });
+    await this.syncUserAssignedProjects(input.userId);
+    return created;
+  }
+
+  async listTeamAssignments(projectId: string) {
+    if (!Types.ObjectId.isValid(projectId)) {
+      throw new BadRequestException('Invalid project id');
+    }
+    return this.assignmentModel
+      .find({
+        projectId: new Types.ObjectId(projectId),
+        globalAccess: false,
+        status: ProjectAccessStatus.Active,
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async revokeTeamAssignment(assignmentId: string, actorId?: string) {
+    const assignment = await this.requireAssignment(assignmentId);
+    if (assignment.globalAccess || !assignment.projectId) {
+      throw new BadRequestException(
+        'Only project-scoped team assignments can be revoked via team API',
+      );
+    }
+    const updated = await this.assignmentModel
+      .findByIdAndUpdate(
+        assignmentId,
+        {
+          status: ProjectAccessStatus.Inactive,
+          updatedBy: actorId ? new Types.ObjectId(actorId) : null,
+        },
+        { new: true },
+      )
+      .exec();
+    await this.syncUserAssignedProjects(String(assignment.userId));
+    return updated!;
   }
 
   /**

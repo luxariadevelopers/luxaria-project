@@ -43,5 +43,6 @@ export type { SystemExecutionContext } from './system-execution-context';
 export {
   ProjectAccessStatus,
   ProjectAssignment,
+  ProjectTeamRole,
 } from './schemas/project-assignment.schema';
 export { RESOURCE_OWNERSHIP_REGISTRY } from './resource-ownership.registry';

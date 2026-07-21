@@ -13,11 +13,19 @@ export enum SiteType {
   Tower = 'tower',
   Phase = 'phase',
   WorkArea = 'work_area',
+  Floor = 'floor',
 }
 
 export enum SiteStatus {
   Active = 'active',
   Inactive = 'inactive',
+}
+
+export enum WarehouseKind {
+  MainStore = 'main_store',
+  SiteStore = 'site_store',
+  TemporaryStore = 'temporary_store',
+  ScrapYard = 'scrap_yard',
 }
 
 @Schema({
@@ -31,6 +39,10 @@ export class Site {
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;
 
+  /** Self-ref for structure hierarchy (site → phase → block → tower → floor). */
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  parentSiteId!: Types.ObjectId | null;
+
   @Prop({ required: true, trim: true, uppercase: true })
   siteCode!: string;
 
@@ -39,6 +51,19 @@ export class Site {
 
   @Prop({ type: String, enum: SiteType, default: SiteType.Site })
   type!: SiteType;
+
+  @Prop({
+    type: String,
+    enum: WarehouseKind,
+    default: null,
+  })
+  warehouseKind!: WarehouseKind | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  contactName!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  contactPhone!: string | null;
 
   @Prop({ type: String, trim: true, default: null })
   address!: string | null;
@@ -82,3 +107,5 @@ SiteSchema.index(
 
 SiteSchema.index({ companyId: 1, projectId: 1, status: 1 });
 SiteSchema.index({ projectId: 1, status: 1 });
+SiteSchema.index({ projectId: 1, parentSiteId: 1 });
+SiteSchema.index({ projectId: 1, type: 1 });

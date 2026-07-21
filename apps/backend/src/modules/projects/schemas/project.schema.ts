@@ -7,18 +7,31 @@ import {
   AddressEmbed,
   AddressEmbedSchema,
 } from '../../company/schemas/address.embed';
+import {
+  defaultProjectFinancialConfig,
+  ProjectFinancialConfigEmbed,
+  ProjectFinancialConfigEmbedSchema,
+} from './project-financial-config.embed';
+import {
+  defaultProjectSettings,
+  ProjectSettingsEmbed,
+  ProjectSettingsEmbedSchema,
+} from './project-settings.embed';
 import { ReraDetailsEmbed, ReraDetailsEmbedSchema } from './rera-details.embed';
 
 export type ProjectDocument = HydratedDocument<Project>;
 
 export enum ProjectStatus {
+  Draft = 'Draft',
   Planning = 'Planning',
   Approval = 'Approval',
   PreConstruction = 'Pre-Construction',
   Construction = 'Construction',
+  Active = 'Active',
   OnHold = 'On Hold',
   Completed = 'Completed',
   Closed = 'Closed',
+  Archived = 'Archived',
   Cancelled = 'Cancelled',
 }
 
@@ -101,10 +114,43 @@ export class Project {
   @Prop({
     type: String,
     enum: ProjectStatus,
-    default: ProjectStatus.Planning,
+    default: ProjectStatus.Draft,
     index: true,
   })
   status!: ProjectStatus;
+
+  /** Status captured when suspending to On Hold; cleared on resume. */
+  @Prop({ type: String, enum: ProjectStatus, default: null })
+  statusBeforeHold!: ProjectStatus | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  clientName!: string | null;
+
+  @Prop({ type: String, trim: true, uppercase: true, default: 'INR' })
+  currency!: string;
+
+  @Prop({ type: String, trim: true, default: 'Asia/Kolkata' })
+  timeZone!: string;
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'FinancialYear',
+    default: null,
+    index: true,
+  })
+  financialYearId!: Types.ObjectId | null;
+
+  @Prop({
+    type: ProjectSettingsEmbedSchema,
+    default: () => defaultProjectSettings(),
+  })
+  settings!: ProjectSettingsEmbed;
+
+  @Prop({
+    type: ProjectFinancialConfigEmbedSchema,
+    default: () => defaultProjectFinancialConfig(),
+  })
+  financialConfig!: ProjectFinancialConfigEmbed;
 
   @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
   projectManager!: Types.ObjectId | null;

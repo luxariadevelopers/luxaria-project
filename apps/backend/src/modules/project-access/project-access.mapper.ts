@@ -1,5 +1,8 @@
 import type { Types } from 'mongoose';
-import type { ProjectAccessStatus } from './schemas/project-assignment.schema';
+import type {
+  ProjectAccessStatus,
+  ProjectTeamRole,
+} from './schemas/project-assignment.schema';
 
 export type PublicProjectAssignment = {
   id: string;
@@ -10,6 +13,7 @@ export type PublicProjectAssignment = {
   accessEndDate: Date | null;
   status: ProjectAccessStatus;
   notes: string | null;
+  teamRole: ProjectTeamRole | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -23,6 +27,7 @@ type AssignmentLike = {
   accessEndDate?: Date | null;
   status: ProjectAccessStatus;
   notes?: string | null;
+  teamRole?: ProjectTeamRole | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -37,6 +42,7 @@ export function toPublicAssignment(assignment: AssignmentLike): PublicProjectAss
     accessEndDate: assignment.accessEndDate ?? null,
     status: assignment.status,
     notes: assignment.notes ?? null,
+    teamRole: assignment.teamRole ?? null,
     createdAt: assignment.createdAt,
     updatedAt: assignment.updatedAt,
   };

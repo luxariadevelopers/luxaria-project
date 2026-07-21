@@ -107,4 +107,15 @@ export type ProjectDashboardSummary = {
     drillDown: DrillDownLink[];
   };
   criticalAlerts: CriticalAlert[];
+  /** Phase 2 PLM optional summary counters (cheap aggregates). */
+  pendingApprovalsCount: number;
+  pendingPoCount: number;
+  pendingGrnCount: number;
+  dprStatusSummary: {
+    draft: number;
+    submitted: number;
+    reviewed: number;
+    reopened: number;
+    other: number;
+  };
 };

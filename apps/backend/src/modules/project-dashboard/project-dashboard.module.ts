@@ -24,6 +24,10 @@ import {
   DprMissingAlertSchema,
 } from '../daily-progress-reports/schemas/daily-progress-report.schema';
 import {
+  GoodsReceipt,
+  GoodsReceiptSchema,
+} from '../goods-receipts/schemas/goods-receipt.schema';
+import {
   JournalEntry,
   JournalEntrySchema,
 } from '../journal/schemas/journal-entry.schema';
@@ -99,6 +103,7 @@ import { ProjectDashboardService } from './project-dashboard.service';
       { name: ManpowerShortfallAlert.name, schema: ManpowerShortfallAlertSchema },
       { name: DprMissingAlert.name, schema: DprMissingAlertSchema },
       { name: PurchaseRequest.name, schema: PurchaseRequestSchema },
+      { name: GoodsReceipt.name, schema: GoodsReceiptSchema },
     ]),
     ProjectAccessModule,
   ],

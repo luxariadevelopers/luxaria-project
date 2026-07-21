@@ -1,6 +1,8 @@
 import type { Types } from 'mongoose';
 import type { AddressEmbed } from '../company/schemas/address.embed';
+import type { ProjectFinancialConfigEmbed } from './schemas/project-financial-config.embed';
 import type { ProjectDocumentCategory } from './schemas/project-document.schema';
+import type { ProjectSettingsEmbed } from './schemas/project-settings.embed';
 import type { ReraDetailsEmbed } from './schemas/rera-details.embed';
 import type { ProjectStage, ProjectStatus, ProjectType } from './schemas/project.schema';
 
@@ -22,6 +24,13 @@ export type PublicProject = {
   expectedCompletionDate: Date | null;
   actualCompletionDate: Date | null;
   status: ProjectStatus;
+  statusBeforeHold: ProjectStatus | null;
+  clientName: string | null;
+  currency: string;
+  timeZone: string;
+  financialYearId: string | null;
+  settings: ProjectSettingsEmbed;
+  financialConfig: ProjectFinancialConfigEmbed;
   projectManager: string | null;
   assignedDirectors: string[];
   defaultBankAccount: string | null;
@@ -51,6 +60,13 @@ type ProjectLike = {
   expectedCompletionDate?: Date | null;
   actualCompletionDate?: Date | null;
   status: ProjectStatus;
+  statusBeforeHold?: ProjectStatus | null;
+  clientName?: string | null;
+  currency?: string | null;
+  timeZone?: string | null;
+  financialYearId?: Types.ObjectId | string | null;
+  settings?: ProjectSettingsEmbed | null;
+  financialConfig?: ProjectFinancialConfigEmbed | null;
   projectManager?: Types.ObjectId | string | null;
   assignedDirectors?: Array<Types.ObjectId | string>;
   defaultBankAccount?: Types.ObjectId | string | null;
@@ -60,6 +76,27 @@ type ProjectLike = {
   companyId?: Types.ObjectId | string | null;
   createdAt?: Date;
   updatedAt?: Date;
+};
+
+const EMPTY_SETTINGS: ProjectSettingsEmbed = {
+  dprEnabled: true,
+  labourEnabled: true,
+  inventoryEnabled: true,
+  equipmentEnabled: false,
+  procurementEnabled: true,
+  pettyCashEnabled: true,
+  boqEnabled: true,
+  billingEnabled: true,
+  customerBookingEnabled: true,
+};
+
+const EMPTY_FINANCIAL: ProjectFinancialConfigEmbed = {
+  costCentreCodes: [],
+  profitCentreCode: null,
+  defaultGstPercent: null,
+  defaultCurrency: null,
+  taxNotes: null,
+  budgetCategories: [],
 };
 
 export function toPublicProject(project: ProjectLike): PublicProject {
@@ -81,6 +118,15 @@ export function toPublicProject(project: ProjectLike): PublicProject {
     expectedCompletionDate: project.expectedCompletionDate ?? null,
     actualCompletionDate: project.actualCompletionDate ?? null,
     status: project.status,
+    statusBeforeHold: project.statusBeforeHold ?? null,
+    clientName: project.clientName ?? null,
+    currency: project.currency ?? 'INR',
+    timeZone: project.timeZone ?? 'Asia/Kolkata',
+    financialYearId: project.financialYearId
+      ? String(project.financialYearId)
+      : null,
+    settings: project.settings ?? EMPTY_SETTINGS,
+    financialConfig: project.financialConfig ?? EMPTY_FINANCIAL,
     projectManager: project.projectManager ? String(project.projectManager) : null,
     assignedDirectors: (project.assignedDirectors ?? []).map((id) => String(id)),
     defaultBankAccount: project.defaultBankAccount
@@ -109,6 +155,7 @@ export type PublicProjectDocument = {
   mimeType: string | null;
   sizeBytes: number;
   category: ProjectDocumentCategory;
+  version: number;
   description: string | null;
   uploadedBy: string | null;
   createdAt?: Date;

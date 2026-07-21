@@ -157,6 +157,40 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="project-structure" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/structure')}
+                element={APP_ROUTE_ELEMENTS['project-structure']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-team" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/team')}
+                element={APP_ROUTE_ELEMENTS['project-team']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-warehouses" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/warehouses')}
+                element={APP_ROUTE_ELEMENTS['project-warehouses']}
+              />
+            </Route>
+
+            <Route
+              element={
+                <RegistryRouteGuard routeId="project-financial-settings" />
+              }
+            >
+              <Route
+                path={toRelativeAppPath(
+                  '/projects/:projectId/financial-settings',
+                )}
+                element={APP_ROUTE_ELEMENTS['project-financial-settings']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="project-dashboard" />}>
               <Route
                 path={toRelativeAppPath('/projects/dashboard')}

@@ -1,37 +1,53 @@
 import { BadRequestException } from '@nestjs/common';
 import { ProjectStatus } from './schemas/project.schema';
 
+/**
+ * Phase 2 lifecycle transitions (backward compatible with Phase 1 statuses).
+ * Archive uses `project.close`; clone uses `project.create` (no new permission codes).
+ */
 const ALLOWED_STATUS_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
+  [ProjectStatus.Draft]: [ProjectStatus.Planning, ProjectStatus.Cancelled],
   [ProjectStatus.Planning]: [
     ProjectStatus.Approval,
     ProjectStatus.OnHold,
     ProjectStatus.Cancelled,
+    ProjectStatus.Draft,
   ],
   [ProjectStatus.Approval]: [
+    ProjectStatus.Active,
     ProjectStatus.PreConstruction,
     ProjectStatus.Planning,
     ProjectStatus.OnHold,
     ProjectStatus.Cancelled,
   ],
   [ProjectStatus.PreConstruction]: [
+    ProjectStatus.Active,
     ProjectStatus.Construction,
     ProjectStatus.OnHold,
     ProjectStatus.Cancelled,
   ],
   [ProjectStatus.Construction]: [
+    ProjectStatus.Active,
     ProjectStatus.OnHold,
     ProjectStatus.Completed,
     ProjectStatus.Cancelled,
+  ],
+  [ProjectStatus.Active]: [
+    ProjectStatus.OnHold,
+    ProjectStatus.Completed,
+    ProjectStatus.Cancelled,
+    ProjectStatus.Construction,
   ],
   [ProjectStatus.OnHold]: [
     ProjectStatus.Planning,
     ProjectStatus.Approval,
     ProjectStatus.PreConstruction,
     ProjectStatus.Construction,
-    ProjectStatus.Cancelled,
+    ProjectStatus.Active,
   ],
   [ProjectStatus.Completed]: [ProjectStatus.Closed],
-  [ProjectStatus.Closed]: [],
+  [ProjectStatus.Closed]: [ProjectStatus.Archived],
+  [ProjectStatus.Archived]: [ProjectStatus.Closed],
   [ProjectStatus.Cancelled]: [],
 };
 
@@ -76,6 +92,10 @@ export function assertStatusTransition(
       `Invalid status transition from "${from}" to "${to}"`,
     );
   }
+}
+
+export function allowedStatusTransitions(from: ProjectStatus): ProjectStatus[] {
+  return [...(ALLOWED_STATUS_TRANSITIONS[from] ?? [])];
 }
 
 export function assertCoordinates(

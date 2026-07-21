@@ -16,12 +16,20 @@ import { toAddressEmbed } from '../company/schemas/address.embed';
 import { Company } from '../company/schemas/company.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
+import { ActorContextService } from '../project-access/actor-context.service';
 import { ProjectAccessService } from '../project-access/project-access.service';
+import { ProjectTeamRole } from '../project-access/schemas/project-assignment.schema';
+import { SiteAccessService } from '../sites/site-access.service';
+import { SitesService } from '../sites/sites.service';
 import { User } from '../users/schemas/user.schema';
 import type { AssignDirectorsDto } from './dto/assign-directors.dto';
 import type { AssignProjectManagerDto } from './dto/assign-project-manager.dto';
+import type { AssignProjectTeamDto } from './dto/assign-project-team.dto';
+import type { CloneProjectDto } from './dto/clone-project.dto';
 import type { CreateProjectDto } from './dto/create-project.dto';
 import type { ListProjectsQueryDto } from './dto/list-projects-query.dto';
+import type { ProjectFinancialConfigDto } from './dto/project-financial-config.dto';
+import type { ProjectSettingsDto } from './dto/project-settings.dto';
 import type { ReraDetailsDto } from './dto/rera-details.dto';
 import type { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import type { UpdateProjectDto } from './dto/update-project.dto';
@@ -35,10 +43,12 @@ import {
   assertStatusTransition,
   assertValidProjectDates,
 } from './projects.validation';
+import { defaultProjectFinancialConfig } from './schemas/project-financial-config.embed';
 import {
   ProjectDocumentCategory,
   ProjectFile,
 } from './schemas/project-document.schema';
+import { defaultProjectSettings } from './schemas/project-settings.embed';
 import type { ReraDetailsEmbed } from './schemas/rera-details.embed';
 import {
   Project,
@@ -68,6 +78,9 @@ export class ProjectsService {
     private readonly numberingService: NumberingService,
     private readonly projectAccessService: ProjectAccessService,
     private readonly auditLogService: AuditLogService,
+    private readonly sitesService: SitesService,
+    private readonly siteAccessService: SiteAccessService,
+    private readonly actorContextService: ActorContextService,
   ) {}
 
   async create(dto: CreateProjectDto, actorId: string) {
@@ -92,6 +105,17 @@ export class ProjectsService {
     const reraDetails = this.toReraEmbed(dto.reraDetails);
     assertValidReraDates(reraDetails);
 
+    const settings = {
+      ...defaultProjectSettings(),
+      ...(dto.settings ?? {}),
+    };
+    const financialConfig = {
+      ...defaultProjectFinancialConfig(),
+      ...(dto.financialConfig ?? {}),
+      costCentreCodes: dto.financialConfig?.costCentreCodes ?? [],
+      budgetCategories: dto.financialConfig?.budgetCategories ?? [],
+    };
+
     const project = await this.projectModel.create({
       projectCode,
       projectName: dto.projectName.trim(),
@@ -108,7 +132,16 @@ export class ProjectsService {
       startDate,
       expectedCompletionDate,
       actualCompletionDate: null,
-      status: dto.status ?? ProjectStatus.Planning,
+      status: dto.status ?? ProjectStatus.Draft,
+      statusBeforeHold: null,
+      clientName: dto.clientName?.trim() ?? null,
+      currency: (dto.currency ?? 'INR').trim().toUpperCase() || 'INR',
+      timeZone: dto.timeZone?.trim() || 'Asia/Kolkata',
+      financialYearId: dto.financialYearId
+        ? new Types.ObjectId(dto.financialYearId)
+        : null,
+      settings,
+      financialConfig,
       projectManager: dto.projectManager
         ? new Types.ObjectId(dto.projectManager)
         : null,
@@ -125,7 +158,6 @@ export class ProjectsService {
       createdBy: new Types.ObjectId(actorId),
     });
 
-    // Grant project access to creator and project manager
     await this.projectAccessService.assignProjectsToUser(
       actorId,
       [String(project._id)],
@@ -217,6 +249,29 @@ export class ProjectsService {
     if (dto.actualCompletionDate !== undefined) {
       update.actualCompletionDate = actualCompletionDate;
     }
+    if (dto.clientName !== undefined) {
+      update.clientName = dto.clientName?.trim() ?? null;
+    }
+    if (dto.currency !== undefined) {
+      update.currency = dto.currency.trim().toUpperCase() || 'INR';
+    }
+    if (dto.timeZone !== undefined) {
+      update.timeZone = dto.timeZone.trim() || 'Asia/Kolkata';
+    }
+    if (dto.financialYearId !== undefined) {
+      update.financialYearId = dto.financialYearId
+        ? new Types.ObjectId(dto.financialYearId)
+        : null;
+    }
+    if (dto.settings !== undefined) {
+      update.settings = this.mergeSettings(project.settings, dto.settings);
+    }
+    if (dto.financialConfig !== undefined) {
+      update.financialConfig = this.mergeFinancialConfig(
+        project.financialConfig,
+        dto.financialConfig,
+      );
+    }
     if (dto.defaultBankAccount !== undefined) {
       update.defaultBankAccount = dto.defaultBankAccount
         ? new Types.ObjectId(dto.defaultBankAccount)
@@ -247,6 +302,51 @@ export class ProjectsService {
     );
 
     return createSuccessResponse(publicUpdated, 'Project updated successfully');
+  }
+
+  async updateSettings(id: string, dto: ProjectSettingsDto, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+    const updated = await this.projectModel
+      .findByIdAndUpdate(
+        id,
+        {
+          settings: this.mergeSettings(project.settings, dto),
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      )
+      .exec();
+    return createSuccessResponse(
+      toPublicProject(updated!),
+      'Project settings updated successfully',
+    );
+  }
+
+  async updateFinancialConfig(
+    id: string,
+    dto: ProjectFinancialConfigDto,
+    actorId: string,
+  ) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+    const updated = await this.projectModel
+      .findByIdAndUpdate(
+        id,
+        {
+          financialConfig: this.mergeFinancialConfig(
+            project.financialConfig,
+            dto,
+          ),
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      )
+      .exec();
+    return createSuccessResponse(
+      toPublicProject(updated!),
+      'Project financial config updated successfully',
+    );
   }
 
   async assignProjectManager(
@@ -372,17 +472,24 @@ export class ProjectsService {
     const project = await this.requireProject(id);
     assertStatusTransition(project.status, dto.status);
 
-    if (
-      dto.status === ProjectStatus.Closed ||
-      dto.status === ProjectStatus.Cancelled
-    ) {
-      // close requires project.close permission — checked at controller when status is Closed
-    }
-
     const update: Record<string, unknown> = {
       status: dto.status,
       updatedBy: new Types.ObjectId(actorId),
     };
+
+    if (
+      dto.status === ProjectStatus.OnHold &&
+      project.status !== ProjectStatus.OnHold
+    ) {
+      update.statusBeforeHold = project.status;
+    }
+
+    if (
+      project.status === ProjectStatus.OnHold &&
+      dto.status !== ProjectStatus.OnHold
+    ) {
+      update.statusBeforeHold = null;
+    }
 
     if (dto.status === ProjectStatus.Completed || dto.status === ProjectStatus.Closed) {
       update.actualCompletionDate = dto.actualCompletionDate
@@ -421,6 +528,449 @@ export class ProjectsService {
     );
   }
 
+  async suspend(id: string, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+    if (project.status === ProjectStatus.OnHold) {
+      throw new BadRequestException('Project is already on hold');
+    }
+    assertStatusTransition(project.status, ProjectStatus.OnHold);
+
+    const updated = await this.projectModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: ProjectStatus.OnHold,
+          statusBeforeHold: project.status,
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      )
+      .exec();
+
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      { ...publicUpdated, operation: 'suspend' },
+    );
+    return createSuccessResponse(publicUpdated, 'Project suspended successfully');
+  }
+
+  async resume(id: string, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+    if (project.status !== ProjectStatus.OnHold) {
+      throw new BadRequestException('Project is not on hold');
+    }
+    const target = project.statusBeforeHold ?? ProjectStatus.Active;
+    assertStatusTransition(ProjectStatus.OnHold, target);
+
+    const updated = await this.projectModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: target,
+          statusBeforeHold: null,
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      )
+      .exec();
+
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      { ...publicUpdated, operation: 'resume' },
+    );
+    return createSuccessResponse(publicUpdated, 'Project resumed successfully');
+  }
+
+  /** Uses `project.close` permission at controller. */
+  async close(id: string, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+
+    if (project.status === ProjectStatus.Closed) {
+      return createSuccessResponse(
+        toPublicProject(project),
+        'Project is already closed',
+      );
+    }
+    if (project.status !== ProjectStatus.Completed) {
+      throw new BadRequestException(
+        'Project must be Completed before close (use status workflow to complete first)',
+      );
+    }
+    assertStatusTransition(project.status, ProjectStatus.Closed);
+
+    const updated = await this.projectModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: ProjectStatus.Closed,
+          projectStage: ProjectStage.Closed,
+          actualCompletionDate: project.actualCompletionDate ?? new Date(),
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      )
+      .exec();
+
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      { ...publicUpdated, operation: 'close' },
+    );
+    return createSuccessResponse(publicUpdated, 'Project closed successfully');
+  }
+
+  /** Archive reuses `project.close` permission (no separate project.archive code). */
+  async archive(id: string, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+    assertStatusTransition(project.status, ProjectStatus.Archived);
+
+    const updated = await this.projectModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: ProjectStatus.Archived,
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      )
+      .exec();
+
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      { ...publicUpdated, operation: 'archive' },
+    );
+    return createSuccessResponse(publicUpdated, 'Project archived successfully');
+  }
+
+  async restore(id: string, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+
+    if (project.status === ProjectStatus.Archived) {
+      assertStatusTransition(ProjectStatus.Archived, ProjectStatus.Closed);
+      const updated = await this.projectModel
+        .findByIdAndUpdate(
+          id,
+          {
+            status: ProjectStatus.Closed,
+            updatedBy: new Types.ObjectId(actorId),
+          },
+          { new: true },
+        )
+        .exec();
+      const publicUpdated = toPublicProject(updated!);
+      await this.auditProjectMutation(
+        AuditAction.UPDATE,
+        actorId,
+        id,
+        toPublicProject(project),
+        { ...publicUpdated, operation: 'restore_from_archive' },
+      );
+      return createSuccessResponse(
+        publicUpdated,
+        'Project restored from archive successfully',
+      );
+    }
+
+    throw new BadRequestException(
+      'Only Archived projects can be restored via this endpoint (use restore-deleted for soft-deleted rows)',
+    );
+  }
+
+  /** Clone reuses `project.create` permission (no separate project.clone code). */
+  async clone(id: string, dto: CloneProjectDto, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'read');
+    const source = await this.requireProject(id);
+    const companyId = await this.resolveProjectCompanyId(source, actorId);
+
+    const projectCode = await this.numberingService.nextCode(
+      NumberEntityType.PROJECT,
+    );
+    const copySettings = dto.copySettings !== false;
+    const copyFinancialConfig = dto.copyFinancialConfig !== false;
+
+    const cloned = await this.projectModel.create({
+      projectCode,
+      projectName: dto.projectName.trim(),
+      description: source.description,
+      projectType: source.projectType,
+      address: source.address,
+      latitude: source.latitude,
+      longitude: source.longitude,
+      siteRadiusMeters: source.siteRadiusMeters,
+      landArea: source.landArea,
+      builtUpArea: source.builtUpArea,
+      numberOfBlocks: source.numberOfBlocks,
+      numberOfUnits: source.numberOfUnits,
+      startDate: source.startDate,
+      expectedCompletionDate: source.expectedCompletionDate,
+      actualCompletionDate: null,
+      status: ProjectStatus.Draft,
+      statusBeforeHold: null,
+      clientName: source.clientName,
+      currency: source.currency ?? 'INR',
+      timeZone: source.timeZone ?? 'Asia/Kolkata',
+      financialYearId: source.financialYearId,
+      settings: copySettings
+        ? (source.settings ?? defaultProjectSettings())
+        : defaultProjectSettings(),
+      financialConfig: copyFinancialConfig
+        ? (source.financialConfig ?? defaultProjectFinancialConfig())
+        : defaultProjectFinancialConfig(),
+      projectManager: null,
+      assignedDirectors: [],
+      defaultBankAccount: source.defaultBankAccount,
+      approvedBudget: source.approvedBudget,
+      projectStage: ProjectStage.Concept,
+      reraDetails: source.reraDetails,
+      companyId,
+      createdBy: new Types.ObjectId(actorId),
+    });
+
+    await this.projectAccessService.assignProjectsToUser(
+      actorId,
+      [String(cloned._id)],
+      actorId,
+    );
+
+    if (dto.copyStructure) {
+      await this.sitesService.cloneStructureToProject({
+        sourceProjectId: id,
+        targetProjectId: String(cloned._id),
+        companyId: String(companyId),
+        actorId,
+      });
+    }
+
+    const publicProject = toPublicProject(cloned);
+    await this.auditProjectMutation(
+      AuditAction.CREATE,
+      actorId,
+      String(cloned._id),
+      null,
+      { ...publicProject, operation: 'clone', clonedFrom: id },
+    );
+
+    return createSuccessResponse(publicProject, 'Project cloned successfully');
+  }
+
+  async softDelete(id: string, actorId: string) {
+    await this.assertCanAccess(actorId, id, 'update');
+    const project = await this.requireProject(id);
+    await project.softDelete(new Types.ObjectId(actorId));
+    await this.auditProjectMutation(
+      AuditAction.DELETE,
+      actorId,
+      id,
+      toPublicProject(project),
+      { operation: 'soft_delete', id },
+    );
+    return createSuccessResponse(
+      { id, deleted: true },
+      'Project soft-deleted successfully',
+    );
+  }
+
+  async restoreDeleted(id: string, actorId: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid project id');
+    }
+    const project = await this.projectModel
+      .findById(id)
+      .setOptions({ onlyDeleted: true })
+      .exec();
+    if (!project) {
+      throw new NotFoundException('Deleted project not found');
+    }
+    await this.assertCanAccess(actorId, id, 'update');
+    await project.restore();
+    project.set('updatedBy', new Types.ObjectId(actorId));
+    await project.save();
+
+    const publicProject = toPublicProject(project);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      null,
+      { ...publicProject, operation: 'restore_deleted' },
+    );
+    return createSuccessResponse(
+      publicProject,
+      'Soft-deleted project restored successfully',
+    );
+  }
+
+  async listTeam(projectId: string, actorId: string) {
+    await this.assertCanAccess(actorId, projectId, 'read');
+    await this.requireProject(projectId);
+
+    const assignments =
+      await this.projectAccessService.listTeamAssignments(projectId);
+    const userIds = [...new Set(assignments.map((a) => String(a.userId)))];
+    const users = await this.userModel
+      .find({ _id: { $in: userIds.map((id) => new Types.ObjectId(id)) } })
+      .select('_id fullName email userCode status')
+      .lean()
+      .exec();
+    const userMap = new Map(
+      users.map((u) => [
+        String(u._id),
+        {
+          id: String(u._id),
+          fullName: u.fullName,
+          email: u.email,
+          userCode: u.userCode,
+          status: u.status,
+        },
+      ]),
+    );
+
+    const data = assignments.map((assignment) => ({
+      id: String(assignment._id),
+      projectId,
+      userId: String(assignment.userId),
+      teamRole: assignment.teamRole ?? null,
+      accessStartDate: assignment.accessStartDate,
+      accessEndDate: assignment.accessEndDate ?? null,
+      status: assignment.status,
+      user: userMap.get(String(assignment.userId)) ?? null,
+    }));
+
+    return createSuccessResponse(data, 'Project team fetched successfully');
+  }
+
+  async assignTeam(
+    projectId: string,
+    dto: AssignProjectTeamDto,
+    actorId: string,
+  ) {
+    await this.assertCanAccess(actorId, projectId, 'update');
+    const project = await this.requireProject(projectId);
+    const companyId = await this.resolveProjectCompanyId(project, actorId);
+    await this.assertUserBelongsToCompany(dto.userId, companyId);
+
+    const accessStartDate = new Date(dto.accessStartDate);
+    const accessEndDate = dto.accessEndDate ? new Date(dto.accessEndDate) : null;
+
+    const assignment = await this.projectAccessService.upsertTeamAssignment({
+      userId: dto.userId,
+      projectId,
+      teamRole: dto.teamRole,
+      accessStartDate,
+      accessEndDate,
+      actorId,
+    });
+
+    if (dto.teamRole === ProjectTeamRole.ProjectManager) {
+      await this.projectModel
+        .findByIdAndUpdate(projectId, {
+          projectManager: new Types.ObjectId(dto.userId),
+          updatedBy: new Types.ObjectId(actorId),
+        })
+        .exec();
+    }
+
+    if (dto.teamRole === ProjectTeamRole.Director) {
+      const already = project.assignedDirectors.some(
+        (id) => String(id) === dto.userId,
+      );
+      if (!already) {
+        await this.projectModel
+          .findByIdAndUpdate(projectId, {
+            $addToSet: { assignedDirectors: new Types.ObjectId(dto.userId) },
+            updatedBy: new Types.ObjectId(actorId),
+          })
+          .exec();
+      }
+    }
+
+    let siteAssignment = null;
+    if (dto.siteId) {
+      const siteRes = await this.siteAccessService.createAssignment(
+        {
+          userId: dto.userId,
+          projectId,
+          siteId: dto.siteId,
+          projectAssignmentId: String(assignment._id),
+          roleInSite: dto.teamRole,
+          effectiveFrom: dto.accessStartDate,
+          effectiveTo: dto.accessEndDate ?? null,
+        },
+        String(companyId),
+        actorId,
+      );
+      siteAssignment = siteRes.data;
+    }
+
+    this.actorContextService.invalidate(dto.userId);
+
+    return createSuccessResponse(
+      {
+        assignment: {
+          id: String(assignment._id),
+          userId: String(assignment.userId),
+          projectId,
+          teamRole: assignment.teamRole ?? null,
+          accessStartDate: assignment.accessStartDate,
+          accessEndDate: assignment.accessEndDate ?? null,
+          status: assignment.status,
+        },
+        siteAssignment,
+      },
+      'Team member assigned successfully',
+    );
+  }
+
+  async revokeTeam(
+    projectId: string,
+    assignmentId: string,
+    actorId: string,
+  ) {
+    await this.assertCanAccess(actorId, projectId, 'update');
+    await this.requireProject(projectId);
+
+    const assignment =
+      await this.projectAccessService.revokeTeamAssignment(
+        assignmentId,
+        actorId,
+      );
+    if (String(assignment.projectId) !== projectId) {
+      throw new BadRequestException(
+        'Assignment does not belong to this project',
+      );
+    }
+
+    this.actorContextService.invalidate(String(assignment.userId));
+
+    return createSuccessResponse(
+      {
+        id: String(assignment._id),
+        status: assignment.status,
+      },
+      'Team assignment revoked successfully',
+    );
+  }
+
   async getById(id: string, actorId: string) {
     await this.assertCanAccess(actorId, id, 'read');
     const project = await this.requireProject(id);
@@ -432,8 +982,6 @@ export class ProjectsService {
     this.assertRequestedCompanyMatches(query.companyId, companyId);
     const access = await this.projectAccessService.listAccessibleProjectIds(actorId);
     const filter: FilterQuery<Project> = {
-      // Legacy null-company rows remain visible only within the actor's
-      // resolved primary-company context; another company's rows never do.
       companyId: { $in: [companyId, null] },
     };
 
@@ -507,13 +1055,26 @@ export class ProjectsService {
     await this.assertCanAccess(actorId, id, 'update');
     await this.requireProject(id);
 
+    const category = input.category ?? ProjectDocumentCategory.General;
+    const prior = await this.documentModel
+      .findOne({
+        projectId: new Types.ObjectId(id),
+        category,
+        fileName: input.fileName,
+      })
+      .sort({ version: -1 })
+      .lean()
+      .exec();
+    const version = prior?.version ? Number(prior.version) + 1 : 1;
+
     const doc = await this.documentModel.create({
       projectId: new Types.ObjectId(id),
       fileName: input.fileName,
       filePath: input.filePath,
       mimeType: input.mimeType,
       sizeBytes: input.sizeBytes,
-      category: input.category ?? ProjectDocumentCategory.General,
+      category,
+      version,
       description: input.description?.trim() ?? null,
       uploadedBy: new Types.ObjectId(actorId),
       createdBy: new Types.ObjectId(actorId),
@@ -527,6 +1088,7 @@ export class ProjectsService {
       mimeType: publicDocument.mimeType,
       sizeBytes: publicDocument.sizeBytes,
       category: publicDocument.category,
+      version: publicDocument.version,
     });
 
     return createSuccessResponse(
@@ -564,6 +1126,52 @@ export class ProjectsService {
       'Project documents fetched successfully',
       buildPaginationMeta(page, limit, total),
     );
+  }
+
+  private mergeSettings(
+    current: Project['settings'] | null | undefined,
+    dto: ProjectSettingsDto,
+  ) {
+    const base = current ?? defaultProjectSettings();
+    return {
+      dprEnabled: dto.dprEnabled ?? base.dprEnabled,
+      labourEnabled: dto.labourEnabled ?? base.labourEnabled,
+      inventoryEnabled: dto.inventoryEnabled ?? base.inventoryEnabled,
+      equipmentEnabled: dto.equipmentEnabled ?? base.equipmentEnabled,
+      procurementEnabled: dto.procurementEnabled ?? base.procurementEnabled,
+      pettyCashEnabled: dto.pettyCashEnabled ?? base.pettyCashEnabled,
+      boqEnabled: dto.boqEnabled ?? base.boqEnabled,
+      billingEnabled: dto.billingEnabled ?? base.billingEnabled,
+      customerBookingEnabled:
+        dto.customerBookingEnabled ?? base.customerBookingEnabled,
+    };
+  }
+
+  private mergeFinancialConfig(
+    current: Project['financialConfig'] | null | undefined,
+    dto: ProjectFinancialConfigDto,
+  ) {
+    const base = current ?? defaultProjectFinancialConfig();
+    return {
+      costCentreCodes: dto.costCentreCodes ?? base.costCentreCodes ?? [],
+      profitCentreCode:
+        dto.profitCentreCode !== undefined
+          ? dto.profitCentreCode?.trim() ?? null
+          : base.profitCentreCode,
+      defaultGstPercent:
+        dto.defaultGstPercent !== undefined
+          ? dto.defaultGstPercent
+          : base.defaultGstPercent,
+      defaultCurrency:
+        dto.defaultCurrency !== undefined
+          ? dto.defaultCurrency?.trim() ?? null
+          : base.defaultCurrency,
+      taxNotes:
+        dto.taxNotes !== undefined
+          ? dto.taxNotes?.trim() ?? null
+          : base.taxNotes,
+      budgetCategories: dto.budgetCategories ?? base.budgetCategories ?? [],
+    };
   }
 
   private async assertCanAccess(
@@ -623,8 +1231,6 @@ export class ProjectsService {
     companyId: Types.ObjectId,
   ) {
     const user = await this.findUserCompany(userId);
-    // Assignees must carry an explicit company membership. Primary-company
-    // fallback applies only to the authenticated actor, never to assignees.
     if (!user.companyId) {
       throw new ForbiddenException(
         'Project assignees must belong to the authenticated company',
@@ -735,7 +1341,6 @@ export class ProjectsService {
         afterData,
       });
     } catch (error) {
-      // Mutations already committed; audit outages must not false-fail the API.
       this.logger.error(
         `Failed to audit project ${projectId} (${action})`,
         error instanceof Error ? error.stack : String(error),
@@ -807,6 +1412,7 @@ export class ProjectsService {
     mimeType?: string | null;
     sizeBytes: number;
     category: ProjectDocumentCategory;
+    version?: number;
     description?: string | null;
     uploadedBy?: Types.ObjectId | null;
     createdAt?: Date;
@@ -819,6 +1425,7 @@ export class ProjectsService {
       mimeType: doc.mimeType ?? null,
       sizeBytes: doc.sizeBytes,
       category: doc.category,
+      version: doc.version ?? 1,
       description: doc.description ?? null,
       uploadedBy: doc.uploadedBy ? String(doc.uploadedBy) : null,
       createdAt: doc.createdAt,

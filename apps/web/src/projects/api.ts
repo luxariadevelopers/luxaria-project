@@ -1,8 +1,18 @@
 import type { ApiResponse } from '@luxaria/shared-types';
-import { apiClient, apiGet, apiPatch, apiPost } from '@/api/client';
+import {
+  apiClient,
+  apiDelete,
+  apiGet,
+  apiPatch,
+  apiPost,
+} from '@/api/client';
 import type {
+  AssignProjectTeamInput,
+  CloneProjectInput,
   CreateProjectAssignmentInput,
   CreateProjectInput,
+  CreateStructureNodeInput,
+  CreateWarehouseInput,
   ListProjectAssignmentsQuery,
   ListProjectsQuery,
   PaginatedProjectAssignments,
@@ -10,14 +20,24 @@ import type {
   PaginatedProjects,
   ProjectBankOption,
   ProjectCompany,
+  ProjectFinancialConfig,
   ProjectPaginationMeta,
+  ProjectSettings,
   ProjectUserOption,
   PublicProject,
   PublicProjectAssignment,
   PublicProjectDocument,
+  PublicProjectSite,
+  PublicProjectSiteNode,
   UpdateProjectAssignmentInput,
+  UpdateProjectFinancialConfigInput,
   UpdateProjectInput,
+  UpdateProjectSettingsInput,
   UpdateProjectStatusInput,
+} from './types';
+import {
+  DEFAULT_PROJECT_FINANCIAL_CONFIG,
+  DEFAULT_PROJECT_SETTINGS,
 } from './types';
 
 function toIso(value: unknown): string | null {
@@ -43,6 +63,26 @@ function readMeta(
   };
 }
 
+function normaliseSettings(
+  settings?: Partial<ProjectSettings> | null,
+): ProjectSettings {
+  return {
+    ...DEFAULT_PROJECT_SETTINGS,
+    ...(settings ?? {}),
+  };
+}
+
+function normaliseFinancialConfig(
+  config?: Partial<ProjectFinancialConfig> | null,
+): ProjectFinancialConfig {
+  return {
+    ...DEFAULT_PROJECT_FINANCIAL_CONFIG,
+    ...(config ?? {}),
+    costCentreCodes: config?.costCentreCodes ?? [],
+    budgetCategories: config?.budgetCategories ?? [],
+  };
+}
+
 function normaliseProject(row: PublicProject): PublicProject {
   return {
     ...row,
@@ -57,6 +97,13 @@ function normaliseProject(row: PublicProject): PublicProject {
     startDate: toIso(row.startDate),
     expectedCompletionDate: toIso(row.expectedCompletionDate),
     actualCompletionDate: toIso(row.actualCompletionDate),
+    statusBeforeHold: row.statusBeforeHold ?? null,
+    clientName: row.clientName ?? null,
+    currency: row.currency ?? 'INR',
+    timeZone: row.timeZone ?? 'Asia/Kolkata',
+    financialYearId: row.financialYearId ?? null,
+    settings: normaliseSettings(row.settings),
+    financialConfig: normaliseFinancialConfig(row.financialConfig),
     projectManager: row.projectManager ?? null,
     assignedDirectors: row.assignedDirectors ?? [],
     defaultBankAccount: row.defaultBankAccount ?? null,
@@ -83,6 +130,7 @@ function normaliseAssignment(
     accessStartDate: toIso(row.accessStartDate) ?? '',
     accessEndDate: toIso(row.accessEndDate),
     notes: row.notes ?? null,
+    teamRole: row.teamRole ?? null,
     createdAt: toIso(row.createdAt) ?? undefined,
     updatedAt: toIso(row.updatedAt) ?? undefined,
   };
@@ -97,6 +145,30 @@ function normaliseDocument(
     description: row.description ?? null,
     uploadedBy: row.uploadedBy ?? null,
     createdAt: toIso(row.createdAt) ?? undefined,
+  };
+}
+
+function normaliseSite(row: PublicProjectSite): PublicProjectSite {
+  return {
+    ...row,
+    parentSiteId: row.parentSiteId ?? null,
+    warehouseKind: row.warehouseKind ?? null,
+    contactName: row.contactName ?? null,
+    contactPhone: row.contactPhone ?? null,
+    address: row.address ?? null,
+    startDate: toIso(row.startDate),
+    endDate: toIso(row.endDate),
+    siteManagerUserId: row.siteManagerUserId ?? null,
+    warehouseRef: row.warehouseRef ?? null,
+    createdAt: toIso(row.createdAt) ?? undefined,
+    updatedAt: toIso(row.updatedAt) ?? undefined,
+  };
+}
+
+function normaliseSiteNode(row: PublicProjectSiteNode): PublicProjectSiteNode {
+  return {
+    ...normaliseSite(row),
+    children: (row.children ?? []).map(normaliseSiteNode),
   };
 }
 
@@ -164,6 +236,94 @@ export async function updateProjectStatus(
   return normaliseProject(res.data);
 }
 
+export async function updateProjectSettings(
+  id: string,
+  input: UpdateProjectSettingsInput,
+): Promise<PublicProject> {
+  const res = await apiPatch<PublicProject>(`/projects/${id}/settings`, input);
+  if (!res.data) {
+    throw new Error(res.message || 'Project settings update failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function updateProjectFinancialConfig(
+  id: string,
+  input: UpdateProjectFinancialConfigInput,
+): Promise<PublicProject> {
+  const res = await apiPatch<PublicProject>(
+    `/projects/${id}/financial-config`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Project financial config update failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function suspendProject(id: string): Promise<PublicProject> {
+  const res = await apiPost<PublicProject>(`/projects/${id}/suspend`);
+  if (!res.data) {
+    throw new Error(res.message || 'Project suspend failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function resumeProject(id: string): Promise<PublicProject> {
+  const res = await apiPost<PublicProject>(`/projects/${id}/resume`);
+  if (!res.data) {
+    throw new Error(res.message || 'Project resume failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function closeProject(id: string): Promise<PublicProject> {
+  const res = await apiPost<PublicProject>(`/projects/${id}/close`);
+  if (!res.data) {
+    throw new Error(res.message || 'Project close failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function archiveProject(id: string): Promise<PublicProject> {
+  const res = await apiPost<PublicProject>(`/projects/${id}/archive`);
+  if (!res.data) {
+    throw new Error(res.message || 'Project archive failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function restoreProject(id: string): Promise<PublicProject> {
+  const res = await apiPost<PublicProject>(`/projects/${id}/restore`);
+  if (!res.data) {
+    throw new Error(res.message || 'Project restore failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function cloneProject(
+  id: string,
+  input: CloneProjectInput,
+): Promise<PublicProject> {
+  const res = await apiPost<PublicProject>(`/projects/${id}/clone`, input);
+  if (!res.data) {
+    throw new Error(res.message || 'Project clone failed');
+  }
+  return normaliseProject(res.data);
+}
+
+export async function softDeleteProject(
+  id: string,
+): Promise<{ id: string; deleted: boolean }> {
+  const res = await apiDelete<{ id: string; deleted: boolean }>(
+    `/projects/${id}`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Project soft-delete failed');
+  }
+  return res.data;
+}
+
 export async function assignProjectManager(
   id: string,
   projectManagerId: string,
@@ -189,6 +349,88 @@ export async function assignProjectDirectors(
     throw new Error(res.message || 'Project director assignment failed');
   }
   return normaliseProject(res.data);
+}
+
+export async function fetchProjectStructure(
+  projectId: string,
+): Promise<PublicProjectSiteNode[]> {
+  const res = await apiGet<PublicProjectSiteNode[]>(
+    `/projects/${projectId}/structure`,
+  );
+  return (res.data ?? []).map(normaliseSiteNode);
+}
+
+export async function createProjectStructureNode(
+  projectId: string,
+  input: CreateStructureNodeInput,
+): Promise<PublicProjectSite> {
+  const res = await apiPost<PublicProjectSite>(
+    `/projects/${projectId}/structure`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Structure node creation failed');
+  }
+  return normaliseSite(res.data);
+}
+
+export async function fetchProjectWarehouses(
+  projectId: string,
+): Promise<PublicProjectSite[]> {
+  const res = await apiGet<PublicProjectSite[]>(
+    `/projects/${projectId}/warehouses`,
+  );
+  return (res.data ?? []).map(normaliseSite);
+}
+
+export async function createProjectWarehouse(
+  projectId: string,
+  input: CreateWarehouseInput,
+): Promise<PublicProjectSite> {
+  const res = await apiPost<PublicProjectSite>(
+    `/projects/${projectId}/warehouses`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Warehouse creation failed');
+  }
+  return normaliseSite(res.data);
+}
+
+export async function fetchProjectTeam(
+  projectId: string,
+): Promise<PublicProjectAssignment[]> {
+  const res = await apiGet<PublicProjectAssignment[]>(
+    `/projects/${projectId}/team`,
+  );
+  return (res.data ?? []).map(normaliseAssignment);
+}
+
+export async function assignProjectTeam(
+  projectId: string,
+  input: AssignProjectTeamInput,
+): Promise<PublicProjectAssignment> {
+  const res = await apiPost<PublicProjectAssignment>(
+    `/projects/${projectId}/team`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Team assignment failed');
+  }
+  return normaliseAssignment(res.data);
+}
+
+export async function revokeProjectTeam(
+  projectId: string,
+  assignmentId: string,
+): Promise<{ id: string; status: string }> {
+  const res = await apiDelete<{ id: string; status: string }>(
+    `/projects/${projectId}/team/${assignmentId}`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Team revoke failed');
+  }
+  return res.data;
 }
 
 export async function fetchProjectDocuments(

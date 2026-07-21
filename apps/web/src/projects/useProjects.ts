@@ -10,10 +10,16 @@ import {
 import { listAuditLogs } from '@/api/audit-logs';
 import {
   activateProjectAssignment,
+  archiveProject,
   assignProjectDirectors,
   assignProjectManager,
+  assignProjectTeam,
+  cloneProject,
+  closeProject,
   createProject,
   createProjectAssignment,
+  createProjectStructureNode,
+  createProjectWarehouse,
   deactivateProjectAssignment,
   fetchProjectCompany,
   fetchProject,
@@ -21,20 +27,36 @@ import {
   fetchProjectBankOptions,
   fetchProjectDocuments,
   fetchProjects,
+  fetchProjectStructure,
+  fetchProjectTeam,
   fetchProjectUserOptions,
+  fetchProjectWarehouses,
+  resumeProject,
+  revokeProjectTeam,
+  restoreProject,
+  softDeleteProject,
+  suspendProject,
   updateProject,
   updateProjectAssignment,
+  updateProjectFinancialConfig,
+  updateProjectSettings,
   updateProjectStatus,
   uploadProjectDocument,
 } from './api';
 import { projectAccessKeys, projectKeys } from './queryKeys';
 import type {
+  AssignProjectTeamInput,
+  CloneProjectInput,
   CreateProjectAssignmentInput,
   CreateProjectInput,
+  CreateStructureNodeInput,
+  CreateWarehouseInput,
   ListProjectAssignmentsQuery,
   ListProjectsQuery,
   UpdateProjectAssignmentInput,
+  UpdateProjectFinancialConfigInput,
   UpdateProjectInput,
+  UpdateProjectSettingsInput,
   UpdateProjectStatusInput,
 } from './types';
 
@@ -74,6 +96,42 @@ export function useProjectDocuments(
     ),
     queryFn: () =>
       fetchProjectDocuments(projectId!, { page, limit, category }),
+    enabled: Boolean(projectId) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useProjectStructure(
+  projectId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: projectKeys.structure(projectId ?? ''),
+    queryFn: () => fetchProjectStructure(projectId!),
+    enabled: Boolean(projectId) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useProjectWarehouses(
+  projectId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: projectKeys.warehouses(projectId ?? ''),
+    queryFn: () => fetchProjectWarehouses(projectId!),
+    enabled: Boolean(projectId) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useProjectTeam(projectId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: projectKeys.team(projectId ?? ''),
+    queryFn: () => fetchProjectTeam(projectId!),
     enabled: Boolean(projectId) && enabled,
     staleTime: 15_000,
     retry: false,
@@ -169,6 +227,94 @@ export function useUpdateProjectStatus(projectId: string) {
   });
 }
 
+export function useUpdateProjectSettings(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: (input: UpdateProjectSettingsInput) =>
+      updateProjectSettings(projectId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateProjectFinancialConfig(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: (input: UpdateProjectFinancialConfigInput) =>
+      updateProjectFinancialConfig(projectId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSuspendProject(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: () => suspendProject(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useResumeProject(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: () => resumeProject(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCloseProject(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: () => closeProject(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useArchiveProject(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: () => archiveProject(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRestoreProject(projectId: string) {
+  const invalidate = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: () => restoreProject(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCloneProject(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CloneProjectInput) => cloneProject(projectId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: projectKeys.lists() }),
+        queryClient.invalidateQueries({
+          queryKey: PROJECTS_SELECTOR_QUERY_KEY,
+        }),
+      ]);
+    },
+  });
+}
+
+export function useSoftDeleteProject(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => softDeleteProject(projectId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: projectKeys.lists() }),
+        queryClient.invalidateQueries({
+          queryKey: PROJECTS_SELECTOR_QUERY_KEY,
+        }),
+      ]);
+    },
+  });
+}
+
 export function useAssignProjectManager(projectId: string) {
   const invalidate = useProjectMutationInvalidation(projectId);
   return useMutation({
@@ -184,6 +330,76 @@ export function useAssignProjectDirectors(projectId: string) {
     mutationFn: (directorIds: string[]) =>
       assignProjectDirectors(projectId, directorIds),
     onSuccess: invalidate,
+  });
+}
+
+export function useCreateProjectStructureNode(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateStructureNodeInput) =>
+      createProjectStructureNode(projectId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.structure(projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.warehouses(projectId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useCreateProjectWarehouse(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateWarehouseInput) =>
+      createProjectWarehouse(projectId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.warehouses(projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.structure(projectId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useAssignProjectTeam(projectId: string) {
+  const queryClient = useQueryClient();
+  const invalidateProject = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: (input: AssignProjectTeamInput) =>
+      assignProjectTeam(projectId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.team(projectId),
+        }),
+        invalidateProject(),
+      ]);
+    },
+  });
+}
+
+export function useRevokeProjectTeam(projectId: string) {
+  const queryClient = useQueryClient();
+  const invalidateProject = useProjectMutationInvalidation(projectId);
+  return useMutation({
+    mutationFn: (assignmentId: string) =>
+      revokeProjectTeam(projectId, assignmentId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.team(projectId),
+        }),
+        invalidateProject(),
+      ]);
+    },
   });
 }
 

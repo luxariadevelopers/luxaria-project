@@ -57,6 +57,10 @@ import {
 } from '../projects/schemas/project-document.schema';
 import { Project } from '../projects/schemas/project.schema';
 import {
+  GoodsReceipt,
+  GoodsReceiptStatus,
+} from '../goods-receipts/schemas/goods-receipt.schema';
+import {
   PurchaseOrder,
   PurchaseOrderStatus,
 } from '../purchase-orders/schemas/purchase-order.schema';
@@ -143,6 +147,8 @@ export class ProjectDashboardService {
     private readonly dprMissingModel: Model<DprMissingAlert>,
     @InjectModel(PurchaseRequest.name)
     private readonly purchaseRequestModel: Model<PurchaseRequest>,
+    @InjectModel(GoodsReceipt.name)
+    private readonly goodsReceiptModel: Model<GoodsReceipt>,
     private readonly projectScope: ProjectScopedDataHelper,
   ) {}
 
@@ -235,6 +241,41 @@ export class ProjectDashboardService {
       vendorDues,
     );
 
+    const [pendingApprovalsCount, pendingPoCount, pendingGrnCount, dprStatusSummary] =
+      await Promise.all([
+        this.purchaseRequestModel
+          .countDocuments({
+            projectId: pid,
+            status: {
+              $in: [
+                PurchaseRequestStatus.Submitted,
+                PurchaseRequestStatus.Reviewed,
+                PurchaseRequestStatus.Returned,
+              ],
+            },
+          })
+          .exec(),
+        this.purchaseOrderModel
+          .countDocuments({
+            projectId: pid,
+            status: PurchaseOrderStatus.PendingApproval,
+          })
+          .exec(),
+        this.goodsReceiptModel
+          .countDocuments({
+            projectId: pid,
+            status: {
+              $in: [
+                GoodsReceiptStatus.Draft,
+                GoodsReceiptStatus.Submitted,
+                GoodsReceiptStatus.QualityCheck,
+              ],
+            },
+          })
+          .exec(),
+        this.dprStatusSummary(pid),
+      ]);
+
     const summary: ProjectDashboardSummary = {
       filters: {
         projectId,
@@ -295,6 +336,10 @@ export class ProjectDashboardService {
       purchaseOrders,
       sitePhotos,
       criticalAlerts,
+      pendingApprovalsCount,
+      pendingPoCount,
+      pendingGrnCount,
+      dprStatusSummary,
     };
 
     return createSuccessResponse(summary, 'Project dashboard summary');
@@ -1100,6 +1145,29 @@ export class ProjectDashboardService {
     }
 
     return alerts;
+  }
+
+  private async dprStatusSummary(projectOid: Types.ObjectId) {
+    const rows = await this.dprModel
+      .aggregate<{ _id: string; count: number }>([
+        { $match: { projectId: projectOid } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ])
+      .exec();
+    const byStatus = new Map(rows.map((r) => [r._id, r.count]));
+    const draft = byStatus.get(DprStatus.Draft) ?? 0;
+    const submitted = byStatus.get(DprStatus.Submitted) ?? 0;
+    const reviewed = byStatus.get(DprStatus.Reviewed) ?? 0;
+    const reopened = byStatus.get(DprStatus.Reopened) ?? 0;
+    const known = draft + submitted + reviewed + reopened;
+    const total = rows.reduce((sum, r) => sum + r.count, 0);
+    return {
+      draft,
+      submitted,
+      reviewed,
+      reopened,
+      other: Math.max(0, total - known),
+    };
   }
 
   // ─── helpers ───────────────────────────────────────────────────────────

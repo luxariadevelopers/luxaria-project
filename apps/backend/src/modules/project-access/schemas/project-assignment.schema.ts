@@ -12,6 +12,21 @@ export enum ProjectAccessStatus {
   Expired = 'expired',
 }
 
+/** Operational team role on a project assignment (Phase 2 PLM). */
+export enum ProjectTeamRole {
+  Director = 'director',
+  ProjectDirector = 'project_director',
+  ProjectManager = 'project_manager',
+  ConstructionManager = 'construction_manager',
+  SiteEngineer = 'site_engineer',
+  JuniorEngineer = 'junior_engineer',
+  QuantitySurveyor = 'quantity_surveyor',
+  BillingEngineer = 'billing_engineer',
+  Procurement = 'procurement',
+  Accountant = 'accountant',
+  StoreKeeper = 'store_keeper',
+}
+
 @Schema({
   collection: 'project_assignments',
   timestamps: true,
@@ -50,6 +65,9 @@ export class ProjectAssignment {
 
   @Prop({ type: String, trim: true, default: null })
   notes!: string | null;
+
+  @Prop({ type: String, enum: ProjectTeamRole, default: null, index: true })
+  teamRole!: ProjectTeamRole | null;
 }
 
 export const ProjectAssignmentSchema = SchemaFactory.createForClass(ProjectAssignment);

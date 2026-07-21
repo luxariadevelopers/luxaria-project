@@ -142,6 +142,7 @@ export function ProjectForm({
         : PROJECT_STATUS_OPTIONS.filter(
             (option) =>
               option.value !== ProjectStatus.Closed &&
+              option.value !== ProjectStatus.Archived &&
               option.value !== ProjectStatus.Cancelled,
           ),
     [allowTerminalStatus],
@@ -189,6 +190,24 @@ export function ProjectForm({
           multiline
           minRows={3}
         />
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+          <FormTextField
+            name="clientName"
+            control={control}
+            label="Client name"
+          />
+          <FormTextField
+            name="currency"
+            control={control}
+            label="Currency"
+            slotProps={{ htmlInput: { maxLength: 8 } }}
+          />
+          <FormTextField
+            name="timeZone"
+            control={control}
+            label="Time zone"
+          />
+        </Stack>
         <TextField
           label="Company"
           value={`${company.legalName} · ${company.companyCode}`}

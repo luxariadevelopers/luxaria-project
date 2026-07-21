@@ -129,6 +129,9 @@ function ProjectOverview({
           />
           <Fact label="Blocks" value={project.numberOfBlocks ?? '—'} />
           <Fact label="Units" value={project.numberOfUnits ?? '—'} />
+          <Fact label="Client" value={project.clientName ?? '—'} />
+          <Fact label="Currency" value={project.currency || '—'} />
+          <Fact label="Time zone" value={project.timeZone || '—'} />
           <Fact label="Default bank" value={bankLabel} />
         </Box>
       </Paper>
@@ -316,10 +319,14 @@ export function ProjectDetailPage({ projectId: projectIdProp }: Props = {}) {
                 color={
                   project.status === 'Cancelled'
                     ? 'error'
-                    : project.status === 'Completed' ||
-                        project.status === 'Closed'
-                      ? 'success'
-                      : 'default'
+                    : project.status === 'On Hold' ||
+                        project.status === 'Archived'
+                      ? 'warning'
+                      : project.status === 'Completed' ||
+                          project.status === 'Closed' ||
+                          project.status === 'Active'
+                        ? 'success'
+                        : 'default'
                 }
               />
             }
@@ -341,6 +348,51 @@ export function ProjectDetailPage({ projectId: projectIdProp }: Props = {}) {
                 variant="contained"
               >
                 Edit
+              </Button>
+            ) : null}
+            {hasPermission('dashboard.view') ? (
+              <Button
+                component={RouterLink}
+                to={`/projects/${project.id}/dashboard`}
+                variant="outlined"
+              >
+                Dashboard
+              </Button>
+            ) : null}
+            {hasPermission('site.view') ? (
+              <Button
+                component={RouterLink}
+                to={`/projects/${project.id}/structure`}
+                variant="outlined"
+              >
+                Structure
+              </Button>
+            ) : null}
+            {hasPermission('project.view') ? (
+              <Button
+                component={RouterLink}
+                to={`/projects/${project.id}/team`}
+                variant="outlined"
+              >
+                Team
+              </Button>
+            ) : null}
+            {hasPermission('site.view') ? (
+              <Button
+                component={RouterLink}
+                to={`/projects/${project.id}/warehouses`}
+                variant="outlined"
+              >
+                Warehouses
+              </Button>
+            ) : null}
+            {hasPermission('project.update') ? (
+              <Button
+                component={RouterLink}
+                to={`/projects/${project.id}/financial-settings`}
+                variant="outlined"
+              >
+                Financial settings
               </Button>
             ) : null}
             {hasPermission('project_access.view') ? (

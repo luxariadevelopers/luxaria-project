@@ -15,6 +15,7 @@ import { ProjectAccessService } from '../project-access/project-access.service';
 import {
   ProjectAssignment,
   ProjectAssignmentSchema,
+  ProjectTeamRole,
 } from '../project-access/schemas/project-assignment.schema';
 import {
   UnauthorizedProjectAccess,
@@ -111,6 +112,20 @@ describe('ProjectsService', () => {
       permissionsService as never,
     );
 
+    const sitesService = {
+      cloneStructureToProject: jest.fn().mockResolvedValue(undefined),
+      getStructure: jest.fn(),
+      createStructureNode: jest.fn(),
+      listWarehouses: jest.fn(),
+      createWarehouse: jest.fn(),
+    };
+    const siteAccessService = {
+      createAssignment: jest.fn().mockResolvedValue({ data: null }),
+    };
+    const actorContextService = {
+      invalidate: jest.fn(),
+    };
+
     service = new ProjectsService(
       projectModel,
       documentModel,
@@ -119,6 +134,9 @@ describe('ProjectsService', () => {
       new NumberingService(counterModel),
       projectAccessService,
       new AuditLogService(auditModel),
+      sitesService as never,
+      siteAccessService as never,
+      actorContextService as never,
     );
   }, 60_000);
 
@@ -268,7 +286,9 @@ describe('ProjectsService', () => {
       actorId,
     );
     expect(response.data?.projectCode).toMatch(/^PRJ-/);
-    expect(response.data?.status).toBe(ProjectStatus.Planning);
+    expect(response.data?.status).toBe(ProjectStatus.Draft);
+    expect(response.data?.currency).toBe('INR');
+    expect(response.data?.timeZone).toBe('Asia/Kolkata');
     expect(response.data?.projectName).toBe('Luxaria Heights');
     expect(response.data?.companyId).toBe(companyId);
   });
@@ -431,6 +451,11 @@ describe('ProjectsService', () => {
     const created = await service.create(baseCreate(), actorId);
     await service.updateStatus(
       created.data!.id,
+      { status: ProjectStatus.Planning },
+      actorId,
+    );
+    await service.updateStatus(
+      created.data!.id,
       { status: ProjectStatus.Approval, note: 'Ready for approval review' },
       actorId,
     );
@@ -461,6 +486,104 @@ describe('ProjectsService', () => {
         actorId,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('suspends and resumes using statusBeforeHold', async () => {
+    const created = await service.create(baseCreate(), actorId);
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Planning },
+      actorId,
+    );
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Approval },
+      actorId,
+    );
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Active },
+      actorId,
+    );
+
+    const suspended = await service.suspend(created.data!.id, actorId);
+    expect(suspended.data?.status).toBe(ProjectStatus.OnHold);
+    expect(suspended.data?.statusBeforeHold).toBe(ProjectStatus.Active);
+
+    const resumed = await service.resume(created.data!.id, actorId);
+    expect(resumed.data?.status).toBe(ProjectStatus.Active);
+    expect(resumed.data?.statusBeforeHold).toBeNull();
+  });
+
+  it('clones a project into Draft with new code', async () => {
+    const created = await service.create(
+      { ...baseCreate(), clientName: 'Acme' },
+      actorId,
+    );
+    const cloned = await service.clone(
+      created.data!.id,
+      { projectName: 'Luxaria Heights Clone' },
+      actorId,
+    );
+    expect(cloned.data?.status).toBe(ProjectStatus.Draft);
+    expect(cloned.data?.projectName).toBe('Luxaria Heights Clone');
+    expect(cloned.data?.projectCode).not.toBe(created.data!.projectCode);
+    expect(cloned.data?.clientName).toBe('Acme');
+  });
+
+  it('assigns team member and creates project assignment with teamRole', async () => {
+    const created = await service.create(baseCreate(), actorId);
+    const team = await service.assignTeam(
+      created.data!.id,
+      {
+        userId: managerId,
+        teamRole: ProjectTeamRole.ProjectManager,
+        accessStartDate: '2026-01-01',
+      },
+      actorId,
+    );
+
+    expect(team.data?.assignment.teamRole).toBe('project_manager');
+    expect(team.data?.assignment.userId).toBe(managerId);
+
+    const listed = await service.listTeam(created.data!.id, actorId);
+    expect(listed.data?.some((row) => row.userId === managerId)).toBe(true);
+
+    const project = await service.getById(created.data!.id, actorId);
+    expect(project.data?.projectManager).toBe(managerId);
+  });
+
+  it('closes completed then archives and restores', async () => {
+    const created = await service.create(baseCreate(), actorId);
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Planning },
+      actorId,
+    );
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Approval },
+      actorId,
+    );
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Active },
+      actorId,
+    );
+    await service.updateStatus(
+      created.data!.id,
+      { status: ProjectStatus.Completed },
+      actorId,
+    );
+
+    const closed = await service.close(created.data!.id, actorId);
+    expect(closed.data?.status).toBe(ProjectStatus.Closed);
+
+    const archived = await service.archive(created.data!.id, actorId);
+    expect(archived.data?.status).toBe(ProjectStatus.Archived);
+
+    const restored = await service.restore(created.data!.id, actorId);
+    expect(restored.data?.status).toBe(ProjectStatus.Closed);
   });
 
   it('uploads and lists project documents', async () => {

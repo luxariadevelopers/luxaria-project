@@ -41,6 +41,10 @@ import {
   DprWeather,
 } from '../daily-progress-reports/schemas/daily-progress-report.schema';
 import {
+  GoodsReceipt,
+  GoodsReceiptSchema,
+} from '../goods-receipts/schemas/goods-receipt.schema';
+import {
   JournalEntry,
   JournalEntrySchema,
 } from '../journal/schemas/journal-entry.schema';
@@ -198,6 +202,10 @@ describe('ProjectDashboardService', () => {
         PurchaseRequest.name,
         PurchaseRequestSchema,
       ) as Model<PurchaseRequest>,
+      connection.model(
+        GoodsReceipt.name,
+        GoodsReceiptSchema,
+      ) as Model<GoodsReceipt>,
       {
         assertProjectAccess: jest.fn().mockResolvedValue({ allowed: true }),
         assertOptionalProjectAccess: jest.fn().mockResolvedValue(undefined),

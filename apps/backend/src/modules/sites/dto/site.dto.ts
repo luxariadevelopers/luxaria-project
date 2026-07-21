@@ -7,13 +7,23 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
-import { SiteStatus, SiteType } from '../schemas/site.schema';
+import {
+  SiteStatus,
+  SiteType,
+  WarehouseKind,
+} from '../schemas/site.schema';
 
 export class CreateSiteDto {
   @ApiProperty()
   @IsMongoId()
   projectId!: string;
+
+  @ApiPropertyOptional({ description: 'Parent site in the project structure' })
+  @IsOptional()
+  @IsMongoId()
+  parentSiteId?: string | null;
 
   @ApiProperty({ example: 'A1' })
   @IsString()
@@ -29,6 +39,22 @@ export class CreateSiteDto {
   @IsOptional()
   @IsEnum(SiteType)
   type?: SiteType;
+
+  @ApiPropertyOptional({ enum: WarehouseKind })
+  @ValidateIf((o: CreateSiteDto) => o.type === SiteType.Warehouse)
+  @IsOptional()
+  @IsEnum(WarehouseKind)
+  warehouseKind?: WarehouseKind | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactPhone?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -61,6 +87,88 @@ export class CreateSiteDto {
   geo?: Record<string, unknown> | null;
 }
 
+export class CreateStructureNodeDto {
+  @ApiPropertyOptional({ description: 'Parent site in the project structure' })
+  @IsOptional()
+  @IsMongoId()
+  parentSiteId?: string | null;
+
+  @ApiProperty({ enum: SiteType })
+  @IsEnum(SiteType)
+  type!: SiteType;
+
+  @ApiProperty({ example: 'PH1' })
+  @IsString()
+  @MinLength(1)
+  siteCode!: string;
+
+  @ApiProperty({ example: 'Phase 1' })
+  @IsString()
+  @MinLength(1)
+  siteName!: string;
+
+  @ApiPropertyOptional({ enum: WarehouseKind })
+  @IsOptional()
+  @IsEnum(WarehouseKind)
+  warehouseKind?: WarehouseKind | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactPhone?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  siteManagerUserId?: string | null;
+}
+
+export class CreateWarehouseDto {
+  @ApiProperty({ example: 'WH-MAIN' })
+  @IsString()
+  @MinLength(1)
+  siteCode!: string;
+
+  @ApiProperty({ example: 'Main Store' })
+  @IsString()
+  @MinLength(1)
+  siteName!: string;
+
+  @ApiProperty({ enum: WarehouseKind })
+  @IsEnum(WarehouseKind)
+  warehouseKind!: WarehouseKind;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  parentSiteId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactPhone?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string | null;
+}
+
 export class UpdateSiteDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -71,6 +179,26 @@ export class UpdateSiteDto {
   @IsOptional()
   @IsEnum(SiteType)
   type?: SiteType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  parentSiteId?: string | null;
+
+  @ApiPropertyOptional({ enum: WarehouseKind })
+  @IsOptional()
+  @IsEnum(WarehouseKind)
+  warehouseKind?: WarehouseKind | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactPhone?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -118,6 +246,11 @@ export class ListSitesQueryDto {
   @IsOptional()
   @IsEnum(SiteStatus)
   status?: SiteStatus;
+
+  @ApiPropertyOptional({ enum: SiteType })
+  @IsOptional()
+  @IsEnum(SiteType)
+  type?: SiteType;
 
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

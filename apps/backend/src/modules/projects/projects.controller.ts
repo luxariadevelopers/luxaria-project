@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -32,10 +33,19 @@ import {
 } from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { PermissionsService } from '../rbac/permissions.service';
+import {
+  CreateStructureNodeDto,
+  CreateWarehouseDto,
+} from '../sites/dto/site.dto';
+import { SitesService } from '../sites/sites.service';
 import { AssignDirectorsDto } from './dto/assign-directors.dto';
 import { AssignProjectManagerDto } from './dto/assign-project-manager.dto';
+import { AssignProjectTeamDto } from './dto/assign-project-team.dto';
+import { CloneProjectDto } from './dto/clone-project.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
+import { ProjectFinancialConfigDto } from './dto/project-financial-config.dto';
+import { ProjectSettingsDto } from './dto/project-settings.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectsService } from './projects.service';
@@ -65,23 +75,25 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly permissionsService: PermissionsService,
+    private readonly sitesService: SitesService,
   ) {}
 
   @Post()
   @GlobalScope()
   @RequirePermissions('project.create')
-  @ApiOperation({ summary: 'Create project' })
+  @ApiOperation({ summary: 'Create project (default status Draft)' })
   async create(@Body() dto: CreateProjectDto, @CurrentUser() actor: AuthUser) {
     if (
       dto.status === ProjectStatus.Closed ||
-      dto.status === ProjectStatus.Cancelled
+      dto.status === ProjectStatus.Cancelled ||
+      dto.status === ProjectStatus.Archived
     ) {
       const allowed = await this.permissionsService.hasAllPermissions(actor.id, [
         'project.close',
       ]);
       if (!allowed) {
         throw new ForbiddenException(
-          'project.close permission is required to create a closed or cancelled project',
+          'project.close permission is required to create a closed, archived, or cancelled project',
         );
       }
     }
@@ -114,6 +126,30 @@ export class ProjectsController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.projectsService.update(id, dto, actor.id);
+  }
+
+  @Patch(':id/settings')
+  @RequirePermissions('project.update')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Patch project module settings' })
+  updateSettings(
+    @Param('id') id: string,
+    @Body() dto: ProjectSettingsDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.projectsService.updateSettings(id, dto, actor.id);
+  }
+
+  @Patch(':id/financial-config')
+  @RequirePermissions('project.update')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Patch project financial config' })
+  updateFinancialConfig(
+    @Param('id') id: string,
+    @Body() dto: ProjectFinancialConfigDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.projectsService.updateFinancialConfig(id, dto, actor.id);
   }
 
   @Post(':id/project-manager')
@@ -151,18 +187,192 @@ export class ProjectsController {
   ) {
     if (
       dto.status === ProjectStatus.Closed ||
-      dto.status === ProjectStatus.Cancelled
+      dto.status === ProjectStatus.Cancelled ||
+      dto.status === ProjectStatus.Archived
     ) {
       const allowed = await this.permissionsService.hasAllPermissions(actor.id, [
         'project.close',
       ]);
       if (!allowed) {
         throw new ForbiddenException(
-          'project.close permission is required to close or cancel a project',
+          'project.close permission is required to close, archive, or cancel a project',
         );
       }
     }
     return this.projectsService.updateStatus(id, dto, actor.id);
+  }
+
+  /** Lifecycle: suspend → On Hold (project.update). */
+  @Post(':id/suspend')
+  @RequirePermissions('project.update')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Suspend project (On Hold), store statusBeforeHold' })
+  suspend(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.suspend(id, actor.id);
+  }
+
+  /** Lifecycle: resume from On Hold (project.update). */
+  @Post(':id/resume')
+  @RequirePermissions('project.update')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Resume project from On Hold' })
+  resume(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.resume(id, actor.id);
+  }
+
+  /** Lifecycle: Completed → Closed (project.close). */
+  @Post(':id/close')
+  @RequirePermissions('project.close')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Close completed project' })
+  close(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.close(id, actor.id);
+  }
+
+  /**
+   * Lifecycle: Closed → Archived.
+   * Permission: reuses project.close (no separate project.archive code).
+   */
+  @Post(':id/archive')
+  @RequirePermissions('project.close')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Archive closed project (reuses project.close)' })
+  archive(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.archive(id, actor.id);
+  }
+
+  /** Lifecycle: Archived → Closed, or soft-delete restore via restore-deleted. */
+  @Post(':id/restore')
+  @RequirePermissions('project.update')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Restore archived project to Closed' })
+  restore(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.restore(id, actor.id);
+  }
+
+  /**
+   * Clone project as Draft.
+   * Permission: reuses project.create (no separate project.clone code).
+   */
+  @Post(':id/clone')
+  @RequirePermissions('project.create')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'read' })
+  @ApiOperation({ summary: 'Clone project (reuses project.create)' })
+  clone(
+    @Param('id') id: string,
+    @Body() dto: CloneProjectDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.projectsService.clone(id, dto, actor.id);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('project.update')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Soft-delete project' })
+  softDelete(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.softDelete(id, actor.id);
+  }
+
+  @Post(':id/restore-deleted')
+  @RequirePermissions('project.update')
+  @ApiOperation({ summary: 'Restore soft-deleted project' })
+  restoreDeleted(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.restoreDeleted(id, actor.id);
+  }
+
+  @Get(':id/structure')
+  @RequirePermissions('site.view')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'read' })
+  @ApiOperation({ summary: 'Get project site structure tree' })
+  getStructure(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    if (!actor.companyId) {
+      throw new ForbiddenException('Authenticated company context required');
+    }
+    return this.sitesService.getStructure(id, actor.companyId);
+  }
+
+  @Post(':id/structure')
+  @RequirePermissions('site.manage')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Create a structure node under the project' })
+  createStructureNode(
+    @Param('id') id: string,
+    @Body() dto: CreateStructureNodeDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    if (!actor.companyId) {
+      throw new ForbiddenException('Authenticated company context required');
+    }
+    return this.sitesService.createStructureNode(
+      id,
+      dto,
+      actor.companyId,
+      actor.id,
+    );
+  }
+
+  @Get(':id/warehouses')
+  @RequirePermissions('site.view')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'read' })
+  @ApiOperation({ summary: 'List warehouse sites for a project' })
+  listWarehouses(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    if (!actor.companyId) {
+      throw new ForbiddenException('Authenticated company context required');
+    }
+    return this.sitesService.listWarehouses(id, actor.companyId);
+  }
+
+  @Post(':id/warehouses')
+  @RequirePermissions('site.manage')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Create a warehouse site for a project' })
+  createWarehouse(
+    @Param('id') id: string,
+    @Body() dto: CreateWarehouseDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    if (!actor.companyId) {
+      throw new ForbiddenException('Authenticated company context required');
+    }
+    return this.sitesService.createWarehouse(
+      id,
+      dto,
+      actor.companyId,
+      actor.id,
+    );
+  }
+
+  @Get(':id/team')
+  @RequirePermissions('project.view')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'read' })
+  @ApiOperation({ summary: 'List project team assignments' })
+  listTeam(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.projectsService.listTeam(id, actor.id);
+  }
+
+  @Post(':id/team')
+  @RequirePermissions('project_access.assign')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Assign team member with teamRole' })
+  assignTeam(
+    @Param('id') id: string,
+    @Body() dto: AssignProjectTeamDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.projectsService.assignTeam(id, dto, actor.id);
+  }
+
+  @Delete(':id/team/:assignmentId')
+  @RequirePermissions('project_access.assign')
+  @RequireProjectAccess({ source: 'params', key: 'id', operation: 'update' })
+  @ApiOperation({ summary: 'Revoke team assignment' })
+  revokeTeam(
+    @Param('id') id: string,
+    @Param('assignmentId') assignmentId: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.projectsService.revokeTeam(id, assignmentId, actor.id);
   }
 
   @Post(':id/documents')

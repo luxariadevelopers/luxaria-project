@@ -4,6 +4,7 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
 import { CompanyModule } from '../company/company.module';
 import { ProjectAccessModule } from '../project-access/project-access.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { SitesModule } from '../sites/sites.module';
 import { UsersModule } from '../users/users.module';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
@@ -23,6 +24,7 @@ import { Project, ProjectSchema } from './schemas/project.schema';
     forwardRef(() => UsersModule),
     CompanyModule,
     forwardRef(() => ProjectAccessModule),
+    forwardRef(() => SitesModule),
     RbacModule,
   ],
   controllers: [ProjectsController],

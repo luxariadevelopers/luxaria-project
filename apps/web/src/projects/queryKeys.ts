@@ -14,6 +14,11 @@ export const projectKeys = {
     [...projectKeys.detail(id), 'documents', { page, limit, category }] as const,
   activity: (id: string) =>
     [...projectKeys.detail(id), 'activity'] as const,
+  structure: (id: string) =>
+    [...projectKeys.detail(id), 'structure'] as const,
+  warehouses: (id: string) =>
+    [...projectKeys.detail(id), 'warehouses'] as const,
+  team: (id: string) => [...projectKeys.detail(id), 'team'] as const,
   company: (id: string | null) =>
     ['projects', 'lookups', 'company', id ?? 'primary'] as const,
   users: ['projects', 'lookups', 'users'] as const,

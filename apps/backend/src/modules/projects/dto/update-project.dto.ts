@@ -13,6 +13,8 @@ import {
 } from 'class-validator';
 import { AddressDto } from '../../company/dto/address.dto';
 import { ProjectStage, ProjectType } from '../schemas/project.schema';
+import { ProjectFinancialConfigDto } from './project-financial-config.dto';
+import { ProjectSettingsDto } from './project-settings.dto';
 import { ReraDetailsDto } from './rera-details.dto';
 
 export class UpdateProjectDto {
@@ -104,6 +106,38 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsDateString()
   actualCompletionDate?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  clientName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  timeZone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  financialYearId?: string | null;
+
+  @ApiPropertyOptional({ type: ProjectSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProjectSettingsDto)
+  settings?: ProjectSettingsDto;
+
+  @ApiPropertyOptional({ type: ProjectFinancialConfigDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProjectFinancialConfigDto)
+  financialConfig?: ProjectFinancialConfigDto;
 
   @ApiPropertyOptional()
   @IsOptional()

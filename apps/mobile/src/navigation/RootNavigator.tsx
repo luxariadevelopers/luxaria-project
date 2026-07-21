@@ -43,6 +43,7 @@ import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { NotificationPreferencesScreen } from '@/screens/NotificationPreferencesScreen';
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
+import { ProjectDashboardScreen } from '@/screens/ProjectDashboardScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
 import { StockCountEntryScreen } from '@/screens/StockCountEntryScreen';
@@ -170,6 +171,11 @@ function AppNavigator() {
           headerBackVisible: !needsProjectSelection,
           gestureEnabled: !needsProjectSelection,
         }}
+      />
+      <AppStack.Screen
+        name="ProjectDashboard"
+        component={ProjectDashboardScreen}
+        options={{ title: 'Project dashboard' }}
       />
       <AppStack.Screen
         name="GoodsReceipt"

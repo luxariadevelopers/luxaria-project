@@ -14,6 +14,7 @@ export type MainTabParamList = {
 export type AppStackParamList = {
   Tabs: NavigatorScreenParams<MainTabParamList> | undefined;
   ProjectSelect: undefined;
+  ProjectDashboard: undefined;
   GoodsReceipt: { purchaseOrderId?: string } | undefined;
   DailyProgressReport: undefined;
   DprList: undefined;

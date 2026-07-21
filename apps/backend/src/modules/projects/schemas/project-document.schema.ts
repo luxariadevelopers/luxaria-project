@@ -6,6 +6,9 @@ import { softDeletePlugin } from '../../../database/plugins/soft-delete.plugin';
 
 export type ProjectFileDocument = HydratedDocument<ProjectFile>;
 
+/**
+ * Document categories — Phase 2 expanded set plus legacy values kept for DB compat.
+ */
 export enum ProjectDocumentCategory {
   General = 'general',
   Approval = 'approval',
@@ -14,6 +17,16 @@ export enum ProjectDocumentCategory {
   Drawing = 'drawing',
   Photo = 'photo',
   Other = 'other',
+  Drawings = 'drawings',
+  Boq = 'boq',
+  Contracts = 'contracts',
+  GovernmentApprovals = 'government_approvals',
+  LandDocuments = 'land_documents',
+  StructuralDrawings = 'structural_drawings',
+  CompletionCertificates = 'completion_certificates',
+  Legal = 'legal',
+  Images = 'images',
+  Videos = 'videos',
 }
 
 @Schema({
@@ -44,6 +57,10 @@ export class ProjectFile {
   })
   category!: ProjectDocumentCategory;
 
+  /** Lightweight version — increments when same category + fileName is replaced. */
+  @Prop({ type: Number, default: 1, min: 1 })
+  version!: number;
+
   @Prop({ type: String, trim: true, default: null })
   description!: string | null;
 
@@ -61,3 +78,4 @@ ProjectFileSchema.plugin(softDeletePlugin);
 
 ProjectFileSchema.index({ projectId: 1, createdAt: -1 });
 ProjectFileSchema.index({ projectId: 1, category: 1 });
+ProjectFileSchema.index({ projectId: 1, category: 1, fileName: 1 });

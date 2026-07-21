@@ -51,6 +51,8 @@ export const PERMISSIONS = [
   'period_closure.approve_reopen',
 
   // Projects
+  // Phase 2 PLM: archive reuses project.close; clone reuses project.create
+  // (no separate project.archive / project.clone permission codes).
   'project.view',
   'project.create',
   'project.update',

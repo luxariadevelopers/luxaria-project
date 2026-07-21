@@ -100,7 +100,11 @@ import { ProjectDetailPage } from '@/pages/ProjectDetailPage';
 import { ProjectDocumentsPage } from '@/pages/ProjectDocumentsPage';
 import { ProjectEditPage } from '@/pages/ProjectEditPage';
 import { ProjectParticipantsEntryPage, ProjectParticipantsPage } from '@/pages/ProjectParticipantsPage';
+import { ProjectFinancialSettingsPage } from '@/pages/ProjectFinancialSettingsPage';
 import { ProjectSettingsPage } from '@/pages/ProjectSettingsPage';
+import { ProjectStructurePage } from '@/pages/ProjectStructurePage';
+import { ProjectTeamPage } from '@/pages/ProjectTeamPage';
+import { ProjectWarehousesPage } from '@/pages/ProjectWarehousesPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
 import { PurchaseDashboardPage } from '@/pages/PurchaseDashboardPage';
 import { PurchaseOrderCreatePage } from '@/pages/PurchaseOrderCreatePage';
@@ -170,6 +174,10 @@ export const APP_ROUTE_ELEMENTS: {
   'project-access': <ProjectAccessPage />,
   'project-documents': <ProjectDocumentsPage />,
   'project-settings': <ProjectSettingsPage />,
+  'project-structure': <ProjectStructurePage />,
+  'project-team': <ProjectTeamPage />,
+  'project-warehouses': <ProjectWarehousesPage />,
+  'project-financial-settings': <ProjectFinancialSettingsPage />,
   'project-dashboard': <ProjectDashboardEntryPage />,
   'project-dashboard-detail': <ProjectDashboardPage />,
   'project-participants': <ProjectParticipantsEntryPage />,

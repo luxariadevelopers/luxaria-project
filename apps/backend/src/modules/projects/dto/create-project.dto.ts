@@ -16,6 +16,8 @@ import {
 } from 'class-validator';
 import { AddressDto } from '../../company/dto/address.dto';
 import { ProjectStage, ProjectStatus, ProjectType } from '../schemas/project.schema';
+import { ProjectFinancialConfigDto } from './project-financial-config.dto';
+import { ProjectSettingsDto } from './project-settings.dto';
 import { ReraDetailsDto } from './rera-details.dto';
 
 export class CreateProjectDto {
@@ -106,6 +108,38 @@ export class CreateProjectDto {
   @IsOptional()
   @IsEnum(ProjectStatus)
   status?: ProjectStatus;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  clientName?: string | null;
+
+  @ApiPropertyOptional({ example: 'INR', default: 'INR' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional({ example: 'Asia/Kolkata', default: 'Asia/Kolkata' })
+  @IsOptional()
+  @IsString()
+  timeZone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  financialYearId?: string | null;
+
+  @ApiPropertyOptional({ type: ProjectSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProjectSettingsDto)
+  settings?: ProjectSettingsDto;
+
+  @ApiPropertyOptional({ type: ProjectFinancialConfigDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProjectFinancialConfigDto)
+  financialConfig?: ProjectFinancialConfigDto;
 
   @ApiPropertyOptional()
   @IsOptional()
