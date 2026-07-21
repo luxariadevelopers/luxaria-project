@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Button,
   CircularProgress,
@@ -20,6 +21,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { manpowerPlansListPath } from '@/manpower-plans/routes';
 import { ScheduleImpactPanel } from '@/manpower-shortfall/ScheduleImpactPanel';
 import { ShortfallTable } from '@/manpower-shortfall/ShortfallTable';
 import { shortfallAlertTypeLabel } from '@/manpower-shortfall/labels';
@@ -146,10 +148,25 @@ export function ManpowerShortfallPage() {
 
   return (
     <Stack spacing={2} data-testid="manpower-shortfall-page">
-      <Typography color="text.secondary">
-        Compare agreed, planned and actual labour using Nest shortfall
-        thresholds (80% / 60% fill-rate streaks). Acknowledge to escalate.
-      </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+      >
+        <Typography color="text.secondary">
+          Compare agreed, planned and actual labour using Nest shortfall
+          thresholds (80% / 60% fill-rate streaks). Acknowledge to escalate.
+        </Typography>
+        {caps.canCompare ? (
+          <Button
+            component={RouterLink}
+            to={manpowerPlansListPath()}
+            size="small"
+          >
+            Manage daily plans
+          </Button>
+        ) : null}
+      </Stack>
 
       <ShortfallTable
         rows={rows}

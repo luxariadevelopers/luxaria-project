@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import type { AppRouteId } from '@/navigation/routeRegistry';
 import { AccountCreatePage } from '@/pages/AccountCreatePage';
 import { AccountEditPage } from '@/pages/AccountEditPage';
+import { AccountingReportsPage } from '@/pages/AccountingReportsPage';
 import { ApprovalDetailPage } from '@/pages/ApprovalDetailPage';
 import { ApprovalsPage } from '@/pages/ApprovalsPage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
@@ -41,6 +42,7 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { DataTableDemoPage } from '@/pages/DataTableDemoPage';
 import { DirectorCommandCentrePage } from '@/pages/DirectorCommandCentrePage';
 import { DirectorDetailPage } from '@/pages/DirectorDetailPage';
+import { DirectorDigestPage } from '@/pages/DirectorDigestPage';
 import { DirectorsPage } from '@/pages/DirectorsPage';
 import { DocumentsDemoPage } from '@/pages/DocumentsDemoPage';
 import { DocumentsPage } from '@/pages/DocumentsPage';
@@ -67,6 +69,8 @@ import { JournalDetailPage } from '@/pages/JournalDetailPage';
 import { JournalsPage } from '@/pages/JournalsPage';
 import { LabourAttendancePage } from '@/pages/LabourAttendancePage';
 import { LabourCategoriesPage } from '@/pages/LabourCategoriesPage';
+import { ManpowerPlanDetailPage } from '@/pages/ManpowerPlanDetailPage';
+import { ManpowerPlansPage } from '@/pages/ManpowerPlansPage';
 import { ManpowerShortfallPage } from '@/pages/ManpowerShortfallPage';
 import { MaterialCoefficientsPage } from '@/pages/MaterialCoefficientsPage';
 import { MaterialDetailPage } from '@/pages/MaterialDetailPage';
@@ -76,6 +80,8 @@ import { MaterialsPage } from '@/pages/MaterialsPage';
 import { MaterialVariancePage } from '@/pages/MaterialVariancePage';
 import { NoProjectAccessPage } from '@/pages/NoProjectAccessPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
+import { PaymentScheduleDetailPage } from '@/pages/PaymentScheduleDetailPage';
+import { PaymentSchedulesPage } from '@/pages/PaymentSchedulesPage';
 import { PeriodClosePage } from '@/pages/PeriodClosePage';
 import { PettyCashRequestCreatePage } from '@/pages/PettyCashRequestCreatePage';
 import { PettyCashRequestDetailPage } from '@/pages/PettyCashRequestDetailPage';
@@ -113,6 +119,8 @@ import { RunningBillDetailPage } from '@/pages/RunningBillDetailPage';
 import { RunningBillsPage } from '@/pages/RunningBillsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ShareholdingPage } from '@/pages/ShareholdingPage';
+import { SignedPaymentVoucherDetailPage } from '@/pages/SignedPaymentVoucherDetailPage';
+import { SignedPaymentVouchersPage } from '@/pages/SignedPaymentVouchersPage';
 import { SiteOperationsDashboardPage } from '@/pages/SiteOperationsDashboardPage';
 import { StockBalancesPage } from '@/pages/StockBalancesPage';
 import { StockCountDetailPage } from '@/pages/StockCountDetailPage';
@@ -176,7 +184,11 @@ export const APP_ROUTE_ELEMENTS: {
   'running-bill-detail': <RunningBillDetailPage />,
   'labour-categories': <LabourCategoriesPage />,
   'labour-attendance': <LabourAttendancePage />,
+  'signed-payment-vouchers': <SignedPaymentVouchersPage />,
+  'signed-payment-voucher-detail': <SignedPaymentVoucherDetailPage />,
   'manpower-shortfall': <ManpowerShortfallPage />,
+  'manpower-plans': <ManpowerPlansPage />,
+  'manpower-plan-detail': <ManpowerPlanDetailPage />,
   customers: <CustomersPage />,
   'customer-detail': <CustomerDetailPage />,
   'purchase-orders': <PurchaseOrdersPage />,
@@ -199,6 +211,8 @@ export const APP_ROUTE_ELEMENTS: {
   units: <UnitsPage />,
   'unit-detail': <UnitDetailPage />,
   collections: <CollectionsPage />,
+  'payment-schedules': <PaymentSchedulesPage />,
+  'payment-schedule-detail': <PaymentScheduleDetailPage />,
   bookings: <BookingsPage />,
   cancellations: <CancellationsPage />,
   directors: <DirectorsPage />,
@@ -242,6 +256,7 @@ export const APP_ROUTE_ELEMENTS: {
   'boq-versions': <BoqVersionsPage />,
   'boq-item-editor': <BoqItemEditorPage />,
   'construction-reports': <ConstructionReportsPage />,
+  'accounting-reports': <AccountingReportsPage />,
   'cash-book': <CashBookPage />,
   'bank-book': <BankBookPage />,
   users: <UsersPage />,
@@ -256,6 +271,7 @@ export const APP_ROUTE_ELEMENTS: {
   'role-edit': <RoleEditPage />,
   documents: <DocumentsPage />,
   'audit-logs': <AuditLogsPage />,
+  'director-digest': <DirectorDigestPage />,
   'system-health': <SystemHealthPage />,
   settings: <SettingsPage />,
   forbidden: <ForbiddenPage />,

@@ -9,6 +9,10 @@ import { fetchFinancialYearFilterOptions } from '@/director-command-centre/api';
 import type {
   AccountOption,
   AccountingBookKind,
+  AccountingReportCatalogueItem,
+  AccountingReportPayload,
+  AccountingReportQuery,
+  AccountingReportType,
   CashBankBookPayload,
   CashBankBookQuery,
   LedgerLineRow,
@@ -64,6 +68,42 @@ function normalisePayload(data: CashBankBookPayload): CashBankBookPayload {
       openingBalance: toNumber(data.totals?.openingBalance ?? openingBalance),
       closingBalance: toNumber(data.totals?.closingBalance ?? closingBalance),
     },
+  };
+}
+
+/** `GET /accounting-reports` — `report.view` */
+export async function fetchAccountingReportCatalogue(): Promise<
+  AccountingReportCatalogueItem[]
+> {
+  const res = await apiGet<AccountingReportCatalogueItem[]>(
+    '/accounting-reports',
+  );
+  return res.data ?? [];
+}
+
+/** `GET /accounting-reports/:reportType` — `report.view` */
+export async function fetchAccountingReport(
+  reportType: AccountingReportType,
+  query: AccountingReportQuery = {},
+): Promise<AccountingReportPayload> {
+  const res = await apiGet<AccountingReportPayload>(
+    `/accounting-reports/${reportType}`,
+    {
+      financialYearId: query.financialYearId || undefined,
+      projectId: query.projectId || undefined,
+      from: query.from || undefined,
+      to: query.to || undefined,
+      accountId: query.accountId || undefined,
+      partyId: query.partyId || undefined,
+    },
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Accounting report unavailable');
+  }
+  return {
+    ...res.data,
+    rows: Array.isArray(res.data.rows) ? res.data.rows : [],
+    totals: res.data.totals ?? null,
   };
 }
 

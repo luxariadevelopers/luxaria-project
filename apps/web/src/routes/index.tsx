@@ -332,10 +332,38 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="signed-payment-vouchers" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/signed-vouchers')}
+                element={APP_ROUTE_ELEMENTS['signed-payment-vouchers']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="signed-payment-voucher-detail" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/signed-vouchers/:voucherId')}
+                element={APP_ROUTE_ELEMENTS['signed-payment-voucher-detail']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="manpower-shortfall" />}>
               <Route
                 path={toRelativeAppPath('/contractors/manpower-shortfall')}
                 element={APP_ROUTE_ELEMENTS['manpower-shortfall']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="manpower-plans" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/manpower-plans')}
+                element={APP_ROUTE_ELEMENTS['manpower-plans']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="manpower-plan-detail" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/manpower-plans/:planId')}
+                element={APP_ROUTE_ELEMENTS['manpower-plan-detail']}
               />
             </Route>
 
@@ -490,6 +518,20 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/sales/collections')}
                 element={APP_ROUTE_ELEMENTS.collections}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="payment-schedules" />}>
+              <Route
+                path={toRelativeAppPath('/sales/payment-schedules')}
+                element={APP_ROUTE_ELEMENTS['payment-schedules']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="payment-schedule-detail" />}>
+              <Route
+                path={toRelativeAppPath('/sales/payment-schedules/:id')}
+                element={APP_ROUTE_ELEMENTS['payment-schedule-detail']}
               />
             </Route>
 
@@ -794,6 +836,13 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="accounting-reports" />}>
+              <Route
+                path={toRelativeAppPath('/reports/accounting')}
+                element={APP_ROUTE_ELEMENTS['accounting-reports']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="cash-book" />}>
               <Route
                 path={toRelativeAppPath('/reports/accounting/cash-book')}
@@ -889,6 +938,13 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/administration/audit-logs')}
                 element={APP_ROUTE_ELEMENTS['audit-logs']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="director-digest" />}>
+              <Route
+                path={toRelativeAppPath('/administration/director-digest')}
+                element={APP_ROUTE_ELEMENTS['director-digest']}
               />
             </Route>
 
