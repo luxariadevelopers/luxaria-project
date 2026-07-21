@@ -123,6 +123,11 @@ export async function apiPatch<T>(url: string, body?: unknown) {
   return data;
 }
 
+export async function apiPut<T>(url: string, body?: unknown) {
+  const { data } = await apiClient.put<ApiResponse<T>>(url, body);
+  return data;
+}
+
 export async function apiDelete<T>(url: string) {
   const { data } = await apiClient.delete<ApiResponse<T>>(url);
   return data;

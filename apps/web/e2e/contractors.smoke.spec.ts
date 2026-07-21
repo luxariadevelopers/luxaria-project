@@ -2,9 +2,6 @@ import { expect, test } from '@playwright/test';
 import { e2eEnv, isLiveApi } from './fixtures/test-env';
 import { readRuntimeState } from './fixtures/seed-data';
 
-const missingContractorDetailRouteReason =
-  'Contractor master has list/create/edit drawers only; no /contractors/:contractorId detail route is registered yet.';
-
 test.describe('Contractors page smoke', () => {
   test.use({ storageState: e2eEnv.paths.adminAuth });
 
@@ -23,7 +20,19 @@ test.describe('Contractors page smoke', () => {
     ).toBeVisible();
   });
 
-  test('contractor detail route is not registered yet', async () => {
-    test.skip(true, missingContractorDetailRouteReason);
+  test('admin can open a contractor detail when a row exists', async ({
+    page,
+  }) => {
+    await page.goto('/contractors');
+    await expect(page.getByTestId('contractor-filters')).toBeVisible();
+
+    const firstRow = page.getByRole('row').nth(1);
+    const hasRow = await firstRow.isVisible().catch(() => false);
+    test.skip(!hasRow, 'No contractor rows in seeded environment');
+
+    await firstRow.click();
+    await expect(page).toHaveURL(/\/contractors\/[a-f0-9]{24}/i, {
+      timeout: 15_000,
+    });
   });
 });

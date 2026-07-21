@@ -98,3 +98,72 @@ export type BookingRelatedLabels = {
   units: ReadonlyMap<string, string>;
   customers: ReadonlyMap<string, string>;
 };
+
+/** Nest `BookingPaymentInstallmentDto` */
+export type BookingPaymentInstallmentInput = {
+  sequence: number;
+  label: string;
+  dueDate?: string | null;
+  amount: number;
+  percent?: number | null;
+};
+
+/** Nest `BookingPaymentPlanDto` */
+export type BookingPaymentPlanInput = {
+  name?: string | null;
+  installments?: BookingPaymentInstallmentInput[];
+};
+
+/** Nest `BookingBrokerDto` */
+export type BookingBrokerInput = {
+  name?: string | null;
+  firmName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  commissionPercent?: number | null;
+};
+
+/** Nest `CreateBookingDto` */
+export type CreateBookingInput = {
+  customerId: string;
+  jointApplicantId?: string | null;
+  projectId: string;
+  unitId: string;
+  bookingDate?: string;
+  bookingAmount: number;
+  agreedPrice: number;
+  discount?: number;
+  approvedPrice?: number;
+  paymentPlan?: BookingPaymentPlanInput;
+  broker?: BookingBrokerInput;
+  fundingType: BookingFundingType | string;
+  remarks?: string | null;
+  holdHours?: number;
+};
+
+/** Nest `UpdateBookingDto` */
+export type UpdateBookingInput = Partial<CreateBookingInput>;
+
+/** Nest `TransitionBookingDto` — workflow targets only */
+export type TransitionBookingInput = {
+  status:
+    | typeof BookingStatus.Reserved
+    | typeof BookingStatus.Booked
+    | typeof BookingStatus.Agreement
+    | typeof BookingStatus.Registered;
+};
+
+/** Nest `CancelBookingDto` */
+export type CancelBookingInput = {
+  reason?: string | null;
+};
+
+/** Nest `ApproveBookingDiscountDto` */
+export type ApproveBookingDiscountInput = {
+  comment?: string | null;
+};
+
+/** Nest `RejectBookingDiscountDto` */
+export type RejectBookingDiscountInput = {
+  reason: string;
+};

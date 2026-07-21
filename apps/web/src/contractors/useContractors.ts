@@ -8,6 +8,9 @@ import {
   blockContractor,
   createContractor,
   fetchContractor,
+  fetchContractorDocuments,
+  fetchContractorPerformance,
+  fetchContractorProjects,
   fetchContractors,
   updateContractor,
   verifyContractor,
@@ -39,6 +42,45 @@ export function useContractorDetail(id: string | undefined, enabled = true) {
     queryKey: contractorsKeys.detail(id ?? ''),
     queryFn: () => fetchContractor(id!),
     enabled: Boolean(id) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useContractorDocuments(
+  contractorId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: contractorsKeys.documents(contractorId ?? ''),
+    queryFn: () => fetchContractorDocuments(contractorId!),
+    enabled: Boolean(contractorId) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useContractorProjects(
+  contractorId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: contractorsKeys.projects(contractorId ?? ''),
+    queryFn: () => fetchContractorProjects(contractorId!),
+    enabled: Boolean(contractorId) && enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+export function useContractorPerformance(
+  contractorId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: contractorsKeys.performance(contractorId ?? ''),
+    queryFn: () => fetchContractorPerformance(contractorId!),
+    enabled: Boolean(contractorId) && enabled,
     staleTime: 15_000,
     retry: false,
   });

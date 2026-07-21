@@ -15,6 +15,8 @@ import {
 } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { evaluateRouteProjectAccess } from '@/project-dashboard/routeProjectAccess';
+import { InvestorProfitAllocationPanel } from '@/investor-portal/manage/InvestorProfitAllocationPanel';
+import { canManageInvestorPortal } from '@/investor-portal/permissions';
 import { CreateParticipantDrawer } from '@/project-participants/CreateParticipantDrawer';
 import { CreateVersionDrawer } from '@/project-participants/CreateVersionDrawer';
 import { EditDraftDrawer } from '@/project-participants/EditDraftDrawer';
@@ -294,6 +296,12 @@ export function ProjectParticipantsPage() {
           }}
         />
       ) : null}
+
+      <InvestorProfitAllocationPanel
+        projectId={projectId}
+        participants={activeQuery.data?.participants ?? []}
+        canManage={canManageInvestorPortal(hasPermission)}
+      />
     </Stack>
   );
 }

@@ -63,3 +63,39 @@ export const CONTRACTOR_TYPE_OPTIONS = Object.values(ContractorType).map(
     label: contractorTypeLabel(value),
   }),
 );
+
+export function contractorDocumentCategoryLabel(category: string): string {
+  switch (category) {
+    case 'general':
+      return 'General';
+    case 'agreement':
+      return 'Agreement';
+    case 'pan':
+      return 'PAN';
+    case 'gst':
+      return 'GST';
+    case 'bank_proof':
+      return 'Bank proof';
+    case 'labour_licence':
+      return 'Labour licence';
+    case 'insurance':
+      return 'Insurance';
+    case 'cancelled_cheque':
+      return 'Cancelled cheque';
+    case 'other':
+      return 'Other';
+    default:
+      return category;
+  }
+}
+
+export function contractorProjectAssignmentStatusLabel(status: string): string {
+  switch (status) {
+    case 'active':
+      return 'Active';
+    case 'inactive':
+      return 'Inactive';
+    default:
+      return status;
+  }
+}

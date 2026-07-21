@@ -367,6 +367,13 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="contractor-detail" />}>
+              <Route
+                path={toRelativeAppPath('/contractors/:contractorId')}
+                element={APP_ROUTE_ELEMENTS['contractor-detail']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="customers" />}>
               <Route
                 path={toRelativeAppPath('/sales/customers')}
@@ -539,6 +546,20 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/sales/bookings')}
                 element={APP_ROUTE_ELEMENTS.bookings}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="booking-create" />}>
+              <Route
+                path={toRelativeAppPath('/sales/bookings/new')}
+                element={APP_ROUTE_ELEMENTS['booking-create']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="booking-detail" />}>
+              <Route
+                path={toRelativeAppPath('/sales/bookings/:bookingId')}
+                element={APP_ROUTE_ELEMENTS['booking-detail']}
               />
             </Route>
 
@@ -945,6 +966,13 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/administration/director-digest')}
                 element={APP_ROUTE_ELEMENTS['director-digest']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="approval-workflows" />}>
+              <Route
+                path={toRelativeAppPath('/administration/approval-workflows')}
+                element={APP_ROUTE_ELEMENTS['approval-workflows']}
               />
             </Route>
 

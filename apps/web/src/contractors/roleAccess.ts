@@ -27,3 +27,28 @@ export function resolveContractorCapabilities(
     canVerify: manage,
   };
 }
+
+export const CONTRACTOR_DETAIL_TAB_IDS = [
+  'overview',
+  'bank',
+  'documents',
+  'projects',
+  'performance',
+] as const;
+
+export type ContractorDetailTabId =
+  (typeof CONTRACTOR_DETAIL_TAB_IDS)[number];
+
+export type ContractorDetailTabDef = {
+  id: ContractorDetailTabId;
+  label: string;
+  permission?: PermissionCode;
+};
+
+export const CONTRACTOR_DETAIL_TAB_DEFS: readonly ContractorDetailTabDef[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'bank', label: 'Bank' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'performance', label: 'Performance' },
+] as const;

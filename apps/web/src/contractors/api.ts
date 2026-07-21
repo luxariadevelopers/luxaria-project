@@ -2,10 +2,14 @@ import { apiGet, apiPatch, apiPost } from '@/api/client';
 import { toContractorListRow } from './listProjection';
 import type {
   BlockContractorInput,
+  ContractorDocumentCategory,
+  ContractorPerformance,
   CreateContractorInput,
   ListContractorsQuery,
   PaginatedContractors,
   PublicContractor,
+  PublicContractorDocument,
+  PublicContractorProjectAssignment,
   UpdateContractorInput,
   VerifyContractorInput,
 } from './types';
@@ -132,4 +136,75 @@ export async function blockContractor(
     throw new Error(res.message || 'Contractor block failed');
   }
   return normaliseContractor(res.data);
+}
+
+/** `GET /contractors/:id/documents` — `contractor.view` */
+export async function fetchContractorDocuments(
+  contractorId: string,
+  query: {
+    page?: number;
+    limit?: number;
+    category?: ContractorDocumentCategory;
+  } = {},
+): Promise<PublicContractorDocument[]> {
+  const res = await apiGet<PublicContractorDocument[]>(
+    `/contractors/${contractorId}/documents`,
+    {
+      page: query.page ?? 1,
+      limit: query.limit ?? 50,
+      category: query.category,
+    },
+  );
+  return (res.data ?? []).map((row) => ({
+    ...row,
+    createdAt: row.createdAt
+      ? (toIso(row.createdAt) ?? undefined)
+      : undefined,
+  }));
+}
+
+/** `GET /contractors/:id/projects` — `contractor.view` */
+export async function fetchContractorProjects(
+  contractorId: string,
+  query: { page?: number; limit?: number } = {},
+): Promise<PublicContractorProjectAssignment[]> {
+  const res = await apiGet<PublicContractorProjectAssignment[]>(
+    `/contractors/${contractorId}/projects`,
+    {
+      page: query.page ?? 1,
+      limit: query.limit ?? 50,
+    },
+  );
+  return (res.data ?? []).map((row) => ({
+    ...row,
+    assignedAt: toIso(row.assignedAt) ?? String(row.assignedAt),
+    createdAt: row.createdAt
+      ? (toIso(row.createdAt) ?? undefined)
+      : undefined,
+    updatedAt: row.updatedAt
+      ? (toIso(row.updatedAt) ?? undefined)
+      : undefined,
+  }));
+}
+
+/** `GET /contractors/:id/performance` — `contractor.view` */
+export async function fetchContractorPerformance(
+  contractorId: string,
+): Promise<ContractorPerformance> {
+  const res = await apiGet<ContractorPerformance>(
+    `/contractors/${contractorId}/performance`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Contractor performance unavailable');
+  }
+  return {
+    ...res.data,
+    labourLicence: {
+      ...res.data.labourLicence,
+      validTo: res.data.labourLicence?.validTo
+        ? (toIso(res.data.labourLicence.validTo) ?? null)
+        : null,
+    },
+    asOf: toIso(res.data.asOf) ?? String(res.data.asOf),
+  };
 }

@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
 import { Link, Typography } from '@mui/material';
 import { DataTable } from '@/components/DataTable';
 import { formatDate, formatInr } from '@/format';
 import { unitDetailPath } from '@/units/paths';
+import { bookingDetailPath } from './paths';
 import { BookingStatusChip } from './BookingStatusChip';
 import {
   describeHoldExpiry,
@@ -29,6 +30,7 @@ type Props = {
   filterSlot?: ReactNode;
   toolbarActions?: ReactNode;
   labels?: BookingRelatedLabels;
+  onRowClick?: (params: GridRowParams<PublicBooking>) => void;
 };
 
 function HoldExpiryCell({ display }: { display: HoldExpiryDisplay }) {
@@ -67,12 +69,24 @@ export function BookingTable({
   filterSlot,
   toolbarActions,
   labels,
+  onRowClick,
 }: Props) {
   const columns: GridColDef<PublicBooking>[] = [
     {
       field: 'bookingNumber',
       headerName: 'Booking',
       width: 150,
+      renderCell: (params) => (
+        <Link
+          component={RouterLink}
+          to={bookingDetailPath(params.row.id)}
+          underline="hover"
+          onClick={(e) => e.stopPropagation()}
+          data-testid="booking-detail-link"
+        >
+          {params.row.bookingNumber}
+        </Link>
+      ),
     },
     {
       field: 'unitId',
@@ -172,6 +186,7 @@ export function BookingTable({
       preferencesKey="sales-bookings-list"
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      onRowClick={onRowClick}
     />
   );
 }

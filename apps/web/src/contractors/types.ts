@@ -74,6 +74,7 @@ export type PublicContractor = {
     validFrom: string | null;
     validTo: string | null;
     notes: string | null;
+    isValid?: boolean | null;
   };
   workCategories: string[];
   rating: number | null;
@@ -158,4 +159,78 @@ export type PaginatedContractors = {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   } | null;
+};
+
+export const ContractorDocumentCategory = {
+  General: 'general',
+  Agreement: 'agreement',
+  Pan: 'pan',
+  Gst: 'gst',
+  BankProof: 'bank_proof',
+  LabourLicence: 'labour_licence',
+  Insurance: 'insurance',
+  CancelledCheque: 'cancelled_cheque',
+  Other: 'other',
+} as const;
+
+export type ContractorDocumentCategory =
+  (typeof ContractorDocumentCategory)[keyof typeof ContractorDocumentCategory];
+
+export const ContractorProjectAssignmentStatus = {
+  Active: 'active',
+  Inactive: 'inactive',
+} as const;
+
+export type ContractorProjectAssignmentStatus =
+  (typeof ContractorProjectAssignmentStatus)[keyof typeof ContractorProjectAssignmentStatus];
+
+export type PublicContractorDocument = {
+  id: string;
+  contractorId: string;
+  fileName: string;
+  filePath: string;
+  mimeType: string | null;
+  sizeBytes: number;
+  category: ContractorDocumentCategory;
+  uploadedBy: string | null;
+  createdAt?: string;
+};
+
+export type PublicContractorProjectAssignment = {
+  id: string;
+  contractorId: string;
+  projectId: string;
+  status: ContractorProjectAssignmentStatus;
+  notes: string | null;
+  assignedBy: string | null;
+  assignedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ContractorPerformance = {
+  contractorId: string;
+  contractorCode: string;
+  legalName: string;
+  contractorType: ContractorType;
+  status: ContractorStatus;
+  rating: number | null;
+  activeProjectCount: number;
+  labourLicence: {
+    licenceNumber: string | null;
+    validTo: string | null;
+    isValid: boolean | null;
+  };
+  workMeasurements: {
+    submittedCount: number;
+    verifiedCount: number;
+    totalVerifiedQuantity: number;
+    totalSubmittedQuantity: number;
+  };
+  documents: {
+    totalCount: number;
+    labourLicenceCount: number;
+    insuranceCount: number;
+  };
+  asOf: string;
 };

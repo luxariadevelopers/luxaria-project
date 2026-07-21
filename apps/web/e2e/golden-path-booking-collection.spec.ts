@@ -5,8 +5,8 @@ import { e2eEnv, isLiveApi } from './fixtures/test-env';
 
 const missingActorsReason =
   'Phase 137 seeds only admin and limited users; payment-schedule approval requires distinct sales and finance approvers.';
-const missingBookingCreateUiReason =
-  'Booking create and status-transition UI is not shipped; the register list is available but end-to-end booking → collection cannot run in the browser yet.';
+const missingBookingJourneyActorsReason =
+  'Booking create/transition UI is shipped; full UI journey still needs multi-actor sales/finance seeds and payment-schedule approval actors.';
 
 test.describe('Golden path: booking → collection', () => {
   test('API-assisted journey', async () => {
@@ -85,6 +85,6 @@ test.describe('Golden path: booking → collection', () => {
   });
 
   test('UI: end-to-end booking → collection journey', async () => {
-    test.skip(true, missingBookingCreateUiReason);
+    test.skip(true, missingBookingJourneyActorsReason);
   });
 });

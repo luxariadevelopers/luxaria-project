@@ -9,12 +9,15 @@ import { AccountEditPage } from '@/pages/AccountEditPage';
 import { AccountingReportsPage } from '@/pages/AccountingReportsPage';
 import { ApprovalDetailPage } from '@/pages/ApprovalDetailPage';
 import { ApprovalsPage } from '@/pages/ApprovalsPage';
+import { ApprovalWorkflowsPage } from '@/pages/ApprovalWorkflowsPage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { BankAccountDetailPage } from '@/pages/BankAccountDetailPage';
 import { BankAccountsPage } from '@/pages/BankAccountsPage';
 import { BankBookPage } from '@/pages/BankBookPage';
 import { BankReconciliationDetailPage } from '@/pages/BankReconciliationDetailPage';
 import { BankReconciliationPage } from '@/pages/BankReconciliationPage';
+import { BookingCreatePage } from '@/pages/BookingCreatePage';
+import { BookingDetailPage } from '@/pages/BookingDetailPage';
 import { BookingsPage } from '@/pages/BookingsPage';
 import { BoqImportPage } from '@/pages/BoqImportPage';
 import { BoqItemEditorPage } from '@/pages/BoqItemEditorPage';
@@ -32,6 +35,7 @@ import { CompanySettingsPage } from '@/pages/CompanySettingsPage';
 import { ConstructionReportsPage } from '@/pages/ConstructionReportsPage';
 import { ContractorAgreementDetailPage } from '@/pages/ContractorAgreementDetailPage';
 import { ContractorAgreementsPage } from '@/pages/ContractorAgreementsPage';
+import { ContractorDetailPage } from '@/pages/ContractorDetailPage';
 import { ContractorPaymentsPage } from '@/pages/ContractorPaymentsPage';
 import { ContractorsPage } from '@/pages/ContractorsPage';
 import { ContributionReceiptsPage } from '@/pages/ContributionReceiptsPage';
@@ -189,6 +193,7 @@ export const APP_ROUTE_ELEMENTS: {
   'manpower-shortfall': <ManpowerShortfallPage />,
   'manpower-plans': <ManpowerPlansPage />,
   'manpower-plan-detail': <ManpowerPlanDetailPage />,
+  'contractor-detail': <ContractorDetailPage />,
   customers: <CustomersPage />,
   'customer-detail': <CustomerDetailPage />,
   'purchase-orders': <PurchaseOrdersPage />,
@@ -214,6 +219,8 @@ export const APP_ROUTE_ELEMENTS: {
   'payment-schedules': <PaymentSchedulesPage />,
   'payment-schedule-detail': <PaymentScheduleDetailPage />,
   bookings: <BookingsPage />,
+  'booking-create': <BookingCreatePage />,
+  'booking-detail': <BookingDetailPage />,
   cancellations: <CancellationsPage />,
   directors: <DirectorsPage />,
   'director-detail': <DirectorDetailPage />,
@@ -272,6 +279,7 @@ export const APP_ROUTE_ELEMENTS: {
   documents: <DocumentsPage />,
   'audit-logs': <AuditLogsPage />,
   'director-digest': <DirectorDigestPage />,
+  'approval-workflows': <ApprovalWorkflowsPage />,
   'system-health': <SystemHealthPage />,
   settings: <SettingsPage />,
   forbidden: <ForbiddenPage />,

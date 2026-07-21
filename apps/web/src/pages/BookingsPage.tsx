@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Stack, Typography } from '@mui/material';
-import { useSearchParams } from 'react-router-dom';
+import { Button, Stack, Typography } from '@mui/material';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
@@ -9,6 +9,7 @@ import {
   type BookingFilterState,
 } from '@/bookings/BookingFilters';
 import { BookingTable } from '@/bookings/BookingTable';
+import { BOOKING_ROUTES } from '@/bookings/routes';
 import { resolveBookingCapabilities } from '@/bookings/roleAccess';
 import { useBookingLookups } from '@/bookings/useBookingLookups';
 import { useBookingsList } from '@/bookings/useBookings';
@@ -16,12 +17,13 @@ import type { BookingStatusValue } from '@/bookings/types';
 
 /**
  * Bookings list — `/sales/bookings`.
- * Nest: GET /bookings (`booking.view`). Create/transition UI ships separately.
+ * Nest: GET /bookings (`booking.view`). Create/detail routes wire separately.
  */
 export function BookingsPage() {
   const { hasPermission, access } = useAuth();
   const caps = resolveBookingCapabilities(hasPermission);
   const { selectedProjectId } = useProject();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const focusId = searchParams.get('id')?.trim() || undefined;
 
@@ -71,8 +73,8 @@ export function BookingsPage() {
   return (
     <Stack spacing={2}>
       <Typography color="text.secondary">
-        Unit bookings for the selected project. Create and status transitions
-        use booking.create / booking.approve on the API.
+        Unit bookings for the selected project. Open a row for workflow actions
+        (reserved → booked → agreement → registered).
       </Typography>
 
       <BookingTable
@@ -103,6 +105,19 @@ export function BookingsPage() {
           />
         }
         labels={labels}
+        toolbarActions={
+          caps.canCreate ? (
+            <Button
+              component={RouterLink}
+              to={BOOKING_ROUTES.create}
+              variant="contained"
+              data-testid="booking-create-link"
+            >
+              New booking
+            </Button>
+          ) : null
+        }
+        onRowClick={(params) => navigate(BOOKING_ROUTES.detail(params.row.id))}
       />
     </Stack>
   );

@@ -2,7 +2,13 @@ import {
   ContractorStatus,
   ContractorVerificationStatus,
   type ContractorListRow,
+  type PublicContractor,
 } from './types';
+
+export type ContractorUiInput = Pick<
+  ContractorListRow | PublicContractor,
+  'status' | 'verificationStatus'
+>;
 
 export type ContractorUiState = {
   isBlocked: boolean;
@@ -11,7 +17,7 @@ export type ContractorUiState = {
   canBlock: boolean;
 };
 
-export function contractorUiState(row: ContractorListRow): ContractorUiState {
+export function contractorUiState(row: ContractorUiInput): ContractorUiState {
   const isBlocked = row.status === ContractorStatus.Blocked;
   return {
     isBlocked,

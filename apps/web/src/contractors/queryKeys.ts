@@ -7,4 +7,10 @@ export const contractorsKeys = {
     [...contractorsKeys.lists(), query] as const,
   details: () => [...contractorsKeys.all, 'detail'] as const,
   detail: (id: string) => [...contractorsKeys.details(), id] as const,
+  documents: (id: string) =>
+    [...contractorsKeys.detail(id), 'documents'] as const,
+  projects: (id: string) =>
+    [...contractorsKeys.detail(id), 'projects'] as const,
+  performance: (id: string) =>
+    [...contractorsKeys.detail(id), 'performance'] as const,
 };

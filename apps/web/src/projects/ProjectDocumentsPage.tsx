@@ -3,6 +3,8 @@ import { Box, CircularProgress, Stack } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
+import { PublishInvestorReportPanel } from '@/investor-portal/manage/PublishInvestorReportPanel';
+import { canManageInvestorPortal } from '@/investor-portal/permissions';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { DetailHeader } from '@/components/entity-detail';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
@@ -79,6 +81,10 @@ export function ProjectDocumentsPage({
         code={project.projectCode}
         backTo={`/projects/${project.id}`}
         backLabel="Project"
+      />
+      <PublishInvestorReportPanel
+        projectId={project.id}
+        canManage={canManageInvestorPortal(hasPermission)}
       />
       <ProjectDocumentsPanel
         documents={documentsQuery.data?.items ?? []}

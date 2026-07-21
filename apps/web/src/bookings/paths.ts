@@ -7,3 +7,11 @@ export function bookingsListPath(query?: { id?: string }): string {
   }
   return BOOKINGS_LIST_PATH;
 }
+
+export function bookingCreatePath(): string {
+  return `${BOOKINGS_LIST_PATH}/new`;
+}
+
+export function bookingDetailPath(id: string): string {
+  return `${BOOKINGS_LIST_PATH}/${encodeURIComponent(id)}`;
+}

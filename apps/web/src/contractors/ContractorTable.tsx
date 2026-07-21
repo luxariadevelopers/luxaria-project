@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Chip, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
+import { useNavigate } from 'react-router-dom';
 import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import {
   contractorTypeLabel,
@@ -57,6 +58,8 @@ export function ContractorTable({
   onActivate,
   onVerify,
 }: Props) {
+  const navigate = useNavigate();
+
   const columns: GridColDef<ContractorListRow>[] = [
     { field: 'contractorCode', headerName: 'Code', width: 120 },
     { field: 'legalName', headerName: 'Legal name', flex: 1, minWidth: 180 },
@@ -185,6 +188,9 @@ export function ContractorTable({
       emptyDescription="Create a contractor or adjust filters."
       height={520}
       getRowId={(row) => row.id}
+      onRowClick={(params) => {
+        void navigate(`/contractors/${params.row.id}`);
+      }}
       paginationMode="server"
       page={page}
       pageSize={pageSize}
