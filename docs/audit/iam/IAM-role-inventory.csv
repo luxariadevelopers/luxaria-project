@@ -1,0 +1,17 @@
+code,name,isSystem,source,siteEngineerDefault,notes
+SUPER_ADMIN,Super Admin,true,role.seed.ts,no,bypassPermissions=true
+MANAGING_DIRECTOR,Managing Director,true,role.seed.ts,no,
+DIRECTOR,Director,true,role.seed.ts,no,Not auto global project access
+FINANCE_DIRECTOR,Finance Director,true,role.seed.ts,no,
+FINANCE_MANAGER,Finance Manager,true,role.seed.ts,no,
+ACCOUNTANT,Accountant,true,role.seed.ts,no,
+PROJECT_MANAGER,Project Manager,true,role.seed.ts,no,
+PURCHASE_MANAGER,Purchase Manager,true,role.seed.ts,no,
+PURCHASE_EXECUTIVE,Purchase Executive,true,role.seed.ts,no,
+SITE_ENGINEER,Site Engineer,true,role.seed.ts,yes,Project+site scoped; no accounting/RBAC
+SITE_SUPERVISOR,Site Supervisor,true,role.seed.ts,no,
+STOREKEEPER,Storekeeper,true,role.seed.ts,no,
+SALES_MANAGER,Sales Manager,true,role.seed.ts,no,
+INVESTOR,Investor,true,role.seed.ts,no,Portal only
+AUDITOR,Auditor,true,role.seed.ts,no,
+READ_ONLY,Read Only,true,role.seed.ts,no,

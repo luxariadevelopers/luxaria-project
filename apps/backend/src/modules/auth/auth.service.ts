@@ -15,6 +15,10 @@ import { hashPassword, verifyPassword } from '../../common/utils/crypto.util';
 import { parseDurationToMs } from '../../common/utils/duration.util';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditAction } from '../audit-log/schemas/audit-log.schema';
+import {
+  Employee,
+  EMPLOYEE_LOGIN_ALLOWED_STATUSES,
+} from '../employees/schemas/employee.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { SUPER_ADMIN_ROLE_CODE } from '../rbac/permissions.catalog';
@@ -40,6 +44,7 @@ export class AuthService {
     private readonly rolesService: RolesService,
     private readonly auditLogService: AuditLogService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Employee.name) private readonly employeeModel: Model<Employee>,
   ) {}
 
   /**
@@ -91,6 +96,7 @@ export class AuthService {
     }
 
     this.assertUserCanAuthenticate(user.status, user.lockUntil);
+    await this.assertEmployeeCanAuthenticate(String(user._id));
 
     const passwordOk = await verifyPassword(user.passwordHash, dto.password);
     if (!passwordOk) {
@@ -168,6 +174,7 @@ export class AuthService {
     }
 
     this.assertUserCanAuthenticate(user.status, user.lockUntil);
+    await this.assertEmployeeCanAuthenticate(String(user._id));
 
     const refreshExpiresIn = this.configService.getOrThrow<AppConfig['jwtRefreshExpiresIn']>(
       'jwtRefreshExpiresIn',
@@ -315,6 +322,25 @@ export class AuthService {
 
     if (status === UserStatus.Locked || (lockUntil && lockUntil.getTime() > Date.now())) {
       throw new ForbiddenException('Account is locked due to repeated failed logins');
+    }
+  }
+
+  /**
+   * When a User is linked to an Employee, deny login unless employee status
+   * is active, on_leave, or invited. Draft/suspended/relieved/terminated/archived
+   * cannot authenticate. Users without an employee record are unaffected.
+   */
+  async assertEmployeeCanAuthenticate(userId: string): Promise<void> {
+    const employee = await this.employeeModel
+      .findOne({ userId })
+      .select('status')
+      .lean()
+      .exec();
+    if (!employee) {
+      return;
+    }
+    if (!EMPLOYEE_LOGIN_ALLOWED_STATUSES.includes(employee.status)) {
+      throw new ForbiddenException('Employee account is not active');
     }
   }
 

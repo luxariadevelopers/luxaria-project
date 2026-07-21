@@ -3,9 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { PassportStrategy } from '@nestjs/passport';
 import type { Model } from 'mongoose';
+import { Types } from 'mongoose';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { AppConfig } from '../../../config/configuration';
 import { Company } from '../../company/schemas/company.schema';
+import {
+  Employee,
+  EMPLOYEE_LOGIN_ALLOWED_STATUSES,
+} from '../../employees/schemas/employee.schema';
 import { UserStatus } from '../../users/schemas/user.schema';
 import { UsersService } from '../../users/users.service';
 import type { AuthUser, JwtPayload } from '../types/auth-user.type';
@@ -16,6 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     configService: ConfigService,
     private readonly usersService: UsersService,
     @InjectModel(Company.name) private readonly companyModel: Model<Company>,
+    @InjectModel(Employee.name) private readonly employeeModel: Model<Employee>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -35,6 +41,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
     if (user.status === UserStatus.Locked) {
       throw new UnauthorizedException('Account is locked');
+    }
+
+    const employee = await this.employeeModel
+      .findOne({ userId: new Types.ObjectId(payload.sub) })
+      .select('status')
+      .lean()
+      .exec();
+    if (
+      employee &&
+      !EMPLOYEE_LOGIN_ALLOWED_STATUSES.includes(employee.status)
+    ) {
+      throw new UnauthorizedException('Employee is not authorized');
     }
 
     // Resolve company server-side — never from JWT claims.

@@ -72,8 +72,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       if (id && projects.length > 0 && !projects.some((p) => p.id === id)) {
         return;
       }
+      const previous = selectedProjectId;
       await tokenStorage.setSelectedProjectId(id);
       setSelectedId(id);
+      if (previous !== id) {
+        // Site scope is project-bound; clear before site-scoped queries refetch.
+        await tokenStorage.setSelectedSiteId(null);
+      }
       await queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
@@ -85,7 +90,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         },
       });
     },
-    [projects, queryClient],
+    [projects, queryClient, selectedProjectId],
   );
 
   const selectedProject = useMemo(

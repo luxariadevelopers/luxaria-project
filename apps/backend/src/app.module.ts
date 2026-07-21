@@ -17,10 +17,12 @@ import { CompanyModule } from './modules/company/company.module';
 import { ContributionReceiptsModule } from './modules/contribution-receipts/contribution-receipts.module';
 import { DirectorsModule } from './modules/directors/directors.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { EmployeesModule } from './modules/employees/employees.module';
 import { ExpenseCategoriesModule } from './modules/expense-categories/expense-categories.module';
 import { FinancialYearModule } from './modules/financial-year/financial-year.module';
 import { HealthModule } from './modules/health/health.module';
 import { InvestorsModule } from './modules/investors/investors.module';
+import { SitesModule } from './modules/sites/sites.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { PaymentSchedulesModule } from './modules/payment-schedules/payment-schedules.module';
@@ -155,6 +157,8 @@ import { ObservabilityModule } from './common/observability/observability.module
     FinancialYearModule,
     AccountingPeriodClosureModule,
     ProjectAccessModule,
+    SitesModule,
+    EmployeesModule,
     ApprovalsModule,
     ProjectsModule,
     UnitsModule,

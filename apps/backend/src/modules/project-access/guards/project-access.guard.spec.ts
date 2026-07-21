@@ -55,6 +55,10 @@ describe('ProjectAccessGuard (R-003 default-deny)', () => {
     get: jest.fn().mockReturnValue('enforce'),
   };
 
+  const siteAccessService = {
+    assertSiteAccessIfScoped: jest.fn().mockResolvedValue(undefined),
+  };
+
   const buildGuard = (reflector: Reflector) =>
     new ProjectAccessGuard(
       reflector,
@@ -63,6 +67,7 @@ describe('ProjectAccessGuard (R-003 default-deny)', () => {
       investorParticipationService as unknown as InvestorParticipationService,
       permissionsService as never,
       configService as never,
+      siteAccessService as never,
     );
 
   const buildContext = (request: Record<string, unknown>): ExecutionContext =>

@@ -3,8 +3,10 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
@@ -12,6 +14,7 @@ import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 import type { AppConfig } from '../../../config/configuration';
 import type { AuthUser } from '../../auth/types/auth-user.type';
 import { PermissionsService } from '../../rbac/permissions.service';
+import { SiteAccessService } from '../../sites/site-access.service';
 import {
   REQUIRE_PROJECT_ACCESS_KEY,
   type RequireProjectAccessOptions,
@@ -28,6 +31,7 @@ import { ResourceOwnershipService } from '../resource-ownership.service';
 
 export type ProjectAccessRequestContext = {
   projectId?: string | null;
+  siteId?: string | null;
   authorisedProjectIds?: string[];
   globalProjectAccess?: boolean;
   resourceType?: string | null;
@@ -58,6 +62,8 @@ export class ProjectAccessGuard implements CanActivate {
     private readonly investorParticipationService: InvestorParticipationService,
     private readonly permissionsService: PermissionsService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => SiteAccessService))
+    private readonly siteAccessService: SiteAccessService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -248,9 +254,36 @@ export class ProjectAccessGuard implements CanActivate {
       audit,
     });
 
+    const siteId = this.readSiteId(request);
+    if (siteId) {
+      try {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: user.id,
+          projectId,
+          siteId,
+        });
+      } catch (error) {
+        if (error instanceof ForbiddenException) {
+          await this.deny(
+            user.id,
+            projectId,
+            scope.operation ?? 'read',
+            'Site access denied',
+            audit,
+            enforcement,
+            resolved.resourceType,
+            resolved.resourceId,
+          );
+          return enforcement !== 'enforce';
+        }
+        throw error;
+      }
+    }
+
     request.projectAccess = {
       scopeKind: 'project',
       projectId,
+      siteId: siteId ?? null,
       resourceType: resolved.resourceType,
       resourceId: resolved.resourceId,
     };
@@ -424,6 +457,19 @@ export class ProjectAccessGuard implements CanActivate {
       unique.push(locator);
     }
     return unique;
+  }
+
+  private readSiteId(request: RequestWithUser): string | null {
+    const locators: ProjectIdLocator[] = [
+      { source: 'params', key: 'siteId' },
+      { source: 'query', key: 'siteId' },
+      { source: 'body', key: 'siteId' },
+    ];
+    for (const locator of locators) {
+      const value = this.readLocator(request, locator);
+      if (value) return value;
+    }
+    return null;
   }
 
   private readLocator(

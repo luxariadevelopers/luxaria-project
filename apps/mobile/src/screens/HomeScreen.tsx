@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { useSite } from '@/context/SiteContext';
 import { resolveAttendanceCapabilities } from '@/labour-attendance';
 import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
@@ -32,6 +33,7 @@ type HomeNavigation = CompositeNavigationProp<
 export function HomeScreen() {
   const { user, hasPermission } = useAuth();
   const { selectedProject } = useProject();
+  const { sites, selectedSite, setSelectedSiteId } = useSite();
   const { isOnline } = useNetwork();
   const { activeCount } = useOfflineSync();
   const navigation = useNavigation<HomeNavigation>();
@@ -52,6 +54,7 @@ export function HomeScreen() {
     LABOUR_VOUCHER_PERMISSIONS.createOrSubmit,
   );
   const canViewDpr = hasPermission('dpr.view') || hasPermission('dpr.create');
+  const canCreateGrn = hasPermission('grn.create');
   const canViewStockLedger = hasPermission('stock.view');
   const canViewQuality =
     hasPermission('quality.view') || hasPermission('quality.inspect');
@@ -70,6 +73,34 @@ export function HomeScreen() {
               ? `${selectedProject.projectCode} · ${selectedProject.projectName}`
               : 'No project selected'}
           </Text>
+          {sites.length > 0 ? (
+            <>
+              <Text style={[styles.cardLabel, styles.siteLabel]}>
+                Active site
+              </Text>
+              <Text style={styles.cardValue}>
+                {selectedSite
+                  ? `${selectedSite.siteCode} · ${selectedSite.siteName}`
+                  : 'No site selected'}
+              </Text>
+              {sites.length > 1 ? (
+                <Pressable
+                  style={styles.linkButton}
+                  onPress={() => {
+                    const currentIndex = selectedSite
+                      ? sites.findIndex((s) => s.id === selectedSite.id)
+                      : -1;
+                    const next = sites[(currentIndex + 1) % sites.length];
+                    if (next) {
+                      void setSelectedSiteId(next.id);
+                    }
+                  }}
+                >
+                  <Text style={styles.linkText}>Change site</Text>
+                </Pressable>
+              ) : null}
+            </>
+          ) : null}
           <Pressable
             style={styles.linkButton}
             onPress={() => navigation.navigate('ProjectSelect')}
@@ -106,12 +137,14 @@ export function HomeScreen() {
           </Pressable>
         ) : null}
 
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('GoodsReceipt')}
-        >
-          <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
-        </Pressable>
+        {canCreateGrn ? (
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('GoodsReceipt')}
+          >
+            <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
+          </Pressable>
+        ) : null}
 
         {attendanceCaps.canView || attendanceCaps.canCreate ? (
           <Pressable
@@ -291,7 +324,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
-  linkButton: { alignSelf: 'flex-start' },
+  siteLabel: { marginTop: 4 },
+  linkButton: { alignSelf: 'flex-start', marginBottom: 8 },
   linkText: { color: colors.primary, fontWeight: '600' },
   row: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   stat: {

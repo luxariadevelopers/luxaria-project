@@ -1,0 +1,37 @@
+permission,module,source,notes
+role.view,rbac,permissions.catalog.ts,Existing
+role.create,rbac,permissions.catalog.ts,Existing
+role.update,rbac,permissions.catalog.ts,Existing
+role.assign,rbac,permissions.catalog.ts,Existing
+permission.view,rbac,permissions.catalog.ts,Existing
+user.view,users,permissions.catalog.ts,Existing
+user.create,users,permissions.catalog.ts,Existing
+user.update,users,permissions.catalog.ts,Existing
+user.activate,users,permissions.catalog.ts,Existing
+user.deactivate,users,permissions.catalog.ts,Existing
+user.reset_password,users,permissions.catalog.ts,Existing
+user.assign_role,users,permissions.catalog.ts,Existing
+user.assign_project,users,permissions.catalog.ts,Existing
+project_access.view,project-access,permissions.catalog.ts,Existing
+project_access.assign,project-access,permissions.catalog.ts,Existing
+project_access.manage,project-access,permissions.catalog.ts,Existing
+dpr.create,dpr,permissions.catalog.ts,Site Engineer seed includes
+dpr.view,dpr,permissions.catalog.ts,Site Engineer seed includes
+journal.view,accounting,permissions.catalog.ts,Must NOT be in Site Engineer defaults
+employee.view,employees,NEW,IAM phase
+employee.create,employees,NEW,IAM phase
+employee.update,employees,NEW,IAM phase
+employee.deactivate,employees,NEW,IAM phase
+department.view,organisation,NEW,IAM phase
+department.manage,organisation,NEW,IAM phase
+designation.view,organisation,NEW,IAM phase
+designation.manage,organisation,NEW,IAM phase
+site.view,sites,NEW,IAM phase
+site.manage,sites,NEW,IAM phase
+site_access.view,sites,NEW,IAM phase
+site_access.assign,sites,NEW,IAM phase
+site_access.manage,sites,NEW,IAM phase
+permission.override.manage,rbac,NEW,Direct allow/deny
+session.revoke,sessions,NEW,Admin session revoke
+delegation.manage,delegation,PLANNED,Secondary phase
+temporary_access.manage,rbac,PLANNED,Secondary phase via overrides

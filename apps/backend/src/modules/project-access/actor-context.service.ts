@@ -1,13 +1,20 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { Types } from 'mongoose';
 import { Company } from '../company/schemas/company.schema';
+import {
+  Employee,
+  EMPLOYEE_LOGIN_ALLOWED_STATUSES,
+} from '../employees/schemas/employee.schema';
 import { PermissionsService } from '../rbac/permissions.service';
+import { SiteAccessService } from '../sites/site-access.service';
 import { User, UserStatus } from '../users/schemas/user.schema';
 import type { AuthenticatedActorContext } from './authenticated-actor.context';
 import { InvestorParticipationService } from './investor-participation.service';
@@ -28,9 +35,12 @@ export class ActorContextService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Company.name) private readonly companyModel: Model<Company>,
+    @InjectModel(Employee.name) private readonly employeeModel: Model<Employee>,
     private readonly permissionsService: PermissionsService,
     private readonly projectAccessService: ProjectAccessService,
     private readonly investorParticipationService: InvestorParticipationService,
+    @Inject(forwardRef(() => SiteAccessService))
+    private readonly siteAccessService: SiteAccessService,
   ) {}
 
   /** Invalidate cached actor context (membership / assignment changes). */
@@ -81,6 +91,19 @@ export class ActorContextService {
       throw new UnauthorizedException('User is not authorized');
     }
 
+    const employee = await this.employeeModel
+      .findOne({ userId: new Types.ObjectId(userId) })
+      .select('_id status departmentId designationId reportingManagerUserId')
+      .lean()
+      .exec();
+
+    if (
+      employee &&
+      !EMPLOYEE_LOGIN_ALLOWED_STATUSES.includes(employee.status)
+    ) {
+      throw new UnauthorizedException('Employee is not authorised to access');
+    }
+
     const primaryCompanyId = await this.resolvePrimaryCompanyId();
     const companyId = user.companyId
       ? String(user.companyId)
@@ -101,9 +124,12 @@ export class ActorContextService {
       await this.projectAccessService.listAccessibleProjectIds(userId);
     const investorId =
       await this.investorParticipationService.resolveLinkedInvestorId(userId);
+    const siteAccess =
+      await this.siteAccessService.listAuthorisedSiteIds(userId);
 
     const context: AuthenticatedActorContext = {
       actorId: userId,
+      userId,
       actorType: investorId ? 'investor' : 'user',
       companyId,
       status: user.status,
@@ -114,6 +140,17 @@ export class ActorContextService {
         projectAccess.globalAccess || rbac.bypassPermissions,
       ),
       authorisedProjectIds: projectAccess.projectIds,
+      authorisedSiteIds: siteAccess.siteIds,
+      employeeId: employee ? String(employee._id) : null,
+      departmentId: employee?.departmentId
+        ? String(employee.departmentId)
+        : null,
+      designationId: employee?.designationId
+        ? String(employee.designationId)
+        : null,
+      reportingManagerId: employee?.reportingManagerUserId
+        ? String(employee.reportingManagerUserId)
+        : null,
       investorId,
       systemContext: null,
     };
@@ -132,6 +169,7 @@ export class ActorContextService {
   ): AuthenticatedActorContext {
     return {
       actorId: `system:${system.jobName}`,
+      userId: undefined,
       actorType: 'system',
       companyId,
       status: 'active',
@@ -140,6 +178,11 @@ export class ActorContextService {
       bypassPermissions: false,
       globalAccess: false,
       authorisedProjectIds: system.projectId ? [system.projectId] : [],
+      authorisedSiteIds: [],
+      employeeId: null,
+      departmentId: null,
+      designationId: null,
+      reportingManagerId: null,
       investorId: null,
       systemContext: system,
     };

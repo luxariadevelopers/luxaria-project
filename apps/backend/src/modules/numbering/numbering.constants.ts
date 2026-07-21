@@ -1,6 +1,7 @@
 export enum NumberEntityType {
   COMPANY = 'COMPANY',
   USER = 'USER',
+  EMPLOYEE = 'EMPLOYEE',
   ROLE = 'ROLE',
   PROJECT = 'PROJECT',
   DIRECTOR = 'DIRECTOR',
@@ -72,6 +73,12 @@ export const NUMBER_FORMATS: Record<NumberEntityType, NumberFormatConfig> = {
   },
   [NumberEntityType.USER]: {
     prefix: 'USR',
+    padLength: 6,
+    useFinancialYear: false,
+    allowProjectScope: false,
+  },
+  [NumberEntityType.EMPLOYEE]: {
+    prefix: 'EMP',
     padLength: 6,
     useFinancialYear: false,
     allowProjectScope: false,

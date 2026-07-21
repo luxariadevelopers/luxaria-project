@@ -920,6 +920,57 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="employees" />}>
+              <Route
+                path={toRelativeAppPath('/administration/employees')}
+                element={APP_ROUTE_ELEMENTS.employees}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="employee-create" />}>
+              <Route
+                path={toRelativeAppPath('/administration/employees/new')}
+                element={APP_ROUTE_ELEMENTS['employee-create']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="employee-detail" />}>
+              <Route
+                path={toRelativeAppPath('/administration/employees/:employeeId')}
+                element={APP_ROUTE_ELEMENTS['employee-detail']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="employee-access" />}>
+              <Route
+                path={toRelativeAppPath(
+                  '/administration/employees/:employeeId/access',
+                )}
+                element={APP_ROUTE_ELEMENTS['employee-access']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="departments" />}>
+              <Route
+                path={toRelativeAppPath('/administration/departments')}
+                element={APP_ROUTE_ELEMENTS.departments}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="designations" />}>
+              <Route
+                path={toRelativeAppPath('/administration/designations')}
+                element={APP_ROUTE_ELEMENTS.designations}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="site-access-admin" />}>
+              <Route
+                path={toRelativeAppPath('/administration/site-access')}
+                element={APP_ROUTE_ELEMENTS['site-access-admin']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="roles" />}>
               <Route
                 path={toRelativeAppPath('/administration/roles')}

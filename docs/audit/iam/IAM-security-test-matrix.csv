@@ -1,0 +1,21 @@
+id,actor,action,expected,automation
+IAM-01,Company A admin,POST /employees/provision-site-engineer,201/200,e2e iam-site-engineer-access
+IAM-02,unauthorised user,POST /employees,403,e2e/unit
+IAM-03,admin,create Site Engineer with project A site A1,success,e2e
+IAM-04,Site Engineer,login,success if active,auth unit
+IAM-05,Site Engineer,list projects,only assigned,e2e
+IAM-06,Site Engineer,access site A1,allow,e2e
+IAM-07,Site Engineer,access site A2 when scoped,deny,e2e
+IAM-08,Site Engineer,create DPR with permission,allow,existing dpr + assignment
+IAM-09,Site Engineer,approve DPR without perm,deny,RBAC
+IAM-10,Site Engineer,GET journals,403,permissions
+IAM-11,Site Engineer,GET /users,403,permissions
+IAM-12,Site Engineer,investor APIs,403,permissions
+IAM-13,Site Engineer,Project B,403,e2e
+IAM-14,Company B admin,Company A employee,403,company boundary
+IAM-15,user with deny override,permission from role,deny,permissions.service.spec
+IAM-16,temp allow with dates,within window,allow,permissions.service
+IAM-17,expired allow,after end,deny,permissions.service.spec
+IAM-18,revoked project assignment,project API,deny,R-003 e2e
+IAM-19,inactive employee,login,deny,auth.service.spec
+IAM-20,limited web user,/administration/employees,forbidden page,playwright forbidden smoke

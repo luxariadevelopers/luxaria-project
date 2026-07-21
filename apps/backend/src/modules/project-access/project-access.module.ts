@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Company, CompanySchema } from '../company/schemas/company.schema';
+import { EmployeesModule } from '../employees/employees.module';
 import {
   Investor,
   InvestorSchema,
@@ -12,6 +13,7 @@ import {
 } from '../project-participants/schemas/project-participant.schema';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { RbacModule } from '../rbac/rbac.module';
+import { SitesModule } from '../sites/sites.module';
 import { UsersModule } from '../users/users.module';
 import { ActorContextService } from './actor-context.service';
 import { ProjectAccessGuard } from './guards/project-access.guard';
@@ -41,6 +43,8 @@ import {
       { name: Company.name, schema: CompanySchema },
     ]),
     forwardRef(() => UsersModule),
+    forwardRef(() => EmployeesModule),
+    forwardRef(() => SitesModule),
     RbacModule,
   ],
   controllers: [ProjectAccessController],

@@ -14,7 +14,10 @@ type TxnRow = {
   type: string;
   label: string;
   project_id: string | null;
+  site_id: string | null;
+  company_id: string | null;
   created_by_user_id: string | null;
+  action: string | null;
   endpoint: string;
   method: string;
   payload_json: string;
@@ -53,7 +56,10 @@ function mapTxn(row: TxnRow): OfflineTransaction {
     type: row.type,
     label: row.label,
     projectId: row.project_id,
+    siteId: row.site_id ?? null,
+    companyId: row.company_id ?? null,
     createdByUserId: row.created_by_user_id ?? null,
+    action: row.action ?? null,
     endpoint: row.endpoint,
     method: row.method as OfflineTransaction['method'],
     payloadJson: row.payload_json,
@@ -100,17 +106,21 @@ export function createSqliteOfflineRepository(
       const db = await getDb();
       await db.runAsync(
         `INSERT INTO offline_transactions (
-          id, idempotency_key, type, label, project_id, created_by_user_id,
-          endpoint, method, payload_json, status, attempt_count, last_error,
-          last_error_code, failure_kind, device_timestamp, server_timestamp,
-          server_record_id, created_at, updated_at, next_retry_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, idempotency_key, type, label, project_id, site_id, company_id,
+          created_by_user_id, action, endpoint, method, payload_json, status,
+          attempt_count, last_error, last_error_code, failure_kind,
+          device_timestamp, server_timestamp, server_record_id, created_at,
+          updated_at, next_retry_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         txn.id,
         txn.idempotencyKey,
         txn.type,
         txn.label,
         txn.projectId,
+        txn.siteId,
+        txn.companyId,
         txn.createdByUserId,
+        txn.action,
         txn.endpoint,
         txn.method,
         txn.payloadJson,
@@ -161,8 +171,9 @@ export function createSqliteOfflineRepository(
       await db.runAsync(
         `UPDATE offline_transactions SET
           idempotency_key = ?, type = ?, label = ?, project_id = ?,
-          created_by_user_id = ?, endpoint = ?, method = ?, payload_json = ?,
-          status = ?, attempt_count = ?, last_error = ?, last_error_code = ?,
+          site_id = ?, company_id = ?, created_by_user_id = ?, action = ?,
+          endpoint = ?, method = ?, payload_json = ?, status = ?,
+          attempt_count = ?, last_error = ?, last_error_code = ?,
           failure_kind = ?, device_timestamp = ?, server_timestamp = ?,
           server_record_id = ?, created_at = ?, updated_at = ?, next_retry_at = ?
          WHERE id = ?`,
@@ -170,7 +181,10 @@ export function createSqliteOfflineRepository(
         next.type,
         next.label,
         next.projectId,
+        next.siteId,
+        next.companyId,
         next.createdByUserId,
+        next.action,
         next.endpoint,
         next.method,
         next.payloadJson,

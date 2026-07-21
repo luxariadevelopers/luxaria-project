@@ -74,6 +74,9 @@ describe('Project access API (e2e) — R-003', () => {
               {
                 get: jest.fn().mockReturnValue('enforce'),
               } as never,
+              {
+                assertSiteAccessIfScoped: jest.fn().mockResolvedValue(undefined),
+              } as never,
             ),
           inject: [Reflector],
         },

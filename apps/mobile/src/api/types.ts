@@ -25,6 +25,14 @@ export type AuthUser = {
   email: string | null;
   mobile: string | null;
   status: string;
+  companyId?: string | null;
+};
+
+export type SiteOption = {
+  id: string;
+  projectId: string;
+  siteCode: string;
+  siteName: string;
 };
 
 export type LoginResponse = {

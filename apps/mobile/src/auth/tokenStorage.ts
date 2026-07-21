@@ -5,12 +5,14 @@ const ACCESS_TOKEN_KEY = 'luxaria.accessToken';
 const REFRESH_TOKEN_KEY = 'luxaria.refreshToken';
 const USER_KEY = 'luxaria.user';
 const PROJECT_ID_KEY = 'luxaria.selectedProjectId';
+const SITE_ID_KEY = 'luxaria.selectedSiteId';
 
 type MemoryCache = {
   accessToken: string | null;
   refreshToken: string | null;
   userJson: string | null;
   selectedProjectId: string | null;
+  selectedSiteId: string | null;
   hydrated: boolean;
 };
 
@@ -19,6 +21,7 @@ const memory: MemoryCache = {
   refreshToken: null,
   userJson: null,
   selectedProjectId: null,
+  selectedSiteId: null,
   hydrated: false,
 };
 
@@ -32,17 +35,19 @@ async function setSecure(key: string, value: string | null) {
 
 export const tokenStorage = {
   async hydrate() {
-    const [accessToken, refreshToken, userJson, selectedProjectId] =
+    const [accessToken, refreshToken, userJson, selectedProjectId, selectedSiteId] =
       await Promise.all([
         SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
         SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
         AsyncStorage.getItem(USER_KEY),
         AsyncStorage.getItem(PROJECT_ID_KEY),
+        AsyncStorage.getItem(SITE_ID_KEY),
       ]);
     memory.accessToken = accessToken;
     memory.refreshToken = refreshToken;
     memory.userJson = userJson;
     memory.selectedProjectId = selectedProjectId;
+    memory.selectedSiteId = selectedSiteId;
     memory.hydrated = true;
   },
 
@@ -95,15 +100,29 @@ export const tokenStorage = {
     await AsyncStorage.setItem(PROJECT_ID_KEY, projectId);
   },
 
+  getSelectedSiteId() {
+    return memory.selectedSiteId;
+  },
+
+  async setSelectedSiteId(siteId: string | null) {
+    memory.selectedSiteId = siteId;
+    if (siteId == null) {
+      await AsyncStorage.removeItem(SITE_ID_KEY);
+      return;
+    }
+    await AsyncStorage.setItem(SITE_ID_KEY, siteId);
+  },
+
   async clearAll() {
     memory.accessToken = null;
     memory.refreshToken = null;
     memory.userJson = null;
     memory.selectedProjectId = null;
+    memory.selectedSiteId = null;
     await Promise.all([
       setSecure(ACCESS_TOKEN_KEY, null),
       setSecure(REFRESH_TOKEN_KEY, null),
-      AsyncStorage.multiRemove([USER_KEY, PROJECT_ID_KEY]),
+      AsyncStorage.multiRemove([USER_KEY, PROJECT_ID_KEY, SITE_ID_KEY]),
     ]);
   },
 };

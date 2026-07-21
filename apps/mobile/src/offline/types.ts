@@ -35,8 +35,13 @@ export type OfflineTransaction = {
   type: string;
   label: string;
   projectId: string | null;
-  /** Owner of the queued row; actions restricted to this user. */
+  /** Site scope captured at enqueue time; never replaced on replay. */
+  siteId: string | null;
+  companyId: string | null;
+  /** Owner of the queued row; actions restricted to this user (actorId). */
   createdByUserId: string | null;
+  /** Permission / action code when known (e.g. grn.create). */
+  action: string | null;
   endpoint: string;
   method: 'POST' | 'PATCH' | 'PUT';
   payloadJson: string;
@@ -81,7 +86,12 @@ export type EnqueueTransactionInput = {
   type: string;
   label: string;
   projectId?: string | null;
+  siteId?: string | null;
+  companyId?: string | null;
+  /** Actor who created the row; defaults to signed-in user in OfflineSyncProvider. */
   createdByUserId?: string | null;
+  /** Permission / action associated with the queued mutation. */
+  action?: string | null;
   endpoint: string;
   method?: 'POST' | 'PATCH' | 'PUT';
   payload: Record<string, unknown>;

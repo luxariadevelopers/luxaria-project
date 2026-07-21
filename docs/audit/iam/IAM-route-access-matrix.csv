@@ -1,0 +1,20 @@
+surface,path_or_prefix,auth,permission,project_scope,site_scope,status
+API,POST /api/v1/auth/login,public,none,n/a,n/a,existing
+API,GET /api/v1/auth/me,jwt,none,n/a,n/a,existing
+API,/api/v1/users,jwt,user.*,global,n/a,existing
+API,/api/v1/rbac,jwt,role.*|permission.view,global,n/a,existing
+API,/api/v1/project-access,jwt,project_access.*,global,n/a,existing
+API,/api/v1/employees,jwt,employee.*,global,optional sites,NEW
+API,/api/v1/departments,jwt,department.*,global,n/a,NEW
+API,/api/v1/designations,jwt,designation.*,global,n/a,NEW
+API,/api/v1/sites,jwt,site.*,project,n/a,NEW
+API,/api/v1/site-access,jwt,site_access.*,project+site,yes,NEW
+API,/api/v1/permission-overrides,jwt,permission.override.manage,optional,optional,NEW
+Web,/users,jwt,user.view,none,n/a,existing
+Web,/administration/roles,jwt,role.view,none,n/a,existing
+Web,/administration/employees,jwt,employee.view,none,n/a,NEW
+Web,/administration/departments,jwt,department.view,none,n/a,NEW
+Web,/administration/designations,jwt,designation.view,none,n/a,NEW
+Web,/administration/site-access,jwt,site_access.view,none,n/a,NEW
+Mobile,Home tiles,jwt,feature perms,assigned projects,assigned sites,extend
+Mobile,DPR create,jwt,dpr.create,assigned,assigned site,extend

@@ -6,6 +6,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import type { AppConfig } from '../../config/configuration';
 import { CompanyModule } from '../company/company.module';
+import { EmployeesModule } from '../employees/employees.module';
 import { ProjectAccessGuard } from '../project-access/guards/project-access.guard';
 import { ProjectAccessModule } from '../project-access/project-access.module';
 import { PermissionsGuard } from '../rbac/guards/permissions.guard';
@@ -21,6 +22,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     UsersModule,
     CompanyModule,
+    EmployeesModule,
     RbacModule,
     ProjectAccessModule,
     SessionModule,

@@ -18,6 +18,25 @@ export const PERMISSIONS = [
   'user.reset_password',
   'user.assign_role',
   'user.assign_project',
+  'session.revoke',
+
+  // Employees / org structure (enterprise IAM)
+  'employee.view',
+  'employee.create',
+  'employee.update',
+  'employee.deactivate',
+  'department.view',
+  'department.manage',
+  'designation.view',
+  'designation.manage',
+  'permission.override.manage',
+
+  // Sites / site access
+  'site.view',
+  'site.manage',
+  'site_access.view',
+  'site_access.assign',
+  'site_access.manage',
 
   // Company / masters
   'company.view',

@@ -242,6 +242,46 @@ describe('OfflineQueueService', () => {
     expect(payload.deviceTimestamp).toBe(txn.deviceTimestamp);
   });
 
+  it('stores enqueue-time site/project scope and preserves it on sync payload', async () => {
+    const txn = await queue.enqueue({
+      type: 'dpr.create',
+      label: 'DPR site A',
+      projectId: 'proj-original',
+      siteId: 'site-original',
+      companyId: 'company-1',
+      createdByUserId: 'user-1',
+      action: 'dpr.create',
+      endpoint: '/daily-progress-reports',
+      payload: {
+        projectId: 'proj-original',
+        siteId: 'site-original',
+        notes: 'queued offline',
+      },
+    });
+
+    expect(txn.projectId).toBe('proj-original');
+    expect(txn.siteId).toBe('site-original');
+    expect(txn.companyId).toBe('company-1');
+    expect(txn.createdByUserId).toBe('user-1');
+    expect(txn.action).toBe('dpr.create');
+    expect(txn.createdAt).toBe(now.toISOString());
+
+    // Simulate a mutated payload that would wrongly pick up the current UI selection.
+    const mutated: typeof txn = {
+      ...txn,
+      payloadJson: JSON.stringify({
+        projectId: 'proj-current-ui',
+        siteId: 'site-current-ui',
+        notes: 'queued offline',
+      }),
+    };
+    const payload = queue.buildSyncPayload(mutated, []);
+    expect(payload.projectId).toBe('proj-original');
+    expect(payload.siteId).toBe('site-original');
+    expect(payload.companyId).toBe('company-1');
+    expect(payload.notes).toBe('queued offline');
+  });
+
   it('marks permanent validation failures without auto-retry', async () => {
     const txn = await queue.enqueue({
       type: 'demo',

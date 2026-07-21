@@ -37,6 +37,16 @@ describe('AuthService credential failures', () => {
       record: jest.fn().mockResolvedValue(undefined),
     };
 
+    const employeeModel = {
+      findOne: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(null),
+          }),
+        }),
+      }),
+    };
+
     const service = new AuthService(
       usersService as never,
       {} as never,
@@ -52,6 +62,7 @@ describe('AuthService credential failures', () => {
       {} as never,
       auditLogService as never,
       {} as never,
+      employeeModel as never,
     );
 
     await expect(

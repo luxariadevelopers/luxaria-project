@@ -13,7 +13,10 @@ CREATE TABLE IF NOT EXISTS offline_transactions (
   type TEXT NOT NULL,
   label TEXT NOT NULL,
   project_id TEXT,
+  site_id TEXT,
+  company_id TEXT,
   created_by_user_id TEXT,
+  action TEXT,
   endpoint TEXT NOT NULL,
   method TEXT NOT NULL,
   payload_json TEXT NOT NULL,
@@ -81,6 +84,9 @@ async function migrateSchema(db: SQLite.SQLiteDatabase) {
   await ensureColumn(db, 'offline_transactions', 'created_by_user_id', 'TEXT');
   await ensureColumn(db, 'offline_transactions', 'last_error_code', 'TEXT');
   await ensureColumn(db, 'offline_transactions', 'failure_kind', 'TEXT');
+  await ensureColumn(db, 'offline_transactions', 'site_id', 'TEXT');
+  await ensureColumn(db, 'offline_transactions', 'company_id', 'TEXT');
+  await ensureColumn(db, 'offline_transactions', 'action', 'TEXT');
 }
 
 export async function getOfflineDatabase(): Promise<SQLite.SQLiteDatabase> {

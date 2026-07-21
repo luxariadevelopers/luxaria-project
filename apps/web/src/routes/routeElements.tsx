@@ -136,6 +136,13 @@ import { UnitsPage } from '@/pages/UnitsPage';
 import { UserCreatePage } from '@/pages/UserCreatePage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UserEditPage } from '@/pages/UserEditPage';
+import { DepartmentsPage } from '@/pages/DepartmentsPage';
+import { DesignationsPage } from '@/pages/DesignationsPage';
+import { EmployeeAccessPage } from '@/pages/EmployeeAccessPage';
+import { EmployeeCreatePage } from '@/pages/EmployeeCreatePage';
+import { EmployeeDetailPage } from '@/pages/EmployeeDetailPage';
+import { EmployeesPage } from '@/pages/EmployeesPage';
+import { SiteAccessAdminPage } from '@/pages/SiteAccessAdminPage';
 import { UsersPage } from '@/pages/UsersPage';
 import { VendorDetailPage } from '@/pages/VendorDetailPage';
 import { VendorInvoiceMatchPage } from '@/pages/VendorInvoiceMatchPage';
@@ -272,6 +279,13 @@ export const APP_ROUTE_ELEMENTS: {
   'user-edit': <UserEditPage />,
   'company-overview': <CompanyOverviewPage />,
   'company-settings': <CompanySettingsPage />,
+  employees: <EmployeesPage />,
+  'employee-create': <EmployeeCreatePage />,
+  'employee-detail': <EmployeeDetailPage />,
+  'employee-access': <EmployeeAccessPage />,
+  departments: <DepartmentsPage />,
+  designations: <DesignationsPage />,
+  'site-access-admin': <SiteAccessAdminPage />,
   roles: <RolesPage />,
   'role-create': <RoleCreatePage />,
   'role-detail': <RoleDetailPage />,

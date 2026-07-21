@@ -20,6 +20,21 @@ export type AuthenticatedActorContext = {
   readonly authorisedProjectIds: string[];
   readonly investorId: string | null;
   readonly systemContext: SystemExecutionContext | null;
+
+  /** Same as actorId for user actors (explicit for IAM consumers). */
+  readonly userId?: string;
+  /** Linked employee document id when provisioned via Employees module. */
+  readonly employeeId?: string | null;
+  readonly departmentId?: string | null;
+  readonly designationId?: string | null;
+  /** Reporting manager user id (User ObjectId), when set on employee. */
+  readonly reportingManagerId?: string | null;
+  /**
+   * Active site assignment ids across authorised projects.
+   * Empty does NOT always mean unrestricted — see SiteAccessService policy:
+   * site-scoped only when the user has ≥1 active site assignment for a project.
+   */
+  readonly authorisedSiteIds?: string[];
 };
 
 export type ProjectExecutionContext = {

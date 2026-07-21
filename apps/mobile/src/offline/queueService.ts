@@ -166,13 +166,26 @@ export class OfflineQueueService {
       );
     }
 
+    const projectId = input.projectId ?? null;
+    const siteId =
+      input.siteId ??
+      (typeof input.payload?.siteId === 'string' ? input.payload.siteId : null);
+    const companyId =
+      input.companyId ??
+      (typeof input.payload?.companyId === 'string'
+        ? input.payload.companyId
+        : null);
+
     const txn: OfflineTransaction = {
       id,
       idempotencyKey,
       type: input.type,
       label: input.label,
-      projectId: input.projectId ?? null,
+      projectId,
+      siteId,
+      companyId,
       createdByUserId: input.createdByUserId ?? null,
+      action: input.action ?? null,
       endpoint: input.endpoint,
       method: input.method ?? 'POST',
       payloadJson: JSON.stringify(input.payload ?? {}),
@@ -455,6 +468,7 @@ export class OfflineQueueService {
   /**
    * Merge uploaded document IDs into the payload under `attachments`
    * and per-field keys without mutating already-synced identity fields.
+   * Preserves the original projectId/siteId captured at enqueue time.
    */
   buildSyncPayload(
     txn: OfflineTransaction,
@@ -467,6 +481,16 @@ export class OfflineQueueService {
         attachments[row.fieldKey] = row.serverDocumentId;
         payload[row.fieldKey] = row.serverDocumentId;
       }
+    }
+    // Never replace enqueue-time scope with the current UI selection.
+    if (txn.projectId) {
+      payload.projectId = txn.projectId;
+    }
+    if (txn.siteId) {
+      payload.siteId = txn.siteId;
+    }
+    if (txn.companyId && payload.companyId == null) {
+      payload.companyId = txn.companyId;
     }
     return {
       ...payload,

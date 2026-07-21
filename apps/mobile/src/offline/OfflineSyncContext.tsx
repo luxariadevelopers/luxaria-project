@@ -180,7 +180,10 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
       }
       const txn = await queue.enqueue({
         ...input,
-        createdByUserId: input.createdByUserId ?? actorRef.current?.userId ?? null,
+        createdByUserId:
+          input.createdByUserId ?? actorRef.current?.userId ?? null,
+        companyId: input.companyId ?? user?.companyId ?? null,
+        action: input.action ?? input.type ?? null,
       });
       await refresh();
       if (isOnlineRef.current) {
@@ -188,7 +191,7 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
       }
       return txn;
     },
-    [processQueue, refresh],
+    [processQueue, refresh, user?.companyId],
   );
 
   const retry = useCallback(

@@ -1,0 +1,21 @@
+permission,description,sensitive
+employee.view,View employees,no
+employee.create,Create employees / provision Site Engineer,yes
+employee.update,Update employees,yes
+employee.deactivate,Deactivate employees,yes
+department.view,View departments,no
+department.manage,Manage departments,yes
+designation.view,View designations,no
+designation.manage,Manage designations,yes
+site.view,View project sites,no
+site.manage,Create/update project sites,yes
+site_access.view,View site assignments / me,no
+site_access.assign,Assign users to sites,yes
+site_access.manage,Activate/deactivate/revoke site access,yes
+permission.override.manage,Direct allow/deny overrides,yes
+session.revoke,Admin revoke sessions,yes
+project_access.assign,Assign project access,yes
+role.assign,Assign roles,yes
+user.create,Create login users,yes
+dpr.create,Create DPR,no
+journal.view,View journals,yes
