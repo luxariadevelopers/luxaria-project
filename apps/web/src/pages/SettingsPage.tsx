@@ -1,24 +1,27 @@
-import { Paper, Stack, Typography } from '@mui/material';
+import { Box, CircularProgress, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import {
+  NotificationPreferencesForm,
+  ProfileSummary,
+  SettingsQuickLinks,
+} from '@/settings';
 
 export function SettingsPage() {
-  const { user, access } = useAuth();
+  const { user, access, isBootstrapping } = useAuth();
+
+  if (isBootstrapping) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} />
+      </Box>
+    );
+  }
 
   return (
-    <Stack spacing={2}>
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Profile
-        </Typography>
-        <Typography color="text.secondary">User code: {user?.userCode}</Typography>
-        <Typography color="text.secondary">Email: {user?.email ?? '—'}</Typography>
-        <Typography color="text.secondary">
-          Roles: {access?.roleCodes?.join(', ') || '—'}
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 2 }}>
-          Application settings UI will be added in later phases.
-        </Typography>
-      </Paper>
+    <Stack spacing={2.5}>
+      <ProfileSummary user={user} access={access} loading={false} />
+      <NotificationPreferencesForm />
+      <SettingsQuickLinks />
     </Stack>
   );
 }
