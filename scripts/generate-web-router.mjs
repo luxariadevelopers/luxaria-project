@@ -145,6 +145,7 @@ const ELEMENT_MAP = {
   'reorder-alerts': 'ReorderAlertsPage',
   'boq-versions': 'BoqVersionsPage',
   'boq-item-editor': 'BoqItemEditorPage',
+  'construction-reports': 'ConstructionReportsPage',
   'cash-book': 'CashBookPage',
   'bank-book': 'BankBookPage',
   users: 'UsersPage',

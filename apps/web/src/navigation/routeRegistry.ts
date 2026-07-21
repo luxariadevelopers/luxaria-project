@@ -1302,6 +1302,18 @@ const APP_ROUTES = [
     breadcrumbSegment: 'items',
   },
   {
+    id: 'construction-reports',
+    path: '/reports/construction',
+    title: 'Construction Reports',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'reports',
+    icon: 'reports',
+    anyOf: ['report.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'construction',
+  },
+  {
     id: 'cash-book',
     path: '/reports/accounting/cash-book',
     title: 'Cash Book',

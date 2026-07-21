@@ -787,6 +787,13 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="construction-reports" />}>
+              <Route
+                path={toRelativeAppPath('/reports/construction')}
+                element={APP_ROUTE_ELEMENTS['construction-reports']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="cash-book" />}>
               <Route
                 path={toRelativeAppPath('/reports/accounting/cash-book')}

@@ -28,6 +28,7 @@ import { CommitmentDetailPage } from '@/pages/CommitmentDetailPage';
 import { CommitmentsPage } from '@/pages/CommitmentsPage';
 import { CompanyOverviewPage } from '@/pages/CompanyOverviewPage';
 import { CompanySettingsPage } from '@/pages/CompanySettingsPage';
+import { ConstructionReportsPage } from '@/pages/ConstructionReportsPage';
 import { ContractorAgreementDetailPage } from '@/pages/ContractorAgreementDetailPage';
 import { ContractorAgreementsPage } from '@/pages/ContractorAgreementsPage';
 import { ContractorPaymentsPage } from '@/pages/ContractorPaymentsPage';
@@ -240,6 +241,7 @@ export const APP_ROUTE_ELEMENTS: {
   'reorder-alerts': <ReorderAlertsPage />,
   'boq-versions': <BoqVersionsPage />,
   'boq-item-editor': <BoqItemEditorPage />,
+  'construction-reports': <ConstructionReportsPage />,
   'cash-book': <CashBookPage />,
   'bank-book': <BankBookPage />,
   users: <UsersPage />,
