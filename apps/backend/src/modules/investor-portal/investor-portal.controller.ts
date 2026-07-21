@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
@@ -8,6 +8,7 @@ import {
 } from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import {
+  ListInvestorProfitAllocationsQueryDto,
   PublishInvestorReportDto,
   RecordInvestorProfitDto,
   UpdateDistributedProfitDto,
@@ -67,6 +68,16 @@ export class InvestorPortalController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.investorPortalService.publishReport(dto, actor.id);
+  }
+
+  @Get('profit-allocations')
+  @ProjectScoped({ mode: 'single', operation: 'read' })
+  @RequirePermissions('investor_portal.manage')
+  @ApiOperation({
+    summary: 'List profit allocations for a project',
+  })
+  listProfitAllocations(@Query() query: ListInvestorProfitAllocationsQueryDto) {
+    return this.investorPortalService.listProfitAllocations(query);
   }
 
   @Post('profit-allocations')

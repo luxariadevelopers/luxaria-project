@@ -57,8 +57,21 @@ export type UpdatedInvestorProfitAllocation = {
   undistributedAmount: number;
 };
 
-/** Session-persisted row for PATCH distributed (no list GET on backend). */
-export type RecentProfitAllocationRow = RecordedInvestorProfitAllocation & {
-  participantLabel: string | null;
-  recordedAt: string;
+export type PublicInvestorProfitAllocation = {
+  id: string;
+  projectId: string;
+  participantId: string;
+  investorId: string;
+  periodLabel: string | null;
+  allocatedAmount: number;
+  distributedAmount: number;
+  undistributedAmount: number;
+  status: string;
+  approvedAt: string | null;
+  createdAt: string | null;
+};
+
+export type ProfitAllocationListQuery = {
+  projectId: string;
+  status?: string;
 };

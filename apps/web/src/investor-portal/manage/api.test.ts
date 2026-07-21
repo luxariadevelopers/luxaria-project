@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  fetchProfitAllocations,
   publishInvestorReport,
   recordInvestorProfitAllocation,
   updateInvestorDistributedProfit,
@@ -7,14 +8,16 @@ import {
 import { InvestorVisibleReportType } from './types';
 
 vi.mock('@/api/client', () => ({
+  apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiPatch: vi.fn(),
 }));
 
-import { apiPatch, apiPost } from '@/api/client';
+import { apiGet, apiPatch, apiPost } from '@/api/client';
 
 describe('investor portal manage api', () => {
   beforeEach(() => {
+    vi.mocked(apiGet).mockReset();
     vi.mocked(apiPost).mockReset();
     vi.mocked(apiPatch).mockReset();
   });
@@ -39,6 +42,38 @@ describe('investor portal manage api', () => {
       reportType: InvestorVisibleReportType.Progress,
       summary: 'On track',
     });
+  });
+
+  it('gets profit allocations for a project', async () => {
+    vi.mocked(apiGet).mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          id: 'a1',
+          projectId: '507f1f77bcf86cd799439011',
+          participantId: '507f1f77bcf86cd799439012',
+          investorId: 'inv1',
+          periodLabel: 'FY 2025',
+          allocatedAmount: 1000,
+          distributedAmount: 250,
+          undistributedAmount: 750,
+          status: 'approved',
+          approvedAt: '2026-07-01T00:00:00.000Z',
+          createdAt: '2026-07-01T00:00:00.000Z',
+        },
+      ],
+    });
+
+    const rows = await fetchProfitAllocations({
+      projectId: '507f1f77bcf86cd799439011',
+    });
+
+    expect(apiGet).toHaveBeenCalledWith('/investor-portal/profit-allocations', {
+      projectId: '507f1f77bcf86cd799439011',
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.undistributedAmount).toBe(750);
   });
 
   it('posts profit allocation payload', async () => {

@@ -46,6 +46,20 @@ export type InvestorPortalReport = {
   publishedAt: string | null;
 };
 
+export type InvestorProfitAllocationPublic = {
+  id: string;
+  projectId: string;
+  participantId: string;
+  investorId: string;
+  periodLabel: string | null;
+  allocatedAmount: number;
+  distributedAmount: number;
+  undistributedAmount: number;
+  status: string;
+  approvedAt: string | null;
+  createdAt: string | null;
+};
+
 export type InvestorPortalProjectDetail = {
   project: {
     id: string;

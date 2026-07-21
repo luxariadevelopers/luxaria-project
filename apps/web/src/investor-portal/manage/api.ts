@@ -1,5 +1,7 @@
-import { apiPatch, apiPost } from '@/api/client';
+import { apiGet, apiPatch, apiPost } from '@/api/client';
 import type {
+  ProfitAllocationListQuery,
+  PublicInvestorProfitAllocation,
   PublishInvestorReportInput,
   PublishedInvestorReport,
   RecordInvestorProfitInput,
@@ -17,6 +19,17 @@ import type {
 /** `POST /investor-portal/reports` */
 export async function publishInvestorReport(input: PublishInvestorReportInput) {
   return apiPost<PublishedInvestorReport>('/investor-portal/reports', input);
+}
+
+/** `GET /investor-portal/profit-allocations` */
+export async function fetchProfitAllocations(
+  query: ProfitAllocationListQuery,
+): Promise<PublicInvestorProfitAllocation[]> {
+  const response = await apiGet<PublicInvestorProfitAllocation[]>(
+    '/investor-portal/profit-allocations',
+    query,
+  );
+  return response.data ?? [];
 }
 
 /** `POST /investor-portal/profit-allocations` */

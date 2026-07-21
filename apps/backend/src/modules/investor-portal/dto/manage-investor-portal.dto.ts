@@ -12,6 +12,7 @@ import {
 import {
   InvestorVisibleReportType,
 } from '../schemas/investor-visible-report.schema';
+import { InvestorProfitAllocationStatus } from '../schemas/investor-profit-allocation.schema';
 
 export class PublishInvestorReportDto {
   @ApiProperty()
@@ -90,4 +91,15 @@ export class UpdateDistributedProfitDto {
   @IsNumber()
   @Min(0)
   distributedAmount!: number;
+}
+
+export class ListInvestorProfitAllocationsQueryDto {
+  @ApiProperty()
+  @IsMongoId()
+  projectId!: string;
+
+  @ApiPropertyOptional({ enum: InvestorProfitAllocationStatus })
+  @IsOptional()
+  @IsEnum(InvestorProfitAllocationStatus)
+  status?: InvestorProfitAllocationStatus;
 }

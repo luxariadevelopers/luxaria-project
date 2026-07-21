@@ -44,6 +44,7 @@ import {
   WorkMeasurementStatus,
 } from '../work-measurements/schemas/work-measurement.schema';
 import type {
+  ListInvestorProfitAllocationsQueryDto,
   PublishInvestorReportDto,
   RecordInvestorProfitDto,
   UpdateDistributedProfitDto,
@@ -52,6 +53,7 @@ import type {
   InvestorPortalMe,
   InvestorPortalProjectDetail,
   InvestorPortalProjectSummary,
+  InvestorProfitAllocationPublic,
 } from './investor-portal.types';
 import {
   InvestorProfitAllocation,
@@ -312,6 +314,33 @@ export class InvestorPortalService {
         ),
       },
       'Investor profit allocation recorded',
+    );
+  }
+
+  async listProfitAllocations(query: ListInvestorProfitAllocationsQueryDto) {
+    if (!Types.ObjectId.isValid(query.projectId)) {
+      throw new BadRequestException('Invalid projectId');
+    }
+
+    const filter: {
+      projectId: Types.ObjectId;
+      status?: InvestorProfitAllocationStatus;
+    } = {
+      projectId: new Types.ObjectId(query.projectId),
+    };
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    const rows = await this.profitModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
+    return createSuccessResponse(
+      rows.map((row) => this.toPublicProfitAllocation(row)),
+      'Profit allocations listed',
     );
   }
 
@@ -674,6 +703,30 @@ export class InvestorPortalService {
     }
     // Ensure investment.participantId is own; investorId must not appear as another investor's id list
     void investorId;
+  }
+
+  private toPublicProfitAllocation(
+    row: InvestorProfitAllocation & { _id: Types.ObjectId },
+  ): InvestorProfitAllocationPublic {
+    return {
+      id: String(row._id),
+      projectId: String(row.projectId),
+      participantId: String(row.participantId),
+      investorId: String(row.investorId),
+      periodLabel: row.periodLabel ?? null,
+      allocatedAmount: row.allocatedAmount,
+      distributedAmount: row.distributedAmount,
+      undistributedAmount: this.round2(
+        row.allocatedAmount - row.distributedAmount,
+      ),
+      status: row.status,
+      approvedAt: row.approvedAt
+        ? new Date(row.approvedAt).toISOString()
+        : null,
+      createdAt: row.createdAt
+        ? new Date(row.createdAt).toISOString()
+        : null,
+    };
   }
 
   private round2(n: number): number {

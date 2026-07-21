@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Divider,
   Stack,
   Table,
@@ -26,15 +27,11 @@ import {
   type PublicProjectParticipant,
 } from '@/project-participants/types';
 import {
+  useProfitAllocations,
   useRecordInvestorProfitAllocation,
   useUpdateInvestorDistributedProfit,
 } from './hooks';
-import {
-  listRecentProfitAllocations,
-  patchRecentProfitAllocationDistributed,
-  upsertRecentProfitAllocation,
-} from './recentAllocations';
-import type { RecentProfitAllocationRow } from './types';
+import type { PublicInvestorProfitAllocation } from './types';
 import {
   recordInvestorProfitSchema,
   updateDistributedProfitSchema,
@@ -46,6 +43,10 @@ type Props = {
   projectId: string;
   participants: readonly PublicProjectParticipant[];
   canManage: boolean;
+};
+
+type AllocationRow = PublicInvestorProfitAllocation & {
+  participantLabel: string | null;
 };
 
 function formatMoney(value: number): string {
@@ -61,9 +62,9 @@ export function InvestorProfitAllocationPanel({
   canManage,
 }: Props) {
   const record = useRecordInvestorProfitAllocation(projectId);
-  const updateDistributed = useUpdateInvestorDistributedProfit();
+  const updateDistributed = useUpdateInvestorDistributedProfit(projectId);
+  const allocationsQuery = useProfitAllocations(projectId);
   const { success, error: notifyError } = useNotify();
-  const [recentRows, setRecentRows] = useState<RecentProfitAllocationRow[]>([]);
   const [selectedAllocationId, setSelectedAllocationId] = useState('');
 
   const outsideInvestors = useMemo(
@@ -94,9 +95,14 @@ export function InvestorProfitAllocationPanel({
     return map;
   }, [outsideInvestors]);
 
-  useEffect(() => {
-    setRecentRows(listRecentProfitAllocations(projectId));
-  }, [projectId]);
+  const allocationRows = useMemo<AllocationRow[]>(
+    () =>
+      (allocationsQuery.data ?? []).map((row) => ({
+        ...row,
+        participantLabel: participantLabelById.get(row.participantId) ?? null,
+      })),
+    [allocationsQuery.data, participantLabelById],
+  );
 
   const recordForm = useForm<RecordInvestorProfitFormValues>({
     resolver: zodResolver(
@@ -123,7 +129,9 @@ export function InvestorProfitAllocationPanel({
     },
   });
 
-  const selectedRow = recentRows.find((row) => row.id === selectedAllocationId);
+  const selectedRow = allocationRows.find(
+    (row) => row.id === selectedAllocationId,
+  );
   const watchedAllocationId = useWatch({
     control: updateForm.control,
     name: 'allocationId',
@@ -166,18 +174,9 @@ export function InvestorProfitAllocationPanel({
         approvedAt: values.approvedAt.trim() || undefined,
       });
       const payload = response.data;
-      if (!payload) {
-        success(response.message ?? 'Profit allocation recorded');
-        return;
+      if (payload) {
+        setSelectedAllocationId(payload.id);
       }
-      const row: RecentProfitAllocationRow = {
-        ...payload,
-        participantLabel:
-          participantLabelById.get(payload.participantId) ?? null,
-        recordedAt: new Date().toISOString(),
-      };
-      setRecentRows(upsertRecentProfitAllocation(row));
-      setSelectedAllocationId(row.id);
       success(response.message ?? 'Profit allocation recorded');
       recordForm.reset({
         participantId: values.participantId,
@@ -202,17 +201,6 @@ export function InvestorProfitAllocationPanel({
         allocationId: values.allocationId,
         distributedAmount: values.distributedAmount,
       });
-      const payload = response.data;
-      if (payload) {
-        setRecentRows(
-          patchRecentProfitAllocationDistributed(
-            projectId,
-            payload.id,
-            payload.distributedAmount,
-            payload.undistributedAmount,
-          ),
-        );
-      }
       success(response.message ?? 'Distributed profit updated');
     } catch (error) {
       if (isForbiddenError(error)) {
@@ -320,16 +308,32 @@ export function InvestorProfitAllocationPanel({
           <Stack spacing={2}>
             <Typography variant="subtitle2">Mark distributed</Typography>
             <Typography variant="body2" color="text.secondary">
-              Select a recently recorded allocation from this browser session, or
-              paste an allocation id from a prior record response.
+              Select a recorded allocation for this project, or enter an
+              allocation id directly.
             </Typography>
 
-            {recentRows.length > 0 ? (
+            {allocationsQuery.isLoading ? (
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: 'center' }}
+              >
+                <CircularProgress size={18} />
+                <Typography variant="body2" color="text.secondary">
+                  Loading allocations…
+                </Typography>
+              </Stack>
+            ) : allocationsQuery.isError ? (
+              <Typography variant="body2" color="error">
+                {getErrorMessage(allocationsQuery.error)}
+              </Typography>
+            ) : allocationRows.length > 0 ? (
               <Box sx={{ overflowX: 'auto' }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell>Investor</TableCell>
+                      <TableCell>Period</TableCell>
                       <TableCell align="right">Allocated</TableCell>
                       <TableCell align="right">Distributed</TableCell>
                       <TableCell align="right">Undistributed</TableCell>
@@ -337,11 +341,12 @@ export function InvestorProfitAllocationPanel({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recentRows.map((row) => (
+                    {allocationRows.map((row) => (
                       <TableRow key={row.id} selected={row.id === selectedAllocationId}>
                         <TableCell>
                           {row.participantLabel ?? row.participantId}
                         </TableCell>
+                        <TableCell>{row.periodLabel ?? '—'}</TableCell>
                         <TableCell align="right">
                           {formatMoney(row.allocatedAmount)}
                         </TableCell>
@@ -371,8 +376,7 @@ export function InvestorProfitAllocationPanel({
               </Box>
             ) : (
               <Typography variant="body2" color="text.secondary">
-                No allocations recorded in this session yet. After recording, rows
-                appear here for quick distributed updates.
+                No profit allocations recorded for this project yet.
               </Typography>
             )}
 

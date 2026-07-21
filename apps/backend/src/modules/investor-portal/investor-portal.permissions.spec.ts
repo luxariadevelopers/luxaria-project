@@ -522,6 +522,24 @@ describe('InvestorPortalService permissions & restrictions', () => {
     );
     expect(profit.data?.undistributedAmount).toBe(75_000);
 
+    const listed = await service.listProfitAllocations({
+      projectId: projectAId,
+    });
+    expect(listed.data?.some((row) => row.allocatedAmount === 500_000)).toBe(
+      true,
+    );
+    expect(listed.data?.some((row) => row.allocatedAmount === 100_000)).toBe(
+      true,
+    );
+
+    const approvedOnly = await service.listProfitAllocations({
+      projectId: projectAId,
+      status: InvestorProfitAllocationStatus.Approved,
+    });
+    expect(approvedOnly.data?.every((row) => row.status === 'approved')).toBe(
+      true,
+    );
+
     const detail = await service.getProject(projectAId, investorUserA);
     expect(detail.data?.reports.some((r) => r.title === 'Board packet')).toBe(
       true,
