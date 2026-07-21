@@ -1,16 +1,54 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 import { DashboardPage } from './pages/dashboard.page';
+import {
+  createAuthenticatedApi,
+  toGoldenPathContext,
+  uniqueRunSuffix,
+} from './fixtures/api-client';
 import { readRuntimeState } from './fixtures/seed-data';
-import { e2eEnv, isLiveApi } from './fixtures/test-env';
-
-const missingActorsReason =
-  'Phase 137 seeds only admin and limited users; the two-step procurement workflow requires distinct eligible approvers.';
-const missingMultiStepUiReason =
-  'Full PR → PO → GRN → invoice → payment browser journey needs multi-actor approvals and is not covered by single-admin seeds.';
+import {
+  e2eEnv,
+  hasGoldenPathActors,
+  isLiveApi,
+} from './fixtures/test-env';
 
 test.describe('Golden path: PR → PO → GRN → invoice → payment', () => {
-  test('API-assisted journey', async () => {
-    test.skip(true, missingActorsReason);
+  test('API-assisted journey', async ({ request }) => {
+    test.skip(!isLiveApi(), 'Requires live API (E2E_LIVE_API or CI)');
+
+    const state = await readRuntimeState();
+    test.skip(state?.seedFailed, state?.seedError ?? 'E2E seed failed');
+    test.skip(
+      !hasGoldenPathActors(state) || !state.projectId || !state.adminUserId,
+      'Golden-path actors or master data missing from runtime state',
+    );
+
+    const suffix = uniqueRunSuffix();
+    const adminApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.admin.identifier,
+      e2eEnv.admin.password,
+    );
+    const purchaseApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.purchaseApprover.identifier,
+      e2eEnv.purchaseApprover.password,
+    );
+    const financeApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.financeManager.identifier,
+      e2eEnv.financeManager.password,
+    );
+
+    await adminApi.runProcurementGoldenPath(
+      { purchaseApi, financeApi },
+      toGoldenPathContext({
+        projectId: state.projectId,
+        adminUserId: state.adminUserId,
+        master: state.master,
+      }),
+      suffix,
+    );
   });
 
   test.describe('UI register smoke', () => {
@@ -20,6 +58,7 @@ test.describe('Golden path: PR → PO → GRN → invoice → payment', () => {
       test.skip(!isLiveApi(), 'Requires live API (E2E_LIVE_API or CI)');
 
       const state = await readRuntimeState();
+      test.skip(state?.seedFailed, state?.seedError ?? 'E2E seed failed');
       test.skip(!state?.projectId, 'Seeded project missing from runtime state');
     });
 
@@ -46,13 +85,16 @@ test.describe('Golden path: PR → PO → GRN → invoice → payment', () => {
         .click();
 
       await page.goto('/procurement/purchase-requests');
-      await expect(
-        page.getByRole('heading', { name: 'Purchase requests', level: 5 }),
-      ).toBeVisible();
+      await page
+        .getByRole('heading', { name: 'Purchase requests', level: 5 })
+        .waitFor();
     });
   });
 
   test('UI: end-to-end procurement journey', async () => {
-    test.skip(true, missingMultiStepUiReason);
+    test.skip(
+      true,
+      'Full PR→PO→GRN→invoice→payment UI needs many screens; API-assisted journey covers the workflow. Register smoke validates admin navigation.',
+    );
   });
 });

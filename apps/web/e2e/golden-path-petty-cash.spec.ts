@@ -1,16 +1,54 @@
 import { expect, test } from '@playwright/test';
 import { DashboardPage } from './pages/dashboard.page';
+import {
+  createAuthenticatedApi,
+  toGoldenPathContext,
+  uniqueRunSuffix,
+} from './fixtures/api-client';
 import { readRuntimeState } from './fixtures/seed-data';
-import { e2eEnv, isLiveApi } from './fixtures/test-env';
-
-const missingActorsReason =
-  'Phase 137 seeds only admin and limited users; petty-cash approval and expense posting require distinct actors.';
-const missingMultiStepUiReason =
-  'Full petty cash → expense → posting browser journey needs PM/finance actors beyond the admin seed.';
+import {
+  e2eEnv,
+  hasGoldenPathActors,
+  isLiveApi,
+} from './fixtures/test-env';
 
 test.describe('Golden path: petty cash → expense → posting', () => {
-  test('API-assisted journey', async () => {
-    test.skip(true, missingActorsReason);
+  test('API-assisted journey', async ({ request }) => {
+    test.skip(!isLiveApi(), 'Requires live API (E2E_LIVE_API or CI)');
+
+    const state = await readRuntimeState();
+    test.skip(state?.seedFailed, state?.seedError ?? 'E2E seed failed');
+    test.skip(
+      !hasGoldenPathActors(state) || !state.projectId || !state.adminUserId,
+      'Golden-path actors or master data missing from runtime state',
+    );
+
+    const suffix = uniqueRunSuffix();
+    const adminApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.admin.identifier,
+      e2eEnv.admin.password,
+    );
+    const purchaseApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.purchaseApprover.identifier,
+      e2eEnv.purchaseApprover.password,
+    );
+    const financeApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.financeApprover.identifier,
+      e2eEnv.financeApprover.password,
+    );
+
+    await adminApi.runPettyCashGoldenPath(
+      { purchaseApi, financeApi },
+      toGoldenPathContext({
+        projectId: state.projectId,
+        adminUserId: state.adminUserId,
+        master: state.master,
+      }),
+      suffix,
+    );
   });
 
   test.describe('UI register smoke', () => {
@@ -20,6 +58,7 @@ test.describe('Golden path: petty cash → expense → posting', () => {
       test.skip(!isLiveApi(), 'Requires live API (E2E_LIVE_API or CI)');
 
       const state = await readRuntimeState();
+      test.skip(state?.seedFailed, state?.seedError ?? 'E2E seed failed');
       test.skip(!state?.projectId, 'Seeded project missing from runtime state');
     });
 
@@ -75,6 +114,9 @@ test.describe('Golden path: petty cash → expense → posting', () => {
   });
 
   test('UI: end-to-end petty cash journey', async () => {
-    test.skip(true, missingMultiStepUiReason);
+    test.skip(
+      true,
+      'Full petty-cash→expense→posting UI needs PM/finance handoffs across multiple pages; API-assisted journey covers the workflow. Create-form smoke validates admin UI.',
+    );
   });
 });

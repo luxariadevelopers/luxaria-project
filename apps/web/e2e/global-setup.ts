@@ -9,8 +9,16 @@ export default async function globalSetup(): Promise<void> {
 
   if (!isLiveApi()) {
     await mkdir(path.dirname(e2eEnv.paths.adminAuth), { recursive: true });
-    await writeFile(e2eEnv.paths.adminAuth, emptyStorage, 'utf8');
-    await writeFile(e2eEnv.paths.limitedAuth, emptyStorage, 'utf8');
+    for (const authPath of [
+      e2eEnv.paths.adminAuth,
+      e2eEnv.paths.limitedAuth,
+      e2eEnv.paths.salesApproverAuth,
+      e2eEnv.paths.financeApproverAuth,
+      e2eEnv.paths.purchaseApproverAuth,
+      e2eEnv.paths.financeManagerAuth,
+    ]) {
+      await writeFile(authPath, emptyStorage, 'utf8');
+    }
     await writeRuntimeState({ liveApi: false });
     return;
   }
