@@ -567,6 +567,17 @@ describe('ProjectsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('rejects assignees with null companyId instead of primary-company fallback', async () => {
+    await userModel.findByIdAndUpdate(managerId, { companyId: null });
+
+    await expect(
+      service.create(
+        { ...baseCreate(), projectManager: managerId },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('revokes access when manager and director assignments are replaced', async () => {
     const created = await service.create(
       {

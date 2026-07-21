@@ -16,7 +16,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DataTable, useListQueryState } from '@/components/data-table';
-import { EmptyState, PermissionDenied } from '@/components/errors';
+import { PermissionDenied } from '@/components/errors';
 import { formatDate, formatInr } from '@/format';
 import {
   PROJECT_LIST_FILTER_KEYS,
@@ -83,9 +83,10 @@ export function ProjectListPage() {
       projectStage:
         (listState.state.filters.projectStage as ProjectStage | undefined) ||
         undefined,
-      companyId: companyId ?? undefined,
+      // Backend already scopes the actor's company; omit client companyId so
+      // legacy null-company rows stay visible and company.view is not required.
     },
-    canView && Boolean(companyId),
+    canView,
   );
 
   const usersQuery = useProjectUserOptions(
@@ -211,25 +212,6 @@ export function ProjectListPage() {
       <PermissionDenied
         title="Projects unavailable"
         message="You need the project.view permission to open projects."
-      />
-    );
-  }
-
-  if (!companyId && !companyQuery.isLoading) {
-    return (
-      <EmptyState
-        title="Company unavailable"
-        description={
-          companyQuery.error
-            ? 'The authenticated company could not be resolved. Retry after company access is restored.'
-            : 'Your account has no companyId and company.view is required to resolve /companies/primary.'
-        }
-        actionLabel={companyQuery.error ? 'Retry' : undefined}
-        onAction={
-          companyQuery.error
-            ? () => void companyQuery.refetch()
-            : undefined
-        }
       />
     );
   }

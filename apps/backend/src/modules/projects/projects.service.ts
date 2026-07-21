@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -57,6 +58,8 @@ const ALLOWED_SORT = new Set([
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     @InjectModel(Project.name) private readonly projectModel: Model<Project>,
     @InjectModel(ProjectFile.name) private readonly documentModel: Model<ProjectFile>,
@@ -620,11 +623,14 @@ export class ProjectsService {
     companyId: Types.ObjectId,
   ) {
     const user = await this.findUserCompany(userId);
-    const userCompanyId = user.companyId
-      ? String(user.companyId)
-      : String(await this.resolvePrimaryCompanyId());
-
-    if (userCompanyId !== String(companyId)) {
+    // Assignees must carry an explicit company membership. Primary-company
+    // fallback applies only to the authenticated actor, never to assignees.
+    if (!user.companyId) {
+      throw new ForbiddenException(
+        'Project assignees must belong to the authenticated company',
+      );
+    }
+    if (String(user.companyId) !== String(companyId)) {
       throw new ForbiddenException(
         'Project assignees must belong to the authenticated company',
       );
@@ -717,16 +723,24 @@ export class ProjectsService {
     beforeData: unknown,
     afterData: unknown,
   ): Promise<void> {
-    await this.auditLogService.record({
-      userId: actorId,
-      action,
-      module: 'project',
-      entityType: 'project',
-      entityId: projectId,
-      projectId,
-      beforeData,
-      afterData,
-    });
+    try {
+      await this.auditLogService.record({
+        userId: actorId,
+        action,
+        module: 'project',
+        entityType: 'project',
+        entityId: projectId,
+        projectId,
+        beforeData,
+        afterData,
+      });
+    } catch (error) {
+      // Mutations already committed; audit outages must not false-fail the API.
+      this.logger.error(
+        `Failed to audit project ${projectId} (${action})`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   private toReraEmbed(dto?: ReraDetailsDto | null): ReraDetailsEmbed {

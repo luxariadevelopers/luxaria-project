@@ -238,7 +238,7 @@ export function buildProjectFormDefaults(
 
 export function toCreateProjectInput(
   values: ProjectFormValues,
-  companyId: string,
+  companyId?: string | null,
 ): CreateProjectInput {
   return {
     projectName: values.projectName.trim(),
@@ -278,7 +278,8 @@ export function toCreateProjectInput(
       authority: optionalString(values.reraDetails.authority),
       notes: optionalString(values.reraDetails.notes),
     },
-    companyId,
+    // Omit when unknown — backend resolves the authenticated tenant.
+    ...(companyId ? { companyId } : {}),
   };
 }
 

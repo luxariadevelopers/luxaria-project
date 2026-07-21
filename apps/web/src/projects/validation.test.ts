@@ -117,6 +117,11 @@ describe('project form validation', () => {
     expect(dto.approvedBudget).toBe(25_000_000);
     expect(dto).not.toHaveProperty('projectCode');
   });
+
+  it('omits companyId so the backend can resolve the tenant', () => {
+    const dto = toCreateProjectInput(projectFormSchema.parse(validValues()));
+    expect(dto).not.toHaveProperty('companyId');
+  });
 });
 
 describe('project assignment validation', () => {

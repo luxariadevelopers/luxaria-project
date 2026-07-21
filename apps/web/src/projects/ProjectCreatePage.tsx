@@ -9,7 +9,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { PermissionDenied, RetryPanel } from '@/components/errors';
+import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { ProjectForm } from './ProjectForm';
@@ -69,39 +69,11 @@ export function ProjectCreatePage() {
     );
   }
 
-  if (!resolvedCompanyId && companyQuery.isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-        <CircularProgress size={32} />
-      </Box>
-    );
-  }
-
-  if (!resolvedCompanyId) {
-    return (
-      <Stack spacing={2}>
-        <Typography variant="h5">Create project</Typography>
-        {companyQuery.error ? (
-          <RetryPanel
-            error={companyQuery.error}
-            onRetry={() => void companyQuery.refetch()}
-            forceRetry
-          />
-        ) : (
-          <Alert severity="error">
-            Your authenticated user has no companyId. company.view is required
-            to resolve the read-only /companies/primary tenant.
-          </Alert>
-        )}
-      </Stack>
-    );
-  }
-
   const company = companyQuery.data ?? {
-    id: resolvedCompanyId,
-    companyCode: resolvedCompanyId,
-    legalName: 'Authenticated company',
-    tradeName: 'Authenticated company',
+    id: resolvedCompanyId ?? '',
+    companyCode: resolvedCompanyId ?? 'server-resolved',
+    legalName: 'Server-resolved company',
+    tradeName: 'Server-resolved company',
     isPrimary: false,
   };
 
