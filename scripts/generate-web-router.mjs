@@ -62,6 +62,7 @@ const ELEMENT_MAP = {
   'profit-share': 'ProfitShareEntryPage',
   'profit-share-detail': 'ProfitSharePage',
   'daily-progress': 'DprListPage',
+  'dpr-detail': 'DprDetailPage',
   boq: 'BoqPage',
   'boq-import': 'BoqImportPage',
   'work-measurements': 'WorkMeasurementsPage',

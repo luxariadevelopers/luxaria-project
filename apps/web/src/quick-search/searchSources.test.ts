@@ -60,7 +60,7 @@ describe('groupQuickSearchResults', () => {
             title: 'BK-2026-000001',
             subtitle: 'Booking',
             status: 'hold',
-            path: '/bookings?id=b1',
+            path: '/sales/bookings?id=b1',
             projectId: 'p1',
           },
         ],

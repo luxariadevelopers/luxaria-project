@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { Chip, Link, Stack } from '@mui/material';
+import { Chip, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { DataTable, type DataTableRowAction } from '@/components/DataTable';
-import { vendorVerificationLabel } from './labels';
-import { VendorRating } from './VendorRating';
-import { VendorStatusChip } from './VendorStatusChip';
-import type { VendorListRow } from './types';
-import { vendorUiState } from './vendorStatus';
+import {
+  contractorTypeLabel,
+  contractorVerificationLabel,
+} from './labels';
+import { ContractorStatusChip } from './ContractorStatusChip';
+import { contractorUiState } from './contractorStatus';
+import type { ContractorListRow } from './types';
 
 type Props = {
-  rows: readonly VendorListRow[];
+  rows: readonly ContractorListRow[];
   loading?: boolean;
   error?: unknown;
   onRetry?: () => void;
@@ -27,13 +28,13 @@ type Props = {
   canBlock?: boolean;
   canActivate?: boolean;
   canVerify?: boolean;
-  onEdit?: (row: VendorListRow) => void;
-  onBlock?: (row: VendorListRow) => void;
-  onActivate?: (row: VendorListRow) => void;
-  onVerify?: (row: VendorListRow, verified: boolean) => void;
+  onEdit?: (row: ContractorListRow) => void;
+  onBlock?: (row: ContractorListRow) => void;
+  onActivate?: (row: ContractorListRow) => void;
+  onVerify?: (row: ContractorListRow, verified: boolean) => void;
 };
 
-export function VendorTable({
+export function ContractorTable({
   rows,
   loading,
   error,
@@ -56,22 +57,8 @@ export function VendorTable({
   onActivate,
   onVerify,
 }: Props) {
-  const columns: GridColDef<VendorListRow>[] = [
-    {
-      field: 'vendorCode',
-      headerName: 'Code',
-      width: 120,
-      renderCell: (params) => (
-        <Link
-          component={RouterLink}
-          to={`/procurement/vendors/${params.row.id}`}
-          underline="hover"
-          data-testid={`vendor-link-${params.row.id}`}
-        >
-          {params.value}
-        </Link>
-      ),
-    },
+  const columns: GridColDef<ContractorListRow>[] = [
+    { field: 'contractorCode', headerName: 'Code', width: 120 },
     { field: 'legalName', headerName: 'Legal name', flex: 1, minWidth: 180 },
     {
       field: 'tradeName',
@@ -80,36 +67,29 @@ export function VendorTable({
       valueGetter: (_v, row) => row.tradeName ?? '—',
     },
     {
+      field: 'contractorType',
+      headerName: 'Type',
+      width: 120,
+      valueGetter: (_v, row) => contractorTypeLabel(row.contractorType),
+    },
+    {
       field: 'gstin',
       headerName: 'GSTIN',
       width: 160,
       valueGetter: (_v, row) => row.gstin ?? '—',
     },
     {
-      field: 'pan',
-      headerName: 'PAN',
-      width: 120,
-      valueGetter: (_v, row) => row.pan ?? '—',
-    },
-    {
-      field: 'materialCategories',
-      headerName: 'Categories',
-      flex: 1,
-      minWidth: 160,
+      field: 'workCategories',
+      headerName: 'Work',
+      width: 180,
       sortable: false,
       renderCell: (params) => {
-        const cats = params.row.materialCategories;
-        if (!cats.length) return '—';
+        const cats = params.row.workCategories ?? [];
+        if (cats.length === 0) return '—';
         return (
-          <Stack
-            direction="row"
-            spacing={0.5}
-            useFlexGap
-            sx={{ flexWrap: 'wrap', py: 0.5 }}
-            data-testid="vendor-categories"
-          >
+          <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
             {cats.slice(0, 3).map((cat) => (
-              <Chip key={cat} size="small" label={cat} variant="outlined" />
+              <Chip key={cat} size="small" label={cat} />
             ))}
             {cats.length > 3 ? (
               <Chip size="small" label={`+${cats.length - 3}`} />
@@ -121,20 +101,22 @@ export function VendorTable({
     {
       field: 'rating',
       headerName: 'Rating',
-      width: 110,
-      renderCell: (params) => <VendorRating rating={params.row.rating} />,
+      width: 90,
+      valueGetter: (_v, row) =>
+        row.rating == null ? '—' : String(row.rating),
     },
     {
       field: 'verificationStatus',
       headerName: 'Verification',
       width: 130,
-      valueGetter: (_v, row) => vendorVerificationLabel(row.verificationStatus),
+      valueGetter: (_v, row) =>
+        contractorVerificationLabel(row.verificationStatus),
     },
     {
       field: 'status',
       headerName: 'Status',
       width: 150,
-      renderCell: (params) => <VendorStatusChip row={params.row} />,
+      renderCell: (params) => <ContractorStatusChip row={params.row} />,
     },
     {
       field: 'contactPerson',
@@ -144,7 +126,7 @@ export function VendorTable({
     },
   ];
 
-  const rowActions: DataTableRowAction<VendorListRow>[] = [];
+  const rowActions: DataTableRowAction<ContractorListRow>[] = [];
 
   if (canUpdate && onEdit) {
     rowActions.push({
@@ -160,14 +142,14 @@ export function VendorTable({
         id: 'verify',
         label: 'Verify',
         onClick: (row) => onVerify(row, true),
-        disabled: (row) => !vendorUiState(row).canVerify,
+        disabled: (row) => !contractorUiState(row).canVerify,
       },
       {
         id: 'reject',
         label: 'Reject verification',
         danger: true,
         onClick: (row) => onVerify(row, false),
-        disabled: (row) => !vendorUiState(row).canVerify,
+        disabled: (row) => !contractorUiState(row).canVerify,
       },
     );
   }
@@ -177,7 +159,7 @@ export function VendorTable({
       id: 'activate',
       label: 'Activate',
       onClick: onActivate,
-      disabled: (row) => !vendorUiState(row).canActivate,
+      disabled: (row) => !contractorUiState(row).canActivate,
     });
   }
 
@@ -187,20 +169,20 @@ export function VendorTable({
       label: 'Block',
       danger: true,
       onClick: onBlock,
-      disabled: (row) => !vendorUiState(row).canBlock,
+      disabled: (row) => !contractorUiState(row).canBlock,
     });
   }
 
   return (
     <DataTable
-      title="Vendors"
+      title="Contractors"
       rows={[...rows]}
       columns={columns}
       loading={loading}
       error={error}
       onRetry={onRetry}
-      emptyTitle="No vendors"
-      emptyDescription="Create a vendor or adjust filters (try clearing Blocked)."
+      emptyTitle="No contractors"
+      emptyDescription="Create a contractor or adjust filters."
       height={520}
       getRowId={(row) => row.id}
       paginationMode="server"
@@ -212,7 +194,7 @@ export function VendorTable({
       search={search}
       onSearchChange={onSearchChange}
       searchPlaceholder="Search name, code, GSTIN, PAN…"
-      preferencesKey="vendors-list"
+      preferencesKey="contractors-list"
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}

@@ -43,6 +43,7 @@ import { DirectorDetailPage } from '@/pages/DirectorDetailPage';
 import { DirectorsPage } from '@/pages/DirectorsPage';
 import { DocumentsDemoPage } from '@/pages/DocumentsDemoPage';
 import { DocumentsPage } from '@/pages/DocumentsPage';
+import { DprDetailPage } from '@/pages/DprDetailPage';
 import { DprListPage } from '@/pages/DprListPage';
 import { EntityDetailDemoPage } from '@/pages/EntityDetailDemoPage';
 import { ExpenseCategoriesPage } from '@/pages/ExpenseCategoriesPage';
@@ -156,6 +157,7 @@ export const APP_ROUTE_ELEMENTS: {
   'profit-share': <ProfitShareEntryPage />,
   'profit-share-detail': <ProfitSharePage />,
   'daily-progress': <DprListPage />,
+  'dpr-detail': <DprDetailPage />,
   boq: <BoqPage />,
   'boq-import': <BoqImportPage />,
   'work-measurements': <WorkMeasurementsPage />,

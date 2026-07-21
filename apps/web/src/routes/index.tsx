@@ -201,8 +201,15 @@ export function AppRouter() {
 
             <Route element={<RegistryRouteGuard routeId="daily-progress" />}>
               <Route
-                path={toRelativeAppPath('/daily-progress-reports')}
+                path={toRelativeAppPath('/project-control/dpr')}
                 element={APP_ROUTE_ELEMENTS['daily-progress']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="dpr-detail" />}>
+              <Route
+                path={toRelativeAppPath('/project-control/dpr/:id')}
+                element={APP_ROUTE_ELEMENTS['dpr-detail']}
               />
             </Route>
 
@@ -488,7 +495,7 @@ export function AppRouter() {
 
             <Route element={<RegistryRouteGuard routeId="bookings" />}>
               <Route
-                path={toRelativeAppPath('/bookings')}
+                path={toRelativeAppPath('/sales/bookings')}
                 element={APP_ROUTE_ELEMENTS.bookings}
               />
             </Route>

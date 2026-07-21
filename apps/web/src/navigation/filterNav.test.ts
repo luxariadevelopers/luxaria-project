@@ -1672,7 +1672,7 @@ describe('getPageTitle', () => {
     );
     expect(getPageTitle('/documents')).toBe('Documents');
     expect(getPageTitle('/administration/audit-logs')).toBe('Audit Logs');
-    expect(getPageTitle('/daily-progress-reports')).toBe('Daily progress');
+    expect(getPageTitle('/project-control/dpr')).toBe('Daily progress');
     expect(getPageTitle('/forbidden')).toBe('Access denied');
   });
 });

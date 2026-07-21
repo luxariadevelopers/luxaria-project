@@ -98,7 +98,7 @@ function hitPath(sourceId: QuickSearchSourceId, id: string): string {
     case 'purchase-requests':
       return `/procurement/purchase-requests/${encodeURIComponent(id)}`;
     case 'bookings':
-      return `/bookings?id=${encodeURIComponent(id)}`;
+      return `/sales/bookings?id=${encodeURIComponent(id)}`;
   }
 }
 
