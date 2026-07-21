@@ -128,6 +128,16 @@ export class E2eApiClient {
   }
 
   async bootstrapAdmin(): Promise<string> {
+    try {
+      const session = await this.login(
+        e2eEnv.admin.identifier,
+        e2eEnv.admin.password,
+      );
+      return session.user.id;
+    } catch {
+      // Admin not present or password differs — attempt one-time bootstrap.
+    }
+
     const res = await this.post('/auth/bootstrap-admin', {
       fullName: e2eEnv.admin.fullName,
       email: e2eEnv.admin.identifier,
@@ -143,11 +153,15 @@ export class E2eApiClient {
       return session.user.id;
     }
 
-    const body = (await res.json()) as ApiEnvelope<{ id: string }>;
-    if (!res.ok() || !body.data?.id) {
+    if (!res.ok()) {
       throw new Error(
         `bootstrap-admin failed (${res.status()}): ${await res.text()}`,
       );
+    }
+
+    const body = (await res.json()) as ApiEnvelope<{ id: string }>;
+    if (!body.data?.id) {
+      throw new Error('bootstrap-admin response missing id');
     }
     return body.data.id;
   }
