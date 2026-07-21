@@ -2,10 +2,12 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -14,7 +16,7 @@ import { ErrorTrackingService } from './common/observability/error-tracking.serv
 import type { AppConfig } from './config/configuration';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
 
@@ -48,6 +50,13 @@ async function bootstrap() {
   );
   app.use(compression());
   app.use(cookieParser());
+  // Company logos are non-sensitive branding assets. Keep static exposure
+  // constrained to this directory; documents and generated reports remain
+  // behind their authenticated APIs.
+  app.useStaticAssets(join(process.cwd(), 'uploads', 'company'), {
+    prefix: '/uploads/company',
+    index: false,
+  });
 
   app.enableCors({
     origin: (

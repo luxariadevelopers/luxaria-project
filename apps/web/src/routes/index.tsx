@@ -640,6 +640,27 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="financial-years" />}>
+              <Route
+                path={toRelativeAppPath('/accounting/financial-years')}
+                element={APP_ROUTE_ELEMENTS['financial-years']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="financial-year-create" />}>
+              <Route
+                path={toRelativeAppPath('/accounting/financial-years/new')}
+                element={APP_ROUTE_ELEMENTS['financial-year-create']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="financial-year-detail" />}>
+              <Route
+                path={toRelativeAppPath('/accounting/financial-years/:financialYearId')}
+                element={APP_ROUTE_ELEMENTS['financial-year-detail']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="period-close" />}>
               <Route
                 path={toRelativeAppPath('/accounting/period-close')}
@@ -777,6 +798,69 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/users')}
                 element={APP_ROUTE_ELEMENTS.users}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="user-create" />}>
+              <Route
+                path={toRelativeAppPath('/users/new')}
+                element={APP_ROUTE_ELEMENTS['user-create']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="user-detail" />}>
+              <Route
+                path={toRelativeAppPath('/users/:userId')}
+                element={APP_ROUTE_ELEMENTS['user-detail']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="user-edit" />}>
+              <Route
+                path={toRelativeAppPath('/users/:userId/edit')}
+                element={APP_ROUTE_ELEMENTS['user-edit']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="company-overview" />}>
+              <Route
+                path={toRelativeAppPath('/administration/company')}
+                element={APP_ROUTE_ELEMENTS['company-overview']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="company-settings" />}>
+              <Route
+                path={toRelativeAppPath('/administration/company/settings')}
+                element={APP_ROUTE_ELEMENTS['company-settings']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="roles" />}>
+              <Route
+                path={toRelativeAppPath('/administration/roles')}
+                element={APP_ROUTE_ELEMENTS.roles}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="role-create" />}>
+              <Route
+                path={toRelativeAppPath('/administration/roles/new')}
+                element={APP_ROUTE_ELEMENTS['role-create']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="role-detail" />}>
+              <Route
+                path={toRelativeAppPath('/administration/roles/:roleId')}
+                element={APP_ROUTE_ELEMENTS['role-detail']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="role-edit" />}>
+              <Route
+                path={toRelativeAppPath('/administration/roles/:roleId/edit')}
+                element={APP_ROUTE_ELEMENTS['role-edit']}
               />
             </Route>
 

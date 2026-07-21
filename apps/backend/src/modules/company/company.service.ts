@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -42,21 +43,27 @@ export class CompanyService {
     private readonly capitalHistoryModel: Model<CompanyCapitalHistory>,
   ) {}
 
-  async getPrimary() {
+  async getPrimary(authenticatedCompanyId?: string | null) {
     const company = await this.companyModel.findOne({ isPrimary: true }).exec();
     if (!company) {
       throw new NotFoundException('Primary company not found');
     }
+    this.assertCompanyBoundary(String(company._id), authenticatedCompanyId);
     return createSuccessResponse(toPublicCompany(company), 'Company fetched successfully');
   }
 
-  async getById(id: string) {
-    const company = await this.requireCompany(id);
+  async getById(id: string, authenticatedCompanyId?: string | null) {
+    const company = await this.requireCompany(id, authenticatedCompanyId);
     return createSuccessResponse(toPublicCompany(company), 'Company fetched successfully');
   }
 
-  async update(id: string, dto: UpdateCompanyDto, actorId?: string) {
-    const company = await this.requireCompany(id);
+  async update(
+    id: string,
+    dto: UpdateCompanyDto,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const company = await this.requireCompany(id, authenticatedCompanyId);
     const now = new Date();
     const update: Record<string, unknown> = {
       updatedBy: actorId ? new Types.ObjectId(actorId) : null,
@@ -110,8 +117,13 @@ export class CompanyService {
     return createSuccessResponse(toPublicCompany(updated!), 'Company updated successfully');
   }
 
-  async updateStatutory(id: string, dto: UpdateStatutoryDto, actorId?: string) {
-    await this.requireCompany(id);
+  async updateStatutory(
+    id: string,
+    dto: UpdateStatutoryDto,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireCompany(id, authenticatedCompanyId);
 
     const update: Record<string, unknown> = {
       updatedBy: actorId ? new Types.ObjectId(actorId) : null,
@@ -137,8 +149,13 @@ export class CompanyService {
    * Updates current capital snapshot and appends an immutable history row.
    * Historical capital entries are never overwritten.
    */
-  async updateCapital(id: string, dto: UpdateCapitalDto, actorId?: string) {
-    const company = await this.requireCompany(id);
+  async updateCapital(
+    id: string,
+    dto: UpdateCapitalDto,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const company = await this.requireCompany(id, authenticatedCompanyId);
     assertNonNegativeCapital(dto.newAmount, 'newAmount');
 
     const previousAmount =
@@ -195,8 +212,13 @@ export class CompanyService {
     );
   }
 
-  async setLogo(id: string, logoPath: string, actorId?: string) {
-    await this.requireCompany(id);
+  async setLogo(
+    id: string,
+    logoPath: string,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireCompany(id, authenticatedCompanyId);
     const updated = await this.companyModel
       .findByIdAndUpdate(
         id,
@@ -213,8 +235,9 @@ export class CompanyService {
   async listAddressHistory(
     id: string,
     query: { page?: number; limit?: number; addressType?: CompanyAddressType },
+    authenticatedCompanyId?: string | null,
   ) {
-    await this.requireCompany(id);
+    await this.requireCompany(id, authenticatedCompanyId);
     const filter: Record<string, unknown> = { companyId: new Types.ObjectId(id) };
     if (query.addressType) filter.addressType = query.addressType;
 
@@ -253,8 +276,9 @@ export class CompanyService {
   async listCapitalHistory(
     id: string,
     query: { page?: number; limit?: number; capitalType?: CompanyCapitalType },
+    authenticatedCompanyId?: string | null,
   ) {
-    await this.requireCompany(id);
+    await this.requireCompany(id, authenticatedCompanyId);
     const filter: Record<string, unknown> = { companyId: new Types.ObjectId(id) };
     if (query.capitalType) filter.capitalType = query.capitalType;
 
@@ -321,10 +345,31 @@ export class CompanyService {
     });
   }
 
-  private async requireCompany(id: string) {
+  private assertCompanyBoundary(
+    id: string,
+    authenticatedCompanyId?: string | null,
+  ): void {
+    // Undefined is reserved for trusted internal callers and legacy unit tests.
+    if (authenticatedCompanyId === undefined) {
+      return;
+    }
+    if (
+      !authenticatedCompanyId ||
+      !Types.ObjectId.isValid(authenticatedCompanyId) ||
+      !new Types.ObjectId(id).equals(authenticatedCompanyId)
+    ) {
+      throw new ForbiddenException('Access denied');
+    }
+  }
+
+  private async requireCompany(
+    id: string,
+    authenticatedCompanyId?: string | null,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid company id');
     }
+    this.assertCompanyBoundary(id, authenticatedCompanyId);
     const company = await this.companyModel.findById(id).exec();
     if (!company) {
       throw new NotFoundException('Company not found');

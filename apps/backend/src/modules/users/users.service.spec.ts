@@ -2,6 +2,10 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { Types, connect, disconnect } from 'mongoose';
+import {
+  Company,
+  CompanySchema,
+} from '../company/schemas/company.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { Counter, CounterSchema } from '../numbering/schemas/counter.schema';
@@ -12,6 +16,7 @@ describe('UsersService', () => {
   let mongoServer: MongoMemoryServer;
   let connection: Connection;
   let userModel: Model<User>;
+  let companyModel: Model<Company>;
   let service: UsersService;
 
   const sessionService = {
@@ -23,13 +28,18 @@ describe('UsersService', () => {
     const mongoose = await connect(mongoServer.getUri());
     connection = mongoose.connection;
     userModel = connection.model(User.name, UserSchema) as Model<User>;
+    companyModel = connection.model(
+      Company.name,
+      CompanySchema,
+    ) as Model<Company>;
     const counterModel = connection.model(Counter.name, CounterSchema) as Model<Counter>;
     await userModel.syncIndexes();
+    await companyModel.syncIndexes();
     await counterModel.syncIndexes();
 
     const numberingService = new NumberingService(counterModel);
     const rolesService = {
-      assertActiveRoleIds: jest.fn().mockResolvedValue(undefined),
+      assertRoleAssignmentAllowed: jest.fn().mockResolvedValue(undefined),
     };
     const projectAccessService = {
       assignProjectsToUser: jest
@@ -61,6 +71,7 @@ describe('UsersService', () => {
       sessionService as never,
       rolesService as never,
       projectAccessService as never,
+      companyModel,
     );
   }, 60_000);
 
@@ -71,6 +82,7 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     await userModel.deleteMany({}).setOptions({ withDeleted: true });
+    await companyModel.deleteMany({}).setOptions({ withDeleted: true });
     await connection.model(Counter.name).deleteMany({});
     jest.clearAllMocks();
   });
@@ -165,6 +177,78 @@ describe('UsersService', () => {
     expect(response.meta?.total).toBe(1);
   });
 
+  it('scopes user administration to the authenticated company', async () => {
+    const address = {
+      line1: '1 Test Street',
+      city: 'Chennai',
+      state: 'Tamil Nadu',
+      pincode: '600001',
+      country: 'India',
+    };
+    const [primaryCompany, foreignCompany] = await companyModel.create([
+      {
+        companyCode: 'CMP-PRIMARY',
+        legalName: 'Primary Company',
+        tradeName: 'Primary',
+        registeredAddress: address,
+        corporateAddress: address,
+        authorisedShareCapital: 1_000_000,
+        paidUpShareCapital: 100_000,
+        financialYearStartMonth: 4,
+        isPrimary: true,
+      },
+      {
+        companyCode: 'CMP-FOREIGN',
+        legalName: 'Foreign Company',
+        tradeName: 'Foreign',
+        registeredAddress: address,
+        corporateAddress: address,
+        authorisedShareCapital: 1_000_000,
+        paidUpShareCapital: 100_000,
+        financialYearStartMonth: 4,
+        isPrimary: false,
+      },
+    ]);
+
+    const legacyPrimary = await service.create({
+      fullName: 'Legacy Primary User',
+      email: 'legacy-primary@luxaria.dev',
+      password: 'ChangeMe123!',
+    });
+    const foreign = await service.create(
+      {
+        fullName: 'Foreign User',
+        email: 'foreign@luxaria.dev',
+        password: 'ChangeMe123!',
+      },
+      undefined,
+      false,
+      String(foreignCompany._id),
+    );
+
+    const primaryList = await service.list(
+      {},
+      String(primaryCompany._id),
+    );
+    const foreignList = await service.list(
+      {},
+      String(foreignCompany._id),
+    );
+
+    expect(primaryList.data?.map((user) => user.id)).toContain(
+      legacyPrimary.data!.id,
+    );
+    expect(primaryList.data?.map((user) => user.id)).not.toContain(
+      foreign.data!.id,
+    );
+    expect(foreignList.data?.map((user) => user.id)).toEqual([
+      foreign.data!.id,
+    ]);
+    await expect(
+      service.getById(foreign.data!.id, String(primaryCompany._id)),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('soft deletes a user', async () => {
     const created = await service.create({
       fullName: 'Delete Me',
@@ -184,11 +268,14 @@ describe('UsersService', () => {
       userModel,
       numbering as unknown as NumberingService,
       sessionService as never,
-      { assertActiveRoleIds: jest.fn().mockResolvedValue(undefined) } as never,
+      {
+        assertRoleAssignmentAllowed: jest.fn().mockResolvedValue(undefined),
+      } as never,
       {
         assignProjectsToUser: jest.fn().mockResolvedValue(undefined),
         removeProjectsFromUser: jest.fn().mockResolvedValue(undefined),
       } as never,
+      companyModel,
     );
 
     const response = await isolated.create({

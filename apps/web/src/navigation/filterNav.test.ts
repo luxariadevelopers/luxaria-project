@@ -116,6 +116,66 @@ describe('representative role visibility (nav + guard same source)', () => {
     ).toBe(true);
   });
 
+  it('guards administration routes by their exact capabilities', () => {
+    expect(
+      canEnterRoute(
+        requireRouteById('company-overview'),
+        access(['company.view']),
+      ),
+    ).toBe(true);
+    expect(
+      canEnterRoute(
+        requireRouteById('company-settings'),
+        access(['company.update']),
+      ),
+    ).toBe(false);
+
+    expect(
+      canEnterRoute(requireRouteById('user-create'), access(['user.create'])),
+    ).toBe(true);
+    expect(
+      canEnterRoute(
+        requireRouteById('user-edit'),
+        access(['user.update']),
+      ),
+    ).toBe(false);
+    expect(
+      canEnterRoute(
+        requireRouteById('user-edit'),
+        access(['user.view', 'user.update']),
+      ),
+    ).toBe(true);
+
+    expect(
+      canEnterRoute(requireRouteById('role-create'), access(['role.create'])),
+    ).toBe(true);
+    expect(
+      canEnterRoute(
+        requireRouteById('role-edit'),
+        access(['role.update']),
+      ),
+    ).toBe(false);
+    expect(
+      canEnterRoute(
+        requireRouteById('role-edit'),
+        access(['role.view', 'role.update']),
+      ),
+    ).toBe(true);
+
+    expect(
+      canEnterRoute(
+        requireRouteById('financial-year-create'),
+        access(['financial_year.manage']),
+      ),
+    ).toBe(true);
+    expect(
+      canEnterRoute(
+        requireRouteById('financial-year-detail'),
+        access(['financial_year.manage']),
+      ),
+    ).toBe(false);
+  });
+
   it('user admin sees users and is denied project modules', () => {
     const ctx = ROLES.userAdmin;
     const ids = visibleIds(ctx);
@@ -1588,6 +1648,28 @@ describe('getPageTitle', () => {
     expect(getPageTitle('/contractors/agreements')).toBe('Agreements');
     expect(getPageTitle('/contractors/agreements/abc123')).toBe('Agreement');
     expect(getPageTitle('/sales/collections')).toBe('Collections');
+    expect(getPageTitle('/users/new')).toBe('New User');
+    expect(getPageTitle('/users/507f1f77bcf86cd799439011')).toBe('User');
+    expect(
+      getPageTitle('/users/507f1f77bcf86cd799439011/edit'),
+    ).toBe('Edit User');
+    expect(getPageTitle('/administration/company')).toBe('Company');
+    expect(getPageTitle('/administration/company/settings')).toBe(
+      'Company Settings',
+    );
+    expect(getPageTitle('/administration/roles')).toBe(
+      'Roles & Permissions',
+    );
+    expect(getPageTitle('/administration/roles/new')).toBe('New Role');
+    expect(
+      getPageTitle('/administration/roles/507f1f77bcf86cd799439011'),
+    ).toBe('Role');
+    expect(getPageTitle('/accounting/financial-years')).toBe(
+      'Financial Years',
+    );
+    expect(getPageTitle('/accounting/financial-years/new')).toBe(
+      'New Financial Year',
+    );
     expect(getPageTitle('/documents')).toBe('Documents');
     expect(getPageTitle('/administration/audit-logs')).toBe('Audit Logs');
     expect(getPageTitle('/daily-progress-reports')).toBe('Daily progress');
@@ -1596,6 +1678,29 @@ describe('getPageTitle', () => {
 });
 
 describe('pathMatchesPattern / param routes', () => {
+  it('prefers static administration routes over nested identifiers', () => {
+    expect(findRouteByPathname('/users/new')?.id).toBe('user-create');
+    expect(
+      findRouteByPathname('/users/507f1f77bcf86cd799439011/edit')?.id,
+    ).toBe('user-edit');
+    expect(findRouteByPathname('/administration/roles/new')?.id).toBe(
+      'role-create',
+    );
+    expect(
+      findRouteByPathname(
+        '/administration/roles/507f1f77bcf86cd799439011/edit',
+      )?.id,
+    ).toBe('role-edit');
+    expect(
+      findRouteByPathname('/accounting/financial-years/new')?.id,
+    ).toBe('financial-year-create');
+    expect(
+      findRouteByPathname(
+        '/accounting/financial-years/507f1f77bcf86cd799439011',
+      )?.id,
+    ).toBe('financial-year-detail');
+  });
+
   it('matches project management static and nested routes', () => {
     expect(findRouteByPathname('/projects/new')?.id).toBe('project-create');
     expect(

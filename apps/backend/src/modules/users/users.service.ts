@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -13,6 +14,7 @@ import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
 import { hashPassword } from '../../common/utils/crypto.util';
 import { softDeleteById } from '../../database/utils/soft-delete.helper';
+import { Company } from '../company/schemas/company.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { ProjectAccessService } from '../project-access/project-access.service';
@@ -50,6 +52,8 @@ export class UsersService {
     private readonly rolesService: RolesService,
     @Inject(forwardRef(() => ProjectAccessService))
     private readonly projectAccessService: ProjectAccessService,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<Company>,
   ) {}
 
   findById(id: string | Types.ObjectId) {
@@ -105,6 +109,7 @@ export class UsersService {
     department?: string | null;
     profilePhoto?: string | null;
     assignedProjects?: Types.ObjectId[];
+    companyId?: Types.ObjectId | null;
     roleIds?: Types.ObjectId[];
     reportingManager?: Types.ObjectId | null;
     joiningDate?: Date | null;
@@ -122,6 +127,7 @@ export class UsersService {
         department: input.department ?? null,
         profilePhoto: input.profilePhoto ?? null,
         assignedProjects: input.assignedProjects ?? [],
+        companyId: input.companyId ?? null,
         roleIds: input.roleIds ?? [],
         reportingManager: input.reportingManager ?? null,
         joiningDate: input.joiningDate ?? null,
@@ -133,14 +139,25 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto, actorId?: string) {
+  async create(
+    dto: CreateUserDto,
+    actorId?: string,
+    actorCanBypass = false,
+    authenticatedCompanyId?: string | null,
+  ) {
     await this.assertUniqueEmailMobile(dto.email, dto.mobile);
 
     if (dto.reportingManager) {
-      await this.assertUserExists(dto.reportingManager);
+      await this.assertUserExists(
+        dto.reportingManager,
+        authenticatedCompanyId,
+      );
     }
 
-    await this.rolesService.assertActiveRoleIds(dto.roleIds ?? []);
+    await this.rolesService.assertRoleAssignmentAllowed(
+      dto.roleIds ?? [],
+      actorCanBypass,
+    );
 
     const userCode = await this.numberingService.nextCode(NumberEntityType.USER);
     const passwordHash = await hashPassword(dto.password);
@@ -157,6 +174,9 @@ export class UsersService {
       department: dto.department ?? null,
       profilePhoto: dto.profilePhoto ?? null,
       assignedProjects: [],
+      companyId: authenticatedCompanyId
+        ? new MongooseTypes.ObjectId(authenticatedCompanyId)
+        : null,
       roleIds: (dto.roleIds ?? []).map((id) => new MongooseTypes.ObjectId(id)),
       reportingManager: dto.reportingManager
         ? new MongooseTypes.ObjectId(dto.reportingManager)
@@ -182,8 +202,12 @@ export class UsersService {
     return createSuccessResponse(toPublicUser(created!), 'User created successfully');
   }
 
-  async update(id: string, dto: UpdateUserDto) {
-    const user = await this.requireUser(id);
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const user = await this.requireUser(id, authenticatedCompanyId);
 
     if (dto.email !== undefined || dto.mobile !== undefined) {
       await this.assertUniqueEmailMobile(
@@ -197,7 +221,10 @@ export class UsersService {
       if (dto.reportingManager === id) {
         throw new BadRequestException('User cannot be their own reporting manager');
       }
-      await this.assertUserExists(dto.reportingManager);
+      await this.assertUserExists(
+        dto.reportingManager,
+        authenticatedCompanyId,
+      );
     }
 
     const update: Record<string, unknown> = {};
@@ -233,8 +260,8 @@ export class UsersService {
     return createSuccessResponse(toPublicUser(updated!), 'User updated successfully');
   }
 
-  async activate(id: string) {
-    await this.requireUser(id);
+  async activate(id: string, authenticatedCompanyId?: string | null) {
+    await this.requireUser(id, authenticatedCompanyId);
     const updated = await this.userModel
       .findByIdAndUpdate(
         id,
@@ -249,8 +276,8 @@ export class UsersService {
     return createSuccessResponse(toPublicUser(updated!), 'User activated successfully');
   }
 
-  async deactivate(id: string) {
-    await this.requireUser(id);
+  async deactivate(id: string, authenticatedCompanyId?: string | null) {
+    await this.requireUser(id, authenticatedCompanyId);
     const updated = await this.userModel
       .findByIdAndUpdate(id, { status: UserStatus.Inactive }, { new: true })
       .exec();
@@ -258,8 +285,12 @@ export class UsersService {
     return createSuccessResponse(toPublicUser(updated!), 'User deactivated successfully');
   }
 
-  async softDeleteUser(id: string, actorId?: string) {
-    await this.requireUser(id);
+  async softDeleteUser(
+    id: string,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireUser(id, authenticatedCompanyId);
     const deleted = await softDeleteById(
       this.userModel,
       id,
@@ -272,17 +303,30 @@ export class UsersService {
     );
   }
 
-  async adminResetPassword(id: string, dto: AdminResetPasswordDto) {
-    await this.requireUser(id);
+  async adminResetPassword(
+    id: string,
+    dto: AdminResetPasswordDto,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireUser(id, authenticatedCompanyId);
     const passwordHash = await hashPassword(dto.newPassword);
     await this.updatePassword(id, passwordHash);
     await this.sessionService.revokeAllForUser(id);
     return createSuccessResponse(null, 'Password reset successfully');
   }
 
-  async assignRoles(id: string, dto: AssignRolesDto) {
-    await this.requireUser(id);
-    await this.rolesService.assertActiveRoleIds(dto.roleIds);
+  async assignRoles(
+    id: string,
+    dto: AssignRolesDto,
+    actorCanBypass = false,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const user = await this.requireUser(id, authenticatedCompanyId);
+    await this.rolesService.assertRoleReplacementAllowed(
+      (user.roleIds ?? []).map(String),
+      dto.roleIds,
+      actorCanBypass,
+    );
     const updated = await this.userModel
       .findByIdAndUpdate(
         id,
@@ -293,26 +337,39 @@ export class UsersService {
     return createSuccessResponse(toPublicUser(updated!), 'Roles assigned successfully');
   }
 
-  async assignProjects(id: string, dto: AssignProjectsDto, actorId?: string) {
-    await this.requireUser(id);
+  async assignProjects(
+    id: string,
+    dto: AssignProjectsDto,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireUser(id, authenticatedCompanyId);
     await this.projectAccessService.assignProjectsToUser(id, dto.projectIds, actorId);
     const updated = await this.userModel.findById(id).exec();
     return createSuccessResponse(toPublicUser(updated!), 'Projects assigned successfully');
   }
 
-  async removeProjects(id: string, dto: RemoveProjectsDto, actorId?: string) {
-    await this.requireUser(id);
+  async removeProjects(
+    id: string,
+    dto: RemoveProjectsDto,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireUser(id, authenticatedCompanyId);
     await this.projectAccessService.removeProjectsFromUser(id, dto.projectIds, actorId);
     const updated = await this.userModel.findById(id).exec();
     return createSuccessResponse(toPublicUser(updated!), 'Projects removed successfully');
   }
 
-  async getById(id: string) {
-    const user = await this.requireUser(id);
+  async getById(id: string, authenticatedCompanyId?: string | null) {
+    const user = await this.requireUser(id, authenticatedCompanyId);
     return createSuccessResponse(toPublicUser(user), 'User retrieved successfully');
   }
 
-  async list(query: ListUsersQueryDto) {
+  async list(
+    query: ListUsersQueryDto,
+    authenticatedCompanyId?: string | null,
+  ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const sortBy = ALLOWED_SORT_FIELDS.has(query.sortBy ?? '')
@@ -321,6 +378,10 @@ export class UsersService {
     const sortOrder: SortOrder = query.sortOrder === 'asc' ? 1 : -1;
 
     const filter = this.buildListFilter(query);
+    Object.assign(
+      filter,
+      await this.buildCompanyFilter(authenticatedCompanyId),
+    );
     const [items, total] = await Promise.all([
       this.userModel
         .find(filter)
@@ -420,19 +481,64 @@ export class UsersService {
     return filter;
   }
 
-  private async requireUser(id: string) {
+  private async buildCompanyFilter(
+    authenticatedCompanyId?: string | null,
+  ): Promise<FilterQuery<User>> {
+    if (authenticatedCompanyId === undefined) {
+      return {};
+    }
+    if (
+      !authenticatedCompanyId ||
+      !MongooseTypes.ObjectId.isValid(authenticatedCompanyId)
+    ) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const companyObjectId = new MongooseTypes.ObjectId(
+      authenticatedCompanyId,
+    );
+    const primaryCompany = await this.companyModel
+      .findOne({ isPrimary: true })
+      .select('_id')
+      .lean()
+      .exec();
+    const isPrimaryCompany =
+      Boolean(primaryCompany?._id) &&
+      String(primaryCompany?._id) === authenticatedCompanyId;
+
+    return {
+      companyId: isPrimaryCompany
+        ? { $in: [companyObjectId, null] }
+        : companyObjectId,
+    };
+  }
+
+  private async requireUser(
+    id: string,
+    authenticatedCompanyId?: string | null,
+  ) {
     if (!MongooseTypes.ObjectId.isValid(id)) {
       throw new NotFoundException('User not found');
     }
-    const user = await this.userModel.findById(id).exec();
+    const user = await this.userModel
+      .findOne({
+        _id: new MongooseTypes.ObjectId(id),
+        ...(await this.buildCompanyFilter(authenticatedCompanyId)),
+      })
+      .exec();
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return user;
   }
 
-  private async assertUserExists(id: string) {
-    const user = await this.userModel.findById(id).exec();
+  private async assertUserExists(
+    id: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const user = await this.requireUser(id, authenticatedCompanyId).catch(
+      () => null,
+    );
     if (!user) {
       throw new BadRequestException('Reporting manager not found');
     }

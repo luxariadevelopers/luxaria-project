@@ -26,6 +26,8 @@ import { ChartOfAccountsPage } from '@/pages/ChartOfAccountsPage';
 import { CollectionsPage } from '@/pages/CollectionsPage';
 import { CommitmentDetailPage } from '@/pages/CommitmentDetailPage';
 import { CommitmentsPage } from '@/pages/CommitmentsPage';
+import { CompanyOverviewPage } from '@/pages/CompanyOverviewPage';
+import { CompanySettingsPage } from '@/pages/CompanySettingsPage';
 import { ContractorAgreementDetailPage } from '@/pages/ContractorAgreementDetailPage';
 import { ContractorAgreementsPage } from '@/pages/ContractorAgreementsPage';
 import { ContractorPaymentsPage } from '@/pages/ContractorPaymentsPage';
@@ -48,6 +50,9 @@ import { ExpenseDetailPage } from '@/pages/ExpenseDetailPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
 import { ExportDemoPage } from '@/pages/ExportDemoPage';
 import { FinanceDashboardPage } from '@/pages/FinanceDashboardPage';
+import { FinancialYearCreatePage } from '@/pages/FinancialYearCreatePage';
+import { FinancialYearDetailPage } from '@/pages/FinancialYearDetailPage';
+import { FinancialYearsPage } from '@/pages/FinancialYearsPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
 import { FormDemoPage } from '@/pages/FormDemoPage';
 import { FundingDashboardPage } from '@/pages/FundingDashboardPage';
@@ -97,6 +102,10 @@ import { QualityInspectionsPage } from '@/pages/QualityInspectionsPage';
 import { QuotationComparisonPage } from '@/pages/QuotationComparisonPage';
 import { QuotationsPage } from '@/pages/QuotationsPage';
 import { ReorderAlertsPage } from '@/pages/ReorderAlertsPage';
+import { RoleCreatePage } from '@/pages/RoleCreatePage';
+import { RoleDetailPage } from '@/pages/RoleDetailPage';
+import { RoleEditPage } from '@/pages/RoleEditPage';
+import { RolesPage } from '@/pages/RolesPage';
 import { RunningBillCreatePage } from '@/pages/RunningBillCreatePage';
 import { RunningBillDetailPage } from '@/pages/RunningBillDetailPage';
 import { RunningBillsPage } from '@/pages/RunningBillsPage';
@@ -110,6 +119,9 @@ import { StockLedgerPage } from '@/pages/StockLedgerPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
 import { UnitDetailPage } from '@/pages/UnitDetailPage';
 import { UnitsPage } from '@/pages/UnitsPage';
+import { UserCreatePage } from '@/pages/UserCreatePage';
+import { UserDetailPage } from '@/pages/UserDetailPage';
+import { UserEditPage } from '@/pages/UserEditPage';
 import { UsersPage } from '@/pages/UsersPage';
 import { VendorDetailPage } from '@/pages/VendorDetailPage';
 import { VendorInvoiceMatchPage } from '@/pages/VendorInvoiceMatchPage';
@@ -206,6 +218,9 @@ export const APP_ROUTE_ELEMENTS: {
   'bank-account-detail': <BankAccountDetailPage />,
   'bank-reconciliation': <BankReconciliationPage />,
   'bank-reconciliation-detail': <BankReconciliationDetailPage />,
+  'financial-years': <FinancialYearsPage />,
+  'financial-year-create': <FinancialYearCreatePage />,
+  'financial-year-detail': <FinancialYearDetailPage />,
   'period-close': <PeriodClosePage />,
   'expense-categories': <ExpenseCategoriesPage />,
   'site-expenses': <ExpensesPage />,
@@ -226,6 +241,15 @@ export const APP_ROUTE_ELEMENTS: {
   'cash-book': <CashBookPage />,
   'bank-book': <BankBookPage />,
   users: <UsersPage />,
+  'user-create': <UserCreatePage />,
+  'user-detail': <UserDetailPage />,
+  'user-edit': <UserEditPage />,
+  'company-overview': <CompanyOverviewPage />,
+  'company-settings': <CompanySettingsPage />,
+  roles: <RolesPage />,
+  'role-create': <RoleCreatePage />,
+  'role-detail': <RoleDetailPage />,
+  'role-edit': <RoleEditPage />,
   documents: <DocumentsPage />,
   'audit-logs': <AuditLogsPage />,
   'system-health': <SystemHealthPage />,

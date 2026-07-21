@@ -271,4 +271,61 @@ describe('FinancialYearService', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('scopes financial-year administration to the authenticated company', async () => {
+    const [foreignCompany] = await companyModel.create([
+      {
+        companyCode: 'CMP-0002',
+        legalName: 'Foreign Company Pvt. Ltd.',
+        tradeName: 'Foreign',
+        registeredAddress: {
+          line1: 'Foreign Office',
+          line2: null,
+          city: 'Bengaluru',
+          state: 'Karnataka',
+          pincode: '560001',
+          country: 'India',
+        },
+        corporateAddress: {
+          line1: 'Foreign Office',
+          line2: null,
+          city: 'Bengaluru',
+          state: 'Karnataka',
+          pincode: '560001',
+          country: 'India',
+        },
+        authorisedShareCapital: 5_000_000,
+        paidUpShareCapital: 0,
+        financialYearStartMonth: 4,
+        status: CompanyStatus.Active,
+        isPrimary: false,
+      },
+    ]);
+    const foreignCompanyId = String(foreignCompany._id);
+    const foreignYear = await service.create({
+      name: 'Foreign FY 2026-27',
+      startDate: '2026-04-01',
+      endDate: '2027-03-31',
+      companyId: foreignCompanyId,
+    });
+
+    await expect(
+      service.getById(foreignYear.data!.id, companyId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.list({ companyId: foreignCompanyId }, companyId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.create(
+        {
+          name: 'Forbidden foreign year',
+          startDate: '2027-04-01',
+          endDate: '2028-03-31',
+          companyId: foreignCompanyId,
+        },
+        actorA,
+        companyId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 });

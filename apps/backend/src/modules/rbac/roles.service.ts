@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -59,6 +60,56 @@ export class RolesService {
     }
   }
 
+  async assertRoleAssignmentAllowed(
+    roleIds: string[],
+    actorCanBypass: boolean,
+  ): Promise<void> {
+    await this.assertActiveRoleIds(roleIds);
+    if (actorCanBypass || roleIds.length === 0) {
+      return;
+    }
+    if (await this.roleIdsContainBypass(roleIds)) {
+      throw new ForbiddenException(
+        'Only a bypass administrator can assign a bypass role',
+      );
+    }
+  }
+
+  async assertRoleReplacementAllowed(
+    currentRoleIds: string[],
+    nextRoleIds: string[],
+    actorCanBypass: boolean,
+  ): Promise<void> {
+    await this.assertRoleAssignmentAllowed(nextRoleIds, actorCanBypass);
+    if (
+      !actorCanBypass &&
+      currentRoleIds.length > 0 &&
+      (await this.roleIdsContainBypass(currentRoleIds))
+    ) {
+      throw new ForbiddenException(
+        'Only a bypass administrator can change a bypass user assignment',
+      );
+    }
+  }
+
+  private async roleIdsContainBypass(roleIds: string[]): Promise<boolean> {
+    const validRoleIds = [...new Set(roleIds)].filter((id) =>
+      MongooseTypes.ObjectId.isValid(id),
+    );
+    if (validRoleIds.length === 0) {
+      return false;
+    }
+    const bypassRoleExists = await this.roleModel.exists({
+      _id: {
+        $in: validRoleIds.map(
+          (id) => new MongooseTypes.ObjectId(id),
+        ),
+      },
+      bypassPermissions: true,
+    });
+    return Boolean(bypassRoleExists);
+  }
+
   findById(id: string | Types.ObjectId) {
     return this.roleModel.findById(id).exec();
   }
@@ -67,7 +118,16 @@ export class RolesService {
     return this.roleModel.findOne({ code: code.trim().toUpperCase() }).exec();
   }
 
-  async create(dto: CreateRoleDto, actorId?: string) {
+  async create(
+    dto: CreateRoleDto,
+    actorId?: string,
+    actorCanBypass = false,
+  ) {
+    if (dto.bypassPermissions && !actorCanBypass) {
+      throw new ForbiddenException(
+        'Only a bypass administrator can create a bypass role',
+      );
+    }
     const permissions = this.normalizePermissions(dto.permissions ?? []);
     const code = dto.code
       ? dto.code.trim().toUpperCase()
@@ -89,7 +149,12 @@ export class RolesService {
     return createSuccessResponse(toPublicRole(role), 'Role created successfully');
   }
 
-  async update(id: string, dto: UpdateRoleDto, actorId?: string) {
+  async update(
+    id: string,
+    dto: UpdateRoleDto,
+    actorId?: string,
+    actorCanBypass = false,
+  ) {
     const role = await this.requireRole(id);
     const update: Record<string, unknown> = {
       updatedBy: actorId ? new MongooseTypes.ObjectId(actorId) : null,
@@ -103,6 +168,11 @@ export class RolesService {
       update.permissions = this.normalizePermissions(dto.permissions);
     }
     if (dto.bypassPermissions !== undefined) {
+      if (!actorCanBypass) {
+        throw new ForbiddenException(
+          'Only a bypass administrator can change bypass access',
+        );
+      }
       if (role.isSystem && role.bypassPermissions && dto.bypassPermissions === false) {
         throw new BadRequestException('Cannot remove bypass from the Super Admin system role');
       }
@@ -189,7 +259,11 @@ export class RolesService {
     return createSuccessResponse(toPublicRole(updated!), 'Role deactivated successfully');
   }
 
-  async assignToUser(userId: string, dto: AssignRoleToUserDto) {
+  async assignToUser(
+    userId: string,
+    dto: AssignRoleToUserDto,
+    actorCanBypass = false,
+  ) {
     if (!MongooseTypes.ObjectId.isValid(userId)) {
       throw new BadRequestException('Invalid user id');
     }
@@ -199,7 +273,11 @@ export class RolesService {
       throw new NotFoundException('User not found');
     }
 
-    await this.assertActiveRoleIds(dto.roleIds);
+    await this.assertRoleReplacementAllowed(
+      (user.roleIds ?? []).map(String),
+      dto.roleIds,
+      actorCanBypass,
+    );
 
     const updated = await this.userModel
       .findByIdAndUpdate(

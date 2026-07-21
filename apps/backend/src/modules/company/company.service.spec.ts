@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { Types, connect, disconnect } from 'mongoose';
@@ -77,6 +77,25 @@ describe('CompanyService', () => {
     const oid = new Types.ObjectId(companyId);
     const capitalRows = await capitalHistoryModel.find({ companyId: oid }).lean();
     expect(capitalRows).toHaveLength(2);
+  });
+
+  it('rejects access when the requested company differs from the authenticated company', async () => {
+    const foreignCompanyId = new Types.ObjectId().toHexString();
+
+    await expect(
+      service.getById(companyId, foreignCompanyId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.getPrimary(foreignCompanyId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.update(
+        companyId,
+        { tradeName: 'Forbidden change' },
+        undefined,
+        foreignCompanyId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('is idempotent on re-seed and does not duplicate capital history', async () => {

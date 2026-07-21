@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  forwardRef,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
@@ -14,6 +24,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { PERMISSIONS } from './permissions.catalog';
 import { PermissionsService } from './permissions.service';
 import { RolesService } from './roles.service';
+import { UsersService } from '../users/users.service';
 import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 
 @GlobalScope()
@@ -24,6 +35,8 @@ export class RbacController {
   constructor(
     private readonly rolesService: RolesService,
     private readonly permissionsService: PermissionsService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
   ) {}
 
   @Get('permissions')
@@ -64,19 +77,33 @@ export class RbacController {
   @Post('roles')
   @RequirePermissions('role.create')
   @ApiOperation({ summary: 'Create role' })
-  createRole(@Body() dto: CreateRoleDto, @CurrentUser() actor: AuthUser) {
-    return this.rolesService.create(dto, actor.id);
+  async createRole(
+    @Body() dto: CreateRoleDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    const access = await this.permissionsService.resolveUserAccess(actor.id);
+    return this.rolesService.create(
+      dto,
+      actor.id,
+      access.bypassPermissions,
+    );
   }
 
   @Patch('roles/:id')
   @RequirePermissions('role.update')
   @ApiOperation({ summary: 'Update role' })
-  updateRole(
+  async updateRole(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.rolesService.update(id, dto, actor.id);
+    const access = await this.permissionsService.resolveUserAccess(actor.id);
+    return this.rolesService.update(
+      id,
+      dto,
+      actor.id,
+      access.bypassPermissions,
+    );
   }
 
   @Post('roles/:id/permissions')
@@ -118,7 +145,17 @@ export class RbacController {
   @Post('users/:userId/roles')
   @RequirePermissions('role.assign')
   @ApiOperation({ summary: 'Assign roles to user (full replace)' })
-  assignRolesToUser(@Param('userId') userId: string, @Body() dto: AssignRoleToUserDto) {
-    return this.rolesService.assignToUser(userId, dto);
+  async assignRolesToUser(
+    @Param('userId') userId: string,
+    @Body() dto: AssignRoleToUserDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    const access = await this.permissionsService.resolveUserAccess(actor.id);
+    return this.usersService.assignRoles(
+      userId,
+      dto,
+      access.bypassPermissions,
+      actor.companyId,
+    );
   }
 }

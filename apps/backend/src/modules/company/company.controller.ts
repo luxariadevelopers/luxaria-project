@@ -55,15 +55,15 @@ export class CompanyController {
   @Get('primary')
   @RequirePermissions('company.view')
   @ApiOperation({ summary: 'View the primary company (single-tenant default)' })
-  getPrimary() {
-    return this.companyService.getPrimary();
+  getPrimary(@CurrentUser() actor: AuthUser) {
+    return this.companyService.getPrimary(actor.companyId);
   }
 
   @Get(':id')
   @RequirePermissions('company.view')
   @ApiOperation({ summary: 'View company by id' })
-  getById(@Param('id') id: string) {
-    return this.companyService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.companyService.getById(id, actor.companyId);
   }
 
   @Patch(':id')
@@ -74,7 +74,7 @@ export class CompanyController {
     @Body() dto: UpdateCompanyDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.companyService.update(id, dto, actor.id);
+    return this.companyService.update(id, dto, actor.id, actor.companyId);
   }
 
   @Patch(':id/statutory')
@@ -85,7 +85,12 @@ export class CompanyController {
     @Body() dto: UpdateStatutoryDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.companyService.updateStatutory(id, dto, actor.id);
+    return this.companyService.updateStatutory(
+      id,
+      dto,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Post(':id/capital')
@@ -98,7 +103,12 @@ export class CompanyController {
     @Body() dto: UpdateCapitalDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.companyService.updateCapital(id, dto, actor.id);
+    return this.companyService.updateCapital(
+      id,
+      dto,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Post(':id/logo')
@@ -124,7 +134,7 @@ export class CompanyController {
       }),
     ),
   )
-  uploadLogo(
+  async uploadLogo(
     @Param('id') id: string,
     @UploadedFile() file: UploadedLogo | undefined,
     @CurrentUser() actor: AuthUser,
@@ -133,6 +143,7 @@ export class CompanyController {
       throw new BadRequestException('Logo file is required');
     }
 
+    await this.companyService.getById(id, actor.companyId);
     assertMagicBytes(file.buffer, file.mimetype);
     mkdirSync(LOGO_UPLOAD_DIR, { recursive: true });
     const mimeExt =
@@ -146,7 +157,12 @@ export class CompanyController {
     const filename = `logo-${Date.now()}${mimeExt}`;
     writeFileSync(join(LOGO_UPLOAD_DIR, filename), file.buffer);
 
-    return this.companyService.setLogo(id, `uploads/company/${filename}`, actor.id);
+    return this.companyService.setLogo(
+      id,
+      `uploads/company/${filename}`,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Get(':id/address-history')
@@ -155,8 +171,9 @@ export class CompanyController {
   listAddressHistory(
     @Param('id') id: string,
     @Query() query: PaginationQueryDto & { addressType?: CompanyAddressType },
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.companyService.listAddressHistory(id, query);
+    return this.companyService.listAddressHistory(id, query, actor.companyId);
   }
 
   @Get(':id/capital-history')
@@ -165,7 +182,8 @@ export class CompanyController {
   listCapitalHistory(
     @Param('id') id: string,
     @Query() query: PaginationQueryDto & { capitalType?: CompanyCapitalType },
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.companyService.listCapitalHistory(id, query);
+    return this.companyService.listCapitalHistory(id, query, actor.companyId);
   }
 }

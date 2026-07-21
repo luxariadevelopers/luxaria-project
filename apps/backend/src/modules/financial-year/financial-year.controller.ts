@@ -25,21 +25,34 @@ export class FinancialYearController {
   @RequirePermissions('financial_year.manage')
   @ApiOperation({ summary: 'Create financial year (no overlap allowed)' })
   create(@Body() dto: CreateFinancialYearDto, @CurrentUser() actor: AuthUser) {
-    return this.financialYearService.create(dto, actor.id);
+    return this.financialYearService.create(
+      dto,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Get()
   @RequirePermissions('financial_year.view')
   @ApiOperation({ summary: 'List financial years' })
-  list(@Query() query: ListFinancialYearsQueryDto) {
-    return this.financialYearService.list(query);
+  list(
+    @Query() query: ListFinancialYearsQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.financialYearService.list(query, actor.companyId);
   }
 
   @Get('current')
   @RequirePermissions('financial_year.view')
   @ApiOperation({ summary: 'Get current financial year' })
-  getCurrent(@Query('companyId') companyId?: string) {
-    return this.financialYearService.getCurrent(companyId);
+  getCurrent(
+    @CurrentUser() actor: AuthUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.financialYearService.getCurrent(
+      companyId,
+      actor.companyId,
+    );
   }
 
   @Post('validate-date')
@@ -47,29 +60,39 @@ export class FinancialYearController {
   @ApiOperation({
     summary: 'Validate a transaction date against financial years (locked years reject postings)',
   })
-  validateDate(@Body() dto: ValidateTransactionDateDto) {
-    return this.financialYearService.validateTransactionDate(dto);
+  validateDate(
+    @Body() dto: ValidateTransactionDateDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.financialYearService.validateTransactionDate(
+      dto,
+      actor.companyId,
+    );
   }
 
   @Get(':id')
   @RequirePermissions('financial_year.view')
   @ApiOperation({ summary: 'Get financial year by id' })
-  getById(@Param('id') id: string) {
-    return this.financialYearService.getById(id);
+  getById(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    return this.financialYearService.getById(id, actor.companyId);
   }
 
   @Post(':id/set-current')
   @RequirePermissions('financial_year.manage')
   @ApiOperation({ summary: 'Set as the only current financial year' })
   setCurrent(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
-    return this.financialYearService.setCurrent(id, actor.id);
+    return this.financialYearService.setCurrent(
+      id,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Post(':id/lock')
   @RequirePermissions('financial_year.manage')
   @ApiOperation({ summary: 'Lock financial year (rejects accounting postings)' })
   lock(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
-    return this.financialYearService.lock(id, actor.id);
+    return this.financialYearService.lock(id, actor.id, actor.companyId);
   }
 
   @Post(':id/unlock-requests')
@@ -80,7 +103,12 @@ export class FinancialYearController {
     @Body() dto: RequestUnlockDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.financialYearService.requestUnlock(id, dto, actor.id);
+    return this.financialYearService.requestUnlock(
+      id,
+      dto,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Get(':id/unlock-requests')
@@ -89,8 +117,13 @@ export class FinancialYearController {
   listUnlockRequests(
     @Param('id') id: string,
     @Query() query: PaginationQueryDto & { status?: UnlockRequestStatus },
+    @CurrentUser() actor: AuthUser,
   ) {
-    return this.financialYearService.listUnlockRequests(id, query);
+    return this.financialYearService.listUnlockRequests(
+      id,
+      query,
+      actor.companyId,
+    );
   }
 
   @Post(':id/unlock-requests/:requestId/approve')
@@ -104,7 +137,13 @@ export class FinancialYearController {
     @Body() dto: ApproveUnlockDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.financialYearService.approveUnlock(id, requestId, dto, actor.id);
+    return this.financialYearService.approveUnlock(
+      id,
+      requestId,
+      dto,
+      actor.id,
+      actor.companyId,
+    );
   }
 
   @Post(':id/unlock-requests/:requestId/reject')
@@ -116,6 +155,12 @@ export class FinancialYearController {
     @Body() dto: RejectUnlockDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.financialYearService.rejectUnlock(id, requestId, dto, actor.id);
+    return this.financialYearService.rejectUnlock(
+      id,
+      requestId,
+      dto,
+      actor.id,
+      actor.companyId,
+    );
   }
 }

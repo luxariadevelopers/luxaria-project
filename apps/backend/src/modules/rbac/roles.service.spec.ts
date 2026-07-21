@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { connect, disconnect } from 'mongoose';
@@ -60,6 +64,27 @@ describe('RolesService', () => {
         permissions: ['fake.action'],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('allows only an existing bypass administrator to create a bypass role', async () => {
+    await expect(
+      service.create({
+        name: 'Forbidden bypass',
+        code: 'FORBIDDEN_BYPASS',
+        bypassPermissions: true,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    const response = await service.create(
+      {
+        name: 'Delegated bypass',
+        code: 'DELEGATED_BYPASS',
+        bypassPermissions: true,
+      },
+      undefined,
+      true,
+    );
+    expect(response.data?.bypassPermissions).toBe(true);
   });
 
   it('clones a role without copying bypass', async () => {
@@ -137,6 +162,38 @@ describe('RolesService', () => {
     await expect(
       service.assignToUser(String(user._id), { roleIds: [String(inactive._id)] }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('allows only a bypass administrator to assign a bypass role', async () => {
+    const [bypassRole] = await roleModel.create([
+      {
+        code: 'SUPER_ADMIN',
+        name: 'Super Admin',
+        permissions: [],
+        bypassPermissions: true,
+        status: RoleStatus.Active,
+      },
+    ]);
+    const [user] = await userModel.create([
+      {
+        userCode: 'USR-000011',
+        fullName: 'Bypass Target',
+        email: 'bypass-target@luxaria.dev',
+        passwordHash: 'hash',
+        status: UserStatus.Active,
+        roleIds: [],
+      },
+    ]);
+    const input = { roleIds: [String(bypassRole._id)] };
+
+    await expect(
+      service.assignToUser(String(user._id), input),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.assignToUser(String(user._id), input, true),
+    ).resolves.toMatchObject({
+      data: { roleIds: [String(bypassRole._id)] },
+    });
   });
 
   it('rejects duplicate role codes', async () => {

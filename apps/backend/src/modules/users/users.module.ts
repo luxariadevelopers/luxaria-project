@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CompanyModule } from '../company/company.module';
 import { ProjectAccessModule } from '../project-access/project-access.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { SessionModule } from '../sessions/session.module';
@@ -10,6 +11,7 @@ import { UsersService } from './users.service';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    CompanyModule,
     SessionModule,
     forwardRef(() => RbacModule),
     forwardRef(() => ProjectAccessModule),

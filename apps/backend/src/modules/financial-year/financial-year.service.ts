@@ -53,12 +53,19 @@ export class FinancialYearService {
     private readonly accountingPeriodModel: Model<AccountingPeriod>,
   ) {}
 
-  async create(dto: CreateFinancialYearDto, actorId?: string) {
+  async create(
+    dto: CreateFinancialYearDto,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
     const startDate = this.startOfDay(new Date(dto.startDate));
     const endDate = this.endOfDay(new Date(dto.endDate));
     this.assertValidRange(startDate, endDate);
 
-    const companyId = await this.resolveCompanyId(dto.companyId);
+    const companyId = await this.resolveScopedCompanyId(
+      dto.companyId,
+      authenticatedCompanyId,
+    );
     await this.assertNoOverlap(companyId, startDate, endDate);
 
     const setAsCurrent = Boolean(dto.setAsCurrent);
@@ -85,9 +92,24 @@ export class FinancialYearService {
     );
   }
 
-  async list(query: ListFinancialYearsQueryDto) {
+  async list(
+    query: ListFinancialYearsQueryDto,
+    authenticatedCompanyId?: string | null,
+  ) {
     const filter: FilterQuery<FinancialYear> = {};
-    if (query.companyId) filter.companyId = new Types.ObjectId(query.companyId);
+    if (authenticatedCompanyId !== undefined) {
+      const companyId = await this.resolveScopedCompanyId(
+        query.companyId,
+        authenticatedCompanyId,
+      );
+      const primaryCompanyId = await this.resolveCompanyId(null);
+      filter.companyId =
+        primaryCompanyId && companyId?.equals(primaryCompanyId)
+          ? { $in: [companyId, null] }
+          : companyId;
+    } else if (query.companyId) {
+      filter.companyId = new Types.ObjectId(query.companyId);
+    }
     if (query.status) filter.status = query.status;
     if (query.isCurrent !== undefined) filter.isCurrent = query.isCurrent;
     if (query.isLocked !== undefined) filter.isLocked = query.isLocked;
@@ -113,18 +135,22 @@ export class FinancialYearService {
     );
   }
 
-  async getById(id: string) {
-    const fy = await this.requireFinancialYear(id);
+  async getById(id: string, authenticatedCompanyId?: string | null) {
+    const fy = await this.requireFinancialYear(id, authenticatedCompanyId);
     return createSuccessResponse(
       toPublicFinancialYear(fy),
       'Financial year fetched successfully',
     );
   }
 
-  async getCurrent(companyId?: string | null) {
-    const resolvedCompanyId = companyId
-      ? await this.resolveCompanyId(companyId)
-      : await this.resolveCompanyId(null);
+  async getCurrent(
+    companyId?: string | null,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const resolvedCompanyId = await this.resolveScopedCompanyId(
+      companyId,
+      authenticatedCompanyId,
+    );
 
     const fy = await this.financialYearModel
       .findOne({ companyId: resolvedCompanyId, isCurrent: true })
@@ -140,8 +166,12 @@ export class FinancialYearService {
     );
   }
 
-  async setCurrent(id: string, actorId?: string) {
-    const fy = await this.requireFinancialYear(id);
+  async setCurrent(
+    id: string,
+    actorId?: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const fy = await this.requireFinancialYear(id, authenticatedCompanyId);
     if (fy.isLocked || fy.status === FinancialYearStatus.Locked) {
       throw new BadRequestException('Cannot set a locked financial year as current');
     }
@@ -168,8 +198,12 @@ export class FinancialYearService {
     );
   }
 
-  async lock(id: string, actorId: string) {
-    const fy = await this.requireFinancialYear(id);
+  async lock(
+    id: string,
+    actorId: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const fy = await this.requireFinancialYear(id, authenticatedCompanyId);
     if (fy.isLocked) {
       throw new ConflictException('Financial year is already locked');
     }
@@ -194,8 +228,13 @@ export class FinancialYearService {
     );
   }
 
-  async requestUnlock(id: string, dto: RequestUnlockDto, actorId: string) {
-    const fy = await this.requireFinancialYear(id);
+  async requestUnlock(
+    id: string,
+    dto: RequestUnlockDto,
+    actorId: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    const fy = await this.requireFinancialYear(id, authenticatedCompanyId);
     if (!fy.isLocked) {
       throw new BadRequestException('Financial year is not locked');
     }
@@ -233,8 +272,12 @@ export class FinancialYearService {
     requestId: string,
     dto: ApproveUnlockDto,
     actorId: string,
+    authenticatedCompanyId?: string | null,
   ) {
-    const fy = await this.requireFinancialYear(financialYearId);
+    const fy = await this.requireFinancialYear(
+      financialYearId,
+      authenticatedCompanyId,
+    );
     if (!fy.isLocked) {
       throw new BadRequestException('Financial year is not locked');
     }
@@ -282,8 +325,12 @@ export class FinancialYearService {
     requestId: string,
     dto: RejectUnlockDto,
     actorId: string,
+    authenticatedCompanyId?: string | null,
   ) {
-    await this.requireFinancialYear(financialYearId);
+    await this.requireFinancialYear(
+      financialYearId,
+      authenticatedCompanyId,
+    );
     const request = await this.requireUnlockRequest(requestId, financialYearId);
     if (request.status !== UnlockRequestStatus.Pending) {
       throw new BadRequestException('Unlock request is not pending');
@@ -304,8 +351,12 @@ export class FinancialYearService {
   async listUnlockRequests(
     financialYearId: string,
     query: { page?: number; limit?: number; status?: UnlockRequestStatus },
+    authenticatedCompanyId?: string | null,
   ) {
-    await this.requireFinancialYear(financialYearId);
+    await this.requireFinancialYear(
+      financialYearId,
+      authenticatedCompanyId,
+    );
     const filter: FilterQuery<FinancialYearUnlockRequest> = {
       financialYearId: new Types.ObjectId(financialYearId),
     };
@@ -337,12 +388,17 @@ export class FinancialYearService {
    */
   async validateTransactionDate(
     dto: ValidateTransactionDateDto,
+    authenticatedCompanyId?: string | null,
   ): Promise<ReturnType<typeof createSuccessResponse<TransactionDateValidationResult>>> {
+    const companyId = await this.resolveScopedCompanyId(
+      dto.companyId,
+      authenticatedCompanyId,
+    );
     const result = await this.resolveTransactionDate(
       new Date(dto.transactionDate),
       {
         forPosting: dto.forPosting !== false,
-        companyId: dto.companyId,
+        companyId: companyId ? String(companyId) : null,
       },
     );
 
@@ -509,6 +565,26 @@ export class FinancialYearService {
     return primary?._id ? (primary._id as Types.ObjectId) : null;
   }
 
+  private async resolveScopedCompanyId(
+    requestedCompanyId?: string | null,
+    authenticatedCompanyId?: string | null,
+  ): Promise<Types.ObjectId | null> {
+    if (authenticatedCompanyId === undefined) {
+      return this.resolveCompanyId(requestedCompanyId);
+    }
+
+    const actorCompanyId = await this.resolveCompanyId(
+      authenticatedCompanyId,
+    );
+    if (requestedCompanyId) {
+      const requested = await this.resolveCompanyId(requestedCompanyId);
+      if (String(requested) !== String(actorCompanyId)) {
+        throw new ForbiddenException('Access denied');
+      }
+    }
+    return actorCompanyId;
+  }
+
   private assertValidRange(startDate: Date, endDate: Date) {
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
       throw new BadRequestException('Invalid startDate or endDate');
@@ -530,13 +606,26 @@ export class FinancialYearService {
     return d;
   }
 
-  private async requireFinancialYear(id: string) {
+  private async requireFinancialYear(
+    id: string,
+    authenticatedCompanyId?: string | null,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid financial year id');
     }
     const fy = await this.financialYearModel.findById(id).exec();
     if (!fy) {
       throw new NotFoundException('Financial year not found');
+    }
+    if (authenticatedCompanyId !== undefined) {
+      const actorCompanyId = await this.resolveCompanyId(
+        authenticatedCompanyId,
+      );
+      const financialYearCompanyId =
+        fy.companyId ?? (await this.resolveCompanyId(null));
+      if (String(financialYearCompanyId) !== String(actorCompanyId)) {
+        throw new ForbiddenException('Access denied');
+      }
     }
     return fy;
   }
