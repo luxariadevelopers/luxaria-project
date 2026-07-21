@@ -49,4 +49,4 @@ COA · Journal · FY · Period closure · Bank recon · Cash · Vendor/contracto
 
 ## Roadmap next
 
-**Phase 9 – Director BI, Analytics, Forecasting & Executive Dashboard**
+~~**Phase 9 – Director BI, Analytics, Forecasting & Executive Dashboard**~~ — delivered (see `docs/audit/analytics/BI-completion-report.md`). Next: production readiness hardening.

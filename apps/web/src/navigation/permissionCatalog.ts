@@ -297,6 +297,19 @@ export const PERMISSIONS = [
   'notification.manage',
   'director_digest.view',
   'director_digest.send',
+  'analytics.dashboard.view',
+  'analytics.company.view',
+  'analytics.project.view',
+  'analytics.financial.view',
+  'analytics.sales.view',
+  'analytics.construction.view',
+  'analytics.procurement.view',
+  'analytics.inventory.view',
+  'analytics.contractor.view',
+  'analytics.forecast.view',
+  'analytics.export',
+  'analytics.snapshot.manage',
+  'analytics.alert.manage',
 ] as const;
 
 /** Strict catalog union — invalid keys fail typecheck in the registry. */

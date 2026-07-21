@@ -27,6 +27,23 @@ const DIRECTOR_DIGEST = [
   'director_digest.send',
 ] as const;
 
+/** Phase 9 Director BI — full analytics pack for board / MD / finance. */
+const ANALYTICS_FULL = [
+  'analytics.dashboard.view',
+  'analytics.company.view',
+  'analytics.project.view',
+  'analytics.financial.view',
+  'analytics.sales.view',
+  'analytics.construction.view',
+  'analytics.procurement.view',
+  'analytics.inventory.view',
+  'analytics.contractor.view',
+  'analytics.forecast.view',
+  'analytics.export',
+  'analytics.snapshot.manage',
+  'analytics.alert.manage',
+] as const;
+
 const PROJECT_VIEW = [
   'project.view',
   'boq.view',
@@ -257,6 +274,7 @@ export const ROLE_SEEDS: RoleSeedDefinition[] = [
       'document.view',
       ...NOTIFICATION_MANAGE,
       ...DIRECTOR_DIGEST,
+      ...ANALYTICS_FULL,
       ...VIEW_REPORTS,
     ],
     isSystem: true,
@@ -306,6 +324,7 @@ export const ROLE_SEEDS: RoleSeedDefinition[] = [
       'contractor_report.view',
       ...NOTIFICATION_MANAGE,
       ...DIRECTOR_DIGEST,
+      ...ANALYTICS_FULL,
       ...VIEW_REPORTS,
     ],
     isSystem: true,
@@ -317,6 +336,7 @@ export const ROLE_SEEDS: RoleSeedDefinition[] = [
     description: 'Owns finance policy, releases, and accounting oversight',
     permissions: [
       ...FINANCE_CORE,
+      ...ANALYTICS_FULL,
       'user.view',
       'project.view',
       'vendor.view',

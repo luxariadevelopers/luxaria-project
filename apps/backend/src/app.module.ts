@@ -35,6 +35,7 @@ import { UnitRegistrationsModule } from './modules/unit-registrations';
 import { CustomerLoansModule } from './modules/customer-loans';
 import { UnitHandoversModule } from './modules/unit-handovers';
 import { CustomerWarrantiesModule } from './modules/customer-warranties';
+import { AnalyticsModule } from './modules/analytics';
 import { DirectorCommandCentreModule } from './modules/director-command-centre/director-command-centre.module';
 import { ProjectDashboardModule } from './modules/project-dashboard/project-dashboard.module';
 import { FinanceDashboardModule } from './modules/finance-dashboard/finance-dashboard.module';
@@ -180,6 +181,7 @@ import { ObservabilityModule } from './common/observability/observability.module
     DirectorCommandCentreModule,
     ProjectDashboardModule,
     FinanceDashboardModule,
+    AnalyticsModule,
     InvestorPortalModule,
     SalesDashboardModule,
     SalesReportsModule,

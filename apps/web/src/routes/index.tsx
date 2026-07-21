@@ -66,6 +66,97 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="director-dashboard" />}>
+              <Route
+                path={toRelativeAppPath('/director-dashboard')}
+                element={APP_ROUTE_ELEMENTS['director-dashboard']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="executive-summary" />}>
+              <Route
+                path={toRelativeAppPath('/executive-summary')}
+                element={APP_ROUTE_ELEMENTS['executive-summary']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="project-health" />}>
+              <Route
+                path={toRelativeAppPath('/project-health')}
+                element={APP_ROUTE_ELEMENTS['project-health']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="project-profitability" />}>
+              <Route
+                path={toRelativeAppPath('/project-profitability')}
+                element={APP_ROUTE_ELEMENTS['project-profitability']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="cash-flow-forecast" />}>
+              <Route
+                path={toRelativeAppPath('/cash-flow-forecast')}
+                element={APP_ROUTE_ELEMENTS['cash-flow-forecast']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="analytics-cost-forecast" />}>
+              <Route
+                path={toRelativeAppPath('/cost-forecast')}
+                element={APP_ROUTE_ELEMENTS['analytics-cost-forecast']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="sales-analytics" />}>
+              <Route
+                path={toRelativeAppPath('/sales-analytics')}
+                element={APP_ROUTE_ELEMENTS['sales-analytics']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="construction-analytics" />}>
+              <Route
+                path={toRelativeAppPath('/construction-analytics')}
+                element={APP_ROUTE_ELEMENTS['construction-analytics']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="procurement-analytics" />}>
+              <Route
+                path={toRelativeAppPath('/procurement-analytics')}
+                element={APP_ROUTE_ELEMENTS['procurement-analytics']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="inventory-analytics" />}>
+              <Route
+                path={toRelativeAppPath('/inventory-analytics')}
+                element={APP_ROUTE_ELEMENTS['inventory-analytics']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="contractor-analytics" />}>
+              <Route
+                path={toRelativeAppPath('/contractor-analytics')}
+                element={APP_ROUTE_ELEMENTS['contractor-analytics']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="financial-analytics" />}>
+              <Route
+                path={toRelativeAppPath('/financial-analytics')}
+                element={APP_ROUTE_ELEMENTS['financial-analytics']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="risk-alerts" />}>
+              <Route
+                path={toRelativeAppPath('/risk-alerts')}
+                element={APP_ROUTE_ELEMENTS['risk-alerts']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="kpi-drilldown" />}>
+              <Route
+                path={toRelativeAppPath('/kpi-drilldown')}
+                element={APP_ROUTE_ELEMENTS['kpi-drilldown']}
+              />
+            </Route>
+            <Route element={<RegistryRouteGuard routeId="analytics-reports" />}>
+              <Route
+                path={toRelativeAppPath('/analytics-reports')}
+                element={APP_ROUTE_ELEMENTS['analytics-reports']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="finance-dashboard" />}>
               <Route
                 path={toRelativeAppPath('/dashboard/finance')}

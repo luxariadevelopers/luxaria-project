@@ -344,6 +344,21 @@ export const PERMISSIONS = [
   // Daily director digest
   'director_digest.view',
   'director_digest.send',
+
+  // Phase 9 – Director BI / analytics read-model
+  'analytics.dashboard.view',
+  'analytics.company.view',
+  'analytics.project.view',
+  'analytics.financial.view',
+  'analytics.sales.view',
+  'analytics.construction.view',
+  'analytics.procurement.view',
+  'analytics.inventory.view',
+  'analytics.contractor.view',
+  'analytics.forecast.view',
+  'analytics.export',
+  'analytics.snapshot.manage',
+  'analytics.alert.manage',
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number] | (string & {});

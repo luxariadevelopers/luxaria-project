@@ -57,6 +57,23 @@ import { LeadDetailPage } from '@/pages/LeadDetailPage';
 import { LeadsPage } from '@/pages/LeadsPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { DataTableDemoPage } from '@/pages/DataTableDemoPage';
+import {
+  AnalyticsCostForecastPage,
+  AnalyticsReportsPage,
+  CashFlowForecastPage,
+  ConstructionAnalyticsPage,
+  ContractorAnalyticsPage,
+  DirectorDashboardAnalyticsPage,
+  ExecutiveSummaryPage,
+  FinancialAnalyticsPage,
+  InventoryAnalyticsPage,
+  KpiDrilldownPage,
+  ProcurementAnalyticsPage,
+  ProjectHealthPage,
+  ProjectProfitabilityPage,
+  RiskAlertsPage,
+  SalesAnalyticsPage,
+} from '@/pages/AnalyticsPages';
 import { DirectorCommandCentrePage } from '@/pages/DirectorCommandCentrePage';
 import { DirectorDetailPage } from '@/pages/DirectorDetailPage';
 import { DirectorDigestPage } from '@/pages/DirectorDigestPage';
@@ -205,6 +222,21 @@ export const APP_ROUTE_ELEMENTS: {
 } = {
   dashboard: <DashboardPage />,
   'director-command-centre': <DirectorCommandCentrePage />,
+  'director-dashboard': <DirectorDashboardAnalyticsPage />,
+  'executive-summary': <ExecutiveSummaryPage />,
+  'project-health': <ProjectHealthPage />,
+  'project-profitability': <ProjectProfitabilityPage />,
+  'cash-flow-forecast': <CashFlowForecastPage />,
+  'analytics-cost-forecast': <AnalyticsCostForecastPage />,
+  'sales-analytics': <SalesAnalyticsPage />,
+  'construction-analytics': <ConstructionAnalyticsPage />,
+  'procurement-analytics': <ProcurementAnalyticsPage />,
+  'inventory-analytics': <InventoryAnalyticsPage />,
+  'contractor-analytics': <ContractorAnalyticsPage />,
+  'financial-analytics': <FinancialAnalyticsPage />,
+  'risk-alerts': <RiskAlertsPage />,
+  'kpi-drilldown': <KpiDrilldownPage />,
+  'analytics-reports': <AnalyticsReportsPage />,
   'finance-dashboard': <FinanceDashboardPage />,
   'site-operations-dashboard': <SiteOperationsDashboardPage />,
   'site-execution-dashboard': <SiteExecutionDashboardPage />,

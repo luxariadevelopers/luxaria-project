@@ -251,6 +251,19 @@ Catalog size: **193**. Used on routes: **185**.
 | `notification.manage` | yes |
 | `director_digest.view` | yes |
 | `director_digest.send` | yes |
+| `analytics.dashboard.view` | yes |
+| `analytics.company.view` | yes |
+| `analytics.project.view` | yes |
+| `analytics.financial.view` | yes |
+| `analytics.sales.view` | yes |
+| `analytics.construction.view` | yes |
+| `analytics.procurement.view` | yes |
+| `analytics.inventory.view` | yes |
+| `analytics.contractor.view` | yes |
+| `analytics.forecast.view` | yes |
+| `analytics.export` | yes |
+| `analytics.snapshot.manage` | yes |
+| `analytics.alert.manage` | yes |
 
 ## Unused catalog permissions (present but not on any `@RequirePermissions`)
 

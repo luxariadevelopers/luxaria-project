@@ -60,6 +60,9 @@ export function HomeScreen() {
   const canViewQuality =
     hasPermission('quality.view') || hasPermission('quality.inspect');
   const canCaptureLead = hasPermission('lead.manage');
+  const canViewExecutive =
+    hasPermission('analytics.dashboard.view') ||
+    hasPermission('dashboard.view');
 
   return (
     <Screen
@@ -123,6 +126,15 @@ export function HomeScreen() {
             <Text style={styles.statLabel}>Pending sync</Text>
           </View>
         </View>
+
+        {canViewExecutive ? (
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('ExecutiveDashboard')}
+          >
+            <Text style={styles.primaryButtonText}>Executive summary</Text>
+          </Pressable>
+        ) : null}
 
         {canCaptureLead ? (
           <Pressable
