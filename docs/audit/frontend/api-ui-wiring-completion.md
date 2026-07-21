@@ -1,51 +1,54 @@
 # Frontend API-to-UI wiring — completion report
 
-**Overall verdict:** PARTIAL  
+**Overall verdict:** IN_PROGRESS  
 **Baseline commit:** `603c8c9`  
-**Current HEAD (pre-this-doc-commit):** `89ac033`  
+**Current HEAD:** `e7c9ed3f6d005cbb5b12d7f70f63987936e94004`  
 **Audit date:** 2026-07-21  
 **Inventory:** [`api-ui-wiring-inventory.csv`](./api-ui-wiring-inventory.csv)
 
 ## Executive summary
 
-Remediation from `603c8c9` registered production web routes for admin, projects, construction, sales/collections, reports hubs, and mobile operational screens. Parallel follow-up agents added payment schedules, accounting reports hub, manpower plans, signed payment vouchers (web), director digest, mobile material-issue create, and project-creation Playwright coverage.
+Remediation from `603c8c9` registered production web routes for admin, projects, construction, sales/collections, reports hubs, and mobile operational screens. Commit `e7c9ed3` closed the remaining Nest UI gaps: payment schedules (`/sales/payment-schedules`), accounting reports hub (`/reports/accounting`), manpower plans, signed payment vouchers (web), and director digest admin.
 
-Web and mobile typecheck pass. Remaining gaps are mostly secondary routes (contractor detail), investor-portal POSTs, approval-workflow config admin, booking create/transition UI, and broader E2E coverage.
+Web and mobile typecheck pass. **Overall wiring is no longer blocked by missing routes**, but the campaign stays **IN_PROGRESS** until booking create/status-transition UI lands — that is the last sales golden-path gap and prevents a full PASS closeout. Parent agent should refresh this doc after that merge.
 
 ## Scorecard by phase / module
 
 | Phase / module | Verdict | Notes |
 | --- | --- | --- |
-| Auth & session | **PASS** | Login + settings/session |
+| Auth & session | **PASS** | Login + settings profile at `/settings` |
 | Admin (company, users, RBAC, audit, health, director digest) | **PASS** | Digest at `/administration/director-digest` |
-| Projects & access | **PASS** | Create + E2E live coverage |
+| Projects & access | **PASS** | Create + live E2E (AC-1..AC-5) |
 | Dashboards | **PASS** | Director, finance, site, purchase, funding |
 | Approvals | **PASS** | Web + mobile |
 | Project control | **PARTIAL** | Web complete; mobile lacks BOQ |
-| Procurement | **PASS** | Golden-path E2E |
-| Contractors / manpower / signed vouchers | **PASS** | Plans + shortfall + signed vouchers web |
-| Inventory | **PASS** | Mobile issue create added (`89ac033`) |
-| Sales / collections / payment schedules | **PARTIAL** | Schedules wired; booking create/transition still soft gap |
+| Procurement | **PASS** | PR register golden-path smoke unskipped |
+| Contractors / manpower / signed vouchers | **PARTIAL** | Plans + shortfall + signed vouchers web; **no contractor detail route** |
+| Inventory | **PASS** | Mobile issue create (`89ac033`) |
+| Sales / collections / payment schedules | **IN_PROGRESS** | Schedules wired; **booking create/transition UI still landing** |
 | Accounting core | **PASS** | Journals, COA, bank recon, period close |
-| Petty cash | **PASS** | Golden-path E2E |
+| Petty cash | **PASS** | Register + create form golden-path smoke unskipped |
 | Accounting reports | **PASS** | Hub `/reports/accounting` + cash/bank books |
 | Construction reports | **PASS** | Hub covers all Nest variants |
-| Investor portal | **PARTIAL** | Some POST endpoints unwired |
+| Investor portal | **PARTIAL** | Manage POST panels exist but not on staff routes |
 | Mobile operational stack | **PASS** | Create/list/detail flows registered |
 
-## Remaining gaps
+## Remaining gaps (honest)
 
 | Item | Status |
 | --- | --- |
-| Booking create / status-transition UI | Soft gap — register list only |
-| Contractor master detail route | List wired; no `/contractors/:id` |
+| Booking create / status-transition UI | **Blocker for PASS** — register list only; golden-path E2E journey skipped |
+| Contractor master detail route | List + drawers wired; no `/contractors/:id` |
 | Approval workflow config admin | `PUT /approval-workflows` unwired |
-| Investor portal report/profit POSTs | Unwired |
-| Broader Playwright matrix | Most modules `NONE`; project-creation + register smokes exist |
+| Investor portal staff manage routes | POST report/profit panels not on staff nav |
+| Manpower plan compare | Compare API used indirectly; no dedicated compare UI |
+| Per-report accounting pages | Hub runs catalogue; TB/GL/etc. lack standalone routes (by design) |
+| Multi-actor golden paths | Procurement/petty-cash/booking full journeys skipped — seed lacks distinct approvers |
 
 ## Remediation commits (`603c8c9..HEAD`)
 
 ```
+e7c9ed3 feat(web): wire remaining Nest UI gaps and register routes
 89ac033 feat(mobile): add material issue create flow
 be1de68 test(web): add project creation Playwright coverage
 238d36f feat(mobile): wire remaining Nest operational workflows
@@ -60,8 +63,6 @@ a0d3760 feat(web): register existing production workflow pages
 4239c1a fix(web): restore type-safe feature contracts
 ```
 
-Plus subsequent commit(s) wiring payment schedules, accounting hub, manpower plans, signed vouchers, and director digest.
-
 ## Typecheck / build notes
 
 | App | Command | Result |
@@ -72,13 +73,23 @@ Plus subsequent commit(s) wiring payment schedules, accounting hub, manpower pla
 
 ## E2E status summary
 
-| Spec | Status |
+Playwright projects: `chromium-shell` (no backend), `chromium-live` (smokes + project creation), `chromium-golden-path` (register smokes + skipped multi-actor journeys).
+
+| Spec | Coverage |
 | --- | --- |
-| `project-creation.spec.ts` | Live API create + validation |
-| `golden-path-booking-collection.spec.ts` | Register smoke unskipped; full journey still skipped |
-| `golden-path-procurement.spec.ts` | Active |
-| `golden-path-petty-cash.spec.ts` | Active |
-| Smoke specs | Active |
+| `smoke.spec.ts` | Unauthenticated shell |
+| `login.smoke.spec.ts` | Admin sign-in → dashboard |
+| `permissions.smoke.spec.ts` | Limited user → forbidden |
+| `project-selection.smoke.spec.ts` | Header project selector (seeded project) |
+| `approvals.smoke.spec.ts` | Approvals API list + draft create |
+| `project-creation.spec.ts` | AC-1 create; AC-2 validation; AC-3 list refresh; AC-4 detail (create + register); AC-5 selector; AC-6 duplicate skipped |
+| `payment-schedules.smoke.spec.ts` | `/sales/payment-schedules` open + filters |
+| `accounting-reports.smoke.spec.ts` | `/reports/accounting` hub open |
+| `contractors.smoke.spec.ts` | `/contractors` list; detail route skipped |
+| `settings.smoke.spec.ts` | `/settings` profile panel |
+| `golden-path-booking-collection.spec.ts` | Booking + collections register smoke; full journey skipped (create UI + actors) |
+| `golden-path-procurement.spec.ts` | PR register smoke; full journey skipped (multi-actor) |
+| `golden-path-petty-cash.spec.ts` | Petty-cash register + create form smoke; full journey skipped (multi-actor) |
 
 ## Regeneration
 
@@ -87,3 +98,4 @@ Plus subsequent commit(s) wiring payment schedules, accounting hub, manpower pla
 3. Cross-check `apps/mobile/src/navigation/RootNavigator.tsx`.
 4. Refresh this scorecard and `api-ui-wiring-inventory.csv`.
 5. Re-run web/mobile typecheck and note Playwright live vs shell projects.
+6. Record `git rev-parse HEAD` as **Current HEAD** above.
