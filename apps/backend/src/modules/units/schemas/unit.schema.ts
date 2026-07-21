@@ -8,7 +8,8 @@ export type UnitDocument = HydratedDocument<Unit>;
 
 /**
  * Sales inventory lifecycle.
- * Available → Held → Reserved → Booked → Agreement Executed → Registered
+ * Available → Held → Reserved → Booked → Agreement → Registered → Handed Over
+ * (+ Sold alias for closed sale; Cancelled / Blocked terminals)
  */
 export enum UnitStatus {
   Available = 'available',
@@ -17,6 +18,8 @@ export enum UnitStatus {
   Booked = 'booked',
   AgreementExecuted = 'agreement_executed',
   Registered = 'registered',
+  Sold = 'sold',
+  HandedOver = 'handed_over',
   Cancelled = 'cancelled',
   Blocked = 'blocked',
 }
@@ -80,6 +83,10 @@ export class Unit {
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   builtUpArea!: number;
 
+  /** Saleable / super built-up area used for pricing. */
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  saleableArea!: number;
+
   /** Undivided share of land. */
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   uds!: number;
@@ -91,8 +98,18 @@ export class Unit {
   })
   facing!: UnitFacing | null;
 
+  /** Configuration label (e.g. 2BHK+Study). */
+  @Prop({ type: String, trim: true, default: null })
+  configuration!: string | null;
+
+  @Prop({ type: [String], default: [] })
+  amenities!: string[];
+
   @Prop({ type: String, trim: true, default: null })
   parking!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  floorPlanPath!: string | null;
 
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   basePrice!: number;

@@ -30,6 +30,8 @@ export const OCCUPIED_UNIT_STATUSES: UnitStatus[] = [
   UnitStatus.Booked,
   UnitStatus.AgreementExecuted,
   UnitStatus.Registered,
+  UnitStatus.Sold,
+  UnitStatus.HandedOver,
 ];
 
 export function isOccupiedStatus(status: UnitStatus): boolean {
@@ -65,7 +67,9 @@ const ALLOWED_STATUS_TRANSITIONS: Record<UnitStatus, UnitStatus[]> = {
     UnitStatus.Registered,
     UnitStatus.Cancelled,
   ],
-  [UnitStatus.Registered]: [],
+  [UnitStatus.Registered]: [UnitStatus.Sold, UnitStatus.HandedOver],
+  [UnitStatus.Sold]: [UnitStatus.HandedOver],
+  [UnitStatus.HandedOver]: [],
   [UnitStatus.Cancelled]: [UnitStatus.Available],
   [UnitStatus.Blocked]: [UnitStatus.Available],
 };

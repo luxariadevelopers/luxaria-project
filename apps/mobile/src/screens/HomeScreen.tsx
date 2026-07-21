@@ -59,6 +59,7 @@ export function HomeScreen() {
   const canViewStockLedger = hasPermission('stock.view');
   const canViewQuality =
     hasPermission('quality.view') || hasPermission('quality.inspect');
+  const canCaptureLead = hasPermission('lead.manage');
 
   return (
     <Screen
@@ -122,6 +123,15 @@ export function HomeScreen() {
             <Text style={styles.statLabel}>Pending sync</Text>
           </View>
         </View>
+
+        {canCaptureLead ? (
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('LeadCapture')}
+          >
+            <Text style={styles.primaryButtonText}>Capture sales lead</Text>
+          </Pressable>
+        ) : null}
 
         {canViewDpr ? (
           <Pressable

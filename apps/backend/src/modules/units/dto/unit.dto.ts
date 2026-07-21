@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsEnum,
   IsMongoId,
   IsNumber,
@@ -52,6 +53,16 @@ export class CreateUnitDto {
   @Min(0)
   builtUpArea!: number;
 
+  @ApiPropertyOptional({
+    example: 1200,
+    description: 'Defaults to builtUpArea when omitted',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  saleableArea?: number;
+
   @ApiProperty({ example: 320, description: 'Undivided share' })
   @Type(() => Number)
   @IsNumber()
@@ -63,11 +74,29 @@ export class CreateUnitDto {
   @IsEnum(UnitFacing)
   facing?: UnitFacing | null;
 
+  @ApiPropertyOptional({ example: '2BHK+Study' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  configuration?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  amenities?: string[];
+
   @ApiPropertyOptional({ example: '1 covered' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
   parking?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  floorPlanPath?: string | null;
 
   @ApiProperty({ example: 7500000 })
   @Type(() => Number)
@@ -144,6 +173,13 @@ export class UpdateUnitDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  saleableArea?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   uds?: number;
 
   @ApiPropertyOptional({ enum: UnitFacing })
@@ -155,7 +191,25 @@ export class UpdateUnitDto {
   @IsOptional()
   @IsString()
   @MaxLength(120)
+  configuration?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  amenities?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
   parking?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  floorPlanPath?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()

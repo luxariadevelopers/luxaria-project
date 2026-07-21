@@ -10,6 +10,7 @@ export type PublicPaymentScheduleLine = {
   id: string;
   sequence: number;
   milestone: string;
+  milestoneCode: string | null;
   dueDate: Date | null;
   percentage: number;
   amount: number;
@@ -102,6 +103,8 @@ export function toPublicPaymentSchedule(row: {
     id: String(line._id),
     sequence: line.sequence,
     milestone: line.milestone,
+    milestoneCode:
+      (line as { milestoneCode?: string | null }).milestoneCode ?? null,
     dueDate: line.dueDate ?? null,
     percentage: line.percentage,
     amount: line.amount,

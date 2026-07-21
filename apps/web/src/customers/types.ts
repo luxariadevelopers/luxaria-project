@@ -12,6 +12,17 @@ export const CustomerFundingType = {
 export type CustomerFundingType =
   (typeof CustomerFundingType)[keyof typeof CustomerFundingType];
 
+export const CustomerType = {
+  Individual: 'individual',
+  JointOwner: 'joint_owner',
+  Company: 'company',
+  Nri: 'nri',
+  Trust: 'trust',
+} as const;
+
+export type CustomerType =
+  (typeof CustomerType)[keyof typeof CustomerType];
+
 export const CustomerStatus = {
   Draft: 'draft',
   PendingKyc: 'pending_kyc',
@@ -80,6 +91,7 @@ export type PublicCustomer = {
   companyId: string | null;
   customerCode: string;
   fullName: string;
+  customerType?: CustomerType;
   jointApplicant: CustomerJointApplicant;
   pan: string | null;
   aadhaarReference: string | null;
@@ -107,6 +119,7 @@ export type CustomerListRow = {
   id: string;
   customerCode: string;
   fullName: string;
+  customerType?: CustomerType;
   pan: string | null;
   /** Last-4 only — display via aadhaarMasking helpers */
   aadhaarReference: string | null;

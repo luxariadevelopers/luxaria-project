@@ -51,6 +51,7 @@ import { StockCountListScreen } from '@/screens/StockCountListScreen';
 import { WorkMeasurementFormScreen } from '@/screens/WorkMeasurementFormScreen';
 import { WorkMeasurementListScreen } from '@/screens/WorkMeasurementListScreen';
 import { WorkOrderListScreen } from '@/screens/WorkOrderListScreen';
+import { LeadCaptureScreen } from '@/screens/LeadCaptureScreen';
 import {
   SiteExpenseDetailScreen,
   SiteExpenseFormScreen,
@@ -332,6 +333,11 @@ function AppNavigator() {
         name="QualityInspectionList"
         component={QualityInspectionListScreen}
         options={{ title: 'Quality inspections' }}
+      />
+      <AppStack.Screen
+        name="LeadCapture"
+        component={LeadCaptureScreen}
+        options={{ title: 'Capture lead' }}
       />
       <AppStack.Screen
         name="Notifications"

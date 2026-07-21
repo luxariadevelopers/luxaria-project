@@ -44,6 +44,7 @@ import {
   CustomerFundingType,
   CustomerKycStatus,
   CustomerStatus,
+  CustomerType,
 } from './schemas/customer.schema';
 
 export type CustomerAccessContext = {
@@ -97,19 +98,47 @@ export class CustomersService {
     const customer = await this.customerModel.create({
       companyId,
       customerCode,
+      customerType: dto.customerType ?? CustomerType.Individual,
       fullName: dto.fullName.trim(),
       jointApplicant,
       pan,
       aadhaarReference: aadhaarFields.aadhaarReference,
       aadhaarEncrypted: aadhaarFields.aadhaarEncrypted,
+      passportNumber: dto.passportNumber?.trim().toUpperCase() || null,
+      gstin: dto.gstin?.trim().toUpperCase() || null,
       contact: this.normalizeContact(dto.contact),
+      additionalContacts: (dto.additionalContacts ?? []).map((c) =>
+        this.normalizeContact(c),
+      ),
       address: this.normalizeAddress(dto.address),
+      bankDetails: {
+        accountHolderName: dto.bankDetails?.accountHolderName?.trim() || null,
+        bankName: dto.bankDetails?.bankName?.trim() || null,
+        accountNumber: dto.bankDetails?.accountNumber?.trim() || null,
+        ifsc: dto.bankDetails?.ifsc?.trim().toUpperCase() || null,
+        branch: dto.bankDetails?.branch?.trim() || null,
+      },
+      nominee: {
+        fullName: dto.nominee?.fullName?.trim() || null,
+        relationship: dto.nominee?.relationship?.trim() || null,
+        phone: dto.nominee?.phone?.trim() || null,
+        address: dto.nominee?.address?.trim() || null,
+      },
+      communicationPreferences: {
+        email: dto.communicationPreferences?.email ?? true,
+        sms: dto.communicationPreferences?.sms ?? true,
+        whatsapp: dto.communicationPreferences?.whatsapp ?? false,
+        postal: dto.communicationPreferences?.postal ?? false,
+      },
       occupation: dto.occupation?.trim() ?? null,
       fundingType: dto.fundingType,
       loanBank:
         dto.fundingType === CustomerFundingType.OwnFunds
           ? null
           : (dto.loanBank?.trim() ?? null),
+      sourceLeadId: dto.sourceLeadId
+        ? new Types.ObjectId(dto.sourceLeadId)
+        : null,
       kycStatus: CustomerKycStatus.Pending,
       status: dto.status ?? CustomerStatus.PendingKyc,
       createdBy: new Types.ObjectId(actorId),

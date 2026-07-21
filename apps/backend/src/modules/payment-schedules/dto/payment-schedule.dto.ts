@@ -31,6 +31,15 @@ export class PaymentScheduleLineDto {
   @IsNotEmpty()
   milestone!: string;
 
+  @ApiPropertyOptional({
+    example: 'foundation',
+    description:
+      'Stable code for construction-linked auto demand (booking, foundation, basement, floor_complete, roof, brickwork, plastering, finishing, possession, registration)',
+  })
+  @IsOptional()
+  @IsString()
+  milestoneCode?: string | null;
+
   @ApiPropertyOptional({ example: '2026-08-01' })
   @IsOptional()
   @IsDateString()
@@ -149,6 +158,33 @@ export class MarkDueDto {
   lineId!: string;
 
   @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string | null;
+}
+
+export class TriggerConstructionMilestoneDto {
+  @ApiProperty({
+    example: 'foundation',
+    description: 'Canonical construction milestone code',
+  })
+  @IsString()
+  @IsNotEmpty()
+  milestoneCode!: string;
+
+  @ApiPropertyOptional({ description: 'Limit to one project' })
+  @IsOptional()
+  @IsMongoId()
+  projectId?: string;
+
+  @ApiPropertyOptional({ description: 'Limit to one booking' })
+  @IsOptional()
+  @IsMongoId()
+  bookingId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Due date applied to triggered lines (defaults to today UTC)',
+  })
   @IsOptional()
   @IsDateString()
   dueDate?: string | null;

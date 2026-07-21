@@ -42,6 +42,14 @@ export class PaymentScheduleLine {
   @Prop({ required: true, trim: true })
   milestone!: string;
 
+  /**
+   * Stable construction milestone code for Phase 5 site-execution triggers.
+   * e.g. booking, foundation, basement, floor_complete, roof, brickwork,
+   * plastering, finishing, possession, registration
+   */
+  @Prop({ type: String, trim: true, lowercase: true, default: null, index: true })
+  milestoneCode!: string | null;
+
   @Prop({ type: Date, default: null, index: true })
   dueDate!: Date | null;
 

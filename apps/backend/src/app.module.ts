@@ -28,10 +28,20 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { PaymentSchedulesModule } from './modules/payment-schedules/payment-schedules.module';
 import { CustomerReceiptsModule } from './modules/customer-receipts/customer-receipts.module';
 import { BookingCancellationsModule } from './modules/booking-cancellations/booking-cancellations.module';
+import { LeadsModule } from './modules/leads';
+import { UnitQuotationsModule } from './modules/unit-quotations';
+import { SaleAgreementsModule } from './modules/sale-agreements';
+import { UnitRegistrationsModule } from './modules/unit-registrations';
+import { CustomerLoansModule } from './modules/customer-loans';
+import { UnitHandoversModule } from './modules/unit-handovers';
+import { CustomerWarrantiesModule } from './modules/customer-warranties';
 import { DirectorCommandCentreModule } from './modules/director-command-centre/director-command-centre.module';
 import { ProjectDashboardModule } from './modules/project-dashboard/project-dashboard.module';
 import { FinanceDashboardModule } from './modules/finance-dashboard/finance-dashboard.module';
 import { InvestorPortalModule } from './modules/investor-portal/investor-portal.module';
+import { SalesDashboardModule } from './modules/sales-dashboard';
+import { SalesReportsModule } from './modules/sales-reports';
+import { CustomerPortalModule } from './modules/customer-portal';
 import { AccountingPeriodClosureModule } from './modules/accounting-period-closure/accounting-period-closure.module';
 import { AccountingReportsModule } from './modules/accounting-reports/accounting-reports.module';
 import { BankReconciliationModule } from './modules/bank-reconciliation/bank-reconciliation.module';
@@ -153,10 +163,20 @@ import { ObservabilityModule } from './common/observability/observability.module
     PaymentSchedulesModule,
     CustomerReceiptsModule,
     BookingCancellationsModule,
+    LeadsModule,
+    UnitQuotationsModule,
+    SaleAgreementsModule,
+    UnitRegistrationsModule,
+    CustomerLoansModule,
+    UnitHandoversModule,
+    CustomerWarrantiesModule,
     DirectorCommandCentreModule,
     ProjectDashboardModule,
     FinanceDashboardModule,
     InvestorPortalModule,
+    SalesDashboardModule,
+    SalesReportsModule,
+    CustomerPortalModule,
     NotificationsModule,
     DailyDirectorDigestModule,
     AccountingReportsModule,

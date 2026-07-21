@@ -15,11 +15,36 @@ export function roundPercent(value: number): number {
 export type ScheduleLineInput = {
   sequence: number;
   milestone: string;
+  milestoneCode?: string | null;
   dueDate?: string | Date | null;
   percentage: number;
   amount: number;
   tax?: number;
 };
+
+/** Canonical construction-linked demand milestones (Phase 7 ↔ Phase 5). */
+export const CONSTRUCTION_MILESTONE_CODES = [
+  'booking',
+  'foundation',
+  'basement',
+  'floor_complete',
+  'roof',
+  'brickwork',
+  'plastering',
+  'finishing',
+  'possession',
+  'registration',
+] as const;
+
+export type ConstructionMilestoneCode =
+  (typeof CONSTRUCTION_MILESTONE_CODES)[number];
+
+export function normalizeMilestoneCode(
+  value?: string | null,
+): string | null {
+  if (!value?.trim()) return null;
+  return value.trim().toLowerCase().replace(/\s+/g, '_');
+}
 
 export function assertScheduleLines(
   scheduleType: PaymentScheduleType,

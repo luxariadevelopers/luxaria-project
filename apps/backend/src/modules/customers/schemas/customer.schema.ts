@@ -12,6 +12,14 @@ export enum CustomerFundingType {
   Mixed = 'mixed',
 }
 
+export enum CustomerType {
+  Individual = 'individual',
+  JointOwner = 'joint_owner',
+  Company = 'company',
+  Nri = 'nri',
+  Trust = 'trust',
+}
+
 export enum CustomerStatus {
   Draft = 'draft',
   PendingKyc = 'pending_kyc',
@@ -94,6 +102,63 @@ export class CustomerJointApplicant {
 export const CustomerJointApplicantSchema =
   SchemaFactory.createForClass(CustomerJointApplicant);
 
+@Schema({ _id: false })
+export class CustomerBankDetails {
+  @Prop({ type: String, trim: true, default: null })
+  accountHolderName!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  bankName!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  accountNumber!: string | null;
+
+  @Prop({ type: String, trim: true, uppercase: true, default: null })
+  ifsc!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  branch!: string | null;
+}
+
+export const CustomerBankDetailsSchema =
+  SchemaFactory.createForClass(CustomerBankDetails);
+
+@Schema({ _id: false })
+export class CustomerNominee {
+  @Prop({ type: String, trim: true, default: null })
+  fullName!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  relationship!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  phone!: string | null;
+
+  @Prop({ type: String, trim: true, default: null })
+  address!: string | null;
+}
+
+export const CustomerNomineeSchema =
+  SchemaFactory.createForClass(CustomerNominee);
+
+@Schema({ _id: false })
+export class CustomerCommunicationPreferences {
+  @Prop({ type: Boolean, default: true })
+  email!: boolean;
+
+  @Prop({ type: Boolean, default: true })
+  sms!: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  whatsapp!: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  postal!: boolean;
+}
+
+export const CustomerCommunicationPreferencesSchema =
+  SchemaFactory.createForClass(CustomerCommunicationPreferences);
+
 @Schema({
   collection: 'customers',
   timestamps: true,
@@ -104,6 +169,15 @@ export class Customer {
 
   @Prop({ required: true, unique: true, trim: true, uppercase: true })
   customerCode!: string;
+
+  @Prop({
+    type: String,
+    enum: CustomerType,
+    required: true,
+    default: CustomerType.Individual,
+    index: true,
+  })
+  customerType!: CustomerType;
 
   @Prop({ required: true, trim: true })
   fullName!: string;
@@ -122,11 +196,40 @@ export class Customer {
   @Prop({ type: String, default: null, select: false })
   aadhaarEncrypted!: string | null;
 
+  /** Passport number for NRI customers */
+  @Prop({ type: String, trim: true, uppercase: true, default: null })
+  passportNumber!: string | null;
+
+  /** GSTIN when customerType is company / trust */
+  @Prop({ type: String, trim: true, uppercase: true, default: null })
+  gstin!: string | null;
+
   @Prop({ type: CustomerContactSchema, default: () => ({}) })
   contact!: CustomerContact;
 
+  /** Additional contact persons beyond primary contact */
+  @Prop({ type: [CustomerContactSchema], default: [] })
+  additionalContacts!: CustomerContact[];
+
   @Prop({ type: CustomerAddressSchema, default: () => ({}) })
   address!: CustomerAddress;
+
+  @Prop({ type: CustomerBankDetailsSchema, default: () => ({}) })
+  bankDetails!: CustomerBankDetails;
+
+  @Prop({ type: CustomerNomineeSchema, default: () => ({}) })
+  nominee!: CustomerNominee;
+
+  @Prop({
+    type: CustomerCommunicationPreferencesSchema,
+    default: () => ({
+      email: true,
+      sms: true,
+      whatsapp: false,
+      postal: false,
+    }),
+  })
+  communicationPreferences!: CustomerCommunicationPreferences;
 
   @Prop({ type: String, trim: true, default: null })
   occupation!: string | null;
@@ -142,6 +245,10 @@ export class Customer {
   /** Lending bank name — required when fundingType is bank_loan or mixed */
   @Prop({ type: String, trim: true, default: null })
   loanBank!: string | null;
+
+  /** CRM lead that converted into this customer */
+  @Prop({ type: Types.ObjectId, ref: 'Lead', default: null, index: true })
+  sourceLeadId!: Types.ObjectId | null;
 
   @Prop({
     type: String,

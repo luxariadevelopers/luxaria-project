@@ -62,6 +62,7 @@ export class UnitsService {
 
     assertNonNegative(dto.carpetArea, 'carpetArea');
     assertNonNegative(dto.builtUpArea, 'builtUpArea');
+    assertNonNegative(dto.saleableArea ?? dto.builtUpArea, 'saleableArea');
     assertNonNegative(dto.uds, 'uds');
     assertNonNegative(dto.basePrice, 'basePrice');
     assertNonNegative(dto.additionalCharges ?? 0, 'additionalCharges');
@@ -89,9 +90,13 @@ export class UnitsService {
         unitType: dto.unitType,
         carpetArea: roundArea(dto.carpetArea),
         builtUpArea: roundArea(dto.builtUpArea),
+        saleableArea: roundArea(dto.saleableArea ?? dto.builtUpArea),
         uds: roundArea(dto.uds),
         facing: dto.facing ?? null,
+        configuration: dto.configuration?.trim() || null,
+        amenities: (dto.amenities ?? []).map((a) => a.trim()).filter(Boolean),
         parking: dto.parking?.trim() || null,
+        floorPlanPath: dto.floorPlanPath?.trim() || null,
         basePrice: roundMoney(dto.basePrice),
         additionalCharges: roundMoney(dto.additionalCharges ?? 0),
         tax: roundMoney(dto.tax ?? 0),
@@ -155,6 +160,19 @@ export class UnitsService {
     if (dto.builtUpArea !== undefined) {
       assertNonNegative(dto.builtUpArea, 'builtUpArea');
       row.builtUpArea = roundArea(dto.builtUpArea);
+    }
+    if (dto.saleableArea !== undefined) {
+      assertNonNegative(dto.saleableArea, 'saleableArea');
+      row.saleableArea = roundArea(dto.saleableArea);
+    }
+    if (dto.configuration !== undefined) {
+      row.configuration = dto.configuration?.trim() || null;
+    }
+    if (dto.amenities !== undefined) {
+      row.amenities = dto.amenities.map((a) => a.trim()).filter(Boolean);
+    }
+    if (dto.floorPlanPath !== undefined) {
+      row.floorPlanPath = dto.floorPlanPath?.trim() || null;
     }
     if (dto.uds !== undefined) {
       assertNonNegative(dto.uds, 'uds');

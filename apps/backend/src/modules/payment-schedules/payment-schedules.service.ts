@@ -26,6 +26,7 @@ import {
   canGenerateDemand,
   canMarkDue,
   isLineOverdue,
+  normalizeMilestoneCode,
   roundMoney,
   roundPercent,
   startOfUtcDay,
@@ -39,6 +40,7 @@ import type {
   MarkDueDto,
   RejectPaymentScheduleDto,
   RevisePaymentScheduleDto,
+  TriggerConstructionMilestoneDto,
 } from './dto/payment-schedule.dto';
 import {
   PaymentDemand,
@@ -626,11 +628,103 @@ export class PaymentSchedulesService {
     });
   }
 
+  /**
+   * Phase 5 → Phase 7 bridge: when certified construction progress reports a
+   * milestone, mark matching construction_milestone lines due and issue demands.
+   */
+  async triggerConstructionMilestone(
+    dto: TriggerConstructionMilestoneDto,
+    actorId: string,
+  ) {
+    const milestoneCode = normalizeMilestoneCode(dto.milestoneCode);
+    if (!milestoneCode) {
+      throw new BadRequestException('milestoneCode is required');
+    }
+
+    const filter: FilterQuery<PaymentSchedule> = {
+      scheduleType: PaymentScheduleType.ConstructionMilestone,
+      status: PaymentScheduleStatus.Active,
+      'lines.milestoneCode': milestoneCode,
+    };
+    if (dto.projectId) {
+      filter.projectId = new Types.ObjectId(dto.projectId);
+    }
+    if (dto.bookingId) {
+      filter.bookingId = new Types.ObjectId(dto.bookingId);
+    }
+
+    const schedules = await this.scheduleModel.find(filter).exec();
+    const triggered: Array<{
+      scheduleId: string;
+      lineId: string;
+      demandId: string | null;
+      bookingId: string;
+    }> = [];
+
+    const dueDate = dto.dueDate
+      ? this.parseDate(dto.dueDate, 'dueDate')
+      : startOfUtcDay(new Date());
+
+    for (const schedule of schedules) {
+      for (const line of schedule.lines ?? []) {
+        if (normalizeMilestoneCode(line.milestoneCode) !== milestoneCode) {
+          continue;
+        }
+        if (line.demandId) {
+          continue;
+        }
+        if (
+          line.status !== PaymentScheduleLineStatus.Pending &&
+          line.status !== PaymentScheduleLineStatus.Due
+        ) {
+          continue;
+        }
+
+        if (line.status === PaymentScheduleLineStatus.Pending) {
+          await this.markDue(
+            String(schedule._id),
+            {
+              lineId: String(line._id),
+              dueDate: dueDate.toISOString(),
+            },
+            actorId,
+          );
+        }
+
+        const demandResult = await this.generateDemand(
+          String(schedule._id),
+          {
+            lineId: String(line._id),
+            dueDate: dueDate.toISOString(),
+          },
+          actorId,
+        );
+
+        triggered.push({
+          scheduleId: String(schedule._id),
+          lineId: String(line._id),
+          demandId: demandResult.data?.demand?.id ?? null,
+          bookingId: String(schedule.bookingId),
+        });
+      }
+    }
+
+    return createSuccessResponse(
+      {
+        milestoneCode,
+        triggeredCount: triggered.length,
+        triggered,
+      },
+      `Construction milestone ${milestoneCode}: ${triggered.length} demand(s) generated`,
+    );
+  }
+
   private buildLines(inputs: ScheduleLineInput[]): PaymentScheduleLine[] {
     return inputs.map((line) => ({
       _id: new Types.ObjectId(),
       sequence: line.sequence,
       milestone: line.milestone.trim(),
+      milestoneCode: normalizeMilestoneCode(line.milestoneCode),
       dueDate: line.dueDate
         ? this.parseDate(String(line.dueDate), 'dueDate')
         : null,

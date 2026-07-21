@@ -19,9 +19,13 @@ export type PublicUnit = {
   unitType: UnitType;
   carpetArea: number;
   builtUpArea: number;
+  saleableArea: number;
   uds: number;
   facing: UnitFacing | null;
+  configuration: string | null;
+  amenities: string[];
   parking: string | null;
+  floorPlanPath: string | null;
   basePrice: number;
   additionalCharges: number;
   tax: number;
@@ -42,9 +46,13 @@ type UnitLike = {
   unitType: UnitType;
   carpetArea: number;
   builtUpArea: number;
+  saleableArea?: number;
   uds: number;
   facing?: UnitFacing | null;
+  configuration?: string | null;
+  amenities?: string[];
   parking?: string | null;
+  floorPlanPath?: string | null;
   basePrice: number;
   additionalCharges: number;
   tax: number;
@@ -65,9 +73,13 @@ export function toPublicUnit(row: UnitLike): PublicUnit {
     unitType: row.unitType,
     carpetArea: row.carpetArea,
     builtUpArea: row.builtUpArea,
+    saleableArea: row.saleableArea ?? row.builtUpArea,
     uds: row.uds,
     facing: row.facing ?? null,
+    configuration: row.configuration ?? null,
+    amenities: row.amenities ?? [],
     parking: row.parking ?? null,
+    floorPlanPath: row.floorPlanPath ?? null,
     basePrice: row.basePrice,
     additionalCharges: row.additionalCharges,
     tax: row.tax,

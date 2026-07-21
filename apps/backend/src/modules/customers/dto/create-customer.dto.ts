@@ -15,6 +15,7 @@ import { PAN_REGEX } from '../../company/company.validation';
 import {
   CustomerFundingType,
   CustomerStatus,
+  CustomerType,
 } from '../schemas/customer.schema';
 
 export class CustomerContactDto {
@@ -105,11 +106,83 @@ export class CustomerJointApplicantDto {
   email?: string | null;
 }
 
+export class CustomerBankDetailsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  accountHolderName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  bankName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  accountNumber?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ifsc?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  branch?: string | null;
+}
+
+export class CustomerNomineeDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  fullName?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  relationship?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string | null;
+}
+
+export class CustomerCommunicationPreferencesDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  email?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  sms?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  whatsapp?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  postal?: boolean;
+}
+
 export class CreateCustomerDto {
   @ApiProperty({ example: 'Ravi Kumar' })
   @IsString()
   @IsNotEmpty()
   fullName!: string;
+
+  @ApiPropertyOptional({ enum: CustomerType, default: CustomerType.Individual })
+  @IsOptional()
+  @IsEnum(CustomerType)
+  customerType?: CustomerType;
 
   @ApiPropertyOptional({ type: CustomerJointApplicantDto })
   @IsOptional()
@@ -132,17 +205,51 @@ export class CreateCustomerDto {
   @IsString()
   aadhaar?: string | null;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  passportNumber?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  gstin?: string | null;
+
   @ApiPropertyOptional({ type: CustomerContactDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => CustomerContactDto)
   contact?: CustomerContactDto;
 
+  @ApiPropertyOptional({ type: [CustomerContactDto] })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CustomerContactDto)
+  additionalContacts?: CustomerContactDto[];
+
   @ApiPropertyOptional({ type: CustomerAddressDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => CustomerAddressDto)
   address?: CustomerAddressDto;
+
+  @ApiPropertyOptional({ type: CustomerBankDetailsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CustomerBankDetailsDto)
+  bankDetails?: CustomerBankDetailsDto;
+
+  @ApiPropertyOptional({ type: CustomerNomineeDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CustomerNomineeDto)
+  nominee?: CustomerNomineeDto;
+
+  @ApiPropertyOptional({ type: CustomerCommunicationPreferencesDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CustomerCommunicationPreferencesDto)
+  communicationPreferences?: CustomerCommunicationPreferencesDto;
 
   @ApiPropertyOptional({ example: 'Software Engineer' })
   @IsOptional()
@@ -160,6 +267,11 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsString()
   loanBank?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  sourceLeadId?: string | null;
 
   @ApiPropertyOptional({ enum: CustomerStatus })
   @IsOptional()

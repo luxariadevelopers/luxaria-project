@@ -19,6 +19,7 @@ import {
   MarkDueDto,
   RejectPaymentScheduleDto,
   RevisePaymentScheduleDto,
+  TriggerConstructionMilestoneDto,
 } from './dto/payment-schedule.dto';
 import { PaymentSchedulesService } from './payment-schedules.service';
 import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
@@ -65,6 +66,22 @@ export class PaymentSchedulesController {
   @ApiOperation({ summary: 'Manually run overdue marking job' })
   markOverdue() {
     return this.paymentSchedulesService.markOverdue();
+  }
+
+  @Post('construction-milestones/trigger')
+  @RequirePermissions('collection.create')
+  @ApiOperation({
+    summary:
+      'Trigger customer demands from certified construction milestone (Phase 5 bridge)',
+  })
+  triggerConstructionMilestone(
+    @Body() dto: TriggerConstructionMilestoneDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.paymentSchedulesService.triggerConstructionMilestone(
+      dto,
+      actor.id,
+    );
   }
 
   @Get(':id')

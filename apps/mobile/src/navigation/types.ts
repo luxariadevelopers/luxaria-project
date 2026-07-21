@@ -46,6 +46,7 @@ export type AppStackParamList = {
   PurchaseRequestDetail: { requestId: string };
   StockLedger: undefined;
   QualityInspectionList: undefined;
+  LeadCapture: undefined;
   Notifications: undefined;
   NotificationPreferences: undefined;
   ConflictDetail: { transactionId: string };

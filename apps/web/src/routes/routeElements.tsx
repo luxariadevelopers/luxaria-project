@@ -46,7 +46,12 @@ import { TenderListPage } from '@/pages/TenderListPage';
 import { ContributionReceiptsPage } from '@/pages/ContributionReceiptsPage';
 import { CostForecastPage } from '@/pages/CostForecastPage';
 import { CustomerDetailPage } from '@/pages/CustomerDetailPage';
+import { CustomerLoansPage } from '@/pages/CustomerLoansPage';
+import { CustomerPortalPage } from '@/pages/CustomerPortalPage';
+import { CustomerWarrantiesPage } from '@/pages/CustomerWarrantiesPage';
 import { CustomersPage } from '@/pages/CustomersPage';
+import { LeadDetailPage } from '@/pages/LeadDetailPage';
+import { LeadsPage } from '@/pages/LeadsPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { DataTableDemoPage } from '@/pages/DataTableDemoPage';
 import { DirectorCommandCentrePage } from '@/pages/DirectorCommandCentrePage';
@@ -142,6 +147,8 @@ import { RoleDetailPage } from '@/pages/RoleDetailPage';
 import { RoleEditPage } from '@/pages/RoleEditPage';
 import { RolesPage } from '@/pages/RolesPage';
 import { RunningBillCreatePage } from '@/pages/RunningBillCreatePage';
+import { SaleAgreementsPage } from '@/pages/SaleAgreementsPage';
+import { SalesDashboardPage } from '@/pages/SalesDashboardPage';
 import { RunningBillDetailPage } from '@/pages/RunningBillDetailPage';
 import { RunningBillsPage } from '@/pages/RunningBillsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -156,6 +163,9 @@ import { StockCountsPage } from '@/pages/StockCountsPage';
 import { StockLedgerPage } from '@/pages/StockLedgerPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
 import { UnitDetailPage } from '@/pages/UnitDetailPage';
+import { UnitHandoversPage } from '@/pages/UnitHandoversPage';
+import { UnitQuotationsPage } from '@/pages/UnitQuotationsPage';
+import { UnitRegistrationsPage } from '@/pages/UnitRegistrationsPage';
 import { UnitsPage } from '@/pages/UnitsPage';
 import { UserCreatePage } from '@/pages/UserCreatePage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
@@ -256,6 +266,16 @@ export const APP_ROUTE_ELEMENTS: {
   'manpower-plans': <ManpowerPlansPage />,
   'manpower-plan-detail': <ManpowerPlanDetailPage />,
   'contractor-detail': <ContractorDetailPage />,
+  'sales-dashboard': <SalesDashboardPage />,
+  leads: <LeadsPage />,
+  'lead-detail': <LeadDetailPage />,
+  'unit-quotations': <UnitQuotationsPage />,
+  'sale-agreements': <SaleAgreementsPage />,
+  'customer-loans': <CustomerLoansPage />,
+  'unit-registrations': <UnitRegistrationsPage />,
+  'unit-handovers': <UnitHandoversPage />,
+  'customer-warranties': <CustomerWarrantiesPage />,
+  'customer-portal': <CustomerPortalPage />,
   customers: <CustomersPage />,
   'customer-detail': <CustomerDetailPage />,
   'purchase-orders': <PurchaseOrdersPage />,
