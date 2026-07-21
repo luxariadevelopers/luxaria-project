@@ -76,8 +76,14 @@ import { PettyCashRequestsPage } from '@/pages/PettyCashRequestsPage';
 import { PettyCashTransfersPage } from '@/pages/PettyCashTransfersPage';
 import { PrintPdfDemoPage } from '@/pages/PrintPdfDemoPage';
 import { ProfitShareEntryPage, ProfitSharePage } from '@/pages/ProfitSharePage';
+import { ProjectAccessPage } from '@/pages/ProjectAccessPage';
+import { ProjectCreatePage } from '@/pages/ProjectCreatePage';
 import { ProjectDashboardEntryPage, ProjectDashboardPage } from '@/pages/ProjectDashboardPage';
+import { ProjectDetailPage } from '@/pages/ProjectDetailPage';
+import { ProjectDocumentsPage } from '@/pages/ProjectDocumentsPage';
+import { ProjectEditPage } from '@/pages/ProjectEditPage';
 import { ProjectParticipantsEntryPage, ProjectParticipantsPage } from '@/pages/ProjectParticipantsPage';
+import { ProjectSettingsPage } from '@/pages/ProjectSettingsPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
 import { PurchaseDashboardPage } from '@/pages/PurchaseDashboardPage';
 import { PurchaseOrderCreatePage } from '@/pages/PurchaseOrderCreatePage';
@@ -125,6 +131,12 @@ export const APP_ROUTE_ELEMENTS: {
   approvals: <ApprovalsPage />,
   'approval-detail': <ApprovalDetailPage />,
   projects: <ProjectsPage />,
+  'project-create': <ProjectCreatePage />,
+  'project-detail': <ProjectDetailPage />,
+  'project-edit': <ProjectEditPage />,
+  'project-access': <ProjectAccessPage />,
+  'project-documents': <ProjectDocumentsPage />,
+  'project-settings': <ProjectSettingsPage />,
   'project-dashboard': <ProjectDashboardEntryPage />,
   'project-dashboard-detail': <ProjectDashboardPage />,
   'project-participants': <ProjectParticipantsEntryPage />,

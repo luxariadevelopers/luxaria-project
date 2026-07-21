@@ -7,7 +7,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import {
   PROJECT_ACCESS_ME_QUERY_KEY,
   PROJECTS_SELECTOR_QUERY_KEY,
@@ -39,14 +43,14 @@ type ProjectContextValue = {
   selectionIssue: ProjectSelectionIssue | null;
   setSelectedProjectId: (id: string | null) => void;
   refetch: () => Promise<void>;
+  /** Invalidates data that may belong to the previously active project. */
+  clearProjectCaches: () => Promise<void>;
 };
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
-function invalidateProjectScopedQueries(
-  queryClient: ReturnType<typeof useQueryClient>,
-) {
-  void queryClient.invalidateQueries({
+export async function clearProjectScopedCaches(queryClient: QueryClient) {
+  await queryClient.invalidateQueries({
     predicate: (query) =>
       !shouldPreserveQueryOnProjectSwitch(query.queryKey),
   });
@@ -127,7 +131,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (resolved.shouldClearPersisted && selectedProjectId) {
       tokenStorage.setSelectedProjectId(null);
       setSelectedId(null);
-      invalidateProjectScopedQueries(queryClient);
+      void clearProjectScopedCaches(queryClient);
     }
   }, [resolved.shouldClearPersisted, selectedProjectId, queryClient]);
 
@@ -138,7 +142,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }
       tokenStorage.setSelectedProjectId(id);
       setSelectedId(id);
-      invalidateProjectScopedQueries(queryClient);
+      void clearProjectScopedCaches(queryClient);
     },
     [queryClient, selectedProjectId],
   );
@@ -149,6 +153,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       canViewProjects ? projectsQuery.refetch() : Promise.resolve(),
     ]);
   }, [accessQuery, projectsQuery, canViewProjects]);
+
+  const clearProjectCaches = useCallback(
+    () => clearProjectScopedCaches(queryClient),
+    [queryClient],
+  );
 
   const isLoading =
     isAuthenticated &&
@@ -190,6 +199,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       selectionIssue: resolved.issue,
       setSelectedProjectId,
       refetch,
+      clearProjectCaches,
     }),
     [
       resolved.selectableProjects,
@@ -205,6 +215,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       needsProjectSelection,
       setSelectedProjectId,
       refetch,
+      clearProjectCaches,
     ],
   );
 

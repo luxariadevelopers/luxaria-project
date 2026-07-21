@@ -2,6 +2,12 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { connect, disconnect } from 'mongoose';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import {
+  AuditAction,
+  AuditLog,
+  AuditLogSchema,
+} from '../audit-log/schemas/audit-log.schema';
 import { Company, CompanySchema, CompanyStatus } from '../company/schemas/company.schema';
 import { NumberingService } from '../numbering/numbering.service';
 import { Counter, CounterSchema } from '../numbering/schemas/counter.schema';
@@ -34,7 +40,11 @@ describe('ProjectsService', () => {
   let documentModel: Model<ProjectFile>;
   let userModel: Model<User>;
   let companyModel: Model<Company>;
+  let auditModel: Model<AuditLog>;
+  let projectAccessService: ProjectAccessService;
   let service: ProjectsService;
+  let companyId: string;
+  let foreignCompanyId: string;
   let actorId: string;
   let managerId: string;
   let directorId: string;
@@ -51,7 +61,13 @@ describe('ProjectsService', () => {
   };
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    const configuredPort = Number(process.env.MONGOMS_PORT);
+    mongoServer = await MongoMemoryServer.create({
+      instance:
+        Number.isInteger(configuredPort) && configuredPort > 0
+          ? { port: configuredPort }
+          : undefined,
+    });
     const mongoose = await connect(mongoServer.getUri());
     connection = mongoose.connection;
 
@@ -62,6 +78,10 @@ describe('ProjectsService', () => {
     ) as Model<ProjectFile>;
     userModel = connection.model(User.name, UserSchema) as Model<User>;
     companyModel = connection.model(Company.name, CompanySchema) as Model<Company>;
+    auditModel = connection.model(
+      AuditLog.name,
+      AuditLogSchema,
+    ) as Model<AuditLog>;
     const counterModel = connection.model(Counter.name, CounterSchema) as Model<Counter>;
     const assignmentModel = connection.model(
       ProjectAssignment.name,
@@ -79,9 +99,10 @@ describe('ProjectsService', () => {
       companyModel.syncIndexes(),
       counterModel.syncIndexes(),
       assignmentModel.syncIndexes(),
+      auditModel.syncIndexes(),
     ]);
 
-    const projectAccessService = new ProjectAccessService(
+    projectAccessService = new ProjectAccessService(
       assignmentModel,
       unauthorizedModel,
       userModel,
@@ -97,12 +118,15 @@ describe('ProjectsService', () => {
       companyModel,
       new NumberingService(counterModel),
       projectAccessService,
+      new AuditLogService(auditModel),
     );
   }, 60_000);
 
   afterAll(async () => {
-    await disconnect();
-    await mongoServer.stop();
+    await disconnect().catch(() => undefined);
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
   });
 
   beforeEach(async () => {
@@ -110,6 +134,7 @@ describe('ProjectsService', () => {
     await documentModel.deleteMany({}).setOptions({ withDeleted: true });
     await userModel.deleteMany({}).setOptions({ withDeleted: true });
     await companyModel.deleteMany({}).setOptions({ withDeleted: true });
+    await auditModel.collection.deleteMany({});
     await connection.model(Counter.name).deleteMany({});
     await connection
       .model(ProjectAssignment.name)
@@ -125,7 +150,7 @@ describe('ProjectsService', () => {
       userId: '',
     });
 
-    await companyModel.create({
+    const company = await companyModel.create({
       companyCode: 'CMP-0001',
       legalName: 'Luxaria Developers Pvt. Ltd.',
       tradeName: 'Luxaria',
@@ -151,6 +176,35 @@ describe('ProjectsService', () => {
       status: CompanyStatus.Active,
       isPrimary: true,
     });
+    companyId = String(company._id);
+
+    const foreignCompany = await companyModel.create({
+      companyCode: 'CMP-0002',
+      legalName: 'Foreign Developers Pvt. Ltd.',
+      tradeName: 'Foreign Developers',
+      registeredAddress: {
+        line1: 'Foreign Office',
+        line2: null,
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pincode: '560001',
+        country: 'India',
+      },
+      corporateAddress: {
+        line1: 'Foreign Office',
+        line2: null,
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pincode: '560001',
+        country: 'India',
+      },
+      authorisedShareCapital: 10_000_000,
+      paidUpShareCapital: 0,
+      financialYearStartMonth: 4,
+      status: CompanyStatus.Active,
+      isPrimary: false,
+    });
+    foreignCompanyId = String(foreignCompany._id);
 
     const users = await userModel.create([
       {
@@ -159,6 +213,7 @@ describe('ProjectsService', () => {
         email: 'creator@luxaria.dev',
         passwordHash: 'hash',
         status: UserStatus.Active,
+        companyId: company._id,
       },
       {
         userCode: 'USR-000002',
@@ -166,6 +221,7 @@ describe('ProjectsService', () => {
         email: 'pm@luxaria.dev',
         passwordHash: 'hash',
         status: UserStatus.Active,
+        companyId: company._id,
       },
       {
         userCode: 'USR-000003',
@@ -173,6 +229,7 @@ describe('ProjectsService', () => {
         email: 'dir@luxaria.dev',
         passwordHash: 'hash',
         status: UserStatus.Active,
+        companyId: company._id,
       },
       {
         userCode: 'USR-000004',
@@ -180,6 +237,7 @@ describe('ProjectsService', () => {
         email: 'out@luxaria.dev',
         passwordHash: 'hash',
         status: UserStatus.Active,
+        companyId: foreignCompany._id,
       },
     ]);
     actorId = String(users[0]!._id);
@@ -204,14 +262,53 @@ describe('ProjectsService', () => {
     numberOfUnits: 120,
   });
 
-  it('creates a project with generated projectCode', async () => {
-    const response = await service.create(baseCreate(), actorId);
+  it('creates a same-company project with generated projectCode', async () => {
+    const response = await service.create(
+      { ...baseCreate(), companyId },
+      actorId,
+    );
     expect(response.data?.projectCode).toMatch(/^PRJ-/);
     expect(response.data?.status).toBe(ProjectStatus.Planning);
     expect(response.data?.projectName).toBe('Luxaria Heights');
+    expect(response.data?.companyId).toBe(companyId);
+  });
+
+  it('derives the primary company when the actor has no explicit company', async () => {
+    await userModel.findByIdAndUpdate(actorId, { companyId: null });
+
+    const response = await service.create(baseCreate(), actorId);
+
+    expect(response.data?.companyId).toBe(companyId);
+  });
+
+  it('rejects a supplied foreign company', async () => {
+    await expect(
+      service.create(
+        { ...baseCreate(), companyId: foreignCompanyId },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(await projectModel.countDocuments()).toBe(0);
+  });
+
+  it.each([
+    ['manager', (id: string) => ({ projectManager: id })],
+    ['director', (id: string) => ({ assignedDirectors: [id] })],
+  ])('rejects a foreign-company %s', async (_label, assigneeFields) => {
+    await expect(
+      service.create(
+        { ...baseCreate(), ...assigneeFields(outsiderId) },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(await projectModel.countDocuments()).toBe(0);
   });
 
   it('assigns project manager and directors and grants project access', async () => {
+    const assignmentSpy = jest.spyOn(
+      projectAccessService,
+      'assignProjectsToUser',
+    );
     const created = await service.create(
       {
         ...baseCreate(),
@@ -223,6 +320,24 @@ describe('ProjectsService', () => {
 
     expect(created.data?.projectManager).toBe(managerId);
     expect(created.data?.assignedDirectors).toContain(directorId);
+    expect(assignmentSpy).toHaveBeenNthCalledWith(
+      1,
+      actorId,
+      [created.data!.id],
+      actorId,
+    );
+    expect(assignmentSpy).toHaveBeenNthCalledWith(
+      2,
+      managerId,
+      [created.data!.id],
+      actorId,
+    );
+    expect(assignmentSpy).toHaveBeenNthCalledWith(
+      3,
+      directorId,
+      [created.data!.id],
+      actorId,
+    );
 
     const managerView = await service.getById(created.data!.id, managerId);
     expect(managerView.data?.id).toBe(created.data!.id);
@@ -232,12 +347,67 @@ describe('ProjectsService', () => {
     );
   });
 
+  it('records a safe project creation audit entry', async () => {
+    const created = await service.create(baseCreate(), actorId);
+    const audit = await auditModel
+      .findOne({
+        action: AuditAction.CREATE,
+        entityId: created.data!.id,
+      })
+      .lean()
+      .exec();
+
+    expect(audit).toMatchObject({
+      action: AuditAction.CREATE,
+      module: 'project',
+      entityType: 'project',
+      entityId: created.data!.id,
+    });
+    expect(String(audit?.userId)).toBe(actorId);
+    expect(String(audit?.projectId)).toBe(created.data!.id);
+    expect(audit?.afterData).toMatchObject({
+      id: created.data!.id,
+      projectCode: created.data!.projectCode,
+      projectName: created.data!.projectName,
+      companyId,
+    });
+    expect(audit?.afterData).not.toHaveProperty('createdBy');
+  });
+
   it('lists only accessible projects for non-global users', async () => {
     const a = await service.create({ ...baseCreate(), projectName: 'Project A' }, actorId);
     await service.create({ ...baseCreate(), projectName: 'Project B' }, managerId);
 
     const list = await service.list({}, actorId);
     expect(list.data?.map((p) => p.id)).toEqual([a.data!.id]);
+  });
+
+  it('keeps global project lists inside the authenticated company', async () => {
+    const own = await service.create(
+      { ...baseCreate(), projectName: 'Company A project' },
+      actorId,
+    );
+    const foreign = await service.create(
+      { ...baseCreate(), projectName: 'Company B project' },
+      outsiderId,
+    );
+    permissionsService.resolveUserAccess.mockResolvedValue({
+      bypassPermissions: true,
+      permissions: [],
+      roleCodes: ['SUPER_ADMIN'],
+      roleIds: [],
+      userId: actorId,
+    });
+
+    const list = await service.list({}, actorId);
+
+    expect(list.data?.map((project) => project.id)).toContain(own.data!.id);
+    expect(list.data?.map((project) => project.id)).not.toContain(
+      foreign.data!.id,
+    );
+    await expect(
+      service.list({ companyId: foreignCompanyId }, actorId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('updates project fields with validation', async () => {
@@ -261,9 +431,22 @@ describe('ProjectsService', () => {
     const created = await service.create(baseCreate(), actorId);
     await service.updateStatus(
       created.data!.id,
-      { status: ProjectStatus.Approval },
+      { status: ProjectStatus.Approval, note: 'Ready for approval review' },
       actorId,
     );
+    const statusAudit = await auditModel
+      .findOne({
+        action: AuditAction.UPDATE,
+        entityId: created.data!.id,
+        'afterData.status': ProjectStatus.Approval,
+      })
+      .lean()
+      .exec();
+    expect(statusAudit?.afterData).toMatchObject({
+      status: ProjectStatus.Approval,
+      statusChangeNote: 'Ready for approval review',
+    });
+
     const next = await service.updateStatus(
       created.data!.id,
       { status: ProjectStatus.PreConstruction },
@@ -311,6 +494,50 @@ describe('ProjectsService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects an invalid RERA window and preserves omitted RERA fields on update', async () => {
+    await expect(
+      service.create(
+        {
+          ...baseCreate(),
+          reraDetails: {
+            registrationDate: '2027-01-01',
+            validUntil: '2026-01-01',
+          },
+        },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const created = await service.create(
+      {
+        ...baseCreate(),
+        reraDetails: {
+          reraNumber: 'TN/BUILDING/123/2026',
+          registrationDate: '2026-01-01',
+          validUntil: '2027-01-01',
+          notes: 'Initial',
+        },
+      },
+      actorId,
+    );
+    const updated = await service.update(
+      created.data!.id,
+      { reraDetails: { notes: 'Revised' } },
+      actorId,
+    );
+
+    expect(updated.data?.reraDetails).toMatchObject({
+      reraNumber: 'TN/BUILDING/123/2026',
+      notes: 'Revised',
+    });
+    expect(updated.data?.reraDetails.registrationDate).toEqual(
+      new Date('2026-01-01'),
+    );
+    expect(updated.data?.reraDetails.validUntil).toEqual(
+      new Date('2027-01-01'),
+    );
+  });
+
   it('reassigns project manager', async () => {
     const created = await service.create(baseCreate(), actorId);
     const updated = await service.assignProjectManager(
@@ -319,5 +546,56 @@ describe('ProjectsService', () => {
       actorId,
     );
     expect(updated.data?.projectManager).toBe(managerId);
+  });
+
+  it('rejects foreign-company manager and director reassignment', async () => {
+    const created = await service.create(baseCreate(), actorId);
+
+    await expect(
+      service.assignProjectManager(
+        created.data!.id,
+        { projectManagerId: outsiderId },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.assignDirectors(
+        created.data!.id,
+        { directorIds: [outsiderId] },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('revokes access when manager and director assignments are replaced', async () => {
+    const created = await service.create(
+      {
+        ...baseCreate(),
+        projectManager: managerId,
+        assignedDirectors: [directorId],
+      },
+      actorId,
+    );
+
+    await service.assignProjectManager(
+      created.data!.id,
+      { projectManagerId: actorId },
+      actorId,
+    );
+    await service.assignDirectors(
+      created.data!.id,
+      { directorIds: [] },
+      actorId,
+    );
+
+    await expect(
+      service.getById(created.data!.id, managerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.getById(created.data!.id, directorId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.getById(created.data!.id, actorId),
+    ).resolves.toMatchObject({ data: { id: created.data!.id } });
   });
 });

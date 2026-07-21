@@ -114,6 +114,25 @@ describe('R-003B seeded HTTP IDOR (Company A Project A/B)', () => {
     await harness.close();
   });
 
+  it('requires project.close to create a terminal-status project', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/projects')
+      .set(authHeader(staffOnlyAToken))
+      .send({
+        projectName: `R003B Forbidden Terminal ${Date.now()}`,
+        projectType: 'residential',
+        address: {
+          line1: '3 Isolation Rd',
+          city: 'Chennai',
+          state: 'TN',
+          pincode: '600003',
+          country: 'IN',
+        },
+        status: 'Cancelled',
+      })
+      .expect(403);
+  });
+
   it('same project + permission → project read allowed', async () => {
     await request(app.getHttpServer())
       .get(`/api/v1/projects/${projectAId}`)

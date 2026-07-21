@@ -9,6 +9,8 @@ import type { FilterQuery, Model, SortOrder } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
+import { AuditAction } from '../audit-log/schemas/audit-log.schema';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { toAddressEmbed } from '../company/schemas/address.embed';
 import { Company } from '../company/schemas/company.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
@@ -28,6 +30,7 @@ import {
 } from './projects.mapper';
 import {
   assertCoordinates,
+  assertValidReraDates,
   assertStatusTransition,
   assertValidProjectDates,
 } from './projects.validation';
@@ -61,6 +64,7 @@ export class ProjectsService {
     @InjectModel(Company.name) private readonly companyModel: Model<Company>,
     private readonly numberingService: NumberingService,
     private readonly projectAccessService: ProjectAccessService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async create(dto: CreateProjectDto, actorId: string) {
@@ -71,15 +75,19 @@ export class ProjectsService {
       : null;
     assertValidProjectDates({ startDate, expectedCompletionDate });
 
+    const companyId = await this.resolveAuthenticatedCompanyId(actorId);
+    this.assertRequestedCompanyMatches(dto.companyId, companyId);
+
     if (dto.projectManager) {
-      await this.assertUserExists(dto.projectManager);
+      await this.assertUserBelongsToCompany(dto.projectManager, companyId);
     }
     if (dto.assignedDirectors?.length) {
-      await this.assertUsersExist(dto.assignedDirectors);
+      await this.assertUsersBelongToCompany(dto.assignedDirectors, companyId);
     }
 
-    const companyId = await this.resolveCompanyId(dto.companyId);
     const projectCode = await this.numberingService.nextCode(NumberEntityType.PROJECT);
+    const reraDetails = this.toReraEmbed(dto.reraDetails);
+    assertValidReraDates(reraDetails);
 
     const project = await this.projectModel.create({
       projectCode,
@@ -109,7 +117,7 @@ export class ProjectsService {
         : null,
       approvedBudget: dto.approvedBudget ?? null,
       projectStage: dto.projectStage ?? ProjectStage.Concept,
-      reraDetails: this.toReraEmbed(dto.reraDetails),
+      reraDetails,
       companyId,
       createdBy: new Types.ObjectId(actorId),
     });
@@ -137,7 +145,16 @@ export class ProjectsService {
       }
     }
 
-    return createSuccessResponse(toPublicProject(project), 'Project created successfully');
+    const publicProject = toPublicProject(project);
+    await this.auditProjectMutation(
+      AuditAction.CREATE,
+      actorId,
+      String(project._id),
+      null,
+      publicProject,
+    );
+
+    return createSuccessResponse(publicProject, 'Project created successfully');
   }
 
   async update(id: string, dto: UpdateProjectDto, actorId: string) {
@@ -205,18 +222,28 @@ export class ProjectsService {
     if (dto.approvedBudget !== undefined) update.approvedBudget = dto.approvedBudget;
     if (dto.projectStage !== undefined) update.projectStage = dto.projectStage;
     if (dto.reraDetails !== undefined) {
-      update.reraDetails = {
-        ...this.emptyRera(),
-        ...project.reraDetails,
-        ...this.toReraEmbed(dto.reraDetails),
-      };
+      const reraDetails = this.mergeReraEmbed(
+        project.reraDetails,
+        dto.reraDetails,
+      );
+      assertValidReraDates(reraDetails);
+      update.reraDetails = reraDetails;
     }
 
     const updated = await this.projectModel
       .findByIdAndUpdate(id, update, { new: true })
       .exec();
 
-    return createSuccessResponse(toPublicProject(updated!), 'Project updated successfully');
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      publicUpdated,
+    );
+
+    return createSuccessResponse(publicUpdated, 'Project updated successfully');
   }
 
   async assignProjectManager(
@@ -225,8 +252,11 @@ export class ProjectsService {
     actorId: string,
   ) {
     await this.assertCanAccess(actorId, id, 'update');
-    await this.requireProject(id);
-    await this.assertUserExists(dto.projectManagerId);
+    const project = await this.requireProject(id);
+    await this.assertUserBelongsToCompany(
+      dto.projectManagerId,
+      await this.resolveProjectCompanyId(project, actorId),
+    );
 
     const updated = await this.projectModel
       .findByIdAndUpdate(
@@ -244,17 +274,47 @@ export class ProjectsService {
       [id],
       actorId,
     );
+    const previousManagerId = project.projectManager
+      ? String(project.projectManager)
+      : null;
+    const creatorId = this.projectCreatorId(project);
+    if (
+      previousManagerId &&
+      previousManagerId !== dto.projectManagerId &&
+      previousManagerId !== creatorId &&
+      !project.assignedDirectors.some(
+        (directorId) => String(directorId) === previousManagerId,
+      )
+    ) {
+      await this.projectAccessService.removeProjectsFromUser(
+        previousManagerId,
+        [id],
+        actorId,
+      );
+    }
+
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      publicUpdated,
+    );
 
     return createSuccessResponse(
-      toPublicProject(updated!),
+      publicUpdated,
       'Project manager assigned successfully',
     );
   }
 
   async assignDirectors(id: string, dto: AssignDirectorsDto, actorId: string) {
     await this.assertCanAccess(actorId, id, 'update');
-    await this.requireProject(id);
-    await this.assertUsersExist(dto.directorIds);
+    const project = await this.requireProject(id);
+    await this.assertUsersBelongToCompany(
+      dto.directorIds,
+      await this.resolveProjectCompanyId(project, actorId),
+    );
 
     const updated = await this.projectModel
       .findByIdAndUpdate(
@@ -270,9 +330,36 @@ export class ProjectsService {
     for (const directorId of dto.directorIds) {
       await this.projectAccessService.assignProjectsToUser(directorId, [id], actorId);
     }
+    const nextDirectorIds = new Set(dto.directorIds);
+    const creatorId = this.projectCreatorId(project);
+    const managerId = project.projectManager
+      ? String(project.projectManager)
+      : null;
+    for (const previousDirectorId of project.assignedDirectors.map(String)) {
+      if (
+        !nextDirectorIds.has(previousDirectorId) &&
+        previousDirectorId !== creatorId &&
+        previousDirectorId !== managerId
+      ) {
+        await this.projectAccessService.removeProjectsFromUser(
+          previousDirectorId,
+          [id],
+          actorId,
+        );
+      }
+    }
+
+    const publicUpdated = toPublicProject(updated!);
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      publicUpdated,
+    );
 
     return createSuccessResponse(
-      toPublicProject(updated!),
+      publicUpdated,
       'Directors assigned successfully',
     );
   }
@@ -313,8 +400,20 @@ export class ProjectsService {
       .findByIdAndUpdate(id, update, { new: true })
       .exec();
 
+    const publicUpdated = toPublicProject(updated!);
+    const statusChangeNote = dto.note?.trim() || null;
+    await this.auditProjectMutation(
+      AuditAction.UPDATE,
+      actorId,
+      id,
+      toPublicProject(project),
+      statusChangeNote
+        ? { ...publicUpdated, statusChangeNote }
+        : publicUpdated,
+    );
+
     return createSuccessResponse(
-      toPublicProject(updated!),
+      publicUpdated,
       'Project status updated successfully',
     );
   }
@@ -326,8 +425,14 @@ export class ProjectsService {
   }
 
   async list(query: ListProjectsQueryDto, actorId: string) {
+    const companyId = await this.resolveAuthenticatedCompanyId(actorId);
+    this.assertRequestedCompanyMatches(query.companyId, companyId);
     const access = await this.projectAccessService.listAccessibleProjectIds(actorId);
-    const filter: FilterQuery<Project> = {};
+    const filter: FilterQuery<Project> = {
+      // Legacy null-company rows remain visible only within the actor's
+      // resolved primary-company context; another company's rows never do.
+      companyId: { $in: [companyId, null] },
+    };
 
     if (!access.globalAccess) {
       if (access.projectIds.length === 0) {
@@ -350,9 +455,6 @@ export class ProjectsService {
     }
     if (query.directorId) {
       filter.assignedDirectors = new Types.ObjectId(query.directorId);
-    }
-    if (query.companyId) {
-      filter.companyId = new Types.ObjectId(query.companyId);
     }
     if (query.search?.trim()) {
       const search = query.search.trim();
@@ -414,8 +516,18 @@ export class ProjectsService {
       createdBy: new Types.ObjectId(actorId),
     });
 
+    const publicDocument = this.toPublicDocument(doc);
+    await this.auditProjectMutation(AuditAction.UPDATE, actorId, id, null, {
+      operation: 'document_uploaded',
+      documentId: publicDocument.id,
+      fileName: publicDocument.fileName,
+      mimeType: publicDocument.mimeType,
+      sizeBytes: publicDocument.sizeBytes,
+      category: publicDocument.category,
+    });
+
     return createSuccessResponse(
-      this.toPublicDocument(doc),
+      publicDocument,
       'Project document uploaded successfully',
     );
   }
@@ -481,43 +593,140 @@ export class ProjectsService {
     return project;
   }
 
-  private async assertUserExists(userId: string) {
+  private async findUserCompany(userId: string) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException(`Invalid user id: ${userId}`);
     }
-    const user = await this.userModel.findById(userId).select('_id').lean().exec();
+    const user = await this.userModel
+      .findById(userId)
+      .select('_id companyId')
+      .lean()
+      .exec();
     if (!user) {
       throw new NotFoundException(`User not found: ${userId}`);
     }
+    return user;
   }
 
-  private async assertUsersExist(userIds: string[]) {
+  private projectCreatorId(project: Project): string | null {
+    const createdBy = (
+      project as Project & { createdBy?: Types.ObjectId | null }
+    ).createdBy;
+    return createdBy ? String(createdBy) : null;
+  }
+
+  private async assertUserBelongsToCompany(
+    userId: string,
+    companyId: Types.ObjectId,
+  ) {
+    const user = await this.findUserCompany(userId);
+    const userCompanyId = user.companyId
+      ? String(user.companyId)
+      : String(await this.resolvePrimaryCompanyId());
+
+    if (userCompanyId !== String(companyId)) {
+      throw new ForbiddenException(
+        'Project assignees must belong to the authenticated company',
+      );
+    }
+  }
+
+  private async assertUsersBelongToCompany(
+    userIds: string[],
+    companyId: Types.ObjectId,
+  ) {
     const unique = [...new Set(userIds)];
     for (const id of unique) {
-      await this.assertUserExists(id);
+      await this.assertUserBelongsToCompany(id, companyId);
     }
   }
 
-  private async resolveCompanyId(
-    companyId?: string | null,
-  ): Promise<Types.ObjectId | null> {
-    if (companyId) {
-      if (!Types.ObjectId.isValid(companyId)) {
-        throw new BadRequestException('Invalid company id');
-      }
-      const company = await this.companyModel.findById(companyId).select('_id').lean().exec();
-      if (!company) {
-        throw new NotFoundException('Company not found');
-      }
-      return company._id as Types.ObjectId;
+  private async resolveAuthenticatedCompanyId(
+    actorId: string,
+  ): Promise<Types.ObjectId> {
+    if (!Types.ObjectId.isValid(actorId)) {
+      throw new ForbiddenException('Authenticated company could not be resolved');
     }
 
+    const actor = await this.userModel
+      .findById(actorId)
+      .select('_id companyId')
+      .lean()
+      .exec();
+    if (!actor) {
+      throw new ForbiddenException('Authenticated company could not be resolved');
+    }
+
+    const companyId = actor.companyId
+      ? new Types.ObjectId(String(actor.companyId))
+      : await this.resolvePrimaryCompanyId();
+    const company = await this.companyModel
+      .findById(companyId)
+      .select('_id')
+      .lean()
+      .exec();
+    if (!company) {
+      throw new ForbiddenException('Authenticated company could not be resolved');
+    }
+
+    return new Types.ObjectId(String(company._id));
+  }
+
+  private async resolvePrimaryCompanyId(): Promise<Types.ObjectId> {
     const primary = await this.companyModel
       .findOne({ isPrimary: true })
       .select('_id')
       .lean()
       .exec();
-    return primary?._id ? (primary._id as Types.ObjectId) : null;
+    if (!primary?._id) {
+      throw new ForbiddenException('Authenticated company could not be resolved');
+    }
+    return new Types.ObjectId(String(primary._id));
+  }
+
+  private assertRequestedCompanyMatches(
+    requestedCompanyId: string | null | undefined,
+    actorCompanyId: Types.ObjectId,
+  ): void {
+    if (requestedCompanyId == null) {
+      return;
+    }
+    if (!Types.ObjectId.isValid(requestedCompanyId)) {
+      throw new BadRequestException('Invalid company id');
+    }
+    if (!new Types.ObjectId(requestedCompanyId).equals(actorCompanyId)) {
+      throw new ForbiddenException(
+        'Projects can only be created for the authenticated company',
+      );
+    }
+  }
+
+  private async resolveProjectCompanyId(
+    project: Project,
+    actorId: string,
+  ): Promise<Types.ObjectId> {
+    return project.companyId
+      ? new Types.ObjectId(String(project.companyId))
+      : this.resolveAuthenticatedCompanyId(actorId);
+  }
+
+  private async auditProjectMutation(
+    action: AuditAction,
+    actorId: string,
+    projectId: string,
+    beforeData: unknown,
+    afterData: unknown,
+  ): Promise<void> {
+    await this.auditLogService.record({
+      userId: actorId,
+      action,
+      module: 'project',
+      entityType: 'project',
+      entityId: projectId,
+      projectId,
+      beforeData,
+      afterData,
+    });
   }
 
   private toReraEmbed(dto?: ReraDetailsDto | null): ReraDetailsEmbed {
@@ -530,6 +739,39 @@ export class ProjectsService {
       validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
       authority: dto.authority?.trim() ?? null,
       notes: dto.notes?.trim() ?? null,
+    };
+  }
+
+  private mergeReraEmbed(
+    current: ReraDetailsEmbed | null | undefined,
+    dto: ReraDetailsDto,
+  ): ReraDetailsEmbed {
+    const existing = current ?? this.emptyRera();
+    return {
+      reraNumber:
+        dto.reraNumber !== undefined
+          ? dto.reraNumber?.trim().toUpperCase() ?? null
+          : existing.reraNumber,
+      registrationDate:
+        dto.registrationDate !== undefined
+          ? dto.registrationDate
+            ? new Date(dto.registrationDate)
+            : null
+          : existing.registrationDate,
+      validUntil:
+        dto.validUntil !== undefined
+          ? dto.validUntil
+            ? new Date(dto.validUntil)
+            : null
+          : existing.validUntil,
+      authority:
+        dto.authority !== undefined
+          ? dto.authority?.trim() ?? null
+          : existing.authority,
+      notes:
+        dto.notes !== undefined
+          ? dto.notes?.trim() ?? null
+          : existing.notes,
     };
   }
 

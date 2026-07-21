@@ -3,6 +3,7 @@ import {
   assertCoordinates,
   assertStatusTransition,
   assertValidProjectDates,
+  assertValidReraDates,
 } from './projects.validation';
 import { ProjectStatus } from './schemas/project.schema';
 
@@ -34,6 +35,21 @@ describe('projects.validation', () => {
 
     expect(() =>
       assertStatusTransition(ProjectStatus.Closed, ProjectStatus.Construction),
+    ).toThrow(BadRequestException);
+  });
+
+  it('validates the RERA registration window', () => {
+    expect(() =>
+      assertValidReraDates({
+        registrationDate: new Date('2026-01-01'),
+        validUntil: new Date('2027-01-01'),
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertValidReraDates({
+        registrationDate: new Date('2027-01-01'),
+        validUntil: new Date('2026-01-01'),
+      }),
     ).toThrow(BadRequestException);
   });
 

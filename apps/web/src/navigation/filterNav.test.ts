@@ -91,6 +91,31 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(requireRouteById('daily-progress').projectScope).toBe('required');
   });
 
+  it('guards project management routes by their exact capabilities', () => {
+    const creator = access(['project.create']);
+    const viewer = access(['project.view']);
+    const editor = access(['project.view', 'project.update']);
+    const accessAdmin = access(['project_access.view']);
+
+    expect(canEnterRoute(requireRouteById('project-create'), creator)).toBe(
+      true,
+    );
+    expect(canEnterRoute(requireRouteById('project-detail'), viewer)).toBe(
+      true,
+    );
+    expect(canEnterRoute(requireRouteById('project-documents'), viewer)).toBe(
+      true,
+    );
+    expect(canEnterRoute(requireRouteById('project-edit'), viewer)).toBe(false);
+    expect(canEnterRoute(requireRouteById('project-edit'), editor)).toBe(true);
+    expect(canEnterRoute(requireRouteById('project-settings'), editor)).toBe(
+      true,
+    );
+    expect(
+      canEnterRoute(requireRouteById('project-access'), accessAdmin),
+    ).toBe(true);
+  });
+
   it('user admin sees users and is denied project modules', () => {
     const ctx = ROLES.userAdmin;
     const ids = visibleIds(ctx);
@@ -1403,6 +1428,22 @@ describe('getPageTitle', () => {
       ),
     ).toBe('Purchase Order');
     expect(getPageTitle('/projects')).toBe('Projects');
+    expect(getPageTitle('/projects/new')).toBe('New Project');
+    expect(
+      getPageTitle('/projects/507f1f77bcf86cd799439011'),
+    ).toBe('Project');
+    expect(
+      getPageTitle('/projects/507f1f77bcf86cd799439011/edit'),
+    ).toBe('Edit Project');
+    expect(
+      getPageTitle('/projects/507f1f77bcf86cd799439011/access'),
+    ).toBe('Project Access');
+    expect(
+      getPageTitle('/projects/507f1f77bcf86cd799439011/documents'),
+    ).toBe('Project Documents');
+    expect(
+      getPageTitle('/projects/507f1f77bcf86cd799439011/settings'),
+    ).toBe('Project Settings');
     expect(getPageTitle('/projects/dashboard')).toBe('Project Dashboard');
     expect(
       getPageTitle('/projects/507f1f77bcf86cd799439011/dashboard'),
@@ -1555,6 +1596,29 @@ describe('getPageTitle', () => {
 });
 
 describe('pathMatchesPattern / param routes', () => {
+  it('matches project management static and nested routes', () => {
+    expect(findRouteByPathname('/projects/new')?.id).toBe('project-create');
+    expect(
+      findRouteByPathname('/projects/507f1f77bcf86cd799439011')?.id,
+    ).toBe('project-detail');
+    expect(
+      findRouteByPathname('/projects/507f1f77bcf86cd799439011/edit')?.id,
+    ).toBe('project-edit');
+    expect(
+      findRouteByPathname('/projects/507f1f77bcf86cd799439011/access')?.id,
+    ).toBe('project-access');
+    expect(
+      findRouteByPathname(
+        '/projects/507f1f77bcf86cd799439011/documents',
+      )?.id,
+    ).toBe('project-documents');
+    expect(
+      findRouteByPathname(
+        '/projects/507f1f77bcf86cd799439011/settings',
+      )?.id,
+    ).toBe('project-settings');
+  });
+
   it('matches project dashboard detail paths', () => {
     expect(
       pathMatchesPattern(

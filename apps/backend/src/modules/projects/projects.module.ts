@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuditLogModule } from '../audit-log/audit-log.module';
 import { CompanyModule } from '../company/company.module';
 import { ProjectAccessModule } from '../project-access/project-access.module';
 import { RbacModule } from '../rbac/rbac.module';
@@ -18,6 +19,7 @@ import { Project, ProjectSchema } from './schemas/project.schema';
       { name: Project.name, schema: ProjectSchema },
       { name: ProjectFile.name, schema: ProjectFileSchema },
     ]),
+    AuditLogModule,
     forwardRef(() => UsersModule),
     CompanyModule,
     forwardRef(() => ProjectAccessModule),

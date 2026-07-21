@@ -51,6 +51,18 @@ export function assertValidProjectDates(input: {
   }
 }
 
+export function assertValidReraDates(input: {
+  registrationDate?: Date | null;
+  validUntil?: Date | null;
+}): void {
+  const { registrationDate, validUntil } = input;
+  if (registrationDate && validUntil && validUntil < registrationDate) {
+    throw new BadRequestException(
+      'reraDetails.validUntil must be on or after reraDetails.registrationDate',
+    );
+  }
+}
+
 export function assertStatusTransition(
   from: ProjectStatus,
   to: ProjectStatus,

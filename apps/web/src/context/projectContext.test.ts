@@ -1,15 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { shouldPreserveQueryOnProjectSwitch } from '@luxaria/shared-types';
-
-/**
- * Mirrors ProjectContext invalidate-on-switch predicate.
- */
-function invalidateOnProjectSwitch(queryClient: QueryClient) {
-  void queryClient.invalidateQueries({
-    predicate: (query) =>
-      !shouldPreserveQueryOnProjectSwitch(query.queryKey),
-  });
-}
+import { clearProjectScopedCaches } from './ProjectContext';
 
 describe('project switch cache invalidation', () => {
   it('invalidates project-scoped queries and preserves auth / project meta', async () => {
@@ -28,9 +18,7 @@ describe('project switch cache invalidation', () => {
     queryClient.setQueryData(['daily-progress-reports', 'p1'], [{ id: 'd1' }]);
     queryClient.setQueryData(['goods-receipts', 'p1'], [{ id: 'g1' }]);
 
-    invalidateOnProjectSwitch(queryClient);
-
-    await Promise.resolve();
+    await clearProjectScopedCaches(queryClient);
 
     const dprState = queryClient.getQueryState([
       'daily-progress-reports',

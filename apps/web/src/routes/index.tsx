@@ -115,6 +115,48 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="project-create" />}>
+              <Route
+                path={toRelativeAppPath('/projects/new')}
+                element={APP_ROUTE_ELEMENTS['project-create']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-detail" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId')}
+                element={APP_ROUTE_ELEMENTS['project-detail']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-edit" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/edit')}
+                element={APP_ROUTE_ELEMENTS['project-edit']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-access" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/access')}
+                element={APP_ROUTE_ELEMENTS['project-access']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-documents" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/documents')}
+                element={APP_ROUTE_ELEMENTS['project-documents']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="project-settings" />}>
+              <Route
+                path={toRelativeAppPath('/projects/:projectId/settings')}
+                element={APP_ROUTE_ELEMENTS['project-settings']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="project-dashboard" />}>
               <Route
                 path={toRelativeAppPath('/projects/dashboard')}

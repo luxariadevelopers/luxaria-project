@@ -71,7 +71,20 @@ export class ProjectsController {
   @GlobalScope()
   @RequirePermissions('project.create')
   @ApiOperation({ summary: 'Create project' })
-  create(@Body() dto: CreateProjectDto, @CurrentUser() actor: AuthUser) {
+  async create(@Body() dto: CreateProjectDto, @CurrentUser() actor: AuthUser) {
+    if (
+      dto.status === ProjectStatus.Closed ||
+      dto.status === ProjectStatus.Cancelled
+    ) {
+      const allowed = await this.permissionsService.hasAllPermissions(actor.id, [
+        'project.close',
+      ]);
+      if (!allowed) {
+        throw new ForbiddenException(
+          'project.close permission is required to create a closed or cancelled project',
+        );
+      }
+    }
     return this.projectsService.create(dto, actor.id);
   }
 

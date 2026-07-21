@@ -25,6 +25,8 @@ export type AuthUser = {
   email: string | null;
   mobile: string | null;
   status: string;
+  /** Authoritative tenant resolved by the backend; never user-editable. */
+  companyId: string | null;
 };
 
 export type LoginResponse = {
