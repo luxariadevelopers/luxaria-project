@@ -28,6 +28,8 @@ export function buildPurchaseRequestOfflineEnqueue(
     method: 'POST',
     payload: {
       projectId: input.projectId,
+      siteId: input.siteId ?? null,
+      warehouseSiteId: input.warehouseSiteId ?? null,
       requiredByDate: input.requiredByDate,
       priority: input.priority,
       justification: input.justification.trim(),

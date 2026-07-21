@@ -10,6 +10,8 @@ export type PublicPurchaseRequest = {
 
 export type CreatePurchaseRequestInput = {
   projectId: string;
+  siteId?: string | null;
+  warehouseSiteId?: string | null;
   requiredByDate: string;
   priority?: string;
   justification: string;

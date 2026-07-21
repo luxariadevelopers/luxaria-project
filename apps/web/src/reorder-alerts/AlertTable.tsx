@@ -25,6 +25,8 @@ type Props = {
   toolbarActions?: ReactNode;
   caps: ReorderAlertCapabilities;
   onCreatePurchaseOrder?: (row: PublicStockReorderAlert) => void;
+  onCreatePurchaseRequest?: (row: PublicStockReorderAlert) => void;
+  createPrPendingId?: string | null;
 };
 
 /**
@@ -45,6 +47,8 @@ export function AlertTable({
   toolbarActions,
   caps,
   onCreatePurchaseOrder,
+  onCreatePurchaseRequest,
+  createPrPendingId = null,
 }: Props) {
   const columns: GridColDef<PublicStockReorderAlert>[] = [
     {
@@ -116,6 +120,17 @@ export function AlertTable({
   ];
 
   const rowActions: DataTableRowAction<PublicStockReorderAlert>[] = [];
+  if (onCreatePurchaseRequest && caps.canCreatePurchaseRequest) {
+    rowActions.push({
+      id: 'create-pr-from-alert',
+      label: 'Create PR',
+      onClick: onCreatePurchaseRequest,
+      disabled: (row) =>
+        row.recommendedPurchaseQuantity <= 0 ||
+        row.status !== 'open' ||
+        createPrPendingId === row.id,
+    });
+  }
   if (onCreatePurchaseOrder && caps.canCreatePurchaseOrder) {
     rowActions.push({
       id: 'create_po',

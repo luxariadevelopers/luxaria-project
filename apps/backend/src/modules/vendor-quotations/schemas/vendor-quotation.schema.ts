@@ -93,6 +93,10 @@ export class VendorQuotation {
   })
   purchaseRequestId!: Types.ObjectId;
 
+  /** Optional RFQ this quotation responds to. */
+  @Prop({ type: Types.ObjectId, ref: 'Rfq', default: null, index: true })
+  rfqId!: Types.ObjectId | null;
+
   /** Denormalized from PR for scoping / numbering. */
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;

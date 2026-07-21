@@ -164,6 +164,10 @@ export class PurchaseOrder {
   @Prop({ type: Date, default: null })
   issuedAt!: Date | null;
 
+  /** Set when vendor accepts the issued PO via vendor portal. */
+  @Prop({ type: Date, default: null })
+  vendorAcceptedAt!: Date | null;
+
   @Prop({ type: String, trim: true, default: null })
   pdfPath!: string | null;
 

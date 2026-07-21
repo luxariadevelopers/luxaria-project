@@ -123,6 +123,10 @@ describe('StockReorderService', () => {
       configService,
     );
 
+    const mockPurchaseRequestsService = {
+      create: jest.fn(),
+    } as never;
+
     service = new StockReorderService(
       alertModel,
       materialModel,
@@ -131,6 +135,7 @@ describe('StockReorderService', () => {
       poModel,
       projectModel,
       configService,
+      mockPurchaseRequestsService,
     );
   }, 120_000);
 

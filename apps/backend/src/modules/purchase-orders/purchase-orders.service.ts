@@ -586,6 +586,45 @@ export class PurchaseOrdersService {
     );
   }
 
+  /**
+   * Vendor portal acceptance of an issued PO for the given vendor.
+   */
+  async acceptByVendor(id: string, vendorId: string, actorId: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid purchase order id');
+    }
+    const row = await this.poModel.findById(id).exec();
+    if (!row) {
+      throw new NotFoundException('Purchase order not found');
+    }
+    if (String(row.vendorId) !== vendorId) {
+      throw new BadRequestException(
+        'Purchase order does not belong to this vendor',
+      );
+    }
+    if (
+      row.status !== PurchaseOrderStatus.Issued &&
+      row.status !== PurchaseOrderStatus.PartiallyReceived
+    ) {
+      throw new BadRequestException(
+        'Only issued purchase orders can be accepted by the vendor',
+      );
+    }
+    if (row.vendorAcceptedAt) {
+      return createSuccessResponse(
+        toPublicPurchaseOrder(row),
+        'Purchase order already accepted',
+      );
+    }
+    row.vendorAcceptedAt = new Date();
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save();
+    return createSuccessResponse(
+      toPublicPurchaseOrder(row),
+      'Purchase order accepted by vendor',
+    );
+  }
+
   async cancel(id: string, actorId: string) {
     const row = await this.requirePo(id, actorId, 'update');
     if (

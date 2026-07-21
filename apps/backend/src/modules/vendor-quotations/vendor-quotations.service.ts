@@ -18,6 +18,7 @@ import {
   PurchaseRequest,
   PurchaseRequestStatus,
 } from '../purchase-requests/schemas/purchase-request.schema';
+import { RfqService } from '../rfq/rfq.service';
 import {
   Vendor,
   VendorStatus,
@@ -67,11 +68,26 @@ export class VendorQuotationsService {
     @InjectModel(Vendor.name) private readonly vendorModel: Model<Vendor>,
     @InjectModel(Material.name) private readonly materialModel: Model<Material>,
     private readonly numberingService: NumberingService,
+    private readonly rfqService: RfqService,
   ) {}
 
   async create(dto: CreateVendorQuotationDto, actorId: string) {
     const pr = await this.requireEligiblePurchaseRequest(dto.purchaseRequestId);
     await this.requireActiveVendor(dto.vendorId);
+
+    let rfqId: Types.ObjectId | null = null;
+    if (dto.rfqId) {
+      const rfq = await this.rfqService.requireIssuedWithVendor(
+        dto.rfqId,
+        dto.vendorId,
+      );
+      if (String(rfq.purchaseRequestId) !== String(pr._id)) {
+        throw new BadRequestException(
+          'rfqId purchase request does not match purchaseRequestId',
+        );
+      }
+      rfqId = rfq._id as Types.ObjectId;
+    }
 
     const quotationDate = this.parseDate(dto.quotationDate, 'quotationDate');
     const validityDate = this.parseDate(dto.validityDate, 'validityDate');
@@ -107,6 +123,7 @@ export class VendorQuotationsService {
     const row = await this.quotationModel.create({
       quotationNumber,
       purchaseRequestId: pr._id,
+      rfqId,
       projectId: pr.projectId,
       vendorId: new Types.ObjectId(dto.vendorId),
       quotationDate,

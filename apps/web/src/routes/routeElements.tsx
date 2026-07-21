@@ -112,7 +112,11 @@ import { PurchaseOrderDetailPage } from '@/pages/PurchaseOrderDetailPage';
 import { PurchaseOrdersPage } from '@/pages/PurchaseOrdersPage';
 import { PurchaseRequestCreatePage } from '@/pages/PurchaseRequestCreatePage';
 import { PurchaseRequestDetailPage } from '@/pages/PurchaseRequestDetailPage';
+import { ProcurementMastersPage } from '@/pages/ProcurementMastersPage';
 import { PurchaseRequestsPage } from '@/pages/PurchaseRequestsPage';
+import { RfqDetailPage } from '@/pages/RfqDetailPage';
+import { RfqListPage } from '@/pages/RfqListPage';
+import { VendorPortalRfqsPage } from '@/pages/VendorPortalRfqsPage';
 import { QualityInspectionDetailPage } from '@/pages/QualityInspectionDetailPage';
 import { QualityInspectionsPage } from '@/pages/QualityInspectionsPage';
 import { QuotationComparisonPage } from '@/pages/QuotationComparisonPage';
@@ -214,6 +218,10 @@ export const APP_ROUTE_ELEMENTS: {
   'purchase-orders': <PurchaseOrdersPage />,
   'purchase-order-create': <PurchaseOrderCreatePage />,
   'purchase-order-detail': <PurchaseOrderDetailPage />,
+  'procurement-masters': <ProcurementMastersPage />,
+  'rfq-list': <RfqListPage />,
+  'rfq-detail': <RfqDetailPage />,
+  'vendor-portal-rfqs': <VendorPortalRfqsPage />,
   'purchase-requests': <PurchaseRequestsPage />,
   'purchase-request-create': <PurchaseRequestCreatePage />,
   'purchase-request-detail': <PurchaseRequestDetailPage />,

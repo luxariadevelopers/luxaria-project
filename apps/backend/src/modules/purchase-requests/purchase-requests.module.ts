@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ProjectAccessModule } from '../project-access/project-access.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MaterialMasterModule } from '../material-master/material-master.module';
 import {
@@ -7,8 +6,10 @@ import {
   MaterialStockTransactionSchema,
 } from '../material-master/schemas/material-stock-transaction.schema';
 import { Material, MaterialSchema } from '../material-master/schemas/material.schema';
+import { ProjectAccessModule } from '../project-access/project-access.module';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { RbacModule } from '../rbac/rbac.module';
+import { SitesModule } from '../sites/sites.module';
 import { PurchaseRequestsController } from './purchase-requests.controller';
 import { PurchaseRequestsService } from './purchase-requests.service';
 import {
@@ -27,8 +28,9 @@ import {
       },
       { name: Project.name, schema: ProjectSchema },
     ]),
-    MaterialMasterModule,    ProjectAccessModule,
-
+    MaterialMasterModule,
+    ProjectAccessModule,
+    SitesModule,
     RbacModule,
   ],
   controllers: [PurchaseRequestsController],

@@ -17,6 +17,8 @@ import {
   PurchaseOrder,
   PurchaseOrderSchema,
 } from '../purchase-orders/schemas/purchase-order.schema';
+import { PurchaseRequestsModule } from '../purchase-requests/purchase-requests.module';
+import { RbacModule } from '../rbac/rbac.module';
 import {
   MaterialStockBalance,
   MaterialStockBalanceSchema,
@@ -49,6 +51,8 @@ const redisEnabled =
       { name: PurchaseOrder.name, schema: PurchaseOrderSchema },
       { name: Project.name, schema: ProjectSchema },
     ]),
+    PurchaseRequestsModule,
+    RbacModule,
     ...(redisEnabled
       ? [
           BullModule.forRootAsync({

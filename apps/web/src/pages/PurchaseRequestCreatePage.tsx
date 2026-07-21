@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -27,6 +27,7 @@ import {
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { useSitesList } from '@/employee-admin/useEmployees';
 import { ItemsGrid } from '@/purchase-requests/ItemsGrid';
 import { PRIORITY_OPTIONS } from '@/purchase-requests/labels';
 import { resolvePurchaseRequestCapabilities } from '@/purchase-requests/roleAccess';
@@ -58,6 +59,15 @@ export function PurchaseRequestCreatePage() {
 
   const create = useCreatePurchaseRequest();
   const submit = useSubmitPurchaseRequest();
+  const canViewSites = hasPermission('site.view');
+  const sitesQuery = useSitesList(
+    { projectId: selectedProjectId ?? undefined, page: 1, limit: 100 },
+    Boolean(selectedProjectId) && canViewSites,
+  );
+  const siteOptions = useMemo(
+    () => sitesQuery.data?.items ?? [],
+    [sitesQuery.data?.items],
+  );
 
   const { control, handleSubmit, setError, setValue } =
     useForm<PurchaseRequestFormValues>({
@@ -188,6 +198,66 @@ export function PurchaseRequestCreatePage() {
             </FormControl>
           )}
         />
+        {canViewSites ? (
+          <>
+            <Controller
+              name="siteId"
+              control={control}
+              render={({ field }) => (
+                <FormControl size="small" fullWidth disabled={busy}>
+                  <InputLabel id="pr-site">Requesting site</InputLabel>
+                  <Select
+                    {...field}
+                    value={field.value ?? ''}
+                    labelId="pr-site"
+                    label="Requesting site"
+                    data-testid="pr-site-select"
+                    onChange={(e) =>
+                      field.onChange(e.target.value || null)
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {siteOptions.map((site) => (
+                      <MenuItem key={site.id} value={site.id}>
+                        {site.siteCode} · {site.siteName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            />
+            <Controller
+              name="warehouseSiteId"
+              control={control}
+              render={({ field }) => (
+                <FormControl size="small" fullWidth disabled={busy}>
+                  <InputLabel id="pr-warehouse">Warehouse site (optional)</InputLabel>
+                  <Select
+                    {...field}
+                    value={field.value ?? ''}
+                    labelId="pr-warehouse"
+                    label="Warehouse site (optional)"
+                    data-testid="pr-warehouse-select"
+                    onChange={(e) =>
+                      field.onChange(e.target.value || null)
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {siteOptions.map((site) => (
+                      <MenuItem key={site.id} value={site.id}>
+                        {site.siteCode} · {site.siteName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            />
+          </>
+        ) : null}
       </FormSection>
 
       <ItemsGrid

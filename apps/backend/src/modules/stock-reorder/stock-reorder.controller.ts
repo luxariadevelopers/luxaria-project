@@ -1,5 +1,9 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { createSuccessResponse } from '../../common/dto/api-response.dto';
+import type { AuthUser } from '../auth/types/auth-user.type';
+import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import {
   EvaluateStockReorderDto,
@@ -8,8 +12,6 @@ import {
 } from './dto/stock-reorder.dto';
 import { StockReorderScheduler } from './stock-reorder.scheduler';
 import { StockReorderService } from './stock-reorder.service';
-import { createSuccessResponse } from '../../common/dto/api-response.dto';
-import { ProjectScoped } from '../project-access/decorators/route-scope.decorator';
 
 @ProjectScoped({
   mode: 'filter',
@@ -59,6 +61,22 @@ export class StockReorderController {
       outcome.mode === 'queued'
         ? 'Stock reorder evaluation queued'
         : 'Stock reorder evaluation completed',
+    );
+  }
+
+  @Post('alerts/:id/create-purchase-request')
+  @RequirePermissions('purchase.request')
+  @ApiOperation({
+    summary:
+      'Create draft purchase request from reorder alert recommended qty and resolve alert',
+  })
+  createPurchaseRequest(
+    @Param('id') id: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.stockReorderService.createPurchaseRequestFromAlert(
+      id,
+      actor.id,
     );
   }
 }

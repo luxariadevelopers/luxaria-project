@@ -92,6 +92,9 @@ export type PublicPurchaseRequest = {
   id: string;
   requestNumber: string;
   projectId: string;
+  siteId: string | null;
+  warehouseSiteId: string | null;
+  sourceReorderAlertId: string | null;
   requestedBy: string;
   requiredByDate: string;
   priority: PurchaseRequestPriority;
@@ -124,6 +127,9 @@ export type PurchaseRequestItemInput = {
 
 export type CreatePurchaseRequestInput = {
   projectId: string;
+  siteId?: string | null;
+  warehouseSiteId?: string | null;
+  sourceReorderAlertId?: string | null;
   requiredByDate: string;
   priority?: PurchaseRequestPriority;
   items: PurchaseRequestItemInput[];

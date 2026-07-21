@@ -62,6 +62,13 @@ export class CreateVendorQuotationDto {
   @IsMongoId()
   purchaseRequestId!: string;
 
+  @ApiPropertyOptional({
+    description: 'Optional RFQ; vendor must be invited when set',
+  })
+  @IsOptional()
+  @IsMongoId()
+  rfqId?: string | null;
+
   @ApiProperty()
   @IsMongoId()
   vendorId!: string;

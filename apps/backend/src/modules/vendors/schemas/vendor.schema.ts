@@ -111,6 +111,10 @@ export class Vendor {
   @Prop({ type: Types.ObjectId, ref: 'Company', default: null, index: true })
   companyId!: Types.ObjectId | null;
 
+  /** Linked login user for vendor portal access. */
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
+  userId!: Types.ObjectId | null;
+
   @Prop({ required: true, unique: true, trim: true, uppercase: true })
   vendorCode!: string;
 

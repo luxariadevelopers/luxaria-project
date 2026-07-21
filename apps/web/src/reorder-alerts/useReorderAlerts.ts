@@ -4,6 +4,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  createPurchaseRequestFromAlert,
   evaluateStockReorder,
   fetchReorderAlerts,
   fetchStockForecast,
@@ -43,6 +44,16 @@ export function useEvaluateStockReorder() {
   return useMutation({
     mutationFn: (input: EvaluateReorderInput = {}) =>
       evaluateStockReorder(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: reorderAlertsKeys.all });
+    },
+  });
+}
+
+export function useCreatePurchaseRequestFromAlert() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (alertId: string) => createPurchaseRequestFromAlert(alertId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: reorderAlertsKeys.all });
     },

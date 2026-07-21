@@ -7,4 +7,8 @@ export {
   buildPipelineCards,
   sumPipelineCounts,
 } from './derivePipeline';
+export {
+  fetchProcurementDashboard,
+  buildOpsPipelineCards,
+} from './procurementDashboardApi';
 export { todayIsoDate } from '@/finance-dashboard/FinanceFilters';

@@ -241,4 +241,12 @@ export class CreateVendorDto {
   @IsOptional()
   @IsMongoId()
   companyId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Linked login user for vendor portal access',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsMongoId()
+  userId?: string | null;
 }

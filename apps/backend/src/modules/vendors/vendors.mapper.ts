@@ -40,6 +40,7 @@ export type PublicVendorBankDetails = {
 export type PublicVendor = {
   id: string;
   companyId: string | null;
+  userId: string | null;
   vendorCode: string;
   legalName: string;
   tradeName: string | null;
@@ -92,6 +93,7 @@ export type PublicVendorProjectAssignment = {
 type VendorLike = {
   _id: Types.ObjectId | string;
   companyId?: Types.ObjectId | string | null;
+  userId?: Types.ObjectId | string | null;
   vendorCode: string;
   legalName: string;
   tradeName?: string | null;
@@ -134,6 +136,7 @@ export function toPublicVendor(
   return {
     id: String(vendor._id),
     companyId: vendor.companyId ? String(vendor.companyId) : null,
+    userId: vendor.userId ? String(vendor.userId) : null,
     vendorCode: vendor.vendorCode,
     legalName: vendor.legalName,
     tradeName: vendor.tradeName ?? null,

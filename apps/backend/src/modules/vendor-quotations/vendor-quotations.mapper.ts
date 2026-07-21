@@ -28,6 +28,7 @@ export type PublicVendorQuotation = {
   id: string;
   quotationNumber: string;
   purchaseRequestId: string;
+  rfqId: string | null;
   projectId: string;
   vendorId: string;
   quotationDate: Date;
@@ -104,6 +105,7 @@ type QuotationLike = {
   _id: Types.ObjectId | string;
   quotationNumber: string;
   purchaseRequestId: Types.ObjectId | string;
+  rfqId?: Types.ObjectId | string | null;
   projectId: Types.ObjectId | string;
   vendorId: Types.ObjectId | string;
   quotationDate: Date;
@@ -152,6 +154,7 @@ export function toPublicVendorQuotation(
     id: String(row._id),
     quotationNumber: row.quotationNumber,
     purchaseRequestId: String(row.purchaseRequestId),
+    rfqId: row.rfqId ? String(row.rfqId) : null,
     projectId: String(row.projectId),
     vendorId: String(row.vendorId),
     quotationDate: row.quotationDate,

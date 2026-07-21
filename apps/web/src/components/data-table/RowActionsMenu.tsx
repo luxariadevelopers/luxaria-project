@@ -46,6 +46,7 @@ export function RowActionsMenu<R extends GridValidRowModel>({
         {visible.map((action) => (
           <MenuItem
             key={action.id}
+            data-testid={action.id}
             disabled={action.disabled?.(row) ?? false}
             onClick={() => {
               setAnchor(null);

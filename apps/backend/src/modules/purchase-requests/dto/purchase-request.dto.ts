@@ -60,6 +60,25 @@ export class CreatePurchaseRequestDto {
   @IsMongoId()
   projectId!: string;
 
+  @ApiPropertyOptional({ description: 'Requesting site (must belong to project)' })
+  @IsOptional()
+  @IsMongoId()
+  siteId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Warehouse / store site for receipt planning',
+  })
+  @IsOptional()
+  @IsMongoId()
+  warehouseSiteId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Stock reorder alert that sourced this PR',
+  })
+  @IsOptional()
+  @IsMongoId()
+  sourceReorderAlertId?: string | null;
+
   @ApiProperty({ example: '2026-08-01' })
   @IsDateString()
   requiredByDate!: string;

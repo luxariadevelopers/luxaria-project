@@ -53,6 +53,7 @@ export type PublicPurchaseOrder = {
   approvalRequestId: string | null;
   issuedBy: string | null;
   issuedAt: Date | null;
+  vendorAcceptedAt: Date | null;
   pdfPath: string | null;
   pdfGeneratedAt: Date | null;
   balanceQuantity: number;
@@ -102,6 +103,7 @@ type PoLike = {
   approvalRequestId?: Types.ObjectId | string | null;
   issuedBy?: Types.ObjectId | string | null;
   issuedAt?: Date | null;
+  vendorAcceptedAt?: Date | null;
   pdfPath?: string | null;
   pdfGeneratedAt?: Date | null;
   balanceQuantity: number;
@@ -171,6 +173,7 @@ export function toPublicPurchaseOrder(row: PoLike): PublicPurchaseOrder {
       : null,
     issuedBy: row.issuedBy ? String(row.issuedBy) : null,
     issuedAt: row.issuedAt ?? null,
+    vendorAcceptedAt: row.vendorAcceptedAt ?? null,
     pdfPath: row.pdfPath ?? null,
     pdfGeneratedAt: row.pdfGeneratedAt ?? null,
     balanceQuantity: row.balanceQuantity,

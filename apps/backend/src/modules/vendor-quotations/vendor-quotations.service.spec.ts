@@ -96,12 +96,17 @@ describe('VendorQuotationsService', () => {
       accountModel.syncIndexes(),
     ]);
 
+    const mockRfqService = {
+      requireIssuedWithVendor: jest.fn(),
+    } as never;
+
     service = new VendorQuotationsService(
       quotationModel,
       prModel,
       vendorModel,
       materialModel,
       new NumberingService(counterModel),
+      mockRfqService,
     );
   }, 60_000);
 

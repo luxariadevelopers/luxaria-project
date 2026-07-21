@@ -141,3 +141,24 @@ export async function evaluateStockReorder(
   }
   return res.data;
 }
+
+export type CreatePrFromAlertResult = {
+  purchaseRequest: { id: string; requestNumber: string };
+  alert: PublicStockReorderAlert;
+};
+
+/** `POST /stock-reorder/alerts/:id/create-purchase-request` — `purchase.request` */
+export async function createPurchaseRequestFromAlert(
+  alertId: string,
+): Promise<CreatePrFromAlertResult> {
+  const res = await apiPost<CreatePrFromAlertResult>(
+    `/stock-reorder/alerts/${encodeURIComponent(alertId)}/create-purchase-request`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Create purchase request from alert failed');
+  }
+  return {
+    purchaseRequest: res.data.purchaseRequest,
+    alert: normaliseAlert(res.data.alert),
+  };
+}

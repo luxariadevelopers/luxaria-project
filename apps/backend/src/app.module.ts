@@ -48,12 +48,16 @@ import { LabourAttendanceModule } from './modules/labour-attendance/labour-atten
 import { ManpowerPlanningModule } from './modules/manpower-planning/manpower-planning.module';
 import { MaterialMasterModule } from './modules/material-master/material-master.module';
 import { PurchaseRequestsModule } from './modules/purchase-requests/purchase-requests.module';
+import { ProcurementMastersModule } from './modules/procurement-masters/procurement-masters.module';
+import { ProcurementDashboardModule } from './modules/procurement-dashboard/procurement-dashboard.module';
+import { RfqModule } from './modules/rfq/rfq.module';
 import { VendorQuotationsModule } from './modules/vendor-quotations/vendor-quotations.module';
 import { QuotationComparisonsModule } from './modules/quotation-comparisons/quotation-comparisons.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.module';
 import { VendorInvoicesModule } from './modules/vendor-invoices/vendor-invoices.module';
 import { VendorPaymentsModule } from './modules/vendor-payments/vendor-payments.module';
+import { VendorPortalModule } from './modules/vendor-portal/vendor-portal.module';
 import { QualityInspectionsModule } from './modules/quality-inspections/quality-inspections.module';
 import { StockLedgerModule } from './modules/stock-ledger/stock-ledger.module';
 import { StockCountsModule } from './modules/stock-counts/stock-counts.module';
@@ -145,13 +149,17 @@ import { ObservabilityModule } from './common/observability/observability.module
     MaterialIssuesModule,
     MaterialConsumptionModule,
     StockReorderModule,
+    ProcurementMastersModule,
     PurchaseRequestsModule,
+    RfqModule,
     VendorQuotationsModule,
     QuotationComparisonsModule,
     PurchaseOrdersModule,
     GoodsReceiptsModule,
     VendorInvoicesModule,
     VendorPaymentsModule,
+    VendorPortalModule,
+    ProcurementDashboardModule,
     QualityInspectionsModule,
     DocumentsModule,
     FinancialYearModule,

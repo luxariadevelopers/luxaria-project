@@ -34,6 +34,9 @@ function toDateOnly(value: unknown): string {
 function normaliseRequest(row: PublicPurchaseRequest): PublicPurchaseRequest {
   return {
     ...row,
+    siteId: row.siteId ?? null,
+    warehouseSiteId: row.warehouseSiteId ?? null,
+    sourceReorderAlertId: row.sourceReorderAlertId ?? null,
     requiredByDate: toDateOnly(row.requiredByDate) || row.requiredByDate,
     reviewedAt: toIso(row.reviewedAt),
     approvedAt: toIso(row.approvedAt),

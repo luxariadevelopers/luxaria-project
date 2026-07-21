@@ -443,6 +443,34 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="procurement-masters" />}>
+              <Route
+                path={toRelativeAppPath('/procurement/masters')}
+                element={APP_ROUTE_ELEMENTS['procurement-masters']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="rfq-list" />}>
+              <Route
+                path={toRelativeAppPath('/procurement/rfqs')}
+                element={APP_ROUTE_ELEMENTS['rfq-list']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="rfq-detail" />}>
+              <Route
+                path={toRelativeAppPath('/procurement/rfqs/:rfqId')}
+                element={APP_ROUTE_ELEMENTS['rfq-detail']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="vendor-portal-rfqs" />}>
+              <Route
+                path={toRelativeAppPath('/vendor-portal/rfqs')}
+                element={APP_ROUTE_ELEMENTS['vendor-portal-rfqs']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="purchase-requests" />}>
               <Route
                 path={toRelativeAppPath('/procurement/purchase-requests')}

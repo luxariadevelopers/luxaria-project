@@ -22,6 +22,7 @@ import type {
 } from '@/reorder-alerts/types';
 import { StockReorderAlertStatus as AlertStatus } from '@/reorder-alerts/types';
 import {
+  useCreatePurchaseRequestFromAlert,
   useEvaluateStockReorder,
   useReorderAlertsList,
   useStockForecast,
@@ -69,6 +70,7 @@ export function ReorderAlertsPage() {
     enabled,
   );
   const evaluate = useEvaluateStockReorder();
+  const createPr = useCreatePurchaseRequestFromAlert();
 
   const rows = useMemo(() => {
     const items = [...(list.data?.items ?? [])];
@@ -131,6 +133,22 @@ export function ReorderAlertsPage() {
     );
   };
 
+  const createPrFromAlert = (row: PublicStockReorderAlert) => {
+    void (async () => {
+      try {
+        const result = await createPr.mutateAsync(row.id);
+        success(
+          `Draft PR ${result.purchaseRequest.requestNumber} created from alert`,
+        );
+        navigate(
+          `/procurement/purchase-requests/${result.purchaseRequest.id}`,
+        );
+      } catch (err) {
+        notifyError(getErrorMessage(err));
+      }
+    })();
+  };
+
   return (
     <Stack spacing={2} data-testid="reorder-alerts-page">
       <Typography color="text.secondary">
@@ -177,6 +195,10 @@ export function ReorderAlertsPage() {
           ) : undefined
         }
         caps={caps}
+        onCreatePurchaseRequest={
+          caps.canCreatePurchaseRequest ? createPrFromAlert : undefined
+        }
+        createPrPendingId={createPr.isPending ? createPr.variables ?? null : null}
         onCreatePurchaseOrder={
           caps.canCreatePurchaseOrder ? createPo : undefined
         }

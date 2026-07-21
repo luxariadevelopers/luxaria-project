@@ -50,6 +50,8 @@ export const purchaseRequestItemFormSchema = z.object({
 
 export const purchaseRequestFormSchema = z.object({
   projectId: z.string().trim().min(1, 'Project is required'),
+  siteId: z.string().trim().min(1).nullable().optional(),
+  warehouseSiteId: z.string().trim().min(1).nullable().optional(),
   requiredByDate: isoDateOnlySchema,
   priority: z.enum(PRIORITY_VALUES, {
     required_error: 'Priority is required',
@@ -91,6 +93,8 @@ export function defaultPurchaseRequestValues(
 
   return {
     projectId: '',
+    siteId: null,
+    warehouseSiteId: null,
     requiredByDate,
     priority: PurchaseRequestPriority.Normal,
     justification: '',
@@ -104,6 +108,8 @@ export function shapeCreatePayload(
 ): CreatePurchaseRequestInput {
   return {
     projectId: values.projectId,
+    siteId: values.siteId?.trim() || null,
+    warehouseSiteId: values.warehouseSiteId?.trim() || null,
     requiredByDate: values.requiredByDate,
     priority: values.priority as CreatePurchaseRequestInput['priority'],
     justification: values.justification.trim(),

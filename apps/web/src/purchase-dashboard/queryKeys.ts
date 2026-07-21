@@ -1,5 +1,7 @@
 export const purchaseDashboardKeys = {
   all: ['purchase-dashboard'] as const,
+  ops: (projectId: string) =>
+    [...purchaseDashboardKeys.all, 'ops', projectId] as const,
   pipeline: (projectId: string, date: string) =>
     [...purchaseDashboardKeys.all, 'pipeline', projectId, date] as const,
   pendingPrs: (projectId: string) =>

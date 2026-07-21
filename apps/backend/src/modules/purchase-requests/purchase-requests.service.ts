@@ -17,6 +17,8 @@ import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { ProjectScopedDataHelper } from '../project-access/project-scoped-data.helper';
 import { Project } from '../projects/schemas/project.schema';
+import { SiteAccessService } from '../sites/site-access.service';
+import { SitesService } from '../sites/sites.service';
 import type {
   ApprovePurchaseRequestDto,
   CreatePurchaseRequestDto,
@@ -54,6 +56,8 @@ export class PurchaseRequestsService {
     @InjectModel(Project.name) private readonly projectModel: Model<Project>,
     private readonly numberingService: NumberingService,
     private readonly projectScope: ProjectScopedDataHelper,
+    private readonly sitesService: SitesService,
+    private readonly siteAccessService: SiteAccessService,
   ) {}
 
   async create(dto: CreatePurchaseRequestDto, actorId: string) {
@@ -64,6 +68,23 @@ export class PurchaseRequestsService {
       { resourceType: 'purchase-request' },
     );
     await this.requireProject(dto.projectId);
+    const siteId = await this.resolveSiteForProject(
+      dto.siteId,
+      dto.projectId,
+      'siteId',
+    );
+    const warehouseSiteId = await this.resolveSiteForProject(
+      dto.warehouseSiteId,
+      dto.projectId,
+      'warehouseSiteId',
+    );
+    if (siteId) {
+      await this.siteAccessService.assertSiteAccessIfScoped({
+        userId: actorId,
+        projectId: dto.projectId,
+        siteId: String(siteId),
+      });
+    }
     const requiredByDate = this.assertRequiredByDate(dto.requiredByDate);
     const built = await this.buildItems(dto.items, dto.projectId);
 
@@ -79,6 +100,11 @@ export class PurchaseRequestsService {
     const row = await this.requestModel.create({
       requestNumber,
       projectId: new Types.ObjectId(dto.projectId),
+      siteId,
+      warehouseSiteId,
+      sourceReorderAlertId: dto.sourceReorderAlertId
+        ? new Types.ObjectId(dto.sourceReorderAlertId)
+        : null,
       requestedBy: new Types.ObjectId(actorId),
       requiredByDate,
       priority: dto.priority ?? PurchaseRequestPriority.Normal,
@@ -104,6 +130,33 @@ export class PurchaseRequestsService {
       await this.requireProject(dto.projectId);
       row.projectId = new Types.ObjectId(dto.projectId);
     }
+    const projectId = String(row.projectId);
+    if (dto.siteId !== undefined) {
+      row.siteId = await this.resolveSiteForProject(
+        dto.siteId,
+        projectId,
+        'siteId',
+      );
+      if (row.siteId) {
+        await this.siteAccessService.assertSiteAccessIfScoped({
+          userId: actorId,
+          projectId,
+          siteId: String(row.siteId),
+        });
+      }
+    }
+    if (dto.warehouseSiteId !== undefined) {
+      row.warehouseSiteId = await this.resolveSiteForProject(
+        dto.warehouseSiteId,
+        projectId,
+        'warehouseSiteId',
+      );
+    }
+    if (dto.sourceReorderAlertId !== undefined) {
+      row.sourceReorderAlertId = dto.sourceReorderAlertId
+        ? new Types.ObjectId(dto.sourceReorderAlertId)
+        : null;
+    }
     if (dto.requiredByDate !== undefined) {
       row.requiredByDate = this.assertRequiredByDate(dto.requiredByDate);
     }
@@ -112,7 +165,7 @@ export class PurchaseRequestsService {
       row.justification = dto.justification.trim();
     }
     if (dto.items !== undefined) {
-      const built = await this.buildItems(dto.items, String(row.projectId));
+      const built = await this.buildItems(dto.items, projectId);
       row.items = built.items as PurchaseRequestItem[];
       row.warnings = built.headerWarnings;
       row.isPartiallyApproved = false;
@@ -681,6 +734,32 @@ export class PurchaseRequestsService {
       throw new NotFoundException('Project not found');
     }
     return project;
+  }
+
+  /**
+   * Validates optional site belongs to the given project.
+   */
+  private async resolveSiteForProject(
+    siteId: string | null | undefined,
+    projectId: string,
+    fieldName: string,
+  ): Promise<Types.ObjectId | null> {
+    if (siteId === undefined || siteId === null || siteId === '') {
+      return null;
+    }
+    if (!Types.ObjectId.isValid(siteId)) {
+      throw new BadRequestException(`Invalid ${fieldName}`);
+    }
+    const site = await this.sitesService.findById(siteId);
+    if (!site) {
+      throw new BadRequestException(`${fieldName} site not found`);
+    }
+    if (String(site.projectId) !== projectId) {
+      throw new BadRequestException(
+        `${fieldName} does not belong to the purchase request project`,
+      );
+    }
+    return site._id as Types.ObjectId;
   }
 
   private async requireActiveMaterial(materialId: string) {

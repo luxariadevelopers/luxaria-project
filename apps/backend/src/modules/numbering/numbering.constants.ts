@@ -13,6 +13,7 @@ export enum NumberEntityType {
   BOOKING_CANCELLATION = 'BOOKING_CANCELLATION',
   MATERIAL = 'MATERIAL',
   PURCHASE_REQUEST = 'PURCHASE_REQUEST',
+  RFQ = 'RFQ',
   VENDOR_QUOTATION = 'VENDOR_QUOTATION',
   QUOTATION_COMPARISON = 'QUOTATION_COMPARISON',
   PURCHASE_ORDER = 'PURCHASE_ORDER',
@@ -145,6 +146,12 @@ export const NUMBER_FORMATS: Record<NumberEntityType, NumberFormatConfig> = {
   },
   [NumberEntityType.PURCHASE_REQUEST]: {
     prefix: 'PR',
+    padLength: 6,
+    useFinancialYear: true,
+    allowProjectScope: true,
+  },
+  [NumberEntityType.RFQ]: {
+    prefix: 'RFQ',
     padLength: 6,
     useFinancialYear: true,
     allowProjectScope: true,

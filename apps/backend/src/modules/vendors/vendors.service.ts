@@ -91,6 +91,7 @@ export class VendorsService {
     try {
       const vendor = await this.vendorModel.create({
         companyId,
+        userId: dto.userId ? new Types.ObjectId(dto.userId) : null,
         vendorCode,
         legalName: dto.legalName.trim(),
         tradeName: dto.tradeName?.trim() || null,
@@ -203,6 +204,9 @@ export class VendorsService {
     if (dto.rating !== undefined) update.rating = dto.rating;
     if (dto.companyId !== undefined) {
       update.companyId = await this.resolveCompanyId(dto.companyId);
+    }
+    if (dto.userId !== undefined) {
+      update.userId = dto.userId ? new Types.ObjectId(dto.userId) : null;
     }
 
     try {

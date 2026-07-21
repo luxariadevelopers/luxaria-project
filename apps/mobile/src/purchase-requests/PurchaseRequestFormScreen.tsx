@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { useSite } from '@/context/SiteContext';
 import { useOfflineSync } from '@/offline';
 import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
@@ -24,6 +25,7 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
   const { hasPermission } = useAuth();
   const caps = resolvePurchaseRequestCapabilities(hasPermission);
   const { selectedProject } = useProject();
+  const { selectedSiteId, selectedSite } = useSite();
   const { isOnline } = useNetwork();
   const { enqueue } = useOfflineSync();
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
@@ -70,6 +72,7 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
     setSaving(true); setError(null);
     const payload = {
       projectId: selectedProject.id,
+      siteId: selectedSiteId,
       requiredByDate,
       justification: justification.trim(),
       items: [{ materialId, requestedQuantity: n, unit }],
@@ -99,6 +102,11 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
   return (
     <Screen title="New purchase request" subtitle={selectedProject?.projectCode ?? 'Select project'}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {selectedSite ? (
+        <Text style={styles.meta}>
+          Site {selectedSite.siteCode ?? selectedSiteId}
+        </Text>
+      ) : null}
       <Text style={styles.label}>Required by</Text>
       <TextInput style={styles.input} value={requiredByDate} onChangeText={setRequiredByDate} />
       <Text style={styles.label}>Material id</Text>
@@ -130,6 +138,7 @@ export function PurchaseRequestFormScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
+  meta: { color: colors.textMuted, marginBottom: 4, fontSize: 13 },
   input: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.text, paddingHorizontal: 12, paddingVertical: 10 },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },

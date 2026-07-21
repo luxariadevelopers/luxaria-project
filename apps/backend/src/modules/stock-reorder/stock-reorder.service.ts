@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { FilterQuery, Model, SortOrder } from 'mongoose';
@@ -23,6 +28,8 @@ import {
   PurchaseOrder,
   PurchaseOrderStatus,
 } from '../purchase-orders/schemas/purchase-order.schema';
+import { PurchaseRequestsService } from '../purchase-requests/purchase-requests.service';
+import { PurchaseRequestPriority } from '../purchase-requests/schemas/purchase-request.schema';
 import { MaterialStockBalance } from '../stock-ledger/schemas/material-stock-balance.schema';
 import type {
   EvaluateStockReorderDto,
@@ -79,6 +86,7 @@ export class StockReorderService {
     @InjectModel(Project.name)
     private readonly projectModel: Model<Project>,
     private readonly configService: ConfigService<AppConfig, true>,
+    private readonly purchaseRequestsService: PurchaseRequestsService,
   ) {}
 
   async getForecast(query: ForecastQueryDto) {
@@ -142,6 +150,64 @@ export class StockReorderService {
       items.map((row) => toPublicStockReorderAlert(row)),
       'Stock reorder alerts fetched successfully',
       buildPaginationMeta(page, limit, total),
+    );
+  }
+
+  /**
+   * Create a draft purchase request from an open reorder alert, then resolve it.
+   */
+  async createPurchaseRequestFromAlert(alertId: string, actorId: string) {
+    if (!Types.ObjectId.isValid(alertId)) {
+      throw new BadRequestException('Invalid alert id');
+    }
+    const alert = await this.alertModel.findById(alertId).exec();
+    if (!alert) {
+      throw new NotFoundException('Stock reorder alert not found');
+    }
+    if (alert.status !== StockReorderAlertStatus.Open) {
+      throw new BadRequestException(
+        'Only open reorder alerts can create a purchase request',
+      );
+    }
+
+    const qty = roundQty(alert.recommendedPurchaseQuantity);
+    if (qty <= 0) {
+      throw new BadRequestException(
+        'Alert has no recommended purchase quantity',
+      );
+    }
+
+    const requiredBy = new Date();
+    requiredBy.setDate(requiredBy.getDate() + 14);
+
+    const prResult = await this.purchaseRequestsService.create(
+      {
+        projectId: String(alert.projectId),
+        requiredByDate: requiredBy.toISOString().slice(0, 10),
+        priority: PurchaseRequestPriority.High,
+        justification: `Auto-created from stock reorder alert: ${alert.message}`,
+        sourceReorderAlertId: String(alert._id),
+        items: [
+          {
+            materialId: String(alert.materialId),
+            requestedQuantity: qty,
+            unit: alert.baseUnit,
+          },
+        ],
+      },
+      actorId,
+    );
+
+    alert.status = StockReorderAlertStatus.Resolved;
+    alert.set('updatedBy', new Types.ObjectId(actorId));
+    await alert.save();
+
+    return createSuccessResponse(
+      {
+        purchaseRequest: prResult.data,
+        alert: toPublicStockReorderAlert(alert),
+      },
+      'Purchase request created from reorder alert',
     );
   }
 

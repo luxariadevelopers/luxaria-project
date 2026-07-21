@@ -103,6 +103,23 @@ export class PurchaseRequest {
   @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
   projectId!: Types.ObjectId;
 
+  /** Optional requesting site (must belong to project). */
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null, index: true })
+  siteId!: Types.ObjectId | null;
+
+  /** Optional warehouse / store site for delivery planning. */
+  @Prop({ type: Types.ObjectId, ref: 'Site', default: null })
+  warehouseSiteId!: Types.ObjectId | null;
+
+  /** When created from MRP / stock-reorder alert. */
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'StockReorderAlert',
+    default: null,
+    index: true,
+  })
+  sourceReorderAlertId!: Types.ObjectId | null;
+
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   requestedBy!: Types.ObjectId;
 

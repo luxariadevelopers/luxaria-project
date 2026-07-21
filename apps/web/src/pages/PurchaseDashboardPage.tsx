@@ -18,11 +18,11 @@ import {
 } from '@/purchase-dashboard';
 
 /**
- * Purchase dashboard (Micro Phase 025).
+ * Purchase dashboard (Micro Phase 025 + Phase 3 ops).
  *
- * Composes existing list APIs (no dedicated purchase-dashboard module):
- * - `GET /purchase-requests` / `GET /purchase-orders` (`purchase.view`)
- * - `GET /vendor-invoices` (`vendor_invoice.view`)
+ * Prefers `GET /procurement/dashboard` for ops pipeline counts when available;
+ * falls back to composed list-API counts. Ageing / invoice sections still use
+ * list APIs.
  *
  * Route permission: `dashboard.view` (catalog has no `dashboard.purchase.view`).
  * Date + project filters are required before loading.
@@ -75,10 +75,13 @@ export function PurchaseDashboardPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} data-testid="procurement-dashboard-page">
       <Typography color="text.secondary">
         Procurement overview — PR/PO pipeline, due deliveries, invoice match
         exceptions and payments due. Date and project filters are required.
+        {dash.opsAvailable
+          ? ' Ops counts from /procurement/dashboard.'
+          : ' Using composed list counts (ops endpoint unavailable).'}
       </Typography>
 
       <PurchaseFilters
@@ -136,7 +139,9 @@ export function PurchaseDashboardPage() {
               }
               return canPurchase;
             })}
-            loading={dash.purchaseLoading || dash.invoiceLoading}
+            loading={
+              dash.opsLoading || dash.purchaseLoading || dash.invoiceLoading
+            }
           />
         </>
       ) : null}

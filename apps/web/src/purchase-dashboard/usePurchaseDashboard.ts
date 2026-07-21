@@ -17,6 +17,10 @@ import {
   pendingPrAgeingRows,
   toVendorExceptionRows,
 } from './derivePipeline';
+import {
+  buildOpsPipelineCards,
+  fetchProcurementDashboard,
+} from './procurementDashboardApi';
 import { purchaseDashboardKeys } from './queryKeys';
 import type { PipelineCountInput } from './derivePipeline';
 
@@ -52,6 +56,14 @@ export function usePurchaseDashboard(args: PurchaseDashArgs) {
     args.canDashboard;
   const projectId = args.projectId ?? '';
   const date = args.date;
+
+  const opsQuery = useQuery({
+    queryKey: purchaseDashboardKeys.ops(projectId),
+    enabled: enabled && args.canPurchase,
+    queryFn: () => fetchProcurementDashboard(projectId),
+    staleTime: 30_000,
+    retry: false,
+  });
 
   const prCountQueries = useQueries({
     queries: PENDING_PR_STATUSES.map((status) => ({
@@ -248,6 +260,7 @@ export function usePurchaseDashboard(args: PurchaseDashArgs) {
   const invoiceError = exceptionsQuery.error ?? paymentDueQuery.error;
 
   const refetchAll = () => {
+    void opsQuery.refetch();
     for (const q of prCountQueries) {
       void q.refetch();
     }
@@ -260,14 +273,24 @@ export function usePurchaseDashboard(args: PurchaseDashArgs) {
     void paymentDueQuery.refetch();
   };
 
+  const opsAvailable = Boolean(opsQuery.data) && !opsQuery.isError;
+  const composedCards = buildPipelineCards(counts);
+
   return {
-    pipelineCards: buildPipelineCards(counts),
+    /** Prefer dedicated ops counts when `GET /procurement/dashboard` succeeds. */
+    pipelineCards: opsAvailable
+      ? buildOpsPipelineCards(opsQuery.data!)
+      : composedCards,
+    composedPipelineCards: composedCards,
+    opsAvailable,
+    opsCounts: opsQuery.data ?? null,
     counts,
     pendingPrRows,
     dueDeliveryRows,
     paymentDueRows,
     exceptionRows,
     purchaseLoading,
+    opsLoading: args.canPurchase && (opsQuery.isLoading || opsQuery.isFetching),
     invoiceLoading,
     purchaseError,
     invoiceError,

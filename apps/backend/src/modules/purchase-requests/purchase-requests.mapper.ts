@@ -30,6 +30,9 @@ export type PublicPurchaseRequest = {
   id: string;
   requestNumber: string;
   projectId: string;
+  siteId: string | null;
+  warehouseSiteId: string | null;
+  sourceReorderAlertId: string | null;
   requestedBy: string;
   requiredByDate: Date;
   priority: PurchaseRequestPriority;
@@ -74,6 +77,9 @@ type RequestLike = {
   _id: Types.ObjectId | string;
   requestNumber: string;
   projectId: Types.ObjectId | string;
+  siteId?: Types.ObjectId | string | null;
+  warehouseSiteId?: Types.ObjectId | string | null;
+  sourceReorderAlertId?: Types.ObjectId | string | null;
   requestedBy: Types.ObjectId | string;
   requiredByDate: Date;
   priority: PurchaseRequestPriority;
@@ -142,6 +148,13 @@ export function toPublicPurchaseRequest(
     id: String(row._id),
     requestNumber: row.requestNumber,
     projectId: String(row.projectId),
+    siteId: row.siteId ? String(row.siteId) : null,
+    warehouseSiteId: row.warehouseSiteId
+      ? String(row.warehouseSiteId)
+      : null,
+    sourceReorderAlertId: row.sourceReorderAlertId
+      ? String(row.sourceReorderAlertId)
+      : null,
     requestedBy: String(row.requestedBy),
     requiredByDate: row.requiredByDate,
     priority: row.priority,

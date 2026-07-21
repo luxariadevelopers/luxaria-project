@@ -11,6 +11,8 @@ export type ReorderAlertCapabilities = {
   canEvaluate: boolean;
   /** Deep-link / create PO from recommended qty — `purchase.order`. */
   canCreatePurchaseOrder: boolean;
+  /** `POST …/create-purchase-request` — `purchase.request`. */
+  canCreatePurchaseRequest: boolean;
 };
 
 export function resolveReorderAlertCapabilities(
@@ -20,5 +22,6 @@ export function resolveReorderAlertCapabilities(
     canView: hasPermission('stock.view'),
     canEvaluate: hasPermission('stock.adjust'),
     canCreatePurchaseOrder: hasPermission('purchase.order'),
+    canCreatePurchaseRequest: hasPermission('purchase.request'),
   };
 }

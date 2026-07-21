@@ -14,9 +14,11 @@ import {
   getPurchaseOrder,
   type PurchaseOrderLine,
 } from '@/api/purchaseOrders';
+import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
+import { postGoodsReceipt } from '@/features/grn/api';
 import { buildGrnOfflineEnqueue } from '@/features/grn/buildGrnOfflineEnqueue';
 import type { AppStackParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
@@ -29,11 +31,14 @@ type Props = NativeStackScreenProps<AppStackParamList, 'GoodsReceipt'>;
 type LineState = PurchaseOrderLine & { receiveQty: string };
 
 export function GoodsReceiptScreen({ navigation, route }: Props) {
+  const { hasPermission } = useAuth();
+  const canPost = hasPermission('grn.approve');
   const { selectedProject } = useProject();
   const { isOnline } = useNetwork();
-  const { enqueue } = useOfflineSync();
+  const { enqueue, processQueue, getItemForActor } = useOfflineSync();
   const deepLinkedPoId = route.params?.purchaseOrderId?.trim() ?? '';
   const autoLoadedRef = useRef<string | null>(null);
+  const [lastCreatedGrnId, setLastCreatedGrnId] = useState<string | null>(null);
 
   const [poId, setPoId] = useState(deepLinkedPoId);
   const [poNumber, setPoNumber] = useState<string | undefined>();
@@ -166,13 +171,59 @@ export function GoodsReceiptScreen({ navigation, route }: Props) {
           })),
       });
 
-      await enqueue(enqueueInput);
+      const txn = await enqueue(enqueueInput);
+      let createdId: string | null = txn.serverRecordId;
+      if (isOnline) {
+        await processQueue();
+        const synced = await getItemForActor(txn.id);
+        createdId = synced?.serverRecordId ?? createdId;
+      }
+      if (createdId) setLastCreatedGrnId(createdId);
+
+      const buttons: Array<{
+        text: string;
+        onPress?: () => void;
+        style?: 'cancel' | 'default' | 'destructive';
+      }> = [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Tabs'),
+        },
+      ];
+      if (canPost && createdId) {
+        buttons.unshift({
+          text: 'Post',
+          onPress: () => {
+            void (async () => {
+              try {
+                const posted = await postGoodsReceipt(createdId!);
+                Alert.alert(
+                  'Posted',
+                  `GRN ${posted.grnNumber ?? createdId} posted to stock.`,
+                  [{ text: 'OK', onPress: () => navigation.navigate('Tabs') }],
+                );
+              } catch (err) {
+                Alert.alert(
+                  'Post failed',
+                  getErrorMessage(
+                    err,
+                    'GRN must be accepted before posting. Complete quality check on web if needed.',
+                  ),
+                );
+              }
+            })();
+          },
+        });
+      }
+
       Alert.alert(
-        'Queued',
+        'GRN submitted',
         isOnline
-          ? 'GRN queued — sync will upload photos then submit.'
+          ? createdId
+            ? `Goods receipt created${canPost ? '. You can post to stock if already accepted.' : '.'}`
+            : 'GRN queued — sync will upload photos then submit.'
           : 'GRN saved offline. It will sync when you are back online.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Tabs') }],
+        buttons,
       );
     } catch (error) {
       Alert.alert('GRN', getErrorMessage(error, 'Could not queue GRN'));
@@ -180,8 +231,10 @@ export function GoodsReceiptScreen({ navigation, route }: Props) {
       setSaving(false);
     }
   }, [
+    canPost,
     challan,
     enqueue,
+    getItemForActor,
     gps,
     isOnline,
     lines,
@@ -189,6 +242,7 @@ export function GoodsReceiptScreen({ navigation, route }: Props) {
     photos,
     poId,
     poNumber,
+    processQueue,
     selectedProject?.id,
     vehicle,
     vendorId,
@@ -303,6 +357,33 @@ export function GoodsReceiptScreen({ navigation, route }: Props) {
           </Text>
         )}
       </Pressable>
+
+      {canPost && lastCreatedGrnId ? (
+        <Pressable
+          style={[styles.secondaryBtn, { marginTop: 12 }]}
+          onPress={() => {
+            void (async () => {
+              try {
+                const posted = await postGoodsReceipt(lastCreatedGrnId);
+                Alert.alert(
+                  'Posted',
+                  `GRN ${posted.grnNumber ?? lastCreatedGrnId} posted to stock.`,
+                );
+              } catch (err) {
+                Alert.alert(
+                  'Post failed',
+                  getErrorMessage(
+                    err,
+                    'GRN must be accepted before posting.',
+                  ),
+                );
+              }
+            })();
+          }}
+        >
+          <Text style={styles.secondaryBtnText}>Post last GRN to stock</Text>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }

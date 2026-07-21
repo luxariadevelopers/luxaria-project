@@ -105,6 +105,16 @@ export function PurchaseRequestDetailPage() {
         value: projectLabel,
       },
       {
+        id: 'site',
+        label: 'Requesting site',
+        value: row.siteId ?? '—',
+      },
+      {
+        id: 'warehouse',
+        label: 'Warehouse site',
+        value: row.warehouseSiteId ?? '—',
+      },
+      {
         id: 'lines',
         label: 'Lines',
         value: String(row.items.length),

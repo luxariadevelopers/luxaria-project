@@ -41,6 +41,8 @@ describe('PurchaseRequestsService', () => {
   let projectId: string;
   let materialId: string;
   let actorId: string;
+  let findSiteById: jest.Mock;
+  let assertSiteAccessIfScoped: jest.Mock;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -92,6 +94,8 @@ describe('PurchaseRequestsService', () => {
       authorisedProjectMatchStage: jest.fn().mockResolvedValue({}),
     } as never;
 
+    findSiteById = jest.fn().mockResolvedValue(null);
+    assertSiteAccessIfScoped = jest.fn().mockResolvedValue(undefined);
 
     service = new PurchaseRequestsService(
       requestModel,
@@ -99,7 +103,9 @@ describe('PurchaseRequestsService', () => {
       stockTxnModel,
       projectModel,
       new NumberingService(counterModel),
-      mockProjectScope
+      mockProjectScope,
+      { findById: findSiteById } as never,
+      { assertSiteAccessIfScoped } as never,
     );
   }, 60_000);
 
@@ -110,6 +116,8 @@ describe('PurchaseRequestsService', () => {
 
   beforeEach(async () => {
     actorId = new Types.ObjectId().toHexString();
+    findSiteById.mockReset().mockResolvedValue(null);
+    assertSiteAccessIfScoped.mockReset().mockResolvedValue(undefined);
     await connection
       .model(PurchaseRequest.name)
       .deleteMany({})
@@ -226,6 +234,61 @@ describe('PurchaseRequestsService', () => {
     expect(created.data?.items[0]?.reorderLevel).toBe(50);
     expect(created.data?.items[0]?.warnings.length).toBeGreaterThan(0);
     expect(created.data?.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('validates siteId belongs to project and enforces site access when scoped', async () => {
+    const siteId = new Types.ObjectId();
+    findSiteById.mockResolvedValue({
+      _id: siteId,
+      projectId: new Types.ObjectId(projectId),
+    });
+
+    const created = await service.create(
+      {
+        projectId,
+        siteId: String(siteId),
+        requiredByDate: '2026-08-15',
+        justification: 'Site PR',
+        items: [
+          {
+            materialId,
+            requestedQuantity: 10,
+            unit: MaterialUnit.Bag,
+          },
+        ],
+      },
+      actorId,
+    );
+
+    expect(created.data?.siteId).toBe(String(siteId));
+    expect(assertSiteAccessIfScoped).toHaveBeenCalledWith({
+      userId: actorId,
+      projectId,
+      siteId: String(siteId),
+    });
+
+    findSiteById.mockResolvedValue({
+      _id: new Types.ObjectId(),
+      projectId: new Types.ObjectId(),
+    });
+    await expect(
+      service.create(
+        {
+          projectId,
+          siteId: new Types.ObjectId().toHexString(),
+          requiredByDate: '2026-08-15',
+          justification: 'Wrong site',
+          items: [
+            {
+              materialId,
+              requestedQuantity: 10,
+              unit: MaterialUnit.Bag,
+            },
+          ],
+        },
+        actorId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('runs Draft → Submitted → Reviewed → Approved → Sourcing → Closed', async () => {
