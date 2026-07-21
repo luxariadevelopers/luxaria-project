@@ -39,9 +39,14 @@ test.describe('Golden path: petty cash → expense → posting', () => {
       e2eEnv.financeApprover.identifier,
       e2eEnv.financeApprover.password,
     );
+    const financeManagerApi = await createAuthenticatedApi(
+      request,
+      e2eEnv.financeManager.identifier,
+      e2eEnv.financeManager.password,
+    );
 
     await adminApi.runPettyCashGoldenPath(
-      { purchaseApi, financeApi },
+      { purchaseApi, financeApi, financeManagerApi },
       toGoldenPathContext({
         projectId: state.projectId,
         adminUserId: state.adminUserId,

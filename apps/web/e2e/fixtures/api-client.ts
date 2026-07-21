@@ -1026,6 +1026,7 @@ export class E2eApiClient {
     actors: {
       purchaseApi: E2eApiClient;
       financeApi: E2eApiClient;
+      financeManagerApi: E2eApiClient;
     },
     ctx: GoldenPathContext & {
       pettyCashLedgerAccountId: string;
@@ -1122,14 +1123,14 @@ export class E2eApiClient {
       await this.post(`/site-expense-vouchers/${voucher.id}/submit`),
       'submit expense voucher',
     );
-    await actors.purchaseApi.parseEnvelope(
-      await actors.purchaseApi.post(
+    await actors.financeApi.parseEnvelope(
+      await actors.financeApi.post(
         `/site-expense-vouchers/${voucher.id}/verify`,
       ),
       'verify expense voucher',
     );
-    await actors.financeApi.parseEnvelope(
-      await actors.financeApi.post(
+    await actors.financeManagerApi.parseEnvelope(
+      await actors.financeManagerApi.post(
         `/site-expense-vouchers/${voucher.id}/approve`,
       ),
       'approve expense voucher',
