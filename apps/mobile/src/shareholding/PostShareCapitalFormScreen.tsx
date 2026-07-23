@@ -1,19 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { formatInr } from '@/format';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import {
   fetchActiveCompanyBankAccounts,
@@ -27,7 +25,7 @@ import type {
   PublicShareholding,
 } from '@/directors/types';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { resolveShareholdingCapabilities } from './permissions';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PostShareCapital'>;
@@ -196,80 +194,62 @@ export function PostShareCapitalFormScreen({ navigation }: Props) {
       ) : (
         <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Text style={styles.intro}>
-            Cap table alone does not move money. This posts each
-            director&apos;s capital (shares × face value) into the selected
-            company bank account.
-          </Text>
-
-          {lines.map((line) => (
-            <View key={line.directorId} style={styles.card}>
-              <Text style={styles.code}>{line.label}</Text>
-              <Text style={styles.meta}>
-                {line.numberOfShares.toLocaleString('en-IN')} ×{' '}
-                {formatInr(line.faceValue)} = {formatInr(line.amount)}
-              </Text>
-            </View>
-          ))}
-
-          <View style={styles.totalCard}>
-            <Text style={styles.totalLabel}>Total capital income</Text>
-            <Text style={styles.totalValue}>{formatInr(totalAmount)}</Text>
-          </View>
-
-          <Text style={styles.label}>Bank account</Text>
-          <View style={styles.chips}>
-            {banks.map((bank) => (
-              <Pressable
-                key={bank.id}
-                style={[
-                  styles.chip,
-                  bankAccountId === bank.id && styles.chipActive,
-                ]}
-                onPress={() => setBankAccountId(bank.id)}
-              >
-                <Text style={styles.chipText}>
-                  {bank.bankName} · {bank.maskedAccountNumber}
-                  {bank.isDefault ? ' (default)' : ''}
-                </Text>
-              </Pressable>
+          <FormSection
+            title="Share capital"
+            description="Cap table alone does not move money. This posts each director's capital (shares × face value) into the selected company bank account."
+            framed={false}
+          >
+            {lines.map((line) => (
+              <ListRow
+                key={line.directorId}
+                title={line.label}
+                meta={`${line.numberOfShares.toLocaleString('en-IN')} × ${formatInr(line.faceValue)} = ${formatInr(line.amount)}`}
+              />
             ))}
-          </View>
-          {banks.length === 0 ? (
-            <Text style={styles.meta}>No active company bank accounts.</Text>
-          ) : null}
+          </FormSection>
 
-          <Text style={styles.label}>Received date (YYYY-MM-DD)</Text>
-          <TextInput
-            style={styles.input}
-            value={receivedDate}
-            onChangeText={setReceivedDate}
-            autoCapitalize="none"
-          />
+          <FormSection title="Total capital income">
+            <Text style={styles.totalValue}>{formatInr(totalAmount)}</Text>
+          </FormSection>
 
-          <Text style={styles.label}>Reference (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={reference}
-            onChangeText={setReference}
-            placeholder="Board resolution / receipt ref"
-            placeholderTextColor={colors.textMuted}
-          />
+          <FormSection title="Bank posting">
+            <Text style={styles.label}>Bank account</Text>
+            <View style={styles.chips}>
+              {banks.map((bank) => (
+                <Chip
+                  key={bank.id}
+                  label={`${bank.bankName} · ${bank.maskedAccountNumber}${
+                    bank.isDefault ? ' (default)' : ''
+                  }`}
+                  selected={bankAccountId === bank.id}
+                  onPress={() => setBankAccountId(bank.id)}
+                />
+              ))}
+            </View>
+            {banks.length === 0 ? (
+              <Text style={styles.meta}>No active company bank accounts.</Text>
+            ) : null}
 
-          <Pressable
-            style={[
-              styles.submit,
-              (saving || !bankAccountId || totalAmount <= 0) && styles.disabled,
-            ]}
+            <TextField
+              label="Received date (YYYY-MM-DD)"
+              value={receivedDate}
+              onChangeText={setReceivedDate}
+              autoCapitalize="none"
+            />
+            <TextField
+              label="Reference (optional)"
+              value={reference}
+              onChangeText={setReference}
+              placeholder="Board resolution / receipt ref"
+            />
+          </FormSection>
+
+          <Button
+            label={`Post ${formatInr(totalAmount)} to bank book`}
+            loading={saving}
             disabled={saving || !bankAccountId || totalAmount <= 0}
             onPress={confirmPost}
-          >
-            <Text style={styles.submitText}>
-              {saving
-                ? 'Posting…'
-                : `Post ${formatInr(totalAmount)} to bank book`}
-            </Text>
-          </Pressable>
+          />
         </>
       )}
     </Screen>
@@ -277,62 +257,17 @@ export function PostShareCapitalFormScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  intro: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
+  label: { ...typography.label, marginBottom: spacing.sm },
+  meta: { ...typography.meta, marginTop: spacing.xs, fontSize: 13 },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 12,
-    marginBottom: 8,
-  },
-  code: { color: colors.text, fontWeight: '700' },
-  meta: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
-  totalCard: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-    padding: 14,
-    marginVertical: 12,
-  },
-  totalLabel: { color: colors.textMuted, fontSize: 12 },
   totalValue: {
-    color: colors.text,
-    fontWeight: '700',
+    ...typography.bodyStrong,
     fontSize: 18,
-    marginTop: 4,
   },
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-  },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  submit: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: colors.danger, marginBottom: 8 },
+  error: { color: colors.danger, marginBottom: spacing.sm },
 });

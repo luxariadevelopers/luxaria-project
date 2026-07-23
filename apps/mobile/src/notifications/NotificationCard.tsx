@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { InboxNotification } from '@/api/notifications';
-import { colors } from '@/theme/colors';
+import { colors, hitSlopMin, radii, spacing, typography } from '@/theme';
 
 type Props = {
   notification: InboxNotification;
@@ -32,7 +32,11 @@ export function NotificationCard({
 
   return (
     <Pressable
-      style={[styles.card, !notification.isRead && styles.unread]}
+      style={({ pressed }) => [
+        styles.card,
+        !notification.isRead && styles.unread,
+        pressed && styles.pressed,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityHint={
@@ -62,46 +66,49 @@ export function NotificationCard({
 
 const styles = StyleSheet.create({
   card: {
+    minHeight: hitSlopMin,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: radii.md,
+    padding: spacing.lg - 2,
+    marginBottom: spacing.sm,
   },
   unread: {
     borderColor: colors.primary,
     backgroundColor: '#E8EEF1',
   },
+  pressed: {
+    opacity: 0.9,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-    marginBottom: 6,
+    gap: spacing.sm,
+    marginBottom: spacing.sm - 2,
   },
   title: {
     flex: 1,
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.bodyStrong,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.secondary,
-    marginTop: 6,
+    marginTop: spacing.sm - 2,
   },
   body: {
-    color: colors.text,
+    ...typography.body,
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   meta: {
-    color: colors.textMuted,
+    ...typography.meta,
     fontSize: 12,
     textTransform: 'capitalize',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   cta: {
     color: colors.primary,

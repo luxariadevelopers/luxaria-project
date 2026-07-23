@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@/auth/AuthContext';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -32,7 +30,7 @@ import {
 } from '@/features/material-issue/validation';
 import type { AppStackParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
-import { colors } from '@/theme/colors';
+import { spacing, typography } from '@/theme';
 import { pickImageFromCamera, type LocalFile } from '@/utils/fileUpload';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MaterialReturn'>;
@@ -280,10 +278,10 @@ export function MaterialReturnScreen({ navigation, route }: Props) {
   if (!canReturn) {
     return (
       <Screen title="Material return" subtitle="Permission required">
-        <Text style={styles.error}>
-          Permission denied — Nest catalog code stock.issue is required (alias
-          material_issue.return is not in the catalog).
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="Permission denied — Nest catalog code stock.issue is required (alias material_issue.return is not in the catalog)."
+        />
       </Screen>
     );
   }
@@ -298,115 +296,96 @@ export function MaterialReturnScreen({ navigation, route }: Props) {
       }
     >
       {forbidden ? (
-        <Text style={styles.error}>
-          Permission denied while loading issues (stock.view).
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="Permission denied while loading issues (stock.view)."
+          onRetry={() => void loadSources()}
+        />
       ) : null}
       {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.error}>{error}</Text>
-          <Pressable style={styles.secondaryBtn} onPress={() => void loadSources()}>
-            <Text style={styles.secondaryBtnText}>Retry</Text>
-          </Pressable>
-        </View>
+        <AsyncStatePanel error={error} onRetry={() => void loadSources()} />
       ) : null}
 
-      <Text style={styles.label}>Source issue</Text>
-      {loading && !issue ? (
-        <ActivityIndicator color={colors.primary} />
-      ) : null}
-      {!issue && !loading ? (
-        sourceIssues.length === 0 ? (
-          <Text style={styles.empty}>
-            No confirmed issues available. Confirm an issue before returning.
-          </Text>
-        ) : (
-          sourceIssues.map((row) => (
-            <Pressable
-              key={row.id}
-              style={styles.issueOption}
-              onPress={() => void selectIssue(row.id)}
-            >
-              <Text style={styles.issueTitle}>{row.issueNumber}</Text>
-              <Text style={styles.meta}>{row.workLocation}</Text>
-            </Pressable>
-          ))
-        )
-      ) : null}
+      <FormSection title="Source issue" framed={false}>
+        {loading && !issue ? (
+          <AsyncStatePanel loading loadingLabel="Loading issues…" />
+        ) : null}
+        {!issue && !loading ? (
+          sourceIssues.length === 0 ? (
+            <Text style={styles.empty}>
+              No confirmed issues available. Confirm an issue before returning.
+            </Text>
+          ) : (
+            sourceIssues.map((row) => (
+              <ListRow
+                key={row.id}
+                title={row.issueNumber}
+                meta={row.workLocation}
+                onPress={() => void selectIssue(row.id)}
+              />
+            ))
+          )
+        ) : null}
 
-      {issue ? (
-        <View style={styles.selectedIssue}>
-          <Text style={styles.issueTitle}>{issue.issueNumber}</Text>
-          <Text style={styles.meta}>
-            {issue.workLocation} · {returnableCount} returnable line(s)
-          </Text>
-          <Pressable
-            onPress={() => {
-              setIssue(null);
-              setLines([]);
-            }}
-          >
-            <Text style={styles.link}>Change source issue</Text>
-          </Pressable>
-        </View>
-      ) : null}
+        {issue ? (
+          <ListRow
+            title={issue.issueNumber}
+            meta={`${issue.workLocation} · ${returnableCount} returnable line(s)`}
+            rightSlot={
+              <Button
+                label="Change"
+                variant="ghost"
+                onPress={() => {
+                  setIssue(null);
+                  setLines([]);
+                }}
+              />
+            }
+          />
+        ) : null}
+      </FormSection>
 
-      <Text style={styles.label}>Return date</Text>
-      <TextInput
-        style={styles.input}
-        value={returnDate}
-        onChangeText={setReturnDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Recipient (returned by)</Text>
-      {canViewUsers && recipients.length > 0 ? (
-        <View style={styles.recipientList}>
-          {recipients.slice(0, 12).map((person) => {
-            const selected = returnedBy === person.id;
-            return (
-              <Pressable
-                key={person.id}
-                style={[
-                  styles.recipientChip,
-                  selected && styles.recipientChipSelected,
-                ]}
-                onPress={() => setReturnedBy(person.id)}
-              >
-                <Text
-                  style={[
-                    styles.recipientChipText,
-                    selected && styles.recipientChipTextSelected,
-                  ]}
-                >
-                  {person.fullName}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : (
-        <TextInput
-          style={styles.input}
-          value={returnedBy}
-          onChangeText={setReturnedBy}
-          placeholder="User id (defaults to you)"
-          placeholderTextColor={colors.textMuted}
+      <FormSection title="Return details">
+        <TextField
+          label="Return date"
+          value={returnDate}
+          onChangeText={setReturnDate}
+          placeholder="YYYY-MM-DD"
           autoCapitalize="none"
+          containerStyle={styles.fieldFlush}
         />
-      )}
+
+        <Text style={styles.label}>Recipient (returned by)</Text>
+        {canViewUsers && recipients.length > 0 ? (
+          <View style={styles.chipRow}>
+            {recipients.slice(0, 12).map((person) => (
+              <Chip
+                key={person.id}
+                label={person.fullName}
+                selected={returnedBy === person.id}
+                onPress={() => setReturnedBy(person.id)}
+              />
+            ))}
+          </View>
+        ) : (
+          <TextField
+            value={returnedBy}
+            onChangeText={setReturnedBy}
+            placeholder="User id (defaults to you)"
+            autoCapitalize="none"
+            containerStyle={styles.fieldFlush}
+          />
+        )}
+      </FormSection>
 
       {lines.map((line) => (
-        <View key={line.materialId} style={styles.lineCard}>
-          <Text style={styles.lineTitle}>{line.materialLabel}</Text>
-          <Text style={styles.meta}>
-            Outstanding {line.remainingBaseQuantity} {line.unit}
-          </Text>
-          <Text style={styles.label}>Return qty</Text>
-          <TextInput
-            style={styles.input}
+        <FormSection
+          key={line.materialId}
+          title={line.materialLabel}
+          description={`Outstanding ${line.remainingBaseQuantity} ${line.unit}`}
+        >
+          <TextField
+            label="Return qty"
             keyboardType="decimal-pad"
             value={line.quantityText}
             onChangeText={(value) =>
@@ -419,11 +398,9 @@ export function MaterialReturnScreen({ navigation, route }: Props) {
               )
             }
             placeholder="0"
-            placeholderTextColor={colors.textMuted}
           />
-          <Text style={styles.label}>Reason</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Reason"
             value={line.reason}
             onChangeText={(value) =>
               setLines((prev) =>
@@ -435,9 +412,9 @@ export function MaterialReturnScreen({ navigation, route }: Props) {
               )
             }
             placeholder="Unused / over-issued"
-            placeholderTextColor={colors.textMuted}
+            containerStyle={styles.fieldFlush}
           />
-        </View>
+        </FormSection>
       ))}
 
       {issue && lines.length === 0 ? (
@@ -446,120 +423,46 @@ export function MaterialReturnScreen({ navigation, route }: Props) {
         </Text>
       ) : null}
 
-      <Text style={styles.label}>Notes</Text>
-      <TextInput
-        style={[styles.input, styles.notes]}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-        placeholder="Optional notes"
-        placeholderTextColor={colors.textMuted}
-      />
+      <FormSection title="Notes & evidence" framed={false}>
+        <TextField
+          label="Notes"
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          placeholder="Optional notes"
+          style={styles.notes}
+        />
+        <Button
+          label={`Add photo (${photos.length})`}
+          variant="secondary"
+          onPress={() => void capturePhoto()}
+        />
+      </FormSection>
 
-      <Pressable style={styles.secondaryBtn} onPress={() => void capturePhoto()}>
-        <Text style={styles.secondaryBtnText}>
-          Add photo ({photos.length})
-        </Text>
-      </Pressable>
-
-      <Pressable
-        style={[styles.primaryBtn, saving && styles.primaryBtnDisabled]}
-        disabled={saving || !issue}
+      <Button
+        label={isOnline ? 'Queue return for sync' : 'Save return offline'}
+        loading={saving}
+        disabled={!issue}
         onPress={() => void submit()}
-      >
-        {saving ? (
-          <ActivityIndicator color="#F4F0E6" />
-        ) : (
-          <Text style={styles.primaryBtnText}>
-            {isOnline ? 'Queue return for sync' : 'Save return offline'}
-          </Text>
-        )}
-      </Pressable>
+        style={styles.submit}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   label: {
-    marginTop: 12,
-    marginBottom: 6,
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    ...typography.label,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
-    fontSize: 15,
-  },
-  notes: { minHeight: 72, textAlignVertical: 'top' },
-  meta: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
-  empty: { color: colors.textMuted, lineHeight: 20, marginBottom: 8 },
-  error: { color: colors.danger, lineHeight: 20 },
-  errorBox: { marginBottom: 12, gap: 8 },
-  link: { color: colors.primary, fontWeight: '600', marginTop: 8 },
-  issueOption: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 12,
-    marginBottom: 8,
-  },
-  selectedIssue: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-    padding: 12,
-    marginTop: 4,
-  },
-  issueTitle: { color: colors.text, fontWeight: '700', fontSize: 15 },
-  lineCard: {
-    marginTop: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  lineTitle: { color: colors.text, fontWeight: '600', fontSize: 15 },
-  recipientList: {
+  fieldFlush: { marginBottom: 0 },
+  empty: { ...typography.meta, lineHeight: 20, marginBottom: spacing.sm },
+  chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
-  recipientChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.surface,
-  },
-  recipientChipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  recipientChipText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-  recipientChipTextSelected: { color: '#F4F0E6' },
-  secondaryBtn: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  secondaryBtnText: { color: colors.primary, fontWeight: '600' },
-  primaryBtn: {
-    marginTop: 20,
-    marginBottom: 24,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryBtnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: '#F4F0E6', fontWeight: '700', fontSize: 15 },
+  notes: { minHeight: 72, textAlignVertical: 'top' },
+  submit: { marginTop: spacing.md, marginBottom: spacing.xxxl },
 });

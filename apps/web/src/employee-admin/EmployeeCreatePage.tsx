@@ -30,6 +30,7 @@ import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useProjectsList } from '@/projects/useProjects';
 import { useUsersList } from '@/user-admin/useUsers';
 import {
@@ -461,13 +462,10 @@ export function EmployeeCreatePage() {
 
   return (
     <Stack spacing={2.5} data-testid="employee-create-page">
-      <Stack spacing={0.5}>
-        <Typography variant="h5">Create Employee</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Add employee details, choose designation (who they are appointed
-          as), set login, access, and project/site assignment.
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="Create Employee"
+        subtitle="Add employee details, choose designation (who they are appointed as), set login, access, and project/site assignment."
+      />
 
       <Stepper activeStep={activeStep} alternativeLabel>
         {STEPS.map((label) => (

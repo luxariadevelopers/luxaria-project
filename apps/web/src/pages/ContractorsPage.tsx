@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { BlockContractorDialog } from '@/contractors/BlockContractorDialog';
 import { CreateContractorDrawer } from '@/contractors/CreateContractorDrawer';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   ContractorFilters,
   type ContractorFilterState,
@@ -83,10 +84,9 @@ export function ContractorsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Contractor master — search, verification, activation, and blocking. Bank
-        account numbers are never shown in this list.
-      </Typography>
+      <PageHeader
+        subtitle="Contractor master — search, verification, activation, and blocking. Bank account numbers are never shown in this list."
+      />
 
       <ContractorTable
         rows={contractorsQuery.data?.items ?? []}

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { CreateCustomerDrawer } from '@/customers/CreateCustomerDrawer';
 import {
   CustomerFilters,
@@ -82,10 +83,17 @@ export function CustomersPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Customer master — search, KYC review, and activation. Aadhaar is masked
-        in this list.
-      </Typography>
+      <PageHeader
+        title="Customers"
+        subtitle="Customer master — search, KYC review, and activation. Aadhaar is masked in this list."
+        actions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New customer
+            </Button>
+          ) : undefined
+        }
+      />
 
       <CustomerTable
         rows={customersQuery.data?.items ?? []}
@@ -113,13 +121,6 @@ export function CustomersPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canCreate ? (
-            <Button variant="contained" onClick={() => setCreateOpen(true)}>
-              New customer
-            </Button>
-          ) : undefined
         }
         canVerifyKyc={caps.canVerifyKyc}
         canActivate={caps.canActivate}

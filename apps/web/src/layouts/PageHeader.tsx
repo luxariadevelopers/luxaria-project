@@ -15,7 +15,7 @@ type PageHeaderProps = {
 
 /**
  * Consistent page chrome inside the app shell: breadcrumbs, title, actions.
- * Keeps the first content band stable across desktop and narrow viewports.
+ * On narrow viewports, primary actions stick under the app bar.
  */
 export function PageHeader({
   title,
@@ -44,6 +44,18 @@ export function PageHeader({
             justifyContent: 'space-between',
             gap: 1.5,
             minWidth: 0,
+            position: { xs: 'sticky', sm: 'static' },
+            top: { xs: 56, sm: 'auto' },
+            zIndex: { xs: 2, sm: 'auto' },
+            bgcolor: { xs: 'background.default', sm: 'transparent' },
+            py: { xs: 0.75, sm: 0 },
+            mx: { xs: -0.5, sm: 0 },
+            px: { xs: 0.5, sm: 0 },
+            borderBottom: {
+              xs: '1px solid',
+              sm: 'none',
+            },
+            borderColor: { xs: 'divider', sm: 'transparent' },
           }}
         >
           <Box sx={{ minWidth: 0, flex: '1 1 200px' }}>
@@ -69,7 +81,11 @@ export function PageHeader({
                 display: 'flex',
                 flexWrap: 'wrap',
                 gap: 1,
-                flex: '0 1 auto',
+                flex: { xs: '1 1 100%', sm: '0 1 auto' },
+                justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                '& > *': {
+                  flex: { xs: '1 1 auto', sm: '0 0 auto' },
+                },
               }}
             >
               {actions}

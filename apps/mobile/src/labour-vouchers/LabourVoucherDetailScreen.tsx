@@ -1,22 +1,16 @@
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { getDocumentDownloadUrl, getLabourVoucher } from './api';
-import { AsyncStatePanel } from './components/AsyncStatePanel';
 import { LABOUR_VOUCHER_PERMISSIONS } from './permissions';
 import type { SignedPaymentVoucher } from './types';
 
@@ -91,7 +85,6 @@ export function LabourVoucherDetailScreen({ route }: Props) {
     <Screen
       title={voucher?.voucherNumber ?? 'Labour voucher'}
       subtitle="Signed payment voucher"
-      scroll={false}
     >
       {loading || error || forbidden || !voucher ? (
         <AsyncStatePanel
@@ -103,79 +96,72 @@ export function LabourVoucherDetailScreen({ route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Row label="Status" value={voucher.status} />
-          <Row label="Recipient / gang" value={voucher.recipientName} />
-          <Row label="Mobile" value={voucher.recipientMobile || '—'} />
-          <Row label="Work" value={voucher.workDescription} />
-          <Row
-            label="Gross"
-            value={`₹${voucher.grossAmount.toLocaleString('en-IN', {
-              minimumFractionDigits: 2,
-            })}`}
-          />
-          <Row
-            label="Deductions"
-            value={`₹${voucher.deductions.toLocaleString('en-IN', {
-              minimumFractionDigits: 2,
-            })}`}
-          />
-          <Row
-            label="Net"
-            value={`₹${voucher.netAmount.toLocaleString('en-IN', {
-              minimumFractionDigits: 2,
-            })}`}
-          />
-          <Row
-            label="Recipient signature"
-            value={voucher.recipientSignatureDocumentId ? 'Yes' : 'No'}
-          />
-          <Row
-            label="Engineer signature"
-            value={voucher.engineerSignatureDocumentId ? 'Yes' : 'No'}
-          />
-          <Row
-            label="Witness signature"
-            value={
-              voucher.requiresWitnessSignature
-                ? voucher.witnessSignatureDocumentId
-                  ? 'Yes'
-                  : 'Required — missing'
-                : voucher.witnessSignatureDocumentId
-                  ? 'Yes'
-                  : 'Not required'
-            }
-          />
-          <Row
-            label="Payment mode"
-            value="Petty cash"
-          />
+        <>
+          <FormSection title="Voucher">
+            <Field label="Status" value={voucher.status} />
+            <Field label="Recipient / gang" value={voucher.recipientName} />
+            <Field label="Mobile" value={voucher.recipientMobile || '—'} />
+            <Field label="Work" value={voucher.workDescription} />
+            <Field
+              label="Gross"
+              value={`₹${voucher.grossAmount.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+              })}`}
+            />
+            <Field
+              label="Deductions"
+              value={`₹${voucher.deductions.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+              })}`}
+            />
+            <Field
+              label="Net"
+              value={`₹${voucher.netAmount.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+              })}`}
+            />
+            <Field
+              label="Recipient signature"
+              value={voucher.recipientSignatureDocumentId ? 'Yes' : 'No'}
+            />
+            <Field
+              label="Engineer signature"
+              value={voucher.engineerSignatureDocumentId ? 'Yes' : 'No'}
+            />
+            <Field
+              label="Witness signature"
+              value={
+                voucher.requiresWitnessSignature
+                  ? voucher.witnessSignatureDocumentId
+                    ? 'Yes'
+                    : 'Required — missing'
+                  : voucher.witnessSignatureDocumentId
+                    ? 'Yes'
+                    : 'Not required'
+              }
+            />
+            <Field label="Payment mode" value="Petty cash" />
+          </FormSection>
 
-          <Pressable
-            style={[styles.primaryButton, pdfLoading && styles.disabled]}
-            disabled={pdfLoading}
+          <Button
+            label={
+              voucher.voucherPdfDocumentId
+                ? 'Open voucher PDF'
+                : 'PDF after approval'
+            }
+            loading={pdfLoading}
             onPress={() => void openPdf()}
-          >
-            {pdfLoading ? (
-              <ActivityIndicator color="#F4F0E6" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {voucher.voucherPdfDocumentId
-                  ? 'Open voucher PDF'
-                  : 'PDF after approval'}
-              </Text>
-            )}
-          </Pressable>
+          />
           {pdfError ? <Text style={styles.warn}>{pdfError}</Text> : null}
-        </ScrollView>
+        </>
       )}
     </Screen>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.row}>
+    <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.value}>{value}</Text>
     </View>
@@ -183,27 +169,21 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 40, gap: 12 },
-  row: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 10,
+  field: {
+    marginBottom: spacing.sm,
   },
   label: {
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 4,
+    ...typography.label,
+    marginBottom: 2,
   },
-  value: { color: colors.text, fontSize: 15, lineHeight: 22 },
-  primaryButton: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
+  value: {
+    ...typography.body,
+    fontSize: 15,
+    lineHeight: 22,
   },
-  primaryButtonText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  warn: { color: colors.danger, marginTop: 8, fontSize: 13 },
+  warn: {
+    color: colors.danger,
+    marginTop: spacing.sm,
+    fontSize: 13,
+  },
 });

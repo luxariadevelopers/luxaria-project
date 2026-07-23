@@ -121,6 +121,11 @@ export function DPRTable({
       filterSlot={filterSlot}
       height={520}
       getRowId={(row) => row.id}
+      mobileCard={{
+        primaryField: 'dprNumber',
+        metaFields: ['reportDate', 'weather'],
+        statusField: 'status',
+      }}
     />
   );
 }

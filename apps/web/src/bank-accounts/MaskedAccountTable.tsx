@@ -133,6 +133,11 @@ export function MaskedAccountTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         preferencesKey="bank-accounts-list"
+      mobileCard={{
+        primaryField: 'accountCode',
+        metaFields: ['bankName', 'maskedAccountNumber'],
+        statusField: 'status',
+      }}
         filterSlot={filterSlot}
         emptyTitle="No bank accounts"
         emptyDescription="Create a company or project bank account to get started. Account numbers stay masked."

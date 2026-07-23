@@ -4,13 +4,13 @@ import {
   Box,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { canEditUser } from './roleAccess';
 import { UserForm, type UserFormSubmitExtras } from './UserForm';
 import {
@@ -103,14 +103,10 @@ export function UserEditPage({ userId: userIdProp }: Props = {}) {
 
   return (
     <Stack spacing={2.5} data-testid="user-edit-page">
-      <Stack spacing={0.5}>
-        <Typography variant="h5">Edit {user.fullName}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {user.userCode} · set login, temporary password, reporting officers,
-          and profile photo here. Roles and projects stay on the user detail
-          page.
-        </Typography>
-      </Stack>
+      <PageHeader
+        title={`Edit ${user.fullName}`}
+        subtitle={`${user.userCode} · set login, temporary password, reporting officers, and profile photo here. Roles and projects stay on the user detail page.`}
+      />
       {managersQuery.error ? (
         <Alert severity="warning">
           Could not load the full staff list for reporting officers. Retry or

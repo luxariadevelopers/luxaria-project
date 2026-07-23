@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Divider,
+  Drawer,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
 import type { PublicDepartment } from './types';
 import { useCreateDepartment, useUpdateDepartment } from './useEmployees';
@@ -79,18 +80,25 @@ export function DepartmentFormDialog({ open, department, onClose }: Props) {
   };
 
   return (
-    <Dialog
+    <Drawer
+      anchor="right"
       open={open}
       onClose={busy ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
+      slotProps={{ paper: { sx: formDrawerPaperSx(440) } }}
       data-testid="department-form-dialog"
     >
-      <DialogTitle>
-        {editing ? 'Edit department' : 'Create department'}
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+      <Box
+        sx={{
+          p: 3,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+          <Typography variant="h6">
+            {editing ? 'Edit department' : 'Create department'}
+          </Typography>
           <TextField
             label="Code"
             value={code}
@@ -125,21 +133,26 @@ export function DepartmentFormDialog({ open, department, onClose }: Props) {
           />
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy}>
-          Cancel
-        </Button>
-        <Button variant="contained" onClick={() => void submit()} disabled={busy}>
-          {busy ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : editing ? (
-            'Save'
-          ) : (
-            'Create'
-          )}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <Divider sx={{ my: 2 }} />
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void submit()}
+            disabled={busy}
+          >
+            {busy ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : editing ? (
+              'Save'
+            ) : (
+              'Create'
+            )}
+          </Button>
+        </Stack>
+      </Box>
+    </Drawer>
   );
 }

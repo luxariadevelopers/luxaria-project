@@ -1,21 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   createDirector,
   fetchDirector,
@@ -204,138 +201,115 @@ export function DirectorFormScreen({ navigation, route }: Props) {
         <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Text style={styles.label}>Full name *</Text>
-          <TextInput
-            style={styles.input}
-            value={values.fullName}
-            onChangeText={(v) => setField('fullName', v)}
-          />
+          <FormSection title="Identity">
+            <TextField
+              label="Full name *"
+              value={values.fullName}
+              onChangeText={(v) => setField('fullName', v)}
+            />
 
-          <Text style={styles.label}>Linked user *</Text>
-          {canListUsers ? (
-            <View style={styles.chips}>
-              {users.map((user) => (
-                <Pressable
-                  key={user.id}
-                  style={[
-                    styles.chip,
-                    values.userId === user.id && styles.chipActive,
-                  ]}
-                  onPress={() => setField('userId', user.id)}
-                >
-                  <Text style={styles.chipText}>
-                    {[
+            <Text style={styles.label}>Linked user *</Text>
+            {canListUsers ? (
+              <View style={styles.chips}>
+                {users.map((user) => (
+                  <Chip
+                    key={user.id}
+                    label={[
                       user.userCode,
                       user.fullName,
                       user.employeeId ? `[${user.employeeId}]` : null,
                     ]
                       .filter(Boolean)
                       .join(' — ')}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.hint}>
-              You need user.view to choose a linked user.
-            </Text>
-          )}
-          <TextInput
-            style={styles.input}
-            value={values.userId}
-            onChangeText={(v) => setField('userId', v)}
-            autoCapitalize="none"
-            placeholder="User id"
-            placeholderTextColor={colors.textMuted}
-          />
+                    selected={values.userId === user.id}
+                    onPress={() => setField('userId', user.id)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.hint}>
+                You need user.view to choose a linked user.
+              </Text>
+            )}
+            <TextField
+              label="User id"
+              value={values.userId}
+              onChangeText={(v) => setField('userId', v)}
+              autoCapitalize="none"
+              placeholder="User id"
+            />
 
-          {linkedEmployeeId ? (
-            <>
-              <Text style={styles.label}>Employee ID (read-only)</Text>
+            {linkedEmployeeId ? (
               <View style={styles.readonly}>
+                <Text style={styles.fieldLabel}>Employee ID (read-only)</Text>
                 <Text style={styles.readonlyText}>{linkedEmployeeId}</Text>
               </View>
-            </>
-          ) : null}
+            ) : null}
+          </FormSection>
 
-          <Text style={styles.label}>DIN</Text>
-          <TextInput
-            style={styles.input}
-            value={values.din}
-            onChangeText={(v) => setField('din', v)}
-            keyboardType="number-pad"
-            maxLength={8}
-          />
+          <FormSection title="Contact & compliance">
+            <TextField
+              label="DIN"
+              value={values.din}
+              onChangeText={(v) => setField('din', v)}
+              keyboardType="number-pad"
+              maxLength={8}
+            />
+            <TextField
+              label="PAN"
+              value={values.pan}
+              onChangeText={(v) => setField('pan', v.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={10}
+            />
+            <TextField
+              label="Email"
+              value={values.email}
+              onChangeText={(v) => setField('email', v)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <TextField
+              label="Phone"
+              value={values.phone}
+              onChangeText={(v) => setField('phone', v)}
+              keyboardType="phone-pad"
+            />
+            <TextField
+              label="Address"
+              value={values.address}
+              onChangeText={(v) => setField('address', v)}
+              multiline
+              style={styles.multiline}
+            />
+            <TextField
+              label="Appointment date (YYYY-MM-DD)"
+              value={values.appointmentDate}
+              onChangeText={(v) => setField('appointmentDate', v)}
+              autoCapitalize="none"
+              placeholder="2024-01-15"
+            />
+          </FormSection>
 
-          <Text style={styles.label}>PAN</Text>
-          <TextInput
-            style={styles.input}
-            value={values.pan}
-            onChangeText={(v) => setField('pan', v.toUpperCase())}
-            autoCapitalize="characters"
-            maxLength={10}
-          />
+          <FormSection title="Status">
+            <View style={styles.chips}>
+              {STATUS_OPTIONS.map((status) => (
+                <Chip
+                  key={status}
+                  label={status}
+                  selected={values.status === status}
+                  onPress={() => setField('status', status)}
+                />
+              ))}
+            </View>
+          </FormSection>
 
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={values.email}
-            onChangeText={(v) => setField('email', v)}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          <Text style={styles.label}>Phone</Text>
-          <TextInput
-            style={styles.input}
-            value={values.phone}
-            onChangeText={(v) => setField('phone', v)}
-            keyboardType="phone-pad"
-          />
-
-          <Text style={styles.label}>Address</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            value={values.address}
-            onChangeText={(v) => setField('address', v)}
-            multiline
-          />
-
-          <Text style={styles.label}>Appointment date (YYYY-MM-DD)</Text>
-          <TextInput
-            style={styles.input}
-            value={values.appointmentDate}
-            onChangeText={(v) => setField('appointmentDate', v)}
-            autoCapitalize="none"
-            placeholder="2024-01-15"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.chips}>
-            {STATUS_OPTIONS.map((status) => (
-              <Pressable
-                key={status}
-                style={[
-                  styles.chip,
-                  values.status === status && styles.chipActive,
-                ]}
-                onPress={() => setField('status', status)}
-              >
-                <Text style={styles.chipText}>{status}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Pressable
-            style={[styles.submit, saving && styles.disabled]}
+          <Button
+            label={isEdit ? 'Save changes' : 'Create director'}
+            loading={saving}
             disabled={saving}
             onPress={() => void submit()}
-          >
-            <Text style={styles.submitText}>
-              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create director'}
-            </Text>
-          </Pressable>
+          />
         </>
       )}
     </Screen>
@@ -343,48 +317,17 @@ export function DirectorFormScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
+  label: { ...typography.label, marginBottom: spacing.sm },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-  },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  hint: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
-  readonly: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  readonlyText: { color: colors.text, fontWeight: '600' },
-  submit: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: colors.danger, marginBottom: 8 },
+  hint: { ...typography.meta, fontSize: 13, marginBottom: spacing.sm },
+  readonly: { marginBottom: spacing.md, gap: 2 },
+  fieldLabel: { ...typography.label, fontSize: 12 },
+  readonlyText: { ...typography.bodyStrong },
+  multiline: { minHeight: 80, textAlignVertical: 'top' },
+  error: { color: colors.danger, marginBottom: spacing.sm },
 });

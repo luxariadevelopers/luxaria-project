@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
-  Box,
   Button,
   Chip,
   Stack,
   Tab,
   Tabs,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { getErrorMessage } from '@/api/errors';
@@ -145,50 +144,43 @@ export function ProcurementMastersPage() {
 
   return (
     <Stack spacing={2} data-testid="procurement-masters-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Box>
-          <Typography variant="h5">Procurement masters</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Payment terms, delivery terms, tax rules, and category catalogs.
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1}>
-          {caps.canManageProcurement ? (
-            <Button
-              variant="outlined"
-              disabled={seed.isPending}
-              onClick={() => {
-                void (async () => {
-                  try {
-                    await seed.mutateAsync();
-                    success('Default masters seeded');
-                  } catch (err) {
-                    notifyError(getErrorMessage(err));
-                  }
-                })();
-              }}
-            >
-              {seed.isPending ? 'Seeding…' : 'Seed defaults'}
-            </Button>
-          ) : null}
-          {canManage ? (
-            <Button
-              variant="contained"
-              onClick={() => {
-                setDialogMode('create');
-                setEditRow(null);
-                setDialogOpen(true);
-              }}
-            >
-              Add
-            </Button>
-          ) : null}
-        </Stack>
-      </Stack>
+      <PageHeader
+        subtitle="Payment terms, delivery terms, tax rules, and category catalogs."
+        actions={
+          <Stack direction="row" spacing={1}>
+            {caps.canManageProcurement ? (
+              <Button
+                variant="outlined"
+                disabled={seed.isPending}
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await seed.mutateAsync();
+                      success('Default masters seeded');
+                    } catch (err) {
+                      notifyError(getErrorMessage(err));
+                    }
+                  })();
+                }}
+              >
+                {seed.isPending ? 'Seeding…' : 'Seed defaults'}
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setDialogMode('create');
+                  setEditRow(null);
+                  setDialogOpen(true);
+                }}
+              >
+                Add
+              </Button>
+            ) : null}
+          </Stack>
+        }
+      />
 
       <Tabs
         value={resource}

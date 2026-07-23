@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -7,6 +7,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   GrnFilters,
   type GrnFilterState,
@@ -102,28 +103,20 @@ export function GrnsPage() {
 
   return (
     <Stack spacing={2} data-testid="grns-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-        }}
-      >
-        <Typography color="text.secondary">
-          Review site goods receipts, record QC acceptance, and post accepted
-          quantity to stock.
-        </Typography>
-        {caps.canCreate ? (
-          <Button
-            variant="contained"
-            data-testid="grn-create-new"
-            onClick={() => navigate('/inventory/grns/new')}
-          >
-            New goods receipt
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Review site goods receipts, record QC acceptance, and post accepted quantity to stock."
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              data-testid="grn-create-new"
+              onClick={() => navigate('/inventory/grns/new')}
+            >
+              New goods receipt
+            </Button>
+          ) : undefined
+        }
+      />
       <GrnTable
         rows={list.data?.items ?? []}
         loading={list.isLoading || list.isFetching}

@@ -1,26 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
 } from '@/api/notifications';
 import { getErrorMessage } from '@/api/client';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
+import { Screen } from '@/components/Screen';
 import { usePushNotifications } from '@/notifications/PushNotificationContext';
 import {
   buildPushPreferencePatch,
   isPushEnabledForUser,
 } from '@/notifications/preferences';
-import { Screen } from '@/components/Screen';
-import { colors } from '@/theme/colors';
+import { colors, hitSlopMin, spacing, typography } from '@/theme';
 
 export function NotificationPreferencesScreen() {
   const queryClient = useQueryClient();
@@ -67,10 +62,23 @@ export function NotificationPreferencesScreen() {
     },
   });
 
-  if (prefsQuery.isLoading) {
+  if (prefsQuery.isLoading || prefsQuery.isError) {
     return (
-      <Screen title="Notification preferences" subtitle="Loading…">
-        <ActivityIndicator color={colors.primary} />
+      <Screen
+        title="Notification preferences"
+        subtitle="Control mute and mobile push delivery"
+      >
+        <AsyncStatePanel
+          loading={prefsQuery.isLoading}
+          error={
+            prefsQuery.isError
+              ? getErrorMessage(prefsQuery.error, 'Could not load preferences')
+              : null
+          }
+          onRetry={() => {
+            void prefsQuery.refetch();
+          }}
+        />
       </Screen>
     );
   }
@@ -80,12 +88,15 @@ export function NotificationPreferencesScreen() {
       title="Notification preferences"
       subtitle="Control mute and mobile push delivery"
     >
-      <View style={styles.card}>
+      <FormSection
+        title="Delivery"
+        description="In-app inbox may still receive critical items when muted."
+      >
         <View style={styles.row}>
           <View style={styles.copy}>
             <Text style={styles.label}>Mute all notifications</Text>
             <Text style={styles.help}>
-              In-app inbox may still receive critical items when muted.
+              Suppresses non-critical alerts across channels.
             </Text>
           </View>
           <Switch
@@ -111,66 +122,40 @@ export function NotificationPreferencesScreen() {
             trackColor={{ true: colors.primary, false: colors.border }}
           />
         </View>
-      </View>
+      </FormSection>
 
-      <Pressable
-        style={[styles.save, saveMutation.isPending && styles.disabled]}
-        disabled={saveMutation.isPending}
+      <Button
+        label="Save preferences"
+        loading={saveMutation.isPending}
         onPress={() => {
           void saveMutation.mutateAsync();
         }}
-      >
-        {saveMutation.isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveText}>Save preferences</Text>
-        )}
-      </Pressable>
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginBottom: 20,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
+    minHeight: hitSlopMin,
   },
   copy: {
     flex: 1,
   },
   label: {
-    color: colors.text,
+    ...typography.bodyStrong,
     fontSize: 16,
-    fontWeight: '600',
   },
   help: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 4,
+    ...typography.meta,
+    marginTop: spacing.xs,
   },
   divider: {
     height: 1,
     backgroundColor: colors.border,
-    marginVertical: 16,
-  },
-  save: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  saveText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.7,
+    marginVertical: spacing.md,
   },
 });

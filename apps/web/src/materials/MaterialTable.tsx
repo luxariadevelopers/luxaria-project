@@ -195,6 +195,11 @@ export function MaterialTable({
             loading={loading}
             height={520}
             getRowId={(row) => row.id}
+            mobileCard={{
+              primaryField: 'name',
+              metaFields: ['materialCode', 'category'],
+              statusField: 'status',
+            }}
           />
           <Box
             sx={{

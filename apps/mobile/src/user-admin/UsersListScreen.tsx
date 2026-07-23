@@ -1,27 +1,32 @@
 import { useCallback, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
-import { AsyncStatePanel } from '@/components/AsyncStatePanel';
-import { Screen } from '@/components/Screen';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { ListRow } from '@/components/ListRow';
+import { ListScreen, ListScreenHeader } from '@/components/ListScreen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { spacing } from '@/theme';
 import { fetchUsers } from './api';
 import { resolveUserAdminCapabilities } from './permissions';
 import { UserStatus, type PublicUser } from './types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'UsersList'>;
+
+function statusTone(
+  status: string,
+): 'default' | 'success' | 'warning' | 'danger' {
+  const s = status.toLowerCase();
+  if (s === 'active') return 'success';
+  if (s === 'locked') return 'danger';
+  if (s === 'inactive') return 'warning';
+  return 'default';
+}
 
 export function UsersListScreen({ navigation }: Props) {
   const { hasPermission } = useAuth();
@@ -80,140 +85,88 @@ export function UsersListScreen({ navigation }: Props) {
   );
 
   return (
-    <Screen
+    <ListScreen
       title="Users"
       subtitle="Admin · accounts & access"
-      scroll={false}
       rightSlot={
         caps.canCreate ? (
-          <Pressable
-            style={styles.newBtn}
+          <Button
+            label="New"
             onPress={() => navigation.navigate('UserForm', {})}
-          >
-            <Text style={styles.newBtnText}>New</Text>
-          </Pressable>
+            style={{ minWidth: 88 }}
+          />
         ) : null
       }
-    >
-      <View style={styles.filters}>
-        <TextInput
-          style={styles.search}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search name, email, mobile…"
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="none"
-          returnKeyType="search"
-          onSubmitEditing={() => void load('initial')}
-        />
-        <View style={styles.chips}>
-          {(
-            [
-              { value: '', label: 'All' },
-              { value: UserStatus.Active, label: 'Active' },
-              { value: UserStatus.Inactive, label: 'Inactive' },
-              { value: UserStatus.Locked, label: 'Locked' },
-            ] as const
-          ).map((option) => (
-            <Pressable
-              key={option.label}
-              style={[
-                styles.chip,
-                statusFilter === option.value && styles.chipActive,
-              ]}
-              onPress={() => setStatusFilter(option.value)}
-            >
-              <Text style={styles.chipText}>{option.label}</Text>
-            </Pressable>
-          ))}
-          <Pressable style={styles.chip} onPress={() => void load('initial')}>
-            <Text style={styles.chipText}>Apply</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {loading || error || forbidden || (!loading && items.length === 0) ? (
-        <AsyncStatePanel
-          loading={loading}
-          error={error}
-          forbidden={forbidden}
-          empty={!loading && !error && !forbidden && items.length === 0}
-          emptyLabel="No users found"
-          onRetry={() => void load('initial')}
-        />
-      ) : null}
-
-      {!loading && !error && !forbidden && items.length > 0 ? (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void load('refresh')}
-              tintColor={colors.primary}
+      header={
+        <ListScreenHeader>
+          <TextField
+            label="Search"
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search name, email, mobile…"
+            autoCapitalize="none"
+            returnKeyType="search"
+            onSubmitEditing={() => void load('initial')}
+            containerStyle={styles.search}
+          />
+          <View style={styles.chips}>
+            {(
+              [
+                { value: '' as const, label: 'All' },
+                { value: UserStatus.Active, label: 'Active' },
+                { value: UserStatus.Inactive, label: 'Inactive' },
+                { value: UserStatus.Locked, label: 'Locked' },
+              ] as const
+            ).map((option) => (
+              <Chip
+                key={option.label}
+                label={option.label}
+                selected={statusFilter === option.value}
+                onPress={() => setStatusFilter(option.value)}
+              />
+            ))}
+            <Button
+              label="Apply"
+              variant="secondary"
+              onPress={() => void load('initial')}
+              style={styles.apply}
             />
+          </View>
+        </ListScreenHeader>
+      }
+      data={items}
+      keyExtractor={(item) => item.id}
+      loading={loading}
+      refreshing={refreshing}
+      onRefresh={() => void load('refresh')}
+      error={error}
+      forbidden={forbidden}
+      emptyLabel="No users found"
+      onRetry={() => void load('initial')}
+      renderItem={({ item }) => (
+        <ListRow
+          title={`${item.userCode} · ${item.fullName}`}
+          meta={`${item.department ? `${item.department} · ` : ''}${
+            item.employeeId ? `${item.employeeId} · ` : ''
+          }${item.email ?? item.mobile ?? 'No login contact'}`}
+          status={item.status}
+          statusTone={statusTone(item.status)}
+          onPress={() =>
+            navigation.navigate('UserDetail', { userId: item.id })
           }
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.card}
-              onPress={() =>
-                navigation.navigate('UserDetail', { userId: item.id })
-              }
-            >
-              <Text style={styles.code}>{item.userCode}</Text>
-              <Text style={styles.name}>{item.fullName}</Text>
-              <Text style={styles.meta}>
-                {item.status}
-                {item.department ? ` · ${item.department}` : ''}
-                {item.employeeId ? ` · ${item.employeeId}` : ''}
-              </Text>
-              <Text style={styles.meta}>
-                {item.email ?? item.mobile ?? 'No login contact'}
-              </Text>
-            </Pressable>
-          )}
         />
-      ) : null}
-    </Screen>
+      )}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  newBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  search: { marginBottom: spacing.sm },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    alignItems: 'center',
   },
-  newBtnText: { color: '#F4F0E6', fontWeight: '700' },
-  filters: { marginBottom: 12 },
-  search: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-  },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 14,
-    marginBottom: 10,
-  },
-  code: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  name: { color: colors.text, fontWeight: '700', fontSize: 16, marginTop: 2 },
-  meta: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
+  apply: { minWidth: 88 },
 });

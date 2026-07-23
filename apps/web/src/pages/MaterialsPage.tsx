@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Stack } from '@mui/material';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -142,27 +143,16 @@ export function MaterialsPage() {
 
   return (
     <Stack spacing={2} data-testid="materials-page">
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
-        }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h4">Materials</Typography>
-          <Typography color="text.secondary">
-            Catalogue of material masters, units, and reorder settings.
-          </Typography>
-        </Stack>
-        {caps.canManage ? (
-          <Button variant="contained" onClick={openCreate}>
-            New material
-          </Button>
-        ) : null}
-      </Box>
+      <PageHeader
+        subtitle="Catalogue of material masters, units, and reorder settings."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={openCreate}>
+              New material
+            </Button>
+          ) : undefined
+        }
+      />
 
       {list.isError ? (
         <RetryPanel error={list.error} onRetry={() => void list.refetch()} />

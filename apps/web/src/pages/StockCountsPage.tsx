@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   CreateStockCountDrawer,
   emptyStockCountFilters,
@@ -120,10 +121,9 @@ export function StockCountsPage() {
 
   return (
     <Stack spacing={2} data-testid="stock-counts-page">
-      <Typography color="text.secondary">
-        Physical stock count entry, review, and adjustment posting. Differences
-        require a reason; large variances display director approval.
-      </Typography>
+      <PageHeader
+        subtitle="Physical stock count entry, review, and adjustment posting. Differences require a reason; large variances display director approval."
+      />
 
       <StockCountTable
         rows={list.data?.items ?? []}

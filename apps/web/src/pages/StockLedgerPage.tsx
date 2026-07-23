@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -105,11 +106,9 @@ export function StockLedgerPage() {
 
   return (
     <Stack spacing={2} data-testid="stock-ledger-page">
-      <Typography color="text.secondary">
-        Immutable stock movement history for <strong>{projectLabel}</strong>.
-        Entries cannot be edited here. Running balance is in the material{' '}
-        <strong>base unit</strong> within the filtered set.
-      </Typography>
+      <PageHeader
+        subtitle={`Immutable stock movement history for ${projectLabel}. Entries cannot be edited here. Running balance is in the material base unit within the filtered set.`}
+      />
 
       {!filterParse.ok ? (
         <Alert severity="warning">

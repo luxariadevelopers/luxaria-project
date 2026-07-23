@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { CancelTransferDialog } from '@/petty-cash-transfers/CancelTransferDialog';
 import { ProofUploadPanel } from '@/petty-cash-transfers/ProofUploadPanel';
 import {
@@ -123,12 +124,23 @@ export function PettyCashTransfersPage() {
 
   return (
     <Stack spacing={2} data-testid="petty-cash-transfers-page">
-      <Typography color="text.secondary">
-        Record approved cash funding
-        {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-        Workflow: draft → verify → post (journal Dr Site Petty Cash / Cr Bank).
-        Select a project in the header.
-      </Typography>
+      <PageHeader
+        title="Petty cash transfers"
+        subtitle={`Record approved cash funding${
+          selectedProject ? ` — ${selectedProject.projectName}` : ''
+        }. Workflow: draft → verify → post (journal Dr Site Petty Cash / Cr Bank). Select a project in the header.`}
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              disabled={!projectId}
+              onClick={() => setCreateOpen(true)}
+            >
+              New fund transfer
+            </Button>
+          ) : undefined
+        }
+      />
 
       <TransferTable
         rows={rows}
@@ -160,17 +172,6 @@ export function PettyCashTransfersPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canCreate ? (
-            <Button
-              variant="contained"
-              disabled={!projectId}
-              onClick={() => setCreateOpen(true)}
-            >
-              New fund transfer
-            </Button>
-          ) : undefined
         }
         caps={caps}
         requestLabel={(id) =>

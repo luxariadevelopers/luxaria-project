@@ -23,12 +23,14 @@ export function StatusStrip({
       sx={{
         alignItems: 'center',
         flexWrap: 'wrap',
+        rowGap: 0.75,
         py: 1,
         px: 1.5,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'action.hover',
         borderRadius: 1,
+        minWidth: 0,
       }}
     >
       <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
@@ -50,7 +52,15 @@ export function StatusStrip({
         />
       ))}
       {meta ? (
-        <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            ml: { xs: 0, sm: 'auto' },
+            width: { xs: '100%', sm: 'auto' },
+            wordBreak: 'break-word',
+          }}
+        >
           {meta}
         </Typography>
       ) : null}

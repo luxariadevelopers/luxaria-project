@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, Typography } from '@mui/material';
+import { Stack } from '@mui/material';
 import { listAuditLogs } from '@/api/audit-logs';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { AuditFilters } from '@/audit-logs/AuditFilters';
 import { AuditTable } from '@/audit-logs/AuditTable';
 import { sanitizeAuditEntries } from '@/audit-logs/sanitizeAuditEntry';
@@ -78,10 +79,10 @@ export function AuditLogsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Trace immutable changes by actor, module, entity, and request id. This
-        screen has no create, update, or delete actions.
-      </Typography>
+      <PageHeader
+        title="Audit logs"
+        subtitle="Trace immutable changes by actor, module, entity, and request id. This screen has no create, update, or delete actions."
+      />
 
       {listError && !isForbiddenError(listError) ? (
         <>

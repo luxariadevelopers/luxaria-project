@@ -9,6 +9,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { CONTRACTOR_TYPE_OPTIONS } from './labels';
 import type { ContractorListRow, ContractorType } from './types';
 import { useUpdateContractor } from './useContractors';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   emptyContractorCreateForm,
   optionalTrimmed,
@@ -84,7 +85,7 @@ export function EditContractorDrawer({ contractor, open, onClose }: Props) {
       anchor="right"
       open={open}
       onClose={onClose}
-      slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 } } } }}
+      slotProps={{ paper: { sx: formDrawerPaperSx(440) } }}
     >
       <Box
         component="form"

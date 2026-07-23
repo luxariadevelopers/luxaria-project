@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Box,
   Button,
@@ -182,7 +183,7 @@ export function MaterialFormDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      slotProps={{ paper: { sx: { width: { xs: '100%', sm: 480 } } } }}
+      slotProps={{ paper: { sx: formDrawerPaperSx(480) } }}
     >
       <Box
         component="form"

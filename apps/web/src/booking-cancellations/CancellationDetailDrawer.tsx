@@ -6,6 +6,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { formDrawerPaperSx } from '@/components/forms';
 import { WorkflowTimeline } from '@/workflow-timeline';
 import { formatDate, formatInr } from '@/format';
 import { buildCancellationTimeline } from './buildCancellationTimeline';
@@ -42,8 +43,13 @@ export function CancellationDetailDrawer({
 }: Props) {
   if (!row) {
     return (
-      <Drawer anchor="right" open={open} onClose={onClose}>
-        <Box sx={{ p: 3, width: { xs: '100%', sm: 480 } }} />
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={onClose}
+        slotProps={{ paper: { sx: formDrawerPaperSx(480) } }}
+      >
+        <Box sx={{ p: 3 }} />
       </Drawer>
     );
   }
@@ -57,7 +63,7 @@ export function CancellationDetailDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 520 } } },
+        paper: { sx: formDrawerPaperSx(520) },
       }}
     >
       <Box sx={{ p: 3 }} data-testid="cancellation-detail">

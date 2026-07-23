@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { CustomerWarrantyTable } from '@/customer-warranties/CustomerWarrantyTable';
 import { resolveCustomerWarrantyCapabilities } from '@/customer-warranties/roleAccess';
 import { useCustomerWarrantiesList } from '@/customer-warranties/useCustomerWarranties';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function CustomerWarrantiesPage() {
   const { hasPermission, access } = useAuth();
@@ -41,9 +42,10 @@ export function CustomerWarrantiesPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Post-handover warranty complaints and rectification workflow.
-      </Typography>
+      <PageHeader
+        title="Customer warranties"
+        subtitle="Post-handover warranty complaints and rectification workflow."
+      />
       <CustomerWarrantyTable
         rows={query.data?.items ?? []}
         loading={query.isLoading || query.isFetching}

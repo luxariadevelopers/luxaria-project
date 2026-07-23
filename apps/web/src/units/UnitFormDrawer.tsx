@@ -13,6 +13,7 @@ import {
 } from './labels';
 import { UnitStatus, UnitType, type PublicUnit } from './types';
 import { useCreateUnit, useUpdateUnit } from './useUnits';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   assertUniqueUnitInList,
   toCreateUnitInput,
@@ -168,10 +169,15 @@ export function UnitFormDrawer({
   const busy = create.isPending || update.isPending;
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      slotProps={{ paper: { sx: formDrawerPaperSx(420) } }}
+    >
       <Stack
         spacing={2}
-        sx={{ width: { xs: 320, sm: 420 }, p: 3 }}
+        sx={{ p: 3 }}
         data-testid="unit-form-drawer"
       >
         <Typography variant="h6">

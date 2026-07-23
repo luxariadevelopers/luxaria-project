@@ -20,6 +20,7 @@ import { findOverlappingEffectiveDates } from '@/shareholding/effectiveDateOverl
 import { PostShareCapitalToBankPanel } from '@/shareholding/PostShareCapitalToBankPanel';
 import { ShareholdingTable } from '@/shareholding/ShareholdingTable';
 import { TotalPercentageIndicator } from '@/shareholding/TotalPercentageIndicator';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Company shareholding history — `/capital/shareholding`.
@@ -107,11 +108,10 @@ export function ShareholdingPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Versioned company equity (not project investment). Approving a change
-        closes prior rows and inserts a new version — history is never
-        overwritten.
-      </Typography>
+      <PageHeader
+        title="Shareholding"
+        subtitle="Versioned company equity (not project investment). Approving a change closes prior rows and inserts a new version — history is never overwritten."
+      />
 
       {activeQuery.error && !isForbiddenError(activeQuery.error) ? (
         <RetryPanel

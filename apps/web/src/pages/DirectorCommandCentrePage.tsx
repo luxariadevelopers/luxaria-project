@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -68,11 +69,9 @@ export function DirectorCommandCentrePage() {
 
   return (
     <Stack spacing={3}>
-      <Typography color="text.secondary">
-        Executive summary across accessible projects — balances, payables,
-        progress and exceptions. Metrics come from the API; missing values show
-        as — (not invented zeros).
-      </Typography>
+      <PageHeader
+        subtitle="Executive summary across accessible projects — balances, payables, progress and exceptions. Metrics come from the API; missing values show as — (not invented zeros)."
+      />
 
       <DirectorFilters
         value={filters}

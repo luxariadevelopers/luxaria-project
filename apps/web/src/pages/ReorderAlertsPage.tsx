@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -10,6 +10,7 @@ import { useProject } from '@/context/ProjectContext';
 import { AlertTable } from '@/reorder-alerts/AlertTable';
 import { compareAlertsBySeverity } from '@/reorder-alerts/alertSeverity';
 import { ForecastAssumptionsBanner } from '@/reorder-alerts/ForecastAssumptionsBanner';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   ReorderAlertFilters,
   type ReorderAlertFilterState,
@@ -151,10 +152,9 @@ export function ReorderAlertsPage() {
 
   return (
     <Stack spacing={2} data-testid="reorder-alerts-page">
-      <Typography color="text.secondary">
-        Actionable stock-out forecast so purchase users can replenish before
-        material shortages.
-      </Typography>
+      <PageHeader
+        subtitle="Actionable stock-out forecast so purchase users can replenish before material shortages."
+      />
 
       <ForecastAssumptionsBanner
         dataTimestamp={latestEvaluatedAt}

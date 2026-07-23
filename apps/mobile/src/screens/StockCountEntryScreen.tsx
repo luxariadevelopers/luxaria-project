@@ -1,20 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, FlatList, StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
-import { LoadingScreen } from '@/components/LoadingScreen';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
@@ -33,7 +27,7 @@ import {
   validateCountLines,
 } from '@/stock-count';
 import type { DraftStorage } from '@/stock-count/draftStore';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { pickImageFromCamera } from '@/utils/fileUpload';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StockCountEntry'>;
@@ -105,14 +99,10 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
           return;
         }
         const count = await fetchStockCount(countId);
-        setCountDate(
-          count.countDate.slice(0, 10) || todayDateOnly(),
-        );
+        setCountDate(count.countDate.slice(0, 10) || todayDateOnly());
         setLocation(count.location ?? '');
         setNotes(count.notes ?? '');
-        setReadOnlyStatus(
-          count.status === 'draft' ? null : count.status,
-        );
+        setReadOnlyStatus(count.status === 'draft' ? null : count.status);
         setLines(
           count.items.map((item) => ({
             key: item.id || nextKey(),
@@ -211,14 +201,11 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
     return () => clearTimeout(handle);
   }, [countDate, countId, lines, location, notes, projectId, readOnlyStatus]);
 
-  const updateLine = useCallback(
-    (key: string, patch: Partial<CountLine>) => {
-      setLines((prev) =>
-        prev.map((line) => (line.key === key ? { ...line, ...patch } : line)),
-      );
-    },
-    [],
-  );
+  const updateLine = useCallback((key: string, patch: Partial<CountLine>) => {
+    setLines((prev) =>
+      prev.map((line) => (line.key === key ? { ...line, ...patch } : line)),
+    );
+  }, []);
 
   const capturePhoto = useCallback(
     async (key: string) => {
@@ -248,7 +235,10 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
       return;
     }
     if (readOnlyStatus) {
-      Alert.alert('Stock count', `Count is ${readOnlyStatus} and cannot be edited`);
+      Alert.alert(
+        'Stock count',
+        `Count is ${readOnlyStatus} and cannot be edited`,
+      );
       return;
     }
 
@@ -309,40 +299,34 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
 
   const header = useMemo(
     () => (
-      <View>
+      <FormSection title="Count details" framed={false}>
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-        <Text style={styles.label}>Count date</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Count date"
           value={countDate}
           onChangeText={setCountDate}
           editable={!readOnlyStatus}
           placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.textMuted}
         />
-        <Text style={styles.label}>Location</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Location"
           value={location}
           onChangeText={setLocation}
           editable={!readOnlyStatus}
           placeholder="Main Store (optional)"
-          placeholderTextColor={colors.textMuted}
         />
-        <Text style={styles.label}>Notes</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Notes"
           value={notes}
           onChangeText={setNotes}
           editable={!readOnlyStatus}
           placeholder="Optional notes"
-          placeholderTextColor={colors.textMuted}
         />
         <Text style={styles.listMeta}>
           {lines.length} materials · system qty from forecast (Nest refreshes on
           submit)
         </Text>
-      </View>
+      </FormSection>
     ),
     [countDate, formError, lines.length, location, notes, readOnlyStatus],
   );
@@ -350,31 +334,29 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
   if (forbidden) {
     return (
       <Screen title="Count entry" subtitle="Physical count">
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Permission required</Text>
-          <Text style={styles.panelBody}>
-            Create/submit needs Nest `stock.adjust`. List/view needs
-            `stock.view`.
-          </Text>
-        </View>
+        <AsyncStatePanel
+          forbidden
+          error="Create/submit needs Nest stock.adjust. List/view needs stock.view."
+        />
       </Screen>
     );
   }
 
   if (loading) {
-    return <LoadingScreen label="Preparing count…" />;
+    return (
+      <Screen title="Count entry" subtitle="Physical count" scroll={false}>
+        <AsyncStatePanel loading loadingLabel="Preparing count…" />
+      </Screen>
+    );
   }
 
   if (error && lines.length === 0) {
     return (
       <Screen title="Count entry" subtitle="Physical count">
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Could not load</Text>
-          <Text style={styles.panelBody}>{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={() => void bootstrap()}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </Pressable>
-        </View>
+        <AsyncStatePanel
+          error={error}
+          onRetry={() => void bootstrap()}
+        />
       </Screen>
     );
   }
@@ -422,21 +404,16 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
         )}
         ListFooterComponent={
           !readOnlyStatus && canSubmit ? (
-            <Pressable
-              style={[styles.primaryBtn, saving && styles.primaryBtnDisabled]}
-              disabled={saving}
+            <Button
+              label={
+                isOnline
+                  ? 'Queue count for sync (create + submit)'
+                  : 'Save count offline (create + submit)'
+              }
+              loading={saving}
               onPress={() => void submitOffline()}
-            >
-              {saving ? (
-                <ActivityIndicator color="#F4F0E6" />
-              ) : (
-                <Text style={styles.primaryBtnText}>
-                  {isOnline
-                    ? 'Queue count for sync (create + submit)'
-                    : 'Save count offline (create + submit)'}
-                </Text>
-              )}
-            </Pressable>
+              style={styles.submit}
+            />
           ) : (
             <Text style={styles.readOnly}>
               {readOnlyStatus
@@ -451,65 +428,24 @@ export function StockCountEntryScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  list: { paddingBottom: 40 },
-  label: {
-    marginTop: 12,
-    marginBottom: 6,
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
-    fontSize: 15,
-  },
+  list: { paddingBottom: spacing.xxxl },
   listMeta: {
-    color: colors.textMuted,
-    marginTop: 14,
-    marginBottom: 10,
-    fontSize: 13,
+    ...typography.meta,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
-  formError: { color: '#B42318', marginBottom: 8 },
-  panel: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
+  formError: {
+    color: colors.danger,
+    marginBottom: spacing.sm,
   },
-  panelTitle: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 6,
+  submit: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxl,
   },
-  panelBody: { color: colors.textMuted, lineHeight: 20, marginBottom: 12 },
-  retryBtn: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  retryBtnText: { color: colors.primary, fontWeight: '700' },
-  primaryBtn: {
-    marginTop: 8,
-    marginBottom: 24,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryBtnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: '#F4F0E6', fontWeight: '700', fontSize: 15 },
   readOnly: {
-    color: colors.textMuted,
-    marginTop: 12,
-    marginBottom: 24,
+    ...typography.meta,
+    marginTop: spacing.md,
+    marginBottom: spacing.xxl,
     textAlign: 'center',
   },
 });

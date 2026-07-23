@@ -76,6 +76,11 @@ export function CustomerInvoiceTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       getRowId={(row) => row.id}
+      mobileCard={{
+        primaryField: 'invoiceNumber',
+        metaFields: ['totalAmount', 'invoiceDate'],
+        statusField: 'status',
+      }}
     />
   );
 }

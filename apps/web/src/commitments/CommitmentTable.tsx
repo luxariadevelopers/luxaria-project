@@ -190,6 +190,11 @@ export function CommitmentTable({
       onSearchChange={onSearchChange}
       searchPlaceholder="Search number…"
       preferencesKey="commitments-list"
+      mobileCard={{
+        primaryField: 'commitmentNumber',
+        metaFields: ['commitmentAmount', 'pendingAmount'],
+        statusField: 'status',
+      }}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}

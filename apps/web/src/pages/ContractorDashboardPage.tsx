@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { fetchContractorDashboard } from '@/contractor-dashboard/api';
+import { PageHeader } from '@/layouts/PageHeader';
 
 function KpiCard({
   label,
@@ -56,20 +57,16 @@ export function ContractorDashboardPage() {
 
   if (!canView) return <PermissionDenied />;
   if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
+    return <RetryPanel error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   const data = query.data;
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h5">Contractor Dashboard</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Open work orders, pending RA bills, retention held, outstanding
-          payables, and compliance expiries.
-        </Typography>
-      </div>
+      <PageHeader
+        subtitle="Open work orders, pending RA bills, retention held, outstanding payables, and compliance expiries."
+      />
 
       {!selectedProjectId ? (
         <Alert severity="info">

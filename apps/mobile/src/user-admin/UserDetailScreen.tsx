@@ -1,21 +1,18 @@
 import { useCallback, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   activateUser,
   assignUserProjects,
@@ -221,18 +218,17 @@ export function UserDetailScreen({ navigation, route }: Props) {
       subtitle={user?.userCode ?? userId}
       rightSlot={
         canEdit && user ? (
-          <Pressable
-            style={styles.newBtn}
+          <Button
+            label="Edit"
             onPress={() =>
               navigation.navigate('UserForm', { userId: user.id })
             }
-          >
-            <Text style={styles.newBtnText}>Edit</Text>
-          </Pressable>
+            style={{ minWidth: 80 }}
+          />
         ) : null
       }
     >
-      {loading || error || forbidden || !user ? (
+      {loading || (error && !user) || forbidden || !user ? (
         <AsyncStatePanel
           loading={loading}
           error={error}
@@ -245,9 +241,7 @@ export function UserDetailScreen({ navigation, route }: Props) {
         <View style={styles.stack}>
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <View style={styles.card}>
-            <Text style={styles.name}>{user.fullName}</Text>
-            <Text style={styles.row}>Status: {user.status}</Text>
+          <FormSection title={user.fullName} description={user.status}>
             <Text style={styles.row}>Email: {user.email ?? '—'}</Text>
             <Text style={styles.row}>Mobile: {user.mobile ?? '—'}</Text>
             <Text style={styles.row}>
@@ -265,73 +259,66 @@ export function UserDetailScreen({ navigation, route }: Props) {
             <Text style={styles.row}>
               Last login: {user.lastLoginAt?.slice(0, 16) ?? '—'}
             </Text>
-          </View>
+          </FormSection>
 
-          <View style={styles.actions}>
-            {user.status === UserStatus.Active && caps.canDeactivate ? (
-              <Pressable
-                style={[styles.actionBtn, styles.warnBtn]}
-                disabled={acting}
-                onPress={() => runStatus('deactivate')}
-              >
-                <Text style={styles.actionText}>Deactivate</Text>
-              </Pressable>
-            ) : null}
-            {user.status !== UserStatus.Active && caps.canActivate ? (
-              <Pressable
-                style={styles.actionBtn}
-                disabled={acting}
-                onPress={() => runStatus('activate')}
-              >
-                <Text style={styles.actionText}>Activate</Text>
-              </Pressable>
-            ) : null}
-            {caps.canResetPassword ? (
-              <Pressable
-                style={[styles.actionBtn, styles.warnBtn]}
-                disabled={acting}
-                onPress={() => setShowReset((v) => !v)}
-              >
-                <Text style={styles.actionText}>Reset password</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          <FormSection title="Actions" framed={false}>
+            <View style={styles.actions}>
+              {user.status === UserStatus.Active && caps.canDeactivate ? (
+                <Button
+                  label="Deactivate"
+                  variant="danger"
+                  disabled={acting}
+                  onPress={() => runStatus('deactivate')}
+                />
+              ) : null}
+              {user.status !== UserStatus.Active && caps.canActivate ? (
+                <Button
+                  label="Activate"
+                  disabled={acting}
+                  onPress={() => runStatus('activate')}
+                />
+              ) : null}
+              {caps.canResetPassword ? (
+                <Button
+                  label="Reset password"
+                  variant="secondary"
+                  disabled={acting}
+                  onPress={() => setShowReset((v) => !v)}
+                />
+              ) : null}
+            </View>
+          </FormSection>
 
           {showReset ? (
-            <View style={styles.card}>
-              <Text style={styles.section}>Temporary password</Text>
-              <TextInput
-                style={styles.input}
+            <FormSection title="Temporary password">
+              <TextField
+                label="Password"
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry
                 autoCapitalize="none"
                 placeholder="Min 8 characters"
-                placeholderTextColor={colors.textMuted}
               />
-              <Pressable
-                style={[styles.actionBtn, acting && styles.disabled]}
+              <Button
+                label="Confirm reset"
+                loading={acting}
                 disabled={acting}
                 onPress={() => void submitPasswordReset()}
-              >
-                <Text style={styles.actionText}>
-                  {acting ? 'Resetting…' : 'Confirm reset'}
-                </Text>
-              </Pressable>
-            </View>
+              />
+            </FormSection>
           ) : null}
 
-          <View style={styles.card}>
-            <Text style={styles.section}>Roles</Text>
+          <FormSection title="Roles">
             {caps.canAssignRole && roles.length > 0 ? (
               <>
                 <View style={styles.chips}>
                   {roles.map((role) => {
                     const selected = selectedRoleIds.includes(role.id);
                     return (
-                      <Pressable
+                      <Chip
                         key={role.id}
-                        style={[styles.chip, selected && styles.chipActive]}
+                        label={`${role.name} · ${role.code}`}
+                        selected={selected}
                         onPress={() =>
                           setSelectedRoleIds((prev) =>
                             selected
@@ -339,21 +326,16 @@ export function UserDetailScreen({ navigation, route }: Props) {
                               : [...prev, role.id],
                           )
                         }
-                      >
-                        <Text style={styles.chipText}>
-                          {role.name} · {role.code}
-                        </Text>
-                      </Pressable>
+                      />
                     );
                   })}
                 </View>
-                <Pressable
-                  style={[styles.actionBtn, acting && styles.disabled]}
+                <Button
+                  label="Save roles"
+                  loading={acting}
                   disabled={acting}
                   onPress={() => void saveRoles()}
-                >
-                  <Text style={styles.actionText}>Save roles</Text>
-                </Pressable>
+                />
               </>
             ) : (
               <Text style={styles.row}>
@@ -362,26 +344,21 @@ export function UserDetailScreen({ navigation, route }: Props) {
                   : 'No roles assigned'}
               </Text>
             )}
-          </View>
+          </FormSection>
 
-          <View style={styles.card}>
-            <Text style={styles.section}>Projects</Text>
+          <FormSection title="Projects">
             {caps.canAssignProject && projects.length > 0 ? (
               <View style={styles.chips}>
                 {projects.map((project) => {
                   const assigned = user.assignedProjects.includes(project.id);
                   return (
-                    <Pressable
+                    <Chip
                       key={project.id}
-                      style={[styles.chip, assigned && styles.chipActive]}
+                      label={`${assigned ? '✓ ' : ''}${project.projectCode}`}
+                      selected={assigned}
                       disabled={acting}
                       onPress={() => void toggleProject(project.id, assigned)}
-                    >
-                      <Text style={styles.chipText}>
-                        {assigned ? '✓ ' : ''}
-                        {project.projectCode}
-                      </Text>
-                    </Pressable>
+                    />
                   );
                 })}
               </View>
@@ -392,7 +369,7 @@ export function UserDetailScreen({ navigation, route }: Props) {
                   : 'No projects assigned'}
               </Text>
             )}
-          </View>
+          </FormSection>
         </View>
       )}
     </Screen>
@@ -400,54 +377,14 @@ export function UserDetailScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 12, paddingBottom: 24 },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
+  stack: { gap: spacing.md, paddingBottom: spacing.xxxl },
+  row: { ...typography.body, fontSize: 15, marginBottom: spacing.xs },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  name: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  section: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  row: { color: colors.text, fontSize: 15 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  actionBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  warnBtn: { backgroundColor: '#9A3412' },
-  actionText: { color: '#F4F0E6', fontWeight: '700' },
-  newBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  newBtnText: { color: '#F4F0E6', fontWeight: '700' },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.background,
-  },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  disabled: { opacity: 0.6 },
-  error: { color: '#B42318', marginBottom: 4 },
+  error: { color: colors.danger, marginBottom: spacing.xs },
 });

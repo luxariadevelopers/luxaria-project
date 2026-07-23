@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { fetchInventoryDashboard } from '@/inventory-dashboard/api';
+import { PageHeader } from '@/layouts/PageHeader';
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
   return (
@@ -35,17 +36,16 @@ export function InventoryDashboardPage() {
   }
 
   if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
+    return <RetryPanel error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   const data = query.data;
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Inventory Dashboard</Typography>
-      <Typography variant="body2" color="text.secondary">
-        Stock value, movement velocity, critical / reorder items, and variance.
-      </Typography>
+      <PageHeader
+        subtitle="Stock value, movement velocity, critical / reorder items, and variance."
+      />
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard

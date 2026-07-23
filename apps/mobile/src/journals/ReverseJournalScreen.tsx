@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { formatDate } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { fetchJournal, reverseJournal } from './api';
 import { resolveJournalCapabilities } from './permissions';
 import type { PublicJournalEntry } from './types';
@@ -114,66 +110,58 @@ export function ReverseJournalScreen({ navigation, route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>
-            Original date: {formatDate(item.journalDate)}
-          </Text>
-          <Text style={styles.row}>Narration: {item.narration}</Text>
-          <Text style={styles.label}>Reversal date (YYYY-MM-DD)</Text>
-          <TextInput
-            style={styles.input}
-            value={journalDate}
-            onChangeText={setJournalDate}
-            autoCapitalize="none"
-            editable={!saving}
-          />
-          <Text style={styles.label}>Reversal narration</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            value={narration}
-            onChangeText={setNarration}
-            multiline
-            editable={!saving}
-          />
-          <Pressable
-            style={[styles.btn, saving && styles.disabled]}
+        <>
+          <FormSection title="Original">
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Date</Text>
+              <Text style={styles.fieldValue}>
+                {formatDate(item.journalDate)}
+              </Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Narration</Text>
+              <Text style={styles.fieldValue}>{item.narration}</Text>
+            </View>
+          </FormSection>
+
+          <FormSection title="Reversal">
+            <TextField
+              label="Reversal date (YYYY-MM-DD)"
+              value={journalDate}
+              onChangeText={setJournalDate}
+              autoCapitalize="none"
+              editable={!saving}
+            />
+            <TextField
+              label="Reversal narration"
+              value={narration}
+              onChangeText={setNarration}
+              multiline
+              style={styles.multiline}
+              editable={!saving}
+            />
+          </FormSection>
+
+          <Button
+            label="Confirm reverse"
+            variant="danger"
+            loading={saving}
             disabled={saving}
             onPress={() => void submit()}
-          >
-            <Text style={styles.btnText}>
-              {saving ? 'Reversing…' : 'Confirm reverse'}
-            </Text>
-          </Pressable>
-        </View>
+          />
+        </>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
+  field: { gap: 2, marginBottom: spacing.sm },
+  fieldLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 12,
   },
-  row: { color: colors.text, fontSize: 15 },
-  label: { color: colors.textMuted, marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    padding: 10,
-    backgroundColor: colors.background,
-  },
+  fieldValue: { ...typography.body, color: colors.text },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  btn: {
-    marginTop: 16,
-    backgroundColor: colors.danger,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
 });

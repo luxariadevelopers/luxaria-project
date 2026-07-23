@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import { SignatureCaptureField } from '@/labour-vouchers/components/SignatureCaptureField';
 import { useOfflineSync } from '@/offline';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import type { LocalFile } from '@/utils/fileUpload';
 import {
   createSiteExpense,
@@ -215,7 +220,10 @@ export function SiteExpenseFormScreen({ navigation, route }: Props) {
   if (!caps.canCreate) {
     return (
       <Screen title="New site expense" subtitle="Permission required">
-        <Text style={styles.error}>You need expense.create.</Text>
+        <AsyncStatePanel
+          forbidden
+          error="You need expense.create."
+        />
       </Screen>
     );
   }
@@ -323,78 +331,134 @@ export function SiteExpenseFormScreen({ navigation, route }: Props) {
       subtitle={selectedProject?.projectCode ?? 'Select project'}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Text style={styles.label}>Date</Text>
-      <TextInput style={styles.input} value={expenseDate} onChangeText={setExpenseDate} />
-      <Text style={styles.label}>Petty cash account id</Text>
-      <TextInput style={styles.input} value={pettyCashAccountId} onChangeText={setPettyCashAccountId} autoCapitalize="none" />
-      <View style={styles.chips}>
-        {accounts.slice(0, 5).map((a) => (
-          <Pressable key={a.id} style={[styles.chip, pettyCashAccountId === a.id && styles.chipActive]} onPress={() => setPettyCashAccountId(a.id)}>
-            <Text style={styles.chipText}>{a.accountCode || a.accountName}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Text style={styles.label}>Expense category id</Text>
-      <TextInput style={styles.input} value={expenseCategoryId} onChangeText={setExpenseCategoryId} autoCapitalize="none" />
-      <View style={styles.chips}>
-        {categories.slice(0, 5).map((c) => (
-          <Pressable key={c.id} style={[styles.chip, expenseCategoryId === c.id && styles.chipActive]} onPress={() => setExpenseCategoryId(c.id)}>
-            <Text style={styles.chipText}>{c.code || c.name}</Text>
-          </Pressable>
-        ))}
-      </View>
-      {requiresSignature ? (
-        <Text style={styles.hint}>This category requires a beneficiary / engineer signature.</Text>
-      ) : null}
-      <Text style={styles.label}>Amount</Text>
-      <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="numeric" />
-      <Text style={styles.label}>Paid to</Text>
-      <TextInput style={styles.input} value={paidTo} onChangeText={setPaidTo} />
-      <Text style={styles.label}>Purpose</Text>
-      <TextInput style={[styles.input, styles.multiline]} value={purpose} onChangeText={setPurpose} multiline />
-      <SignatureCaptureField
-        label="Beneficiary / engineer signature"
-        required={requiresSignature}
-        file={signature}
-        disabled={saving}
-        onCaptured={setSignature}
-      />
-      <Pressable
-        style={[styles.secondary, saving && styles.disabled]}
+
+      <FormSection title="Expense">
+        <TextField
+          label="Date"
+          value={expenseDate}
+          onChangeText={setExpenseDate}
+          containerStyle={styles.field}
+        />
+        <TextField
+          label="Petty cash account id"
+          value={pettyCashAccountId}
+          onChangeText={setPettyCashAccountId}
+          autoCapitalize="none"
+          containerStyle={styles.field}
+        />
+        <View style={styles.chips}>
+          {accounts.slice(0, 5).map((a) => (
+            <Chip
+              key={a.id}
+              label={a.accountCode || a.accountName}
+              selected={pettyCashAccountId === a.id}
+              onPress={() => setPettyCashAccountId(a.id)}
+            />
+          ))}
+        </View>
+        <TextField
+          label="Expense category id"
+          value={expenseCategoryId}
+          onChangeText={setExpenseCategoryId}
+          autoCapitalize="none"
+          containerStyle={styles.field}
+        />
+        <View style={styles.chips}>
+          {categories.slice(0, 5).map((c) => (
+            <Chip
+              key={c.id}
+              label={c.code || c.name}
+              selected={expenseCategoryId === c.id}
+              onPress={() => setExpenseCategoryId(c.id)}
+            />
+          ))}
+        </View>
+        {requiresSignature ? (
+          <Text style={styles.hint}>
+            This category requires a beneficiary / engineer signature.
+          </Text>
+        ) : null}
+        <TextField
+          label="Amount"
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="numeric"
+          containerStyle={styles.field}
+        />
+        <TextField
+          label="Paid to"
+          value={paidTo}
+          onChangeText={setPaidTo}
+          containerStyle={styles.field}
+        />
+        <TextField
+          label="Purpose"
+          value={purpose}
+          onChangeText={setPurpose}
+          multiline
+          style={styles.multiline}
+          containerStyle={styles.fieldLast}
+        />
+      </FormSection>
+
+      <FormSection title="Signature" framed={false}>
+        <SignatureCaptureField
+          label="Beneficiary / engineer signature"
+          required={requiresSignature}
+          file={signature}
+          disabled={saving}
+          onCaptured={setSignature}
+        />
+      </FormSection>
+
+      <Button
+        label="Save draft"
+        variant="secondary"
         disabled={saving}
         onPress={() => void saveDraftOnly()}
-      >
-        <Text style={styles.secondaryText}>Save draft</Text>
-      </Pressable>
-      <Pressable style={[styles.submit, saving && styles.disabled]} disabled={saving} onPress={() => void submit()}>
-        <Text style={styles.submitText}>
-          {saving ? 'Saving…' : isOnline ? 'Create & submit' : 'Save offline & submit'}
-        </Text>
-      </Pressable>
+        style={styles.action}
+      />
+      <Button
+        label={
+          saving
+            ? 'Saving…'
+            : isOnline
+              ? 'Create & submit'
+              : 'Save offline & submit'
+        }
+        loading={saving}
+        onPress={() => void submit()}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  hint: { color: colors.textMuted, marginTop: 8, fontSize: 12 },
-  input: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.text, paddingHorizontal: 12, paddingVertical: 10 },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  chip: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  secondary: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingVertical: 14,
-    alignItems: 'center',
+  field: {
+    marginBottom: spacing.md,
   },
-  secondaryText: { color: colors.text, fontWeight: '700' },
-  submit: { marginTop: 12, backgroundColor: colors.primary, paddingVertical: 14, alignItems: 'center' },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: '#B42318', marginBottom: 8 },
+  fieldLast: {
+    marginBottom: 0,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  hint: {
+    ...typography.meta,
+    marginBottom: spacing.md,
+  },
+  multiline: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  action: {
+    marginBottom: spacing.sm,
+  },
+  error: {
+    color: colors.danger,
+    marginBottom: spacing.sm,
+  },
 });

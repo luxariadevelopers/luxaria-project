@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { resolveSaleAgreementCapabilities } from '@/sale-agreements/roleAccess';
 import { SaleAgreementTable } from '@/sale-agreements/SaleAgreementTable';
 import { useSaleAgreementsList } from '@/sale-agreements/useSaleAgreements';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function SaleAgreementsPage() {
   const { hasPermission, access } = useAuth();
@@ -39,9 +40,10 @@ export function SaleAgreementsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Sale agreements — draft through execution for booked units.
-      </Typography>
+      <PageHeader
+        title="Sale agreements"
+        subtitle="Sale agreements — draft through execution for booked units."
+      />
       <SaleAgreementTable
         rows={query.data?.items ?? []}
         loading={query.isLoading || query.isFetching}

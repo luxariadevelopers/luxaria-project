@@ -1,18 +1,9 @@
-import { useState } from 'react';
-import {
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Button, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import {
   EmptyState,
   PermissionDenied,
@@ -20,6 +11,7 @@ import {
 } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import type { PublicMeasurementBookEntry } from '@/measurement-book/api';
 import { MeasurementBookFormDrawer } from '@/measurement-book/MeasurementBookFormDrawer';
 import { RejectMbDialog } from '@/measurement-book/RejectMbDialog';
@@ -80,6 +72,138 @@ export function MeasurementBookPage() {
   const cancel = useCancelMeasurementBook();
   const revise = useReviseMeasurementBook();
 
+  const run = (action: () => Promise<unknown>, okMessage: string) => {
+    void (async () => {
+      try {
+        await action();
+        success(okMessage);
+      } catch (err) {
+        notifyError(getErrorMessage(err));
+      }
+    })();
+  };
+
+  const columns = useMemo<GridColDef<PublicMeasurementBookEntry>[]>(
+    () => [
+      {
+        field: 'entryNumber',
+        headerName: 'Entry',
+        width: 140,
+      },
+      {
+        field: 'revision',
+        headerName: 'Rev',
+        width: 70,
+      },
+      {
+        field: 'period',
+        headerName: 'Period',
+        width: 200,
+        valueGetter: (_v, row) =>
+          `${row.periodFrom.slice(0, 10)} → ${row.periodTo.slice(0, 10)}`,
+      },
+      {
+        field: 'boq',
+        headerName: 'BOQ',
+        width: 120,
+        valueGetter: (_v, row) => row.boqCode || row.boqItemId.slice(-6),
+      },
+      {
+        field: 'location',
+        headerName: 'Location',
+        flex: 1,
+        minWidth: 120,
+        valueGetter: (_v, row) => row.location.locationLabel || '—',
+      },
+      {
+        field: 'dims',
+        headerName: 'Dims',
+        width: 160,
+        valueGetter: (_v, row) => formatDims(row),
+      },
+      {
+        field: 'quantity',
+        headerName: 'Qty',
+        width: 110,
+        valueGetter: (_v, row) => `${row.quantity} ${row.unit}`,
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 130,
+        renderCell: (params) => (
+          <Chip size="small" label={params.row.status} />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const rowActions = (
+    row: PublicMeasurementBookEntry,
+  ): DataTableRowAction<PublicMeasurementBookEntry>[] => {
+    const actions = resolveMeasurementBookActions(row, caps, user?.id);
+    const items: DataTableRowAction<PublicMeasurementBookEntry>[] = [];
+
+    if (actions.includes('submit')) {
+      items.push({
+        id: 'submit',
+        label: 'Submit',
+        onClick: (r) =>
+          run(() => submit.mutateAsync(r.id), 'Entry submitted'),
+      });
+    }
+    if (actions.includes('acknowledge')) {
+      items.push({
+        id: 'acknowledge',
+        label: 'Acknowledge',
+        onClick: (r) =>
+          run(() => acknowledge.mutateAsync(r.id), 'Entry acknowledged'),
+      });
+    }
+    if (actions.includes('verify')) {
+      items.push({
+        id: 'verify',
+        label: 'Verify',
+        onClick: (r) =>
+          run(() => verify.mutateAsync(r.id), 'Entry verified'),
+      });
+    }
+    if (actions.includes('certify')) {
+      items.push({
+        id: 'certify',
+        label: 'Certify',
+        onClick: (r) =>
+          run(() => certify.mutateAsync(r.id), 'Entry certified'),
+      });
+    }
+    if (actions.includes('reject')) {
+      items.push({
+        id: 'reject',
+        label: 'Reject',
+        danger: true,
+        onClick: (r) => setRejectTarget(r),
+      });
+    }
+    if (actions.includes('cancel')) {
+      items.push({
+        id: 'cancel',
+        label: 'Cancel',
+        onClick: (r) =>
+          run(() => cancel.mutateAsync(r.id), 'Entry cancelled'),
+      });
+    }
+    if (actions.includes('revise')) {
+      items.push({
+        id: 'revise',
+        label: 'Revise',
+        onClick: (r) => setReviseTarget(r),
+      });
+    }
+
+    return items;
+  };
+
   if (access && !caps.canView) {
     return (
       <PermissionDenied
@@ -104,213 +228,39 @@ export function MeasurementBookPage() {
     );
   }
 
-  const run = (action: () => Promise<unknown>, okMessage: string) => {
-    void (async () => {
-      try {
-        await action();
-        success(okMessage);
-      } catch (err) {
-        notifyError(getErrorMessage(err));
-      }
-    })();
-  };
-
   const rows = list.data ?? [];
 
   return (
     <Stack spacing={2} data-testid="measurement-book-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-        }}
-      >
-        <div>
-          <Typography variant="h5">Measurement Book</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Formal MB register — L/B/H quantities, engineer submit, contractor
-            acknowledgement, verify/certify (`measurement.create` /
-            `measurement.certify`).
-          </Typography>
-        </div>
-        {caps.canCreate ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            New entry
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Formal MB register — L/B/H quantities, engineer submit, contractor acknowledgement, verify/certify (`measurement.create` / `measurement.certify`)."
+        actions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New entry
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Entry</TableCell>
-              <TableCell>Rev</TableCell>
-              <TableCell>Period</TableCell>
-              <TableCell>BOQ</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Dims</TableCell>
-              <TableCell align="right">Qty</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <Typography variant="body2" color="text.secondary">
-                    No measurement book entries for this project.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => {
-                const actions = resolveMeasurementBookActions(
-                  row,
-                  caps,
-                  user?.id,
-                );
-                return (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.entryNumber}</TableCell>
-                    <TableCell>{row.revision}</TableCell>
-                    <TableCell>
-                      {row.periodFrom.slice(0, 10)} →{' '}
-                      {row.periodTo.slice(0, 10)}
-                    </TableCell>
-                    <TableCell>
-                      {row.boqCode || row.boqItemId.slice(-6)}
-                    </TableCell>
-                    <TableCell>
-                      {row.location.locationLabel || '—'}
-                    </TableCell>
-                    <TableCell>{formatDims(row)}</TableCell>
-                    <TableCell align="right">
-                      {row.quantity} {row.unit}
-                    </TableCell>
-                    <TableCell>
-                      <Chip size="small" label={row.status} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Stack
-                        direction="row"
-                        spacing={0.5}
-                        sx={{
-                          justifyContent: 'flex-end',
-                          flexWrap: 'wrap',
-                        }}
-                        useFlexGap
-                      >
-                        {actions.includes('submit') ? (
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              run(
-                                () => submit.mutateAsync(row.id),
-                                'Entry submitted',
-                              )
-                            }
-                          >
-                            Submit
-                          </Button>
-                        ) : null}
-                        {actions.includes('acknowledge') ? (
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              run(
-                                () => acknowledge.mutateAsync(row.id),
-                                'Entry acknowledged',
-                              )
-                            }
-                          >
-                            Acknowledge
-                          </Button>
-                        ) : null}
-                        {actions.includes('verify') ? (
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              run(
-                                () => verify.mutateAsync(row.id),
-                                'Entry verified',
-                              )
-                            }
-                          >
-                            Verify
-                          </Button>
-                        ) : null}
-                        {actions.includes('certify') ? (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() =>
-                              run(
-                                () => certify.mutateAsync(row.id),
-                                'Entry certified',
-                              )
-                            }
-                          >
-                            Certify
-                          </Button>
-                        ) : null}
-                        {actions.includes('reject') ? (
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => setRejectTarget(row)}
-                          >
-                            Reject
-                          </Button>
-                        ) : null}
-                        {actions.includes('cancel') ? (
-                          <Button
-                            size="small"
-                            color="inherit"
-                            onClick={() =>
-                              run(
-                                () => cancel.mutateAsync(row.id),
-                                'Entry cancelled',
-                              )
-                            }
-                          >
-                            Cancel
-                          </Button>
-                        ) : null}
-                        {actions.includes('revise') ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => setReviseTarget(row)}
-                          >
-                            Revise
-                          </Button>
-                        ) : null}
-                        {actions.length === 0 ? (
-                          <Typography variant="body2" color="text.secondary">
-                            —
-                          </Typography>
-                        ) : null}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+      <DataTable
+        title="Measurement book"
+        rows={rows}
+        columns={columns}
+        loading={list.isLoading || list.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No measurement book entries"
+        emptyDescription="No measurement book entries for this project."
+        height={560}
+        paginationMode="client"
+        rowActions={rowActions}
+        mobileCard={{
+          primaryField: 'entryNumber',
+          metaFields: ['period', 'quantity'],
+          statusField: 'status',
+        }}
+        showColumnVisibility={false}
+      />
 
       <MeasurementBookFormDrawer
         open={createOpen}

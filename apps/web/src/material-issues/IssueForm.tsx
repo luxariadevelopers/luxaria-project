@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Box,
   Button,
@@ -202,7 +203,7 @@ export function IssueForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 520 } } },
+        paper: { sx: formDrawerPaperSx(520) },
       }}
     >
       <Box

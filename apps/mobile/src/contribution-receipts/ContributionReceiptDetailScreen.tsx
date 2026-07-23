@@ -1,23 +1,19 @@
 import { useCallback, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { formatInr } from '@/format';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   cancelContributionReceipt,
   fetchContributionReceipt,
@@ -35,6 +31,15 @@ type Props = NativeStackScreenProps<
   AppStackParamList,
   'ContributionReceiptDetail'
 >;
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
+}
 
 export function ContributionReceiptDetailScreen({ route }: Props) {
   const { receiptId } = route.params;
@@ -138,137 +143,110 @@ export function ContributionReceiptDetailScreen({ route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>
-            Status: {receiptStatusLabel(item.status)}
-          </Text>
-          <Text style={styles.row}>Amount: {formatInr(item.amount)}</Text>
-          <Text style={styles.row}>
-            Received: {String(item.receivedDate).slice(0, 10)}
-          </Text>
-          <Text style={styles.row}>
-            Mode: {paymentModeLabel(item.paymentMode)}
-          </Text>
-          {item.transactionReference ? (
-            <Text style={styles.row}>Ref: {item.transactionReference}</Text>
-          ) : null}
-          {item.remarks ? (
-            <Text style={styles.row}>Remarks: {item.remarks}</Text>
-          ) : null}
-          {item.accountingNote ? (
-            <Text style={styles.note}>{item.accountingNote}</Text>
-          ) : null}
-          {item.cancellationReason ? (
-            <Text style={styles.row}>
-              Cancelled: {item.cancellationReason}
-            </Text>
-          ) : null}
+        <>
+          <FormSection title="Receipt">
+            <Field
+              label="Status"
+              value={receiptStatusLabel(item.status)}
+            />
+            <Field label="Amount" value={formatInr(item.amount)} />
+            <Field
+              label="Received"
+              value={String(item.receivedDate).slice(0, 10)}
+            />
+            <Field
+              label="Mode"
+              value={paymentModeLabel(item.paymentMode)}
+            />
+            {item.transactionReference ? (
+              <Field label="Ref" value={item.transactionReference} />
+            ) : null}
+            {item.remarks ? (
+              <Field label="Remarks" value={item.remarks} />
+            ) : null}
+            {item.accountingNote ? (
+              <Text style={styles.note}>{item.accountingNote}</Text>
+            ) : null}
+            {item.cancellationReason ? (
+              <Field label="Cancelled" value={item.cancellationReason} />
+            ) : null}
+          </FormSection>
 
-          {actions.includes('submit') ? (
-            <Pressable
-              style={[styles.btn, acting && styles.disabled]}
-              disabled={acting}
-              onPress={() => void runAction('submit')}
-            >
-              <Text style={styles.btnText}>
-                {acting ? 'Working…' : 'Submit'}
-              </Text>
-            </Pressable>
-          ) : null}
-          {actions.includes('verify') ? (
-            <Pressable
-              style={[styles.btn, acting && styles.disabled]}
-              disabled={acting}
-              onPress={() => void runAction('verify')}
-            >
-              <Text style={styles.btnText}>
-                {acting ? 'Working…' : 'Verify'}
-              </Text>
-            </Pressable>
-          ) : null}
-          {actions.includes('post') ? (
-            <Pressable
-              style={[styles.btn, acting && styles.disabled]}
-              disabled={acting}
-              onPress={() => void runAction('post')}
-            >
-              <Text style={styles.btnText}>
-                {acting ? 'Working…' : 'Post'}
-              </Text>
-            </Pressable>
-          ) : null}
-          {actions.includes('cancel') ? (
-            <>
-              {!showCancel ? (
-                <Pressable
-                  style={[styles.btnDanger, acting && styles.disabled]}
+          {actions.length > 0 ? (
+            <FormSection title="Actions" framed={false}>
+              {actions.includes('submit') ? (
+                <Button
+                  label="Submit"
+                  loading={acting}
                   disabled={acting}
-                  onPress={() => setShowCancel(true)}
-                >
-                  <Text style={styles.btnText}>Cancel receipt</Text>
-                </Pressable>
-              ) : (
-                <>
-                  <Text style={styles.label}>Cancellation reason</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={cancelReason}
-                    onChangeText={setCancelReason}
-                    placeholder="At least 5 characters"
-                    placeholderTextColor={colors.textMuted}
-                    multiline
-                  />
-                  <Pressable
-                    style={[styles.btnDanger, acting && styles.disabled]}
+                  onPress={() => void runAction('submit')}
+                  style={styles.action}
+                />
+              ) : null}
+              {actions.includes('verify') ? (
+                <Button
+                  label="Verify"
+                  loading={acting}
+                  disabled={acting}
+                  onPress={() => void runAction('verify')}
+                  style={styles.action}
+                />
+              ) : null}
+              {actions.includes('post') ? (
+                <Button
+                  label="Post"
+                  loading={acting}
+                  disabled={acting}
+                  onPress={() => void runAction('post')}
+                  style={styles.action}
+                />
+              ) : null}
+              {actions.includes('cancel') ? (
+                !showCancel ? (
+                  <Button
+                    label="Cancel receipt"
+                    variant="danger"
                     disabled={acting}
-                    onPress={() => void runAction('cancel')}
-                  >
-                    <Text style={styles.btnText}>
-                      {acting ? 'Working…' : 'Confirm cancel'}
-                    </Text>
-                  </Pressable>
-                </>
-              )}
-            </>
+                    onPress={() => setShowCancel(true)}
+                    style={styles.action}
+                  />
+                ) : (
+                  <>
+                    <TextField
+                      label="Cancellation reason"
+                      value={cancelReason}
+                      onChangeText={setCancelReason}
+                      placeholder="At least 5 characters"
+                      multiline
+                      style={styles.multiline}
+                    />
+                    <Button
+                      label="Confirm cancel"
+                      variant="danger"
+                      loading={acting}
+                      disabled={acting}
+                      onPress={() => void runAction('cancel')}
+                    />
+                  </>
+                )
+              ) : null}
+            </FormSection>
           ) : null}
-        </View>
+        </>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
+  field: { gap: 2, marginBottom: spacing.sm },
+  fieldLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 12,
   },
-  row: { color: colors.text, fontSize: 15 },
-  note: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
-  label: { color: colors.textMuted, marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    padding: 10,
-    backgroundColor: colors.background,
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  btn: {
-    marginTop: 12,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnDanger: {
-    marginTop: 8,
-    backgroundColor: colors.danger,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
+  fieldValue: { ...typography.body, color: colors.text },
+  note: { ...typography.meta, fontSize: 13, marginTop: spacing.xs },
+  action: { marginBottom: spacing.sm },
+  multiline: { minHeight: 72, textAlignVertical: 'top' },
 });

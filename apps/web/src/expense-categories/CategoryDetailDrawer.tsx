@@ -36,6 +36,7 @@ import {
   useDeleteExpenseCategory,
   useUpdateExpenseCategory,
 } from './useExpenseCategories';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   categoryToUpdateFormValues,
   expenseCategoryUpdateSchema,
@@ -137,7 +138,7 @@ export function CategoryDetailDrawer({
         anchor="right"
         open={open}
         onClose={onClose}
-        slotProps={{ paper: { sx: { width: { xs: '100%', sm: 460 } } } }}
+        slotProps={{ paper: { sx: formDrawerPaperSx(460) } }}
       />
     );
   }
@@ -180,7 +181,7 @@ export function CategoryDetailDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 480 } } },
+        paper: { sx: formDrawerPaperSx(480) },
       }}
     >
       <Box sx={{ p: 3 }} data-testid="expense-category-detail-drawer">

@@ -1,7 +1,6 @@
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { luxariaTheme } from '@/theme/theme';
@@ -114,8 +113,7 @@ describe('EntityActionBar', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('invokes onClick for a visible action', async () => {
-    const user = userEvent.setup();
+  it('invokes onClick for a visible action', () => {
     const onClick = vi.fn();
     wrap(
       <EntityActionBar
@@ -124,8 +122,19 @@ describe('EntityActionBar', () => {
         hasPermission={() => true}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders sticky action bar chrome', () => {
+    wrap(
+      <EntityActionBar
+        actions={actions}
+        status="draft"
+        hasPermission={() => true}
+      />,
+    );
+    expect(screen.getByTestId('entity-action-bar')).toBeInTheDocument();
   });
 });
 

@@ -11,19 +11,16 @@ import {
   Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable } from '@/components/DataTable';
 import { DetailHeader } from '@/components/entity-detail';
-import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
+import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { WAREHOUSE_KIND_OPTIONS } from './constants';
 import {
@@ -35,6 +32,7 @@ import {
 import {
   StructureSiteType,
   WarehouseKind,
+  type PublicProjectSite,
   type PublicProjectSiteNode,
 } from './types';
 
@@ -111,6 +109,56 @@ export function ProjectWarehousesPage({
     () => flattenSiteLabelMap(structureQuery.data ?? []),
     [structureQuery.data],
   );
+  const warehouses = warehousesQuery.data ?? [];
+  const columns = useMemo<GridColDef<PublicProjectSite>[]>(
+    () => [
+      {
+        field: 'siteCode',
+        headerName: 'Code',
+        width: 130,
+      },
+      {
+        field: 'siteName',
+        headerName: 'Name',
+        flex: 1,
+        minWidth: 160,
+      },
+      {
+        field: 'warehouseKind',
+        headerName: 'Kind',
+        width: 140,
+        valueGetter: (_v, row) =>
+          WAREHOUSE_KIND_OPTIONS.find(
+            (option) => option.value === row.warehouseKind,
+          )?.label ??
+          row.warehouseKind ??
+          '—',
+      },
+      {
+        field: 'parentSiteId',
+        headerName: 'Site',
+        flex: 1,
+        minWidth: 140,
+        valueGetter: (_v, row) =>
+          row.parentSiteId
+            ? (siteLabelById.get(row.parentSiteId) ?? '—')
+            : '—',
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 110,
+      },
+      {
+        field: 'address',
+        headerName: 'Address',
+        flex: 1,
+        minWidth: 140,
+        valueGetter: (_v, row) => row.address ?? '—',
+      },
+    ],
+    [siteLabelById],
+  );
   const siteStoreRequiresParent =
     warehouseKind === WarehouseKind.SiteStore;
   const canSubmit =
@@ -164,12 +212,6 @@ export function ProjectWarehousesPage({
     );
   }
 
-  const warehouses = warehousesQuery.data ?? [];
-  const kindLabel = (value: string | null) =>
-    WAREHOUSE_KIND_OPTIONS.find((option) => option.value === value)?.label ??
-    value ??
-    '—';
-
   const applyParentSite = (nextParentId: string) => {
     setParentSiteId(nextParentId);
     const selected = siteOptions.find((option) => option.id === nextParentId);
@@ -192,43 +234,22 @@ export function ProjectWarehousesPage({
         backLabel="Project"
       />
 
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        {warehouses.length === 0 ? (
-          <EmptyState
-            title="No warehouses"
-            description="Create a main store, site store, temporary store, or scrap yard. Site stores can be linked to a project site from Structure."
-          />
-        ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Code</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Kind</TableCell>
-                <TableCell>Site</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Address</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {warehouses.map((warehouse) => (
-                <TableRow key={warehouse.id}>
-                  <TableCell>{warehouse.siteCode}</TableCell>
-                  <TableCell>{warehouse.siteName}</TableCell>
-                  <TableCell>{kindLabel(warehouse.warehouseKind)}</TableCell>
-                  <TableCell>
-                    {warehouse.parentSiteId
-                      ? (siteLabelById.get(warehouse.parentSiteId) ?? '—')
-                      : '—'}
-                  </TableCell>
-                  <TableCell>{warehouse.status}</TableCell>
-                  <TableCell>{warehouse.address ?? '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Paper>
+      <DataTable
+        title="Warehouses"
+        rows={warehouses}
+        columns={columns}
+        getRowId={(row) => row.id}
+        emptyTitle="No warehouses"
+        emptyDescription="Create a main store, site store, temporary store, or scrap yard. Site stores can be linked to a project site from Structure."
+        height={360}
+        paginationMode="client"
+        mobileCard={{
+          primaryField: 'siteCode',
+          metaFields: ['siteName', 'warehouseKind'],
+          statusField: 'status',
+        }}
+        showColumnVisibility={false}
+      />
 
       {canManage ? (
         <Paper variant="outlined" sx={{ p: 2 }}>

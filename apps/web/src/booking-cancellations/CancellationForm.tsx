@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Box, Button, Drawer, Stack, Typography } from '@mui/material';
+import { formDrawerPaperSx } from '@/components/forms';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { getErrorMessage } from '@/api/errors';
@@ -83,7 +84,7 @@ export function CancellationForm({ open, onClose, bookings }: Props) {
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box sx={{ p: 3 }} data-testid="cancellation-form">

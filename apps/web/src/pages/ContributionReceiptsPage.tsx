@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
@@ -32,6 +32,7 @@ import { resolveUploadsUrl } from '@/print-pdf/resolveUploadsUrl';
 import { CommitmentStatus } from '@/commitments/types';
 import { useCommitmentsList } from '@/commitments/useCommitments';
 import { useActiveParticipants } from '@/project-participants/useProjectParticipants';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Contribution receipts — `/capital/contribution-receipts` (Micro Phase 039).
@@ -179,13 +180,23 @@ export function ContributionReceiptsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Project funding receipts
-        {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-        Director first investment posts as capital; later director money for a
-        project posts as a director loan. Select the project in the header,
-        then create a receipt against the matching commitment.
-      </Typography>
+      <PageHeader
+        title="Contribution receipts"
+        subtitle={`Project funding receipts${
+          selectedProject ? ` — ${selectedProject.projectName}` : ''
+        }. Director first investment posts as capital; later director money for a project posts as a director loan. Select the project in the header, then create a receipt against the matching commitment.`}
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              disabled={!projectId}
+              onClick={() => setCreateOpen(true)}
+            >
+              New receipt
+            </Button>
+          ) : undefined
+        }
+      />
 
       <BalancesSummary
         balances={balances.data}
@@ -222,17 +233,6 @@ export function ContributionReceiptsPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canCreate ? (
-            <Button
-              variant="contained"
-              disabled={!projectId}
-              onClick={() => setCreateOpen(true)}
-            >
-              New receipt
-            </Button>
-          ) : undefined
         }
         caps={caps}
         participantLabel={(id) =>

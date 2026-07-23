@@ -73,6 +73,11 @@ export function CustomerLoanTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'loanNumber',
+        metaFields: ['bankName', 'sanctionAmount'],
+        statusField: 'status',
+      }}
     />
   );
 }

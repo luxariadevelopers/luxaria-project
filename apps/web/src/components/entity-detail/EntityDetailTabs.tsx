@@ -13,6 +13,7 @@ type Props = {
 
 /**
  * Detail body tabs. Tabs with a `permission` are omitted when unauthorised.
+ * Always scrollable on narrow viewports with comfortable tap targets.
  */
 export function EntityDetailTabs({
   tabs,
@@ -39,7 +40,7 @@ export function EntityDetailTabs({
   }
 
   return (
-    <Box data-testid="entity-detail-tabs">
+    <Box data-testid="entity-detail-tabs" sx={{ minWidth: 0 }}>
       <Tabs
         value={active?.id ?? false}
         onChange={(_e, next: string) => {
@@ -47,13 +48,26 @@ export function EntityDetailTabs({
           onChange?.(next);
         }}
         variant="scrollable"
+        scrollButtons="auto"
         allowScrollButtonsMobile
+        sx={{
+          borderBottom: 1,
+          borderColor: 'divider',
+          minHeight: 48,
+          '& .MuiTab-root': {
+            minHeight: 48,
+            minWidth: 'auto',
+            px: { xs: 1.5, sm: 2 },
+            textTransform: 'none',
+            fontWeight: 600,
+          },
+        }}
       >
         {visible.map((tab) => (
           <Tab key={tab.id} value={tab.id} label={tab.label} />
         ))}
       </Tabs>
-      <Box sx={{ pt: 2 }}>{active?.content}</Box>
+      <Box sx={{ pt: 2, minWidth: 0 }}>{active?.content}</Box>
     </Box>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from './labels';
 import type { PublicCompanyBankAccount } from './types';
 import { useUpdateBankAccount } from './useBankAccounts';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   bankAccountUpdateSchema,
   type BankAccountUpdateFormValues,
@@ -111,7 +112,7 @@ export function EditBankAccountDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 460 } } },
+        paper: { sx: formDrawerPaperSx(460) },
       }}
     >
       <Box sx={{ p: 2.5 }} component="form" onSubmit={handleSubmit(onSubmit)}>

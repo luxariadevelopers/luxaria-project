@@ -216,6 +216,11 @@ export function VendorTable({
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
+      mobileCard={{
+        primaryField: 'legalName',
+        metaFields: ['vendorCode', 'gstin'],
+        statusField: 'status',
+      }}
     />
   );
 }

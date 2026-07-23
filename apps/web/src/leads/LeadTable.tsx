@@ -19,7 +19,6 @@ type Props = {
   search: string;
   onSearchChange: (value: string) => void;
   filterSlot?: ReactNode;
-  toolbarActions?: ReactNode;
   canManage?: boolean;
   onTransition?: (row: LeadListRow) => void;
 };
@@ -37,7 +36,6 @@ export function LeadTable({
   search,
   onSearchChange,
   filterSlot,
-  toolbarActions,
   canManage = false,
   onTransition,
 }: Props) {
@@ -106,9 +104,13 @@ export function LeadTable({
       onSearchChange={onSearchChange}
       searchPlaceholder="Search name, phone, email…"
       filterSlot={filterSlot}
-      toolbarActions={toolbarActions}
       rowActions={rowActions}
       onRowClick={(row) => navigate(`/sales/leads/${row.id}`)}
+      mobileCard={{
+        primaryField: 'fullName',
+        metaFields: ['leadNumber', 'phone'],
+        statusField: 'status',
+      }}
     />
   );
 }

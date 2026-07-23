@@ -203,6 +203,11 @@ export function ContractorTable({
       preferencesKey="contractors-list"
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'legalName',
+        metaFields: ['contractorCode', 'contractorType'],
+        statusField: 'status',
+      }}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
     />
   );

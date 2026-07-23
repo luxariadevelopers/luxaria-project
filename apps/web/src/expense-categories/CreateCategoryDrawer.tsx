@@ -11,6 +11,7 @@ import { flattenCategoryTree } from './hierarchy';
 import { LedgerAccountSelector } from './LedgerAccountSelector';
 import type { ExpenseCategoryTreeNode } from './types';
 import { useCreateExpenseCategory } from './useExpenseCategories';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   defaultCreateFormValues,
   expenseCategoryCreateSchema,
@@ -90,7 +91,7 @@ export function CreateCategoryDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 460 } } },
+        paper: { sx: formDrawerPaperSx(460) },
       }}
     >
       <Box

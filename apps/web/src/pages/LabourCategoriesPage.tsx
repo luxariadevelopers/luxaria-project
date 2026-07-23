@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Button,
   CircularProgress,
@@ -7,7 +8,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Typography,
 } from '@mui/material';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -119,10 +119,9 @@ export function LabourCategoriesPage() {
 
   return (
     <Stack spacing={2} data-testid="labour-categories-page">
-      <Typography color="text.secondary">
-        Manage labour skills and company rates. Project and contractor overrides
-        apply across attendance and vouchers.
-      </Typography>
+      <PageHeader
+        subtitle="Manage labour skills and company rates. Project and contractor overrides apply across attendance and vouchers."
+      />
 
       {list.error && !isForbiddenError(list.error) ? (
         <RetryPanel

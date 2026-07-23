@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -7,6 +7,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { applyPettyCashRequestClientFilters } from '@/petty-cash-requests/applyClientFilters';
 import {
   RequestActionDialog,
@@ -210,12 +211,25 @@ export function PettyCashRequestsPage() {
 
   return (
     <Stack spacing={2} data-testid="petty-cash-requests-page">
-      <Typography color="text.secondary">
-        Weekly petty-cash funding requests
-        {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-        Submit, review, approve and fund through the Nest workflow. Previous
-        unsettled cash is shown per request. Select a project in the header.
-      </Typography>
+      <PageHeader
+        title="Petty cash requests"
+        subtitle={`Weekly petty-cash funding requests${
+          selectedProject ? ` — ${selectedProject.projectName}` : ''
+        }. Submit, review, approve and fund through the Nest workflow. Previous unsettled cash is shown per request. Select a project in the header.`}
+        actions={
+          caps.canRequest ? (
+            <Button
+              variant="contained"
+              disabled={!projectId}
+              onClick={() =>
+                navigate('/accounting/petty-cash/requests/new')
+              }
+            >
+              New request
+            </Button>
+          ) : undefined
+        }
+      />
 
       <RequestTable
         rows={rows}
@@ -247,19 +261,6 @@ export function PettyCashRequestsPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canRequest ? (
-            <Button
-              variant="contained"
-              disabled={!projectId}
-              onClick={() =>
-                navigate('/accounting/petty-cash/requests/new')
-              }
-            >
-              New request
-            </Button>
-          ) : undefined
         }
         caps={caps}
         accountLabel={(id) => `…${id.slice(-8)}`}

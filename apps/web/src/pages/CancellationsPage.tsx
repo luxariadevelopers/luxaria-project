@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -7,6 +7,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { CancellationDetailDrawer } from '@/booking-cancellations/CancellationDetailDrawer';
 import {
   CancellationFilters,
@@ -122,12 +123,23 @@ export function CancellationsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Booking cancellations and customer refunds
-        {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-        Units stay unavailable until the approved workflow finishes (refund
-        when due, then release). Select a project in the header.
-      </Typography>
+      <PageHeader
+        title="Cancellations"
+        subtitle={`Booking cancellations and customer refunds${
+          selectedProject ? ` — ${selectedProject.projectName}` : ''
+        }. Units stay unavailable until the approved workflow finishes (refund when due, then release). Select a project in the header.`}
+        actions={
+          caps.canRequest ? (
+            <Button
+              variant="contained"
+              disabled={!projectId}
+              onClick={() => setCreateOpen(true)}
+            >
+              Request cancellation
+            </Button>
+          ) : undefined
+        }
+      />
 
       <CancellationTable
         rows={rows}
@@ -155,17 +167,6 @@ export function CancellationsPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canRequest ? (
-            <Button
-              variant="contained"
-              disabled={!projectId}
-              onClick={() => setCreateOpen(true)}
-            >
-              Request cancellation
-            </Button>
-          ) : undefined
         }
         caps={caps}
         onOpen={setDetailRow}

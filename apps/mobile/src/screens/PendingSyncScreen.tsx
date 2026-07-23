@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -13,6 +12,8 @@ import {
 } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Button } from '@/components/Button';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
@@ -26,27 +27,32 @@ import {
   filterQueueItems,
   statusLabel,
 } from '@/sync-centre';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'PendingSync'>,
   NativeStackNavigationProp<AppStackParamList>
 >;
 
-function statusColor(status: string, failureKind: string | null) {
-  if (failureKind === OfflineFailureKind.Permanent) return colors.danger;
-  if (failureKind === OfflineFailureKind.Forbidden) return colors.danger;
+function statusTone(
+  status: string,
+  failureKind: string | null,
+): 'default' | 'success' | 'warning' | 'danger' {
+  if (
+    failureKind === OfflineFailureKind.Permanent ||
+    failureKind === OfflineFailureKind.Forbidden
+  ) {
+    return 'danger';
+  }
   switch (status) {
     case OfflineTxnStatus.Synced:
-      return colors.success;
+      return 'success';
     case OfflineTxnStatus.Failed:
-      return colors.danger;
+      return 'danger';
     case OfflineTxnStatus.Conflict:
-      return colors.warning;
-    case OfflineTxnStatus.Uploading:
-      return colors.primary;
+      return 'warning';
     default:
-      return colors.textMuted;
+      return 'default';
   }
 }
 
@@ -82,24 +88,22 @@ export function PendingSyncScreen() {
           : 'You are offline — items stay queued locally'
       }
       scroll={false}
+      showHeader
       rightSlot={
         <View style={styles.actions}>
-          <Pressable onPress={() => void refresh()}>
-            <Text style={styles.action}>Refresh</Text>
-          </Pressable>
-          <Pressable
+          <Button
+            label="Refresh"
+            variant="ghost"
+            onPress={() => void refresh()}
+            style={styles.actionBtn}
+          />
+          <Button
+            label="Sync now"
             onPress={() => void processQueue()}
             disabled={!isOnline || isSyncing}
-          >
-            <Text
-              style={[
-                styles.action,
-                (!isOnline || isSyncing) && styles.actionDisabled,
-              ]}
-            >
-              Sync now
-            </Text>
-          </Pressable>
+            loading={isSyncing}
+            style={styles.actionBtn}
+          />
         </View>
       }
     >
@@ -116,9 +120,11 @@ export function PendingSyncScreen() {
       {lastError ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{lastError}</Text>
-          <Pressable onPress={() => void refresh()}>
-            <Text style={styles.action}>Retry load</Text>
-          </Pressable>
+          <Button
+            label="Retry load"
+            variant="secondary"
+            onPress={() => void refresh()}
+          />
         </View>
       ) : null}
 
@@ -145,12 +151,11 @@ export function PendingSyncScreen() {
               related capture form.
             </Text>
             {items.length === 0 ? (
-              <Pressable
-                style={styles.demoButton}
+              <Button
+                label="Enqueue demo item"
                 onPress={() => void enqueueDemo()}
-              >
-                <Text style={styles.demoButtonText}>Enqueue demo item</Text>
-              </Pressable>
+                style={styles.demoButton}
+              />
             ) : null}
           </View>
         }
@@ -158,44 +163,24 @@ export function PendingSyncScreen() {
           const mediaPending = item.media.filter(
             (m) => m.uploadStatus !== 'uploaded',
           ).length;
+          const metaParts = [
+            failureHeadline(item),
+            `Attempts: ${item.attemptCount}`,
+            mediaPending > 0 ? `Media pending: ${mediaPending}` : null,
+          ].filter(Boolean);
 
           return (
-            <Pressable
-              style={styles.item}
+            <ListRow
+              title={item.label}
+              meta={`${item.type} · ${metaParts.join(' · ')}`}
+              status={statusLabel(item.status)}
+              statusTone={statusTone(item.status, item.failureKind)}
               onPress={() =>
-                navigation.navigate('ConflictDetail', { transactionId: item.id })
+                navigation.navigate('ConflictDetail', {
+                  transactionId: item.id,
+                })
               }
-            >
-              <View style={styles.itemHeader}>
-                <Text style={styles.itemType}>{item.type}</Text>
-                <Text
-                  style={[
-                    styles.status,
-                    {
-                      color: statusColor(item.status, item.failureKind),
-                    },
-                  ]}
-                >
-                  {statusLabel(item.status)}
-                </Text>
-              </View>
-              <Text style={styles.itemLabel}>{item.label}</Text>
-              <Text style={styles.headline}>{failureHeadline(item)}</Text>
-              <Text style={styles.itemMeta}>Device: {item.deviceTimestamp}</Text>
-              <Text style={styles.itemMeta}>
-                Server: {item.serverTimestamp ?? '—'}
-              </Text>
-              <Text style={styles.itemMeta}>
-                Attempts: {item.attemptCount}
-                {mediaPending > 0 ? ` · Media pending: ${mediaPending}` : ''}
-              </Text>
-              {item.lastError ? (
-                <Text style={styles.itemError} numberOfLines={2}>
-                  {item.lastError}
-                </Text>
-              ) : null}
-              <Text style={styles.openHint}>Open detail →</Text>
-            </Pressable>
+            />
           );
         }}
       />
@@ -206,27 +191,24 @@ export function PendingSyncScreen() {
 const styles = StyleSheet.create({
   actions: {
     alignItems: 'flex-end',
-    gap: 6,
-    marginTop: 4,
+    gap: spacing.xs,
   },
-  action: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  actionDisabled: {
-    opacity: 0.4,
+  actionBtn: {
+    minWidth: 96,
+    paddingVertical: spacing.sm,
   },
   deniedBanner: {
     backgroundColor: '#F8E4E2',
     borderWidth: 1,
     borderColor: '#E3B0AB',
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   deniedTitle: {
     color: colors.danger,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   deniedText: {
     color: colors.danger,
@@ -237,97 +219,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8E4E2',
     borderWidth: 1,
     borderColor: '#E3B0AB',
-    padding: 12,
-    marginBottom: 12,
-    gap: 8,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   errorText: {
     color: colors.danger,
     fontSize: 13,
   },
   loader: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   list: {
-    paddingBottom: 24,
-    gap: 10,
+    paddingBottom: spacing.xxxl,
     flexGrow: 1,
+    paddingTop: spacing.sm,
   },
   emptyBox: {
-    marginTop: 16,
+    marginTop: spacing.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 20,
+    borderRadius: radii.md,
+    padding: spacing.xl,
   },
   emptyTitle: {
-    color: colors.text,
+    ...typography.title,
     fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   emptyText: {
-    color: colors.textMuted,
+    ...typography.meta,
     lineHeight: 21,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   demoButton: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  demoButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  item: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  itemType: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  status: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  itemLabel: {
-    color: colors.text,
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  headline: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  itemMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  itemError: {
-    color: colors.danger,
-    fontSize: 13,
-    marginTop: 8,
-  },
-  openHint: {
-    marginTop: 10,
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 13,
   },
 });

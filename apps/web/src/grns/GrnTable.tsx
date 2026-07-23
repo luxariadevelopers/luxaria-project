@@ -154,6 +154,11 @@ export function GrnTable({
           ? (params) => onOpenDetail(params.row)
           : undefined
       }
+      mobileCard={{
+        primaryField: 'grnNumber',
+        metaFields: ['receivedDate', 'deliveryChallanNumber'],
+        statusField: 'status',
+      }}
     />
   );
 }

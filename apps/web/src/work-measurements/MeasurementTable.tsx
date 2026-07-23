@@ -213,6 +213,11 @@ export function MeasurementTable({
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
       onRowClick={onOpen ? (params) => onOpen(params.row) : undefined}
+      mobileCard={{
+        primaryField: 'measurementNumber',
+        metaFields: ['measurementDate', 'boqCode'],
+        statusField: 'status',
+      }}
     />
   );
 }

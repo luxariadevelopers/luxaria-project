@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Divider,
+  Drawer,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -15,8 +14,10 @@ import {
   Select,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
 import type { PublicDepartment, PublicDesignation } from './types';
 import { useCreateDesignation, useUpdateDesignation } from './useEmployees';
@@ -99,18 +100,25 @@ export function DesignationFormDialog({
   };
 
   return (
-    <Dialog
+    <Drawer
+      anchor="right"
       open={open}
       onClose={busy ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
+      slotProps={{ paper: { sx: formDrawerPaperSx(480) } }}
       data-testid="designation-form-dialog"
     >
-      <DialogTitle>
-        {editing ? 'Edit designation' : 'Create designation'}
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+      <Box
+        sx={{
+          p: 3,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Typography variant="h6">
+            {editing ? 'Edit designation' : 'Create designation'}
+          </Typography>
           <TextField
             label="Code"
             value={code}
@@ -170,25 +178,26 @@ export function DesignationFormDialog({
           />
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => void submit()}
-          disabled={busy}
-        >
-          {busy ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : editing ? (
-            'Save'
-          ) : (
-            'Create'
-          )}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <Divider sx={{ my: 2 }} />
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void submit()}
+            disabled={busy}
+          >
+            {busy ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : editing ? (
+              'Save'
+            ) : (
+              'Create'
+            )}
+          </Button>
+        </Stack>
+      </Box>
+    </Drawer>
   );
 }

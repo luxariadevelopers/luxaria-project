@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Box,
   Button,
@@ -87,7 +88,7 @@ export function CreateContractorDrawer({ open, onClose, onCreated }: Props) {
       anchor="right"
       open={open}
       onClose={onClose}
-      slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 } } } }}
+      slotProps={{ paper: { sx: formDrawerPaperSx(440) } }}
     >
       <Box
         component="form"

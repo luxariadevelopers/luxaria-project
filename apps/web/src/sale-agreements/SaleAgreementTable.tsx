@@ -66,6 +66,11 @@ export function SaleAgreementTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'agreementNumber',
+        metaFields: ['unitId', 'agreementValue'],
+        statusField: 'status',
+      }}
     />
   );
 }

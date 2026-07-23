@@ -1,17 +1,15 @@
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing } from '@/theme';
 import { createAccount } from './api';
 import { resolveProjectFinanceCapabilities } from './permissions';
 import {
@@ -139,79 +137,53 @@ export function QuickCreateExpenseAccountScreen({ navigation, route }: Props) {
   return (
     <Screen title="New expense account" subtitle={`Type: ${typeLabel}`}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        style={styles.input}
-        value={accountName}
-        onChangeText={(v) => {
-          setAccountName(v);
-          setAccountCode(suggestCode(v, accountCategory));
-        }}
-        placeholder="e.g. Auditor fee"
-        placeholderTextColor={colors.textMuted}
-      />
-      <Text style={styles.label}>Code</Text>
-      <TextInput
-        style={styles.input}
-        value={accountCode}
-        onChangeText={setAccountCode}
-        autoCapitalize="characters"
-      />
-      <Text style={styles.label}>Category</Text>
-      {CATEGORY_OPTIONS.map((opt) => {
-        const selected = opt.value === accountCategory;
-        return (
-          <Pressable
-            key={opt.value}
-            style={[styles.chip, selected && styles.chipSelected]}
-            onPress={() => {
-              setAccountCategory(opt.value);
-              setAccountCode(suggestCode(accountName, opt.value));
-            }}
-          >
-            <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-              {opt.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-      <Pressable
-        style={[styles.btn, saving && styles.disabled]}
+      <FormSection title="Account">
+        <TextField
+          label="Name"
+          value={accountName}
+          onChangeText={(v) => {
+            setAccountName(v);
+            setAccountCode(suggestCode(v, accountCategory));
+          }}
+          placeholder="e.g. Auditor fee"
+        />
+        <TextField
+          label="Code"
+          value={accountCode}
+          onChangeText={setAccountCode}
+          autoCapitalize="characters"
+        />
+        <Text style={styles.label}>Category</Text>
+        <View style={styles.chips}>
+          {CATEGORY_OPTIONS.map((opt) => (
+            <Chip
+              key={opt.value}
+              label={opt.label}
+              selected={opt.value === accountCategory}
+              onPress={() => {
+                setAccountCategory(opt.value);
+                setAccountCode(suggestCode(accountName, opt.value));
+              }}
+            />
+          ))}
+        </View>
+      </FormSection>
+      <Button
+        label="Create"
+        loading={saving}
         disabled={saving}
         onPress={() => void submit()}
-      >
-        <Text style={styles.btnText}>{saving ? 'Creating…' : 'Create'}</Text>
-      </Pressable>
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    padding: 10,
-    backgroundColor: colors.surface,
+  label: { marginBottom: spacing.sm },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  error: { color: colors.danger, marginBottom: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 10,
-    marginBottom: 6,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: { borderColor: colors.primary, backgroundColor: '#E8EEF1' },
-  chipText: { color: colors.text },
-  chipTextSelected: { fontWeight: '700' },
-  btn: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
+  error: { color: colors.danger, marginBottom: spacing.sm },
 });

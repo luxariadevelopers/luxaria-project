@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Alert,
   Paper,
@@ -65,7 +66,7 @@ export function ContractorLedgerPage() {
     );
   }
   if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
+    return <RetryPanel error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   const payload = query.data;
@@ -73,13 +74,9 @@ export function ContractorLedgerPage() {
 
   return (
     <Stack spacing={2}>
-      <div>
-        <Typography variant="h5">Contractor Ledger</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Immutable sub-ledger from posted journals (party type contractor).
-          Source: accounting-reports contractor-ledger.
-        </Typography>
-      </div>
+      <PageHeader
+        subtitle="Immutable sub-ledger from posted journals (party type contractor). Source: accounting-reports contractor-ledger."
+      />
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField

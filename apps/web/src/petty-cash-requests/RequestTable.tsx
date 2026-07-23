@@ -240,6 +240,11 @@ export function RequestTable({
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
+      mobileCard={{
+        primaryField: 'requestNumber',
+        metaFields: ['weekStartDate', 'requestedAmount'],
+        statusField: 'status',
+      }}
     />
   );
 }

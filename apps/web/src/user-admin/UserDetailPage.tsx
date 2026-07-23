@@ -1,37 +1,36 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
-  Button,
   Chip,
   CircularProgress,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   DetailHeader,
+  EntityActionBar,
   EntityDetailLayout,
+  resolveVisibleActions,
   SummaryCards,
+  type EntityDetailAction,
 } from '@/components/entity-detail';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { formatDate, formatDateTime } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useProjectsList } from '@/projects/useProjects';
 import { useRolesList } from '@/rbac-admin/useRbac';
 import { PasswordResetDialog } from './PasswordResetDialog';
 import {
-  canActivateUser,
   canAssignUserProjects,
   canAssignUserRoles,
-  canDeactivateUser,
-  canEditUser,
   canOpenUsers,
-  canResetUserPassword,
 } from './roleAccess';
 import { UserAccessPanels } from './UserAccessPanels';
 import { UserStatus } from './types';
@@ -66,6 +65,7 @@ function Fact({
 export function UserDetailPage({ userId: userIdProp }: Props = {}) {
   const params = useParams<{ userId: string }>();
   const userId = userIdProp ?? params.userId;
+  const navigate = useNavigate();
   const { access, hasPermission } = useAuth();
   const notify = useNotify();
   const canView = canOpenUsers(access);
@@ -173,8 +173,53 @@ export function UserDetailPage({ userId: userIdProp }: Props = {}) {
       ]
     : [];
 
+  const actions = useMemo<EntityDetailAction[]>(() => {
+    if (!user) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        permission: 'user.update',
+        allowedStatuses: Object.values(UserStatus),
+        variant: 'contained',
+        onClick: () => void navigate(`/users/${user.id}/edit`),
+      },
+      {
+        id: 'deactivate',
+        label: 'Deactivate',
+        permission: 'user.deactivate',
+        allowedStatuses: [UserStatus.Active],
+        color: 'warning',
+        variant: 'outlined',
+        onClick: () => setStatusAction('deactivate'),
+      },
+      {
+        id: 'activate',
+        label: 'Activate',
+        permission: 'user.activate',
+        allowedStatuses: [UserStatus.Inactive, UserStatus.Locked],
+        color: 'success',
+        variant: 'outlined',
+        onClick: () => setStatusAction('activate'),
+      },
+      {
+        id: 'reset-password',
+        label: 'Reset password',
+        permission: 'user.reset_password',
+        allowedStatuses: Object.values(UserStatus),
+        color: 'warning',
+        variant: 'outlined',
+        onClick: () => {
+          setPasswordError(undefined);
+          setPasswordOpen(true);
+        },
+      },
+    ];
+  }, [navigate, user]);
+
   return (
     <>
+      <PageHeader hideTitle />
       <EntityDetailLayout
         canView={canView}
         loading={userQuery.isLoading}
@@ -211,55 +256,16 @@ export function UserDetailPage({ userId: userIdProp }: Props = {}) {
           ) : undefined
         }
         actionBar={
-          user ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              sx={{ flexWrap: 'wrap' }}
-            >
-              {canEditUser(access) ? (
-                <Button
-                  component={RouterLink}
-                  to={`/users/${user.id}/edit`}
-                  variant="contained"
-                >
-                  Edit
-                </Button>
-              ) : null}
-              {user.status === UserStatus.Active &&
-              canDeactivateUser(access) ? (
-                <Button
-                  color="warning"
-                  variant="outlined"
-                  onClick={() => setStatusAction('deactivate')}
-                >
-                  Deactivate
-                </Button>
-              ) : null}
-              {user.status !== UserStatus.Active &&
-              canActivateUser(access) ? (
-                <Button
-                  color="success"
-                  variant="outlined"
-                  onClick={() => setStatusAction('activate')}
-                >
-                  Activate
-                </Button>
-              ) : null}
-              {canResetUserPassword(access) ? (
-                <Button
-                  color="warning"
-                  variant="outlined"
-                  onClick={() => {
-                    setPasswordError(undefined);
-                    setPasswordOpen(true);
-                  }}
-                >
-                  Reset password
-                </Button>
-              ) : null}
-            </Stack>
+          user &&
+          resolveVisibleActions(actions, {
+            status: user.status,
+            hasPermission,
+          }).length > 0 ? (
+            <EntityActionBar
+              actions={actions}
+              status={user.status}
+              hasPermission={hasPermission}
+            />
           ) : undefined
         }
         summary={user ? <SummaryCards fields={summary} /> : undefined}

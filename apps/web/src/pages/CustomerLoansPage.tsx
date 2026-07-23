@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { CustomerLoanTable } from '@/customer-loans/CustomerLoanTable';
 import { resolveCustomerLoanCapabilities } from '@/customer-loans/roleAccess';
 import { useCustomerLoansList } from '@/customer-loans/useCustomerLoans';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function CustomerLoansPage() {
   const { hasPermission, access } = useAuth();
@@ -39,9 +40,10 @@ export function CustomerLoansPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Customer home-loan tracking — sanction, disbursement, and correspondence.
-      </Typography>
+      <PageHeader
+        title="Customer loans"
+        subtitle="Customer home-loan tracking — sanction, disbursement, and correspondence."
+      />
       <CustomerLoanTable
         rows={query.data?.items ?? []}
         loading={query.isLoading || query.isFetching}

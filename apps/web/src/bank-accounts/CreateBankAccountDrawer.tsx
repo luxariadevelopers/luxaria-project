@@ -13,6 +13,7 @@ import {
 } from './labels';
 import { BankAccountType } from './types';
 import { useCreateBankAccount } from './useBankAccounts';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   bankAccountCreateSchema,
   type BankAccountCreateFormValues,
@@ -107,7 +108,7 @@ export function CreateBankAccountDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 460 } } },
+        paper: { sx: formDrawerPaperSx(460) },
       }}
     >
       <Box sx={{ p: 2.5 }} component="form" onSubmit={handleSubmit(onSubmit)}>

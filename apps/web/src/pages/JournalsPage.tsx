@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -10,6 +10,7 @@ import {
   RetryPanel,
 } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { JournalFilters } from '@/journals/JournalFilters';
 import { JournalTable } from '@/journals/JournalTable';
 import { JournalTotalsBar } from '@/journals/JournalTotalsBar';
@@ -103,25 +104,20 @@ export function JournalsPage() {
 
   return (
     <Stack spacing={2} data-testid="journals-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Typography color="text.secondary">
-          Searchable journal register — filter by financial year, project, source
-          module, status, and date range. Trace each entry to its source module
-          and entity identifiers. Posted journals are immutable.
-        </Typography>
-        {caps.canCreate ? (
-          <Button
-            variant="contained"
-            onClick={() => navigate('/accounting/journals/new')}
-          >
-            New journal
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Journals"
+        subtitle="Searchable journal register — filter by financial year, project, source module, status, and date range. Trace each entry to its source module and entity identifiers. Posted journals are immutable."
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              onClick={() => navigate('/accounting/journals/new')}
+            >
+              New journal
+            </Button>
+          ) : undefined
+        }
+      />
 
       {!validated.ready ? (
         <>

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Button, Link, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { useProjectWarehouses } from '@/projects/useProjects';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   resolveWarehouseLocationCapabilities,
   WarehouseLocationFilters,
@@ -106,16 +107,19 @@ export function WarehouseLocationsPage() {
 
   return (
     <Stack spacing={2} data-testid="warehouse-locations-page">
-      <Typography color="text.secondary">
-        Hierarchical storage under project warehouses (zone → rack → bin).{' '}
-        <Link
-          component={RouterLink}
-          to={`/projects/${selectedProjectId}/warehouses`}
-          underline="hover"
-        >
-          Manage warehouses
-        </Link>
-      </Typography>
+      <PageHeader
+        subtitle="Hierarchical storage under project warehouses (zone → rack → bin)."
+        actions={
+          <Button
+            component={RouterLink}
+            to={`/projects/${selectedProjectId}/warehouses`}
+            size="small"
+            variant="outlined"
+          >
+            Manage warehouses
+          </Button>
+        }
+      />
 
       {warehouseOptions.length === 0 && !warehousesQuery.isLoading ? (
         <EmptyState

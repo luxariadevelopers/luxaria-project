@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -31,6 +31,7 @@ import {
   useSubmitCommitment,
 } from '@/commitments/useCommitments';
 import { useActiveParticipants } from '@/project-participants/useProjectParticipants';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Contribution commitments list with deep links to detail (Micro Phase 038).
@@ -147,10 +148,17 @@ export function CommitmentsPage() {
 
   return (
     <Stack spacing={2} data-testid="commitments-page">
-      <Typography color="text.secondary">
-        Project contribution commitments — open a row for schedule, documents,
-        version history and lifecycle actions.
-      </Typography>
+      <PageHeader
+        title="Commitments"
+        subtitle="Project contribution commitments — open a row for schedule, documents, version history and lifecycle actions."
+        actions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New commitment
+            </Button>
+          ) : undefined
+        }
+      />
 
       <CommitmentAmountSummary
         summary={summaryQuery.data}
@@ -185,13 +193,6 @@ export function CommitmentsPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canCreate ? (
-            <Button variant="contained" onClick={() => setCreateOpen(true)}>
-              New commitment
-            </Button>
-          ) : undefined
         }
         caps={caps}
         participantLabel={participantLabel}

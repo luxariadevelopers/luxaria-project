@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Autocomplete,
   Button,
@@ -168,7 +169,7 @@ export function CreateStockCountDrawer({
       open={open}
       onClose={handleClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 560, md: 720 }, p: 2 } },
+        paper: { sx: { ...formDrawerPaperSx({ sm: 560, md: 720 }), p: 2 } },
       }}
     >
       <Stack spacing={2} data-testid="create-stock-count-drawer">

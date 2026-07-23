@@ -11,7 +11,6 @@ import {
   Select,
   Stack,
   TextField,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
@@ -20,6 +19,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { DataTable, useListQueryState } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { formatDate, formatDateTime } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useProjectsList } from '@/projects/useProjects';
 import { useRolesList } from '@/rbac-admin/useRbac';
 import {
@@ -275,23 +275,17 @@ export function UserListPage() {
 
   return (
     <Stack spacing={2} data-testid="users-list-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Users</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Search, filter, and administer staff accounts and access.
-          </Typography>
-        </Stack>
-        {canCreateUser(access) ? (
-          <Button component={RouterLink} to="/users/new" variant="contained">
-            New user
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Users"
+        subtitle="Search, filter, and administer staff accounts and access."
+        actions={
+          canCreateUser(access) ? (
+            <Button component={RouterLink} to="/users/new" variant="contained">
+              New user
+            </Button>
+          ) : null
+        }
+      />
 
       {rolesQuery.error && hasPermission('role.view') ? (
         <Alert severity="info">
@@ -358,6 +352,11 @@ export function UserListPage() {
               ]
             : []),
         ]}
+        mobileCard={{
+          primaryField: 'fullName',
+          metaFields: ['userCode', 'email'],
+          statusField: 'status',
+        }}
         height={580}
         showColumnVisibility
       />

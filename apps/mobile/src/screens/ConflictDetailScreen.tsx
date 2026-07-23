@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
@@ -24,7 +20,7 @@ import {
   resolveOpenRecord,
   statusLabel,
 } from '@/sync-centre';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ConflictDetail'>;
 
@@ -139,7 +135,7 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
   if (!ready || loading) {
     return (
       <Screen title="Conflict detail" subtitle="Loading queued record…">
-        <ActivityIndicator color={colors.primary} />
+        <AsyncStatePanel loading />
       </Screen>
     );
   }
@@ -147,16 +143,11 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
   if (accessDenied) {
     return (
       <Screen title="Conflict detail" subtitle="Access restricted">
-        <View style={styles.deniedBox}>
-          <Text style={styles.deniedTitle}>Permission denied</Text>
-          <Text style={styles.deniedText}>
-            You may only act on your own queued records for projects you can
-            access.
-          </Text>
-          <Pressable style={styles.secondaryButton} onPress={() => void load()}>
-            <Text style={styles.secondaryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
+        <AsyncStatePanel
+          forbidden
+          error="You may only act on your own queued records for projects you can access."
+          onRetry={() => void load()}
+        />
       </Screen>
     );
   }
@@ -164,14 +155,11 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
   if (!item) {
     return (
       <Screen title="Conflict detail" subtitle="Missing record">
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyTitle}>
-            {loadError ?? 'Queued record not found'}
-          </Text>
-          <Pressable style={styles.secondaryButton} onPress={() => void load()}>
-            <Text style={styles.secondaryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
+        <AsyncStatePanel
+          empty
+          emptyLabel={loadError ?? 'Queued record not found'}
+          onRetry={() => void load()}
+        />
       </Screen>
     );
   }
@@ -196,26 +184,16 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
         </View>
       ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Status</Text>
-        <Text style={styles.value}>{statusLabel(item.status)}</Text>
-        <Text style={styles.label}>Type</Text>
-        <Text style={styles.value}>{item.type}</Text>
-        <Text style={styles.label}>Label</Text>
-        <Text style={styles.value}>{item.label}</Text>
-        <Text style={styles.label}>Guidance</Text>
-        <Text style={styles.guidance}>{failureGuidance(item)}</Text>
+      <FormSection title="Record">
+        <Field label="Status" value={statusLabel(item.status)} />
+        <Field label="Type" value={item.type} />
+        <Field label="Label" value={item.label} />
+        <Field label="Guidance" value={failureGuidance(item)} multiline />
         {item.lastError ? (
-          <>
-            <Text style={styles.label}>Error detail</Text>
-            <Text style={styles.errorDetail}>{item.lastError}</Text>
-          </>
+          <Field label="Error detail" value={item.lastError} danger multiline />
         ) : null}
         {item.lastErrorCode ? (
-          <>
-            <Text style={styles.label}>Error code</Text>
-            <Text style={styles.value}>{item.lastErrorCode}</Text>
-          </>
+          <Field label="Error code" value={item.lastErrorCode} />
         ) : null}
         {isPermanent ? (
           <Text style={styles.badge}>Permanent validation — auto-retry off</Text>
@@ -223,56 +201,44 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
         {isForbidden ? (
           <Text style={styles.badge}>Forbidden (403) — restore access to sync</Text>
         ) : null}
-        <Text style={styles.label}>Device timestamp</Text>
-        <Text style={styles.value}>{item.deviceTimestamp}</Text>
-        <Text style={styles.label}>Server timestamp</Text>
-        <Text style={styles.value}>{item.serverTimestamp ?? '—'}</Text>
-        <Text style={styles.label}>Idempotency key</Text>
-        <Text style={styles.mono}>{item.idempotencyKey}</Text>
-        <Text style={styles.label}>Attempts</Text>
-        <Text style={styles.value}>{item.attemptCount}</Text>
-        <Text style={styles.label}>Endpoint</Text>
-        <Text style={styles.mono}>
-          {item.method} {item.endpoint}
-        </Text>
-      </View>
+        <Field label="Device timestamp" value={item.deviceTimestamp} />
+        <Field label="Server timestamp" value={item.serverTimestamp ?? '—'} />
+        <Field label="Idempotency key" value={item.idempotencyKey} mono />
+        <Field label="Attempts" value={String(item.attemptCount)} />
+        <Field label="Endpoint" value={`${item.method} ${item.endpoint}`} mono />
+      </FormSection>
 
       {item.media.length > 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.section}>Media</Text>
+        <FormSection title="Media">
           {item.media.map((m) => (
             <Text key={m.id} style={styles.mediaRow}>
               {m.fileName} · {m.uploadStatus}
               {m.lastError ? ` — ${m.lastError}` : ''}
             </Text>
           ))}
-        </View>
+        </FormSection>
       ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.section}>Payload preview</Text>
+      <FormSection title="Payload preview">
         <Text style={styles.payload}>{prettyPayload(item.payloadJson)}</Text>
-      </View>
+      </FormSection>
 
       {showRetry ? (
-        <Pressable
-          style={[styles.primaryButton, busy && styles.disabled]}
-          disabled={busy}
+        <Button
+          label={isPermanent ? 'Retry after fix' : 'Retry sync'}
+          loading={busy}
           onPress={onRetry}
-        >
-          <Text style={styles.primaryButtonText}>
-            {isPermanent ? 'Retry after fix' : 'Retry sync'}
-          </Text>
-        </Pressable>
+          style={styles.action}
+        />
       ) : null}
 
       {openTarget ? (
-        <Pressable
-          style={styles.secondaryButton}
+        <Button
+          label={openTarget.label}
+          variant="secondary"
           onPress={() => navigation.navigate(openTarget.screen)}
-        >
-          <Text style={styles.secondaryButtonText}>{openTarget.label}</Text>
-        </Pressable>
+          style={styles.action}
+        />
       ) : (
         <View style={styles.noteBox}>
           <Text style={styles.note}>
@@ -283,13 +249,13 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
       )}
 
       {showDiscard ? (
-        <Pressable
-          style={[styles.dangerButton, busy && styles.disabled]}
+        <Button
+          label="Discard draft…"
+          variant="danger"
           disabled={busy}
           onPress={onDiscard}
-        >
-          <Text style={styles.dangerButtonText}>Discard draft…</Text>
-        </Pressable>
+          style={styles.action}
+        />
       ) : null}
 
       <Text style={styles.footnote}>
@@ -300,97 +266,80 @@ export function ConflictDetailScreen({ navigation, route }: Props) {
   );
 }
 
+function Field({
+  label,
+  value,
+  mono,
+  danger,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  danger?: boolean;
+  multiline?: boolean;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <Text
+        style={[
+          styles.value,
+          mono && styles.mono,
+          danger && styles.danger,
+          multiline && styles.multiline,
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   errorBanner: {
     backgroundColor: '#F8E4E2',
     borderWidth: 1,
     borderColor: '#E3B0AB',
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
     color: colors.danger,
     fontSize: 13,
   },
-  deniedBox: {
-    backgroundColor: '#F8E4E2',
-    borderWidth: 1,
-    borderColor: '#E3B0AB',
-    padding: 16,
-  },
-  deniedTitle: {
-    color: colors.danger,
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  deniedText: {
-    color: colors.danger,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  emptyBox: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginBottom: 14,
+  field: {
+    marginBottom: spacing.sm,
   },
   label: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 10,
+    ...typography.label,
+    marginBottom: 2,
   },
   value: {
-    color: colors.text,
+    ...typography.body,
     fontSize: 15,
-    fontWeight: '500',
   },
-  guidance: {
-    color: colors.text,
-    fontSize: 14,
+  multiline: {
     lineHeight: 21,
-    marginTop: 4,
   },
-  errorDetail: {
+  danger: {
     color: colors.danger,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 4,
   },
   badge: {
-    marginTop: 12,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
     color: colors.warning,
     fontWeight: '700',
     fontSize: 13,
   },
   mono: {
-    color: colors.text,
     fontSize: 12,
     fontFamily: 'Courier',
   },
-  section: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 15,
-    marginBottom: 8,
-  },
   mediaRow: {
-    color: colors.textMuted,
-    fontSize: 13,
-    marginBottom: 4,
+    ...typography.meta,
+    marginBottom: spacing.xs,
   },
   payload: {
     color: colors.textMuted,
@@ -398,58 +347,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Courier',
     lineHeight: 16,
   },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  primaryButtonText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  secondaryButtonText: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  dangerButton: {
-    borderWidth: 1,
-    borderColor: colors.danger,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  dangerButtonText: {
-    color: colors.danger,
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.6,
+  action: {
+    marginBottom: spacing.sm,
   },
   noteBox: {
-    marginBottom: 10,
-    padding: 12,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radii.md,
   },
   note: {
-    color: colors.textMuted,
-    fontSize: 13,
+    ...typography.meta,
     lineHeight: 19,
   },
   footnote: {
-    color: colors.textMuted,
+    ...typography.meta,
     fontSize: 12,
     lineHeight: 18,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
 });

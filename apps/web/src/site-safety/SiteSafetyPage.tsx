@@ -1,22 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { listSiteSafety, type SiteSafety } from '@/site-safety/api';
 import { SiteSafetyFormDrawer } from '@/site-safety/SiteSafetyFormDrawer';
 
@@ -52,6 +42,59 @@ export function SiteSafetyPage() {
     setDrawerOpen(true);
   };
 
+  const columns = useMemo<GridColDef<SiteSafety>[]>(
+    () => [
+      {
+        field: 'title',
+        headerName: 'Title',
+        flex: 1,
+        minWidth: 180,
+      },
+      {
+        field: 'type',
+        headerName: 'Type',
+        width: 150,
+        valueGetter: (_v, row) => row.type.replaceAll('_', ' '),
+      },
+      {
+        field: 'severity',
+        headerName: 'Severity',
+        width: 120,
+        renderCell: (params) => (
+          <Chip size="small" label={params.row.severity} />
+        ),
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params) => (
+          <Chip size="small" label={params.row.status} />
+        ),
+      },
+      {
+        field: 'attendees',
+        headerName: 'Attendees',
+        width: 110,
+        type: 'number',
+        valueGetter: (_v, row) => row.attendees?.length ?? 0,
+      },
+    ],
+    [],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<SiteSafety>[]>(() => {
+    if (!canManage) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        onClick: openEdit,
+        disabled: (row) => !canEditSafety(row),
+      },
+    ];
+  }, [canManage]);
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return (
@@ -72,88 +115,34 @@ export function SiteSafetyPage() {
 
   return (
     <Stack spacing={2}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
+      <PageHeader
+        subtitle="Near misses, accidents, PPE checks, toolbox talks, and safety inspections."
+        actions={
+          canManage ? (
+            <Button variant="contained" onClick={openCreate}>
+              New record
+            </Button>
+          ) : undefined
+        }
+      />
+      <DataTable
+        title="Site safety"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No safety records"
+        emptyDescription="No safety records yet."
+        height={520}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'title',
+          metaFields: ['type', 'severity'],
+          statusField: 'status',
         }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Site Safety / HSE</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Near misses, accidents, PPE checks, toolbox talks, and safety
-            inspections.
-          </Typography>
-        </Stack>
-        {canManage ? (
-          <Button variant="contained" onClick={openCreate}>
-            New record
-          </Button>
-        ) : null}
-      </Box>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Title</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Severity</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Attendees</TableCell>
-              {canManage ? <TableCell align="right">Actions</TableCell> : null}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No safety records yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell>{row.title}</TableCell>
-                  <TableCell>{row.type.replaceAll('_', ' ')}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={row.severity} />
-                  </TableCell>
-                  <TableCell>
-                    <Chip size="small" label={row.status} />
-                  </TableCell>
-                  <TableCell>{row.attendees?.length ?? 0}</TableCell>
-                  {canManage ? (
-                    <TableCell align="right">
-                      {canEditSafety(row) ? (
-                        <Button size="small" onClick={() => openEdit(row)}>
-                          Edit
-                        </Button>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          —
-                        </Typography>
-                      )}
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+        showColumnVisibility={false}
+      />
 
       {canManage ? (
         <SiteSafetyFormDrawer

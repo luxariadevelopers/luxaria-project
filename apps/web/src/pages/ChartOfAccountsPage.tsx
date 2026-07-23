@@ -31,6 +31,7 @@ import {
   useAccountTree,
   useSeedStandardAccounts,
 } from '@/chart-of-accounts/useChartOfAccounts';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Chart of accounts tree — `/accounting/chart-of-accounts` (Micro Phase 041).
@@ -114,10 +115,17 @@ export function ChartOfAccountsPage() {
 
   return (
     <Stack spacing={2} data-testid="chart-of-accounts-page">
-      <Typography color="text.secondary">
-        Company chart of accounts — browse the hierarchy, maintain allowed
-        accounts, and keep system-seeded accounts protected.
-      </Typography>
+      <PageHeader
+        title="Chart of accounts"
+        subtitle="Company chart of accounts — browse the hierarchy, maintain allowed accounts, and keep system-seeded accounts protected."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={() => openCreate(null)}>
+              New account
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
@@ -164,29 +172,24 @@ export function ChartOfAccountsPage() {
           </Select>
         </FormControl>
         {caps.canManage ? (
-          <>
-            <Button variant="contained" onClick={() => openCreate(null)}>
-              New account
-            </Button>
-            <Button
-              variant="outlined"
-              disabled={seed.isPending}
-              onClick={() => {
-                void (async () => {
-                  try {
-                    const result = await seed.mutateAsync();
-                    success(
-                      `Seeded standard accounts — created ${result.created}, skipped ${result.skipped}`,
-                    );
-                  } catch (err) {
-                    notifyError(getErrorMessage(err));
-                  }
-                })();
-              }}
-            >
-              {seed.isPending ? 'Seeding…' : 'Seed standard'}
-            </Button>
-          </>
+          <Button
+            variant="outlined"
+            disabled={seed.isPending}
+            onClick={() => {
+              void (async () => {
+                try {
+                  const result = await seed.mutateAsync();
+                  success(
+                    `Seeded standard accounts — created ${result.created}, skipped ${result.skipped}`,
+                  );
+                } catch (err) {
+                  notifyError(getErrorMessage(err));
+                }
+              })();
+            }}
+          >
+            {seed.isPending ? 'Seeding…' : 'Seed standard'}
+          </Button>
         ) : null}
       </Stack>
 

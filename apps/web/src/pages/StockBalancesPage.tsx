@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -82,11 +83,9 @@ export function StockBalancesPage() {
 
   return (
     <Stack spacing={2} data-testid="stock-balances-page">
-      <Typography color="text.secondary">
-        Current on-hand stock for <strong>{projectLabel}</strong>. Quantities
-        are always in the material <strong>base unit</strong>. This view does
-        not list raw stock ledger entries.
-      </Typography>
+      <PageHeader
+        subtitle={`On-hand quantities for ${projectLabel}. Quantities are always in the material base unit. This view does not list raw stock ledger entries.`}
+      />
 
       {!filterParse.ok ? (
         <Alert severity="warning">

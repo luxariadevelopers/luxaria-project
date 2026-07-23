@@ -70,4 +70,17 @@ const list = useListQueryState({
 />
 ```
 
+## Mobile cards (below `sm`)
+
+On viewports below the `sm` breakpoint, DataTable renders **card/list rows** instead of the horizontal spreadsheet:
+
+| Slot | Source |
+|------|--------|
+| Primary | `mobileCard.primaryField` or first visible column |
+| Meta (≤2) | `mobileCard.metaFields` or next non-status columns |
+| Status chip | `mobileCard.statusField` or a `*status*` field |
+| Actions | Same `rowActions` as the grid |
+
+Pass `mobileCard={{ disabled: true }}` to keep the grid on phones. Server pagination still uses `page` / `pageSize` / `rowCount`.
+
 Demo story (no sidebar link): `/dev/data-table`.

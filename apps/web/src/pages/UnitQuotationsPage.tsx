@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { resolveUnitQuotationCapabilities } from '@/unit-quotations/roleAccess';
 import { UnitQuotationTable } from '@/unit-quotations/UnitQuotationTable';
 import { useUnitQuotationsList } from '@/unit-quotations/useUnitQuotations';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function UnitQuotationsPage() {
   const { hasPermission, access } = useAuth();
@@ -39,10 +40,10 @@ export function UnitQuotationsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Unit sales quotations — pricing offers for inventory units (not vendor RFQ
-        quotations).
-      </Typography>
+      <PageHeader
+        title="Unit quotations"
+        subtitle="Unit sales quotations — pricing offers for inventory units (not vendor RFQ quotations)."
+      />
       <UnitQuotationTable
         rows={query.data?.items ?? []}
         loading={query.isLoading || query.isFetching}

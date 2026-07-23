@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@/auth/AuthContext';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -43,7 +40,7 @@ import {
 import { SignatureCaptureField } from '@/labour-vouchers/components/SignatureCaptureField';
 import type { AppStackParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import type { LocalFile } from '@/utils/fileUpload';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MaterialIssueForm'>;
@@ -80,6 +77,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
   const [recipients, setRecipients] = useState<MaterialIssueUserOption[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupHint, setLookupHint] = useState<string | null>(null);
 
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().slice(0, 10),
@@ -109,7 +107,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
       return;
     }
     if (!isOnline) {
-      setLookupError(
+      setLookupHint(
         'Load materials and BOQ items while online, then capture offline.',
       );
       return;
@@ -117,6 +115,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
 
     setLoadingLookups(true);
     setLookupError(null);
+    setLookupHint(null);
     try {
       const [materialRows, boqRows, contractorRows, userRows] =
         await Promise.all([
@@ -139,7 +138,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
       setRecipients(userRows);
 
       if (!canViewMaterials || !canViewBoq) {
-        setLookupError(
+        setLookupHint(
           'Enter material and BOQ ids manually if lookups are unavailable (material.view / boq.view).',
         );
       }
@@ -348,9 +347,10 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
   if (!canCreate) {
     return (
       <Screen title="New material issue" subtitle="Permission required">
-        <Text style={styles.error}>
-          Permission denied — stock.issue is required to create material issues.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="Permission denied — stock.issue is required to create material issues."
+        />
       </Screen>
     );
   }
@@ -358,9 +358,10 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
   if (!canUpload) {
     return (
       <Screen title="New material issue" subtitle="Permission required">
-        <Text style={styles.error}>
-          Permission denied — document.upload is required to capture signatures.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="Permission denied — document.upload is required to capture signatures."
+        />
       </Screen>
     );
   }
@@ -375,199 +376,137 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
       }
     >
       {lookupError ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.hint}>{lookupError}</Text>
-          <Pressable style={styles.secondaryBtn} onPress={() => void loadLookups()}>
-            <Text style={styles.secondaryBtnText}>Retry lookups</Text>
-          </Pressable>
-        </View>
+        <AsyncStatePanel
+          error={lookupError}
+          onRetry={() => void loadLookups()}
+        />
       ) : null}
+      {lookupHint ? <Text style={styles.hint}>{lookupHint}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {loadingLookups ? (
-        <ActivityIndicator color={colors.primary} style={styles.spinner} />
+        <AsyncStatePanel loading loadingLabel="Loading lookups…" />
       ) : null}
 
-      <Text style={styles.label}>Issue date</Text>
-      <TextInput
-        style={styles.input}
-        value={issueDate}
-        onChangeText={setIssueDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Received by</Text>
-      {canViewUsers && recipients.length > 0 ? (
-        <View style={styles.chipRow}>
-          {recipients.slice(0, 12).map((person) => {
-            const selected = receivedBy === person.id;
-            return (
-              <Pressable
-                key={person.id}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => setReceivedBy(person.id)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selected && styles.chipTextSelected,
-                  ]}
-                >
-                  {person.fullName}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : (
-        <TextInput
-          style={styles.input}
-          value={receivedBy}
-          onChangeText={setReceivedBy}
-          placeholder="User id"
-          placeholderTextColor={colors.textMuted}
+      <FormSection title="Issue header">
+        <TextField
+          label="Issue date"
+          value={issueDate}
+          onChangeText={setIssueDate}
+          placeholder="YYYY-MM-DD"
           autoCapitalize="none"
         />
-      )}
 
-      <Text style={styles.label}>BOQ item</Text>
-      {boqItems.length > 0 ? (
-        <View style={styles.chipRow}>
-          {boqItems.slice(0, 10).map((row) => {
-            const selected = boqItemId === row.id;
-            return (
-              <Pressable
+        <Text style={styles.label}>Received by</Text>
+        {canViewUsers && recipients.length > 0 ? (
+          <View style={styles.chipRow}>
+            {recipients.slice(0, 12).map((person) => (
+              <Chip
+                key={person.id}
+                label={person.fullName}
+                selected={receivedBy === person.id}
+                onPress={() => setReceivedBy(person.id)}
+              />
+            ))}
+          </View>
+        ) : (
+          <TextField
+            value={receivedBy}
+            onChangeText={setReceivedBy}
+            placeholder="User id"
+            autoCapitalize="none"
+          />
+        )}
+
+        <Text style={styles.label}>BOQ item</Text>
+        {boqItems.length > 0 ? (
+          <View style={styles.chipRow}>
+            {boqItems.slice(0, 10).map((row) => (
+              <Chip
                 key={row.id}
-                style={[styles.chip, selected && styles.chipSelected]}
+                label={row.boqCode}
+                selected={boqItemId === row.id}
                 onPress={() => setBoqItemId(row.id)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selected && styles.chipTextSelected,
-                  ]}
-                >
-                  {row.boqCode}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
-      <TextInput
-        style={styles.input}
-        value={boqItemId}
-        onChangeText={setBoqItemId}
-        placeholder="BOQ item id"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-      />
-      {selectedBoq ? (
-        <Text style={styles.meta}>
-          {selectedBoq.description} · {selectedBoq.unit}
-        </Text>
-      ) : null}
+              />
+            ))}
+          </View>
+        ) : null}
+        <TextField
+          value={boqItemId}
+          onChangeText={setBoqItemId}
+          placeholder="BOQ item id"
+          autoCapitalize="none"
+        />
+        {selectedBoq ? (
+          <Text style={styles.meta}>
+            {selectedBoq.description} · {selectedBoq.unit}
+          </Text>
+        ) : null}
 
-      <Text style={styles.label}>Work location</Text>
-      <TextInput
-        style={styles.input}
-        value={workLocation}
-        onChangeText={setWorkLocation}
-        placeholder="Block A – Column casting"
-        placeholderTextColor={colors.textMuted}
-      />
+        <TextField
+          label="Work location"
+          value={workLocation}
+          onChangeText={setWorkLocation}
+          placeholder="Block A – Column casting"
+        />
+        <TextField
+          label="Store location (optional)"
+          value={storeLocation}
+          onChangeText={setStoreLocation}
+          placeholder="Main Store"
+        />
 
-      <Text style={styles.label}>Store location (optional)</Text>
-      <TextInput
-        style={styles.input}
-        value={storeLocation}
-        onChangeText={setStoreLocation}
-        placeholder="Main Store"
-        placeholderTextColor={colors.textMuted}
-      />
-
-      <Text style={styles.label}>Contractor (optional)</Text>
-      {contractors.length > 0 ? (
-        <View style={styles.chipRow}>
-          {contractors.slice(0, 8).map((row) => {
-            const selected = contractorId === row.id;
-            return (
-              <Pressable
+        <Text style={styles.label}>Contractor (optional)</Text>
+        {contractors.length > 0 ? (
+          <View style={styles.chipRow}>
+            {contractors.slice(0, 8).map((row) => (
+              <Chip
                 key={row.id}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => setContractorId(selected ? '' : row.id)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selected && styles.chipTextSelected,
-                  ]}
-                >
-                  {row.contractorCode}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
-      <TextInput
-        style={styles.input}
-        value={contractorId}
-        onChangeText={setContractorId}
-        placeholder="Contractor id"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-      />
+                label={row.contractorCode}
+                selected={contractorId === row.id}
+                onPress={() => setContractorId(contractorId === row.id ? '' : row.id)}
+              />
+            ))}
+          </View>
+        ) : null}
+        <TextField
+          value={contractorId}
+          onChangeText={setContractorId}
+          placeholder="Contractor id"
+          autoCapitalize="none"
+        />
 
-      <Text style={styles.label}>Block id (optional)</Text>
-      <TextInput
-        style={styles.input}
-        value={blockId}
-        onChangeText={setBlockId}
-        placeholder="Mongo id"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Floor (optional)</Text>
-      <TextInput
-        style={styles.input}
-        value={floorId}
-        onChangeText={setFloorId}
-        placeholder="L2"
-        placeholderTextColor={colors.textMuted}
-      />
+        <TextField
+          label="Block id (optional)"
+          value={blockId}
+          onChangeText={setBlockId}
+          placeholder="Mongo id"
+          autoCapitalize="none"
+        />
+        <TextField
+          label="Floor (optional)"
+          value={floorId}
+          onChangeText={setFloorId}
+          placeholder="L2"
+          containerStyle={styles.fieldFlush}
+        />
+      </FormSection>
 
       {lines.map((line, index) => (
-        <View key={`line-${index}`} style={styles.lineCard}>
-          <Text style={styles.lineTitle}>Material line {index + 1}</Text>
+        <FormSection key={`line-${index}`} title={`Material line ${index + 1}`}>
           {materials.length > 0 ? (
             <View style={styles.chipRow}>
-              {materials.slice(0, 8).map((material) => {
-                const selected = line.materialId === material.id;
-                return (
-                  <Pressable
-                    key={material.id}
-                    style={[styles.chip, selected && styles.chipSelected]}
-                    onPress={() => applyMaterial(index, material)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selected && styles.chipTextSelected,
-                      ]}
-                    >
-                      {material.materialCode || material.materialName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {materials.slice(0, 8).map((material) => (
+                <Chip
+                  key={material.id}
+                  label={material.materialCode || material.materialName}
+                  selected={line.materialId === material.id}
+                  onPress={() => applyMaterial(index, material)}
+                />
+              ))}
             </View>
           ) : null}
-          <Text style={styles.label}>Material id</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Material id"
             value={line.materialId}
             onChangeText={(value) =>
               setLines((prev) =>
@@ -579,12 +518,10 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
               )
             }
             placeholder="Material id"
-            placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
           />
-          <Text style={styles.label}>Quantity</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Quantity"
             keyboardType="decimal-pad"
             value={line.quantityText}
             onChangeText={(value) =>
@@ -595,11 +532,9 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
               )
             }
             placeholder="0"
-            placeholderTextColor={colors.textMuted}
           />
-          <Text style={styles.label}>Unit</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Unit"
             value={line.unit}
             onChangeText={(value) =>
               setLines((prev) =>
@@ -609,12 +544,10 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
               )
             }
             placeholder="bag"
-            placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
           />
-          <Text style={styles.label}>Batch (optional)</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Batch (optional)"
             value={line.batch}
             onChangeText={(value) =>
               setLines((prev) =>
@@ -624,142 +557,96 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
               )
             }
             placeholder="Batch"
-            placeholderTextColor={colors.textMuted}
+            containerStyle={styles.fieldFlush}
           />
           {lines.length > 1 ? (
-            <Pressable
+            <Button
+              label="Remove line"
+              variant="ghost"
               onPress={() =>
-                setLines((prev) => prev.filter((_, rowIndex) => rowIndex !== index))
+                setLines((prev) =>
+                  prev.filter((_, rowIndex) => rowIndex !== index),
+                )
               }
-            >
-              <Text style={styles.link}>Remove line</Text>
-            </Pressable>
+              style={styles.removeBtn}
+            />
           ) : null}
-        </View>
+        </FormSection>
       ))}
 
-      <Pressable
-        style={styles.secondaryBtn}
+      <Button
+        label="Add material line"
+        variant="secondary"
         onPress={() => setLines((prev) => [...prev, emptyLine()])}
+      />
+
+      <FormSection title="Notes" framed={false}>
+        <TextField
+          label="Notes (optional)"
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          placeholder="Optional notes"
+          style={styles.notes}
+        />
+      </FormSection>
+
+      <FormSection
+        title="Signatures"
+        description="Recipient signature is required before submit. Issuer / engineer signature is optional."
+        framed={false}
       >
-        <Text style={styles.secondaryBtnText}>Add material line</Text>
-      </Pressable>
+        <SignatureCaptureField
+          label="Recipient signature"
+          required
+          file={recipientSig}
+          disabled={saving}
+          onCaptured={setRecipientSig}
+        />
+        <SignatureCaptureField
+          label="Issuer / engineer signature"
+          file={issuerSig}
+          disabled={saving}
+          onCaptured={setIssuerSig}
+        />
+      </FormSection>
 
-      <Text style={styles.label}>Notes (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.notes]}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-        placeholder="Optional notes"
-        placeholderTextColor={colors.textMuted}
-      />
-
-      <Text style={styles.sectionTitle}>Signatures</Text>
-      <Text style={styles.hint}>
-        Recipient signature is required before submit. Issuer / engineer
-        signature is optional.
-      </Text>
-      <SignatureCaptureField
-        label="Recipient signature"
-        required
-        file={recipientSig}
-        disabled={saving}
-        onCaptured={setRecipientSig}
-      />
-      <SignatureCaptureField
-        label="Issuer / engineer signature"
-        file={issuerSig}
-        disabled={saving}
-        onCaptured={setIssuerSig}
-      />
-
-      <Pressable
-        style={[styles.primaryBtn, saving && styles.primaryBtnDisabled]}
-        disabled={saving || !selectedProject?.id}
+      <Button
+        label={isOnline ? 'Submit material issue' : 'Queue issue offline'}
+        loading={saving}
+        disabled={!selectedProject?.id}
         onPress={() => void submit()}
-      >
-        {saving ? (
-          <ActivityIndicator color="#F4F0E6" />
-        ) : (
-          <Text style={styles.primaryBtnText}>
-            {isOnline ? 'Submit material issue' : 'Queue issue offline'}
-          </Text>
-        )}
-      </Pressable>
+        style={styles.submit}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   label: {
-    marginTop: 12,
-    marginBottom: 6,
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    ...typography.label,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
-    fontSize: 15,
+  meta: { ...typography.meta, marginBottom: spacing.md },
+  error: {
+    color: colors.danger,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  hint: {
+    ...typography.meta,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  fieldFlush: { marginBottom: 0 },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   notes: { minHeight: 72, textAlignVertical: 'top' },
-  meta: { color: colors.textMuted, marginTop: 6, fontSize: 13 },
-  sectionTitle: {
-    marginTop: 20,
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  hint: { color: colors.textMuted, lineHeight: 20, marginTop: 6 },
-  error: { color: colors.danger, marginBottom: 10, lineHeight: 20 },
-  errorBox: { marginBottom: 12, gap: 8 },
-  link: { color: colors.primary, fontWeight: '600', marginTop: 8 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  chipText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-  chipTextSelected: { color: '#F4F0E6' },
-  lineCard: {
-    marginTop: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  lineTitle: { color: colors.text, fontWeight: '600', fontSize: 15 },
-  secondaryBtn: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  secondaryBtnText: { color: colors.primary, fontWeight: '600' },
-  primaryBtn: {
-    marginTop: 20,
-    marginBottom: 24,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryBtnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: '#F4F0E6', fontWeight: '700', fontSize: 15 },
-  spinner: { marginVertical: 12 },
+  removeBtn: { alignSelf: 'flex-start', marginTop: spacing.sm },
+  submit: { marginTop: spacing.md, marginBottom: spacing.xxxl },
 });

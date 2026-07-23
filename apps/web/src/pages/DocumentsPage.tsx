@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, Typography } from '@mui/material';
+import { Stack } from '@mui/material';
 import { listEntityDocuments } from '@/api/documents';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { DocumentLibraryFilters } from '@/documents/DocumentLibraryFilters';
 import { DocumentTable } from '@/documents/DocumentTable';
 import {
@@ -97,10 +98,10 @@ export function DocumentsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Find permitted documents by entity. Downloads use private, time-limited
-        URLs — object storage keys are never exposed in this UI.
-      </Typography>
+      <PageHeader
+        title="Documents"
+        subtitle="Find permitted documents by entity. Downloads use private, time-limited URLs — object storage keys are never exposed in this UI."
+      />
 
       {!validated.ready ? (
         <>

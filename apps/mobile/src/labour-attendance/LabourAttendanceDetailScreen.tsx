@@ -1,14 +1,16 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { spacing, typography } from '@/theme';
 import { confirmLabourAttendance, getLabourAttendance } from './api';
 import { resolveAttendanceCapabilities } from './permissions';
 import {
@@ -91,55 +93,53 @@ export function LabourAttendanceDetailScreen({ route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>
-            Date: {String(item.attendanceDate).slice(0, 10)}
-          </Text>
-          <Text style={styles.row}>Status: {item.status}</Text>
-          <Text style={styles.row}>Workers: {item.totalWorkers}</Text>
-          <Text style={styles.row}>
-            Overtime: {item.totalOvertimeHours} hrs
-          </Text>
+        <FormSection title="Sheet">
+          <Field label="Date" value={String(item.attendanceDate).slice(0, 10)} />
+          <Field label="Status" value={item.status} />
+          <Field label="Workers" value={String(item.totalWorkers)} />
+          <Field label="Overtime" value={`${item.totalOvertimeHours} hrs`} />
           {item.workLocation ? (
-            <Text style={styles.row}>Location: {item.workLocation}</Text>
+            <Field label="Location" value={item.workLocation} />
           ) : null}
-          {item.remarks ? (
-            <Text style={styles.row}>Remarks: {item.remarks}</Text>
-          ) : null}
+          {item.remarks ? <Field label="Remarks" value={item.remarks} /> : null}
 
           {caps.canConfirm &&
           item.status === LabourAttendanceStatus.Submitted ? (
-            <Pressable
-              style={[styles.btn, acting && styles.disabled]}
-              disabled={acting}
+            <Button
+              label="Confirm attendance"
+              loading={acting}
               onPress={() => void onConfirm()}
-            >
-              <Text style={styles.btnText}>
-                {acting ? 'Confirming…' : 'Confirm attendance'}
-              </Text>
-            </Pressable>
+              style={styles.action}
+            />
           ) : null}
-        </View>
+        </FormSection>
       )}
     </Screen>
   );
 }
 
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
+  field: {
+    marginBottom: spacing.sm,
   },
-  row: { color: colors.text, fontSize: 15 },
-  btn: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
+  label: {
+    ...typography.label,
+    marginBottom: 2,
   },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
+  value: {
+    ...typography.body,
+    fontSize: 15,
+  },
+  action: {
+    marginTop: spacing.md,
+  },
 });

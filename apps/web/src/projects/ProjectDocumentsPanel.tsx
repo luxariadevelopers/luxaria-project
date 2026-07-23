@@ -203,6 +203,10 @@ export function ProjectDocumentsPanel({
         getRowId={(row) => row.id}
         height={460}
         preferencesKey="project-documents"
+        mobileCard={{
+          primaryField: 'fileName',
+          metaFields: ['category', 'createdAt'],
+        }}
       />
     </Stack>
   );

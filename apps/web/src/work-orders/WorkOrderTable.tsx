@@ -182,6 +182,11 @@ export function WorkOrderTable({
       }
       height={520}
       data-testid="work-order-table"
+      mobileCard={{
+        primaryField: 'workOrderNumber',
+        metaFields: ['contractorId', 'contractValue'],
+        statusField: 'status',
+      }}
     />
   );
 }

@@ -10,6 +10,7 @@ import { formatInr } from '@/format';
 import { paymentModeLabel } from './labels';
 import { ContributionPaymentMode } from './types';
 import { useCreateContributionReceipt } from './useContributionReceipts';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   contributionReceiptCreateSchema,
   isDuplicateTransactionReferenceMessage,
@@ -154,7 +155,7 @@ export function CreateContributionReceiptDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 480 } } },
+        paper: { sx: formDrawerPaperSx(480) },
       }}
     >
       <Box sx={{ p: 2.5 }} component="form" onSubmit={handleSubmit(onSubmit)}>

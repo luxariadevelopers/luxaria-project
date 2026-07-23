@@ -184,6 +184,11 @@ export function BookingTable({
       onSearchChange={onSearchChange}
       searchPlaceholder="Search booking number…"
       preferencesKey="sales-bookings-list"
+      mobileCard={{
+        primaryField: 'bookingNumber',
+        metaFields: ['bookingAmount', 'bookingDate'],
+        statusField: 'status',
+      }}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       onRowClick={onRowClick}

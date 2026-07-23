@@ -19,6 +19,7 @@ import {
 import { resolveAccountControls } from './protectedControls';
 import type { ChartOfAccountsCapabilities } from './roleAccess';
 import type { AccountTreeNode, PublicAccount } from './types';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   useActivateAccount,
   useDeactivateAccount,
@@ -68,7 +69,7 @@ export function AccountDetailDrawer({
         anchor="right"
         open={open}
         onClose={onClose}
-        slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 } } } }}
+        slotProps={{ paper: { sx: formDrawerPaperSx(440) } }}
       />
     );
   }
@@ -97,7 +98,7 @@ export function AccountDetailDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 460 } } },
+        paper: { sx: formDrawerPaperSx(460) },
       }}
     >
       <Box sx={{ p: 3 }} data-testid="account-detail-drawer">

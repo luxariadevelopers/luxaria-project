@@ -73,6 +73,11 @@ export function UnitHandoverTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'handoverNumber',
+        metaFields: ['unitId', 'scheduledAt'],
+        statusField: 'status',
+      }}
     />
   );
 }

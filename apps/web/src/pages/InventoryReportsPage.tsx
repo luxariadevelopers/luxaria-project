@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Alert,
   Paper,
@@ -41,6 +42,7 @@ export function InventoryReportsPage() {
   if (valuation.isError || reorder.isError) {
     return (
       <RetryPanel
+        error={valuation.error ?? reorder.error}
         onRetry={() => {
           void valuation.refetch();
           void reorder.refetch();
@@ -54,7 +56,7 @@ export function InventoryReportsPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h5">Inventory Reports</Typography>
+      <PageHeader subtitle="Valuation, movement, and stock health reports for the active project." />
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="subtitle1">Valuation</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

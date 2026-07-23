@@ -4,12 +4,12 @@ import {
   Box,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useProjectsList } from '@/projects/useProjects';
 import { RoleStatus } from '@/rbac-admin/types';
 import { useRolesList } from '@/rbac-admin/useRbac';
@@ -114,13 +114,10 @@ export function UserCreatePage() {
 
   return (
     <Stack spacing={2.5} data-testid="user-create-page">
-      <Stack spacing={0.5}>
-        <Typography variant="h5">Create user</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Email or mobile is the login ID. Set a temporary password — they must
-          choose a permanent one on first login.
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="Create user"
+        subtitle="Email or mobile is the login ID. Set a temporary password — they must choose a permanent one on first login."
+      />
 
       {hasPermission('user.assign_role') &&
       !hasPermission('role.view') ? (

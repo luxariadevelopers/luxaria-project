@@ -16,6 +16,7 @@ import {
   SummaryCards,
 } from '@/components/entity-detail';
 import { PermissionDenied } from '@/components/errors';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useProjectsList } from '@/projects/useProjects';
 import { EmployeeModuleAccessPanel } from './EmployeeModuleAccessPanel';
 import {
@@ -242,42 +243,45 @@ export function EmployeeAccessPage({
   }
 
   return (
-    <EntityDetailLayout
-      canView={canView}
-      loading={accessQuery.isLoading}
-      error={accessQuery.error}
-      onRetry={() => void accessQuery.refetch()}
-      notFound={!accessQuery.isLoading && !accessQuery.error && !summary}
-      permissionTitle="Employee access unavailable"
-      permissionMessage="You need employee.view to open this employee."
-      notFoundTitle="Employee not found"
-      notFoundDescription="The employee may have been deleted or the id is invalid."
-      header={
-        summary ? (
-          <DetailHeader
-            title={summary.employee.displayName}
-            code={summary.employee.employeeCode}
-            subtitle="What they can see"
-            backTo={`/administration/employees/${summary.employee.id}`}
-            backLabel="Employee"
-          />
-        ) : null
-      }
-    >
-      {summary ? (
-        <Stack spacing={2} data-testid="employee-access-page">
-          <EmployeeModuleAccessPanel
-            employeeId={summary.employee.id}
-            summary={summary}
-            canEdit={canEditModules}
-          />
-          <EmployeeAccessSummaryPanel
-            summary={summary}
-            projectNames={projectNames}
-            siteNames={siteNames}
-          />
-        </Stack>
-      ) : null}
-    </EntityDetailLayout>
+    <>
+      <PageHeader hideTitle />
+      <EntityDetailLayout
+        canView={canView}
+        loading={accessQuery.isLoading}
+        error={accessQuery.error}
+        onRetry={() => void accessQuery.refetch()}
+        notFound={!accessQuery.isLoading && !accessQuery.error && !summary}
+        permissionTitle="Employee access unavailable"
+        permissionMessage="You need employee.view to open this employee."
+        notFoundTitle="Employee not found"
+        notFoundDescription="The employee may have been deleted or the id is invalid."
+        header={
+          summary ? (
+            <DetailHeader
+              title={summary.employee.displayName}
+              code={summary.employee.employeeCode}
+              subtitle="What they can see"
+              backTo={`/administration/employees/${summary.employee.id}`}
+              backLabel="Employee"
+            />
+          ) : null
+        }
+      >
+        {summary ? (
+          <Stack spacing={2} data-testid="employee-access-page">
+            <EmployeeModuleAccessPanel
+              employeeId={summary.employee.id}
+              summary={summary}
+              canEdit={canEditModules}
+            />
+            <EmployeeAccessSummaryPanel
+              summary={summary}
+              projectNames={projectNames}
+              siteNames={siteNames}
+            />
+          </Stack>
+        ) : null}
+      </EntityDetailLayout>
+    </>
   );
 }

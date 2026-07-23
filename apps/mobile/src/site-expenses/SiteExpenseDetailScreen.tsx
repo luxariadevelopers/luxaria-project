@@ -1,23 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { formatInr } from '@/format';
 import { SignatureCaptureField } from '@/labour-vouchers/components/SignatureCaptureField';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { spacing, typography } from '@/theme';
 import type { LocalFile } from '@/utils/fileUpload';
 import {
   approveSiteExpense,
@@ -243,118 +239,108 @@ export function SiteExpenseDetailScreen({ route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>Status: {item.status}</Text>
-          <Text style={styles.row}>Amount: {formatInr(item.amount)}</Text>
-          <Text style={styles.row}>Paid to: {item.paidTo}</Text>
-          <Text style={styles.row}>Purpose: {item.purpose}</Text>
-          <Text style={styles.row}>
-            Date: {String(item.expenseDate).slice(0, 10)}
-          </Text>
-          <Text style={styles.row}>Mode: {item.paymentMode}</Text>
-          <Text style={styles.row}>
-            Signature:{' '}
-            {hasExistingSignature
-              ? 'Attached'
-              : requiresSignature
-                ? 'Required'
-                : 'Not required'}
-          </Text>
-          {item.rejectionReason ? (
-            <Text style={styles.row}>Rejection: {item.rejectionReason}</Text>
-          ) : null}
-          {item.cancellationReason ? (
-            <Text style={styles.row}>Cancelled: {item.cancellationReason}</Text>
-          ) : null}
+        <>
+          <FormSection title="Details">
+            <Field label="Status" value={item.status} />
+            <Field label="Amount" value={formatInr(item.amount)} />
+            <Field label="Paid to" value={item.paidTo} />
+            <Field label="Purpose" value={item.purpose} />
+            <Field
+              label="Date"
+              value={String(item.expenseDate).slice(0, 10)}
+            />
+            <Field label="Mode" value={item.paymentMode} />
+            <Field
+              label="Signature"
+              value={
+                hasExistingSignature
+                  ? 'Attached'
+                  : requiresSignature
+                    ? 'Required'
+                    : 'Not required'
+              }
+            />
+            {item.rejectionReason ? (
+              <Field label="Rejection" value={item.rejectionReason} />
+            ) : null}
+            {item.cancellationReason ? (
+              <Field label="Cancelled" value={item.cancellationReason} />
+            ) : null}
+          </FormSection>
 
           {editable ? (
-            <SignatureCaptureField
-              label="Beneficiary / engineer signature"
-              required={requiresSignature && !hasExistingSignature}
-              file={signature}
-              attachedDocumentId={
-                hasExistingSignature
-                  ? item.attachments?.find(
-                      (a) => a.type === SiteExpenseAttachmentType.Signature,
-                    )?.documentId
-                  : null
-              }
-              disabled={acting}
-              onCaptured={setSignature}
-            />
+            <FormSection title="Signature" framed={false}>
+              <SignatureCaptureField
+                label="Beneficiary / engineer signature"
+                required={requiresSignature && !hasExistingSignature}
+                file={signature}
+                attachedDocumentId={
+                  hasExistingSignature
+                    ? item.attachments?.find(
+                        (a) => a.type === SiteExpenseAttachmentType.Signature,
+                      )?.documentId
+                    : null
+                }
+                disabled={acting}
+                onCaptured={setSignature}
+              />
+            </FormSection>
           ) : null}
 
           {actions.length > 0 ? (
-            <>
+            <FormSection title="Actions" framed={false}>
               {needsReason ? (
-                <>
-                  <Text style={styles.label}>Reason / comment</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={reason}
-                    onChangeText={setReason}
-                    placeholder="Required for reject / cancel"
-                    placeholderTextColor={colors.textMuted}
-                    editable={!acting}
-                  />
-                </>
+                <TextField
+                  label="Reason / comment"
+                  value={reason}
+                  onChangeText={setReason}
+                  placeholder="Required for reject / cancel"
+                  editable={!acting}
+                />
               ) : null}
               {actions.map((action) => {
-                const danger =
-                  action === 'reject' || action === 'cancel';
+                const danger = action === 'reject' || action === 'cancel';
                 return (
-                  <Pressable
+                  <Button
                     key={action}
-                    style={[
-                      danger ? styles.btnDanger : styles.btn,
-                      acting && styles.disabled,
-                    ]}
+                    label={acting ? 'Working…' : ACTION_LABELS[action]}
+                    variant={danger ? 'danger' : 'primary'}
                     disabled={acting}
                     onPress={() => void runAction(action)}
-                  >
-                    <Text style={styles.btnText}>
-                      {acting ? 'Working…' : ACTION_LABELS[action]}
-                    </Text>
-                  </Pressable>
+                    style={styles.action}
+                  />
                 );
               })}
-            </>
+            </FormSection>
           ) : null}
-        </View>
+        </>
       )}
     </Screen>
   );
 }
 
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
+  field: {
+    marginBottom: spacing.sm,
   },
-  row: { color: colors.text, fontSize: 15 },
-  label: { color: colors.textMuted, marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    padding: 10,
-    backgroundColor: colors.background,
+  label: {
+    ...typography.label,
+    marginBottom: 2,
   },
-  btn: {
-    marginTop: 12,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
+  value: {
+    ...typography.body,
+    fontSize: 15,
   },
-  btnDanger: {
-    marginTop: 8,
-    backgroundColor: colors.danger,
-    paddingVertical: 12,
-    alignItems: 'center',
+  action: {
+    marginBottom: spacing.sm,
   },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
 });

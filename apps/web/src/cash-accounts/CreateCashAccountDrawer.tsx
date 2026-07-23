@@ -6,6 +6,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { getErrorMessage } from '@/api/errors';
 import { fetchAccounts } from '@/chart-of-accounts/api';
 import { AccountCategory, AccountStatus } from '@/chart-of-accounts/types';
+import { formDrawerPaperSx } from '@/components/forms';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
 import { useNotify } from '@/components/NotificationProvider';
@@ -147,7 +148,7 @@ export function CreateCashAccountDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 420 } } },
+        paper: { sx: formDrawerPaperSx(420) },
       }}
     >
       <Box

@@ -74,6 +74,11 @@ export function UnitQuotationTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'quotationNumber',
+        metaFields: ['grandTotal', 'validUntil'],
+        statusField: 'status',
+      }}
     />
   );
 }

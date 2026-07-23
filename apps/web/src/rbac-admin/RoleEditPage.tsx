@@ -4,7 +4,6 @@ import {
   Box,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
@@ -12,6 +11,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { RoleForm } from './RoleForm';
 import { canEditRole } from './roleAccess';
 import { useRoleDetail, useUpdateRole } from './useRbac';
@@ -103,13 +103,10 @@ export function RoleEditPage({ roleId: roleIdProp }: Props = {}) {
   return (
     <>
       <Stack spacing={2.5} data-testid="role-edit-page">
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Edit {role.name}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {role.code} · permission assignment and status changes are
-            managed from the role detail page.
-          </Typography>
-        </Stack>
+        <PageHeader
+          title={`Edit ${role.name}`}
+          subtitle={`${role.code} · permission assignment and status changes are managed from the role detail page.`}
+        />
         {role.isSystem ? (
           <Alert severity="info">
             This is a system role. Its code is immutable, and bypass cannot be

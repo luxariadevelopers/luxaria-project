@@ -120,6 +120,11 @@ export function RequestTable({
       preferencesKey="purchase-requests-list"
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'requestNumber',
+        metaFields: ['requiredByDate', 'priority'],
+        statusField: 'status',
+      }}
     />
   );
 }

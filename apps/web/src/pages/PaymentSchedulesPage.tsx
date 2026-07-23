@@ -4,7 +4,6 @@ import {
   Stack,
   Tab,
   Tabs,
-  Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
@@ -35,6 +34,7 @@ import {
   useRunMarkOverdueJob,
 } from '@/payment-schedules/usePaymentSchedules';
 import { canRunMarkOverdueJob } from '@/payment-schedules/workflowActions';
+import { PageHeader } from '@/layouts/PageHeader';
 
 type TabValue = 'schedules' | 'overdue';
 
@@ -151,25 +151,19 @@ export function PaymentSchedulesPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h4">Payment schedules</Typography>
-          <Typography color="text.secondary">
-            Customer installment schedules
-            {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-            Generate, approve, mark lines due, and issue demands.
-          </Typography>
-        </Stack>
-        {caps.canCreate ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            Generate schedule
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Payment schedules"
+        subtitle={`Customer installment schedules${
+          selectedProject ? ` — ${selectedProject.projectName}` : ''
+        }. Generate, approve, mark lines due, and issue demands.`}
+        actions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              Generate schedule
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Tabs
         value={tab}

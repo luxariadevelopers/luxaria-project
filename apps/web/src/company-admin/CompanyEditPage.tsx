@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Box, Chip, Stack, Tab, Tabs } from '@mui/material';
 import { DetailHeader } from '@/components/entity-detail';
+import { PageHeader } from '@/layouts/PageHeader';
 import { COMPANY_STATUS_LABELS } from './constants';
 import { CurrentCompanyBoundary, type CurrentCompanyRenderState } from './CurrentCompanyBoundary';
 import { CompanyCapitalPanel } from './CompanyCapitalPanel';
@@ -49,6 +50,7 @@ function CompanyConfiguration({
 
   return (
     <Stack spacing={2.5} data-testid="company-edit-page">
+      <PageHeader hideTitle />
       <DetailHeader
         title={`${company.tradeName} configuration`}
         code={company.companyCode}

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   MeasurementFilters,
 } from '@/work-measurements/MeasurementFilters';
@@ -111,11 +112,9 @@ export function WorkMeasurementsPage() {
 
   return (
     <Stack spacing={2} data-testid="work-measurements-page">
-      <Typography color="text.secondary">
-        Record and verify completed quantities against active BOQ items.
-        Engineer verification requires measurement.certify and a different user
-        than measuredBy.
-      </Typography>
+      <PageHeader
+        subtitle="Record and verify completed quantities against active BOQ items. Engineer verification requires measurement.certify and a different user than measuredBy."
+      />
 
       <MeasurementTable
         rows={list.data?.items ?? []}

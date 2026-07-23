@@ -4,13 +4,13 @@ import {
   Box,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { RoleForm } from './RoleForm';
 import {
   canCreateRole,
@@ -92,13 +92,10 @@ export function RoleCreatePage() {
   return (
     <>
       <Stack spacing={2.5} data-testid="role-create-page">
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Create role</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Create role metadata and optionally select permissions from the
-            server catalog.
-          </Typography>
-        </Stack>
+        <PageHeader
+          title="Create role"
+          subtitle="Create role metadata and optionally select permissions from the server catalog."
+        />
         {!canReadCatalog ? (
           <Alert severity="info">
             permission.view is required to load and select initial

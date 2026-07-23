@@ -138,6 +138,11 @@ export function ShareholdingTable({
       showColumnVisibility
       showExport={false}
       preferencesKey="shareholding-history"
+      mobileCard={{
+        primaryField: 'directorId',
+        metaFields: ['percentage', 'numberOfShares'],
+        statusField: 'status',
+      }}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Button,
   CircularProgress,
@@ -148,25 +149,20 @@ export function ManpowerShortfallPage() {
 
   return (
     <Stack spacing={2} data-testid="manpower-shortfall-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Typography color="text.secondary">
-          Compare agreed, planned and actual labour using Nest shortfall
-          thresholds (80% / 60% fill-rate streaks). Acknowledge to escalate.
-        </Typography>
-        {caps.canCompare ? (
-          <Button
-            component={RouterLink}
-            to={manpowerPlansListPath()}
-            size="small"
-          >
-            Manage daily plans
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Compare agreed, planned and actual labour using Nest shortfall thresholds (80% / 60% fill-rate streaks). Acknowledge to escalate."
+        actions={
+          caps.canCompare ? (
+            <Button
+              component={RouterLink}
+              to={manpowerPlansListPath()}
+              size="small"
+            >
+              Manage daily plans
+            </Button>
+          ) : undefined
+        }
+      />
 
       <ShortfallTable
         rows={rows}

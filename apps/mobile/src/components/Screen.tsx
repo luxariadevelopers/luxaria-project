@@ -1,15 +1,21 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, typography } from '@/theme';
 import { NetworkBanner } from './NetworkBanner';
-import { colors } from '@/theme/colors';
 
 type Props = {
-  title: string;
+  title?: string;
   subtitle?: string;
   children?: ReactNode;
   scroll?: boolean;
   rightSlot?: ReactNode;
+  /**
+   * Force in-screen title visibility.
+   * Default: hide when a native stack header is already shown (avoids double titles).
+   */
+  showHeader?: boolean;
 };
 
 export function Screen({
@@ -18,22 +24,47 @@ export function Screen({
   children,
   scroll = true,
   rightSlot,
+  showHeader,
 }: Props) {
+  const headerHeight = useContext(HeaderHeightContext);
+  const stackHeaderVisible =
+    typeof headerHeight === 'number' && headerHeight > 0;
+  const showInScreenHeader = showHeader ?? !stackHeaderVisible;
+  const showTitleBlock =
+    showInScreenHeader && (Boolean(title) || Boolean(rightSlot));
+  const showContextSubtitle = !showTitleBlock && Boolean(subtitle);
+
   const body = (
     <View style={styles.body}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {showTitleBlock ? (
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            {title ? <Text style={styles.title}>{title}</Text> : null}
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
+          {rightSlot}
         </View>
-        {rightSlot}
-      </View>
+      ) : null}
+      {showContextSubtitle ? (
+        <View style={styles.contextRow}>
+          <Text style={styles.contextSubtitle}>{subtitle}</Text>
+          {rightSlot}
+        </View>
+      ) : null}
+      {!showTitleBlock && !showContextSubtitle && rightSlot ? (
+        <View style={styles.rightOnly}>{rightSlot}</View>
+      ) : null}
       {children}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.safe}
+      edges={
+        stackHeaderVisible ? ['left', 'right'] : ['top', 'left', 'right']
+      }
+    >
       <NetworkBanner />
       {scroll ? (
         <ScrollView contentContainerStyle={styles.scroll}>{body}</ScrollView>
@@ -54,29 +85,40 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 28,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxxl - 4,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 20,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
   headerText: {
     flex: 1,
   },
   title: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '600',
+    ...typography.display,
   },
   subtitle: {
-    color: colors.textMuted,
-    fontSize: 14,
-    marginTop: 6,
-    lineHeight: 20,
+    ...typography.subtitle,
+    marginTop: spacing.sm - 2,
+  },
+  contextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  contextSubtitle: {
+    ...typography.meta,
+    flex: 1,
+  },
+  rightOnly: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.md,
   },
 });

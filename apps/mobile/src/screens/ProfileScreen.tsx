@@ -1,17 +1,13 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '@/auth/AuthContext';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { usePushNotifications } from '@/notifications/PushNotificationContext';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
@@ -19,7 +15,7 @@ import {
   requestCameraPermission,
   requestLocationPermission,
 } from '@/utils/permissions';
-import { colors } from '@/theme/colors';
+import { spacing, typography } from '@/theme';
 
 type ProfileNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Profile'>,
@@ -47,90 +43,97 @@ export function ProfileScreen() {
   };
 
   return (
-    <Screen title="Profile" subtitle="Account, device access, and session">
-      <View style={styles.card}>
-        <Text style={styles.label}>Name</Text>
-        <Text style={styles.value}>{user?.fullName ?? '—'}</Text>
-        <Text style={styles.label}>User code</Text>
-        <Text style={styles.value}>{user?.userCode ?? '—'}</Text>
-        <Text style={styles.label}>Email</Text>
-        <Text style={styles.value}>{user?.email ?? '—'}</Text>
-        <Text style={styles.label}>Mobile</Text>
-        <Text style={styles.value}>{user?.mobile ?? '—'}</Text>
-        <Text style={styles.label}>Roles</Text>
-        <Text style={styles.value}>
-          {access?.roleCodes?.join(', ') || '—'}
-        </Text>
-      </View>
+    <Screen
+      title="Profile"
+      subtitle="Account, device access, and session"
+      showHeader
+    >
+      <FormSection title="Account">
+        <View style={styles.field}>
+          <Text style={styles.label}>Name</Text>
+          <Text style={styles.value}>{user?.fullName ?? '—'}</Text>
+        </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>User code</Text>
+          <Text style={styles.value}>{user?.userCode ?? '—'}</Text>
+        </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <Text style={styles.value}>{user?.email ?? '—'}</Text>
+        </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Mobile</Text>
+          <Text style={styles.value}>{user?.mobile ?? '—'}</Text>
+        </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Roles</Text>
+          <Text style={styles.value}>
+            {access?.roleCodes?.join(', ') || '—'}
+          </Text>
+        </View>
+      </FormSection>
 
       {!user?.mustChangePassword ? (
-        <>
-          <Text style={styles.section}>Security</Text>
-          <Pressable
-            style={styles.action}
+        <FormSection title="Security" framed={false}>
+          <ListRow
+            title="Change password"
+            meta="Update your account password"
             onPress={() => navigation.navigate('ChangePassword')}
-          >
-            <Text style={styles.actionText}>Change password</Text>
-          </Pressable>
-        </>
+          />
+        </FormSection>
       ) : null}
 
-      <Text style={styles.section}>Notifications</Text>
-      <Pressable
-        style={[styles.action, !canViewNotifications && styles.disabled]}
-        disabled={!canViewNotifications}
-        onPress={() => navigation.navigate('Notifications')}
-      >
-        <Text style={styles.actionText}>
-          {canViewNotifications
-            ? 'Open notifications'
-            : 'Notifications (needs notification.view)'}
-        </Text>
-      </Pressable>
-      <Pressable
-        style={styles.action}
-        onPress={() => navigation.navigate('NotificationPreferences')}
-      >
-        <Text style={styles.actionText}>Notification preferences</Text>
-      </Pressable>
-      {lastForegroundTitle ? (
-        <Text style={styles.hint}>
-          Last foreground alert: {lastForegroundTitle}
-        </Text>
-      ) : null}
+      <FormSection title="Notifications" framed={false}>
+        <ListRow
+          title={
+            canViewNotifications
+              ? 'Open notifications'
+              : 'Notifications (needs notification.view)'
+          }
+          onPress={
+            canViewNotifications
+              ? () => navigation.navigate('Notifications')
+              : undefined
+          }
+          disabled={!canViewNotifications}
+        />
+        <ListRow
+          title="Notification preferences"
+          onPress={() => navigation.navigate('NotificationPreferences')}
+        />
+        {lastForegroundTitle ? (
+          <Text style={styles.hint}>
+            Last foreground alert: {lastForegroundTitle}
+          </Text>
+        ) : null}
+      </FormSection>
 
-      <Text style={styles.section}>Device permissions</Text>
-      <Pressable
-        style={styles.action}
-        onPress={() =>
-          void runPermission('Camera', requestCameraPermission)
-        }
-      >
-        <Text style={styles.actionText}>Request camera permission</Text>
-      </Pressable>
-      <Pressable
-        style={styles.action}
-        onPress={() =>
-          void runPermission('Location', requestLocationPermission)
-        }
-      >
-        <Text style={styles.actionText}>Request location permission</Text>
-      </Pressable>
-      <Pressable
-        style={styles.action}
-        onPress={() => {
-          void (async () => {
-            const result = await syncPushRegistration();
-            Alert.alert('Push notifications', result.message);
-          })();
-        }}
-      >
-        <Text style={styles.actionText}>Sync push token with server</Text>
-      </Pressable>
+      <FormSection title="Device permissions" framed={false}>
+        <ListRow
+          title="Request camera permission"
+          onPress={() => void runPermission('Camera', requestCameraPermission)}
+        />
+        <ListRow
+          title="Request location permission"
+          onPress={() =>
+            void runPermission('Location', requestLocationPermission)
+          }
+        />
+        <ListRow
+          title="Sync push token with server"
+          onPress={() => {
+            void (async () => {
+              const result = await syncPushRegistration();
+              Alert.alert('Push notifications', result.message);
+            })();
+          }}
+        />
+      </FormSection>
 
-      <Pressable
-        style={[styles.logout, busy && styles.disabled]}
-        disabled={busy}
+      <Button
+        label="Sign out"
+        variant="danger"
+        loading={busy}
         onPress={() => {
           void (async () => {
             setBusy(true);
@@ -141,68 +144,29 @@ export function ProfileScreen() {
             }
           })();
         }}
-      >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.logoutText}>Sign out</Text>
-        )}
-      </Pressable>
+        style={styles.logout}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginBottom: 20,
+  field: {
+    marginBottom: spacing.sm,
   },
   label: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 10,
+    ...typography.label,
+    marginBottom: 2,
   },
   value: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  section: {
-    color: colors.text,
-    fontWeight: '600',
-    fontSize: 16,
-    marginBottom: 10,
+    ...typography.body,
   },
   hint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginBottom: 12,
-  },
-  action: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 8,
-  },
-  actionText: {
-    color: colors.primary,
-    fontWeight: '600',
+    ...typography.meta,
+    marginTop: spacing.xs,
   },
   logout: {
-    marginTop: 24,
-    backgroundColor: colors.danger,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.7,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxl,
   },
 });

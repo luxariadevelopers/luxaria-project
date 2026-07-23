@@ -7,6 +7,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { applyExpenseClientFilters } from '@/expenses/applyClientFilters';
 import { CreateExpenseDrawer } from '@/expenses/CreateExpenseDrawer';
 import {
@@ -176,12 +177,25 @@ export function ExpensesPage() {
 
   return (
     <Stack spacing={2} data-testid="expenses-page">
-      <Typography color="text.secondary">
-        Enter and review site expenses for
-        {selectedProject ? ` ${selectedProject.projectName}` : ' the selected project'}
-        . Paid from project petty cash. Duplicate bills, GPS out-of-radius, and
-        missing evidence are highlighted. Posted vouchers are immutable.
-      </Typography>
+      <PageHeader
+        title="Site expenses"
+        subtitle={`Enter and review site expenses for${
+          selectedProject
+            ? ` ${selectedProject.projectName}`
+            : ' the selected project'
+        }. Paid from project petty cash. Duplicate bills, GPS out-of-radius, and missing evidence are highlighted. Posted vouchers are immutable.`}
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              disabled={!projectId}
+              onClick={() => setCreateOpen(true)}
+            >
+              New expense
+            </Button>
+          ) : undefined
+        }
+      />
 
       {!projectId ? (
         <Typography color="warning.main" variant="body2">
@@ -225,17 +239,6 @@ export function ExpensesPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canCreate ? (
-            <Button
-              variant="contained"
-              disabled={!projectId}
-              onClick={() => setCreateOpen(true)}
-            >
-              New expense
-            </Button>
-          ) : undefined
         }
         caps={caps}
         onVerify={(row) => openAction('verify', row)}

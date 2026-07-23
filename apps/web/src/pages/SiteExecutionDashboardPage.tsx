@@ -3,6 +3,7 @@ import { Alert, Grid, Paper, Stack, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   fetchSeDirectorDashboard,
   fetchSePmDashboard,
@@ -55,6 +56,7 @@ export function SiteExecutionDashboardPage() {
   if (pm.isError || director.isError) {
     return (
       <RetryPanel
+        error={pm.error ?? director.error}
         onRetry={() => {
           void pm.refetch();
           void director.refetch();
@@ -68,13 +70,9 @@ export function SiteExecutionDashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h5">Site Execution Dashboard</Typography>
-        <Typography variant="body2" color="text.secondary">
-          PM and Director KPIs from DPR, labour, materials, measurements, and
-          issues.
-        </Typography>
-      </div>
+      <PageHeader
+        subtitle="PM and Director KPIs from DPR, labour, materials, measurements, and issues."
+      />
 
       <Typography variant="subtitle1">Project Manager</Typography>
       <Grid container spacing={2}>

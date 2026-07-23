@@ -3113,10 +3113,26 @@ export const ROUTE_LABELS: Record<string, string> = {
   /** Parent crumb for `/project-control/*`. */
   'project-control': 'Project Control',
   boq: 'BOQ',
+  /** Parent crumb for `/procurement/*`. */
+  procurement: 'Procurement',
+  /** Parent crumb for `/sales/*`. */
+  sales: 'Sales',
+  /** Parent crumb for `/site-execution/*`. */
+  'site-execution': 'Site Execution',
 };
 
+/** Title-case a kebab/underscore path segment when no registry label exists. */
+export function humanizeRouteSegment(segment: string): string {
+  if (!segment) return segment;
+  return segment
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 export function getRouteLabel(segment: string): string {
-  return ROUTE_LABELS[segment] ?? segment;
+  return ROUTE_LABELS[segment] ?? humanizeRouteSegment(segment);
 }
 
 export function getPageTitle(pathname: string): string {

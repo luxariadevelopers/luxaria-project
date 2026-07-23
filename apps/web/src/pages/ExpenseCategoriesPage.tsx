@@ -35,6 +35,7 @@ import {
   useSeedStandardExpenseCategories,
 } from '@/expense-categories/useExpenseCategories';
 import { CreateCategoryDrawer } from '@/expense-categories/CreateCategoryDrawer';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Expense categories — `/accounting/expense-categories` (Micro Phase 051).
@@ -111,10 +112,17 @@ export function ExpenseCategoriesPage() {
 
   return (
     <Stack spacing={2} data-testid="expense-categories-page">
-      <Typography color="text.secondary">
-        Configure hierarchical expense categories, default expense ledger
-        mapping, and evidence rules (bill, photo, signature, approval limit).
-      </Typography>
+      <PageHeader
+        title="Expense categories"
+        subtitle="Configure hierarchical expense categories, default expense ledger mapping, and evidence rules (bill, photo, signature, approval limit)."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={() => openCreate(null)}>
+              New category
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Stack
         direction={{ xs: 'column', sm: 'row' }}

@@ -6,7 +6,6 @@ import {
   Chip,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
@@ -18,6 +17,7 @@ import {
 } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { DesignationFormDialog } from './DesignationFormDialog';
 import { canManageDesignations, canOpenDesignations } from './roleAccess';
 import { DesignationStatus, type PublicDesignation } from './types';
@@ -230,29 +230,23 @@ export function DesignationListPage() {
 
   return (
     <Stack spacing={2} data-testid="designations-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Designations</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Job titles linked to departments and optional default roles.
-          </Typography>
-        </Stack>
-        {canManage ? (
-          <Button
-            variant="contained"
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
-            Create designation
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Designations"
+        subtitle="Job titles linked to departments and optional default roles."
+        actions={
+          canManage ? (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              Create designation
+            </Button>
+          ) : null
+        }
+      />
 
       {canManage ? (
         <Alert severity="info">
@@ -290,6 +284,11 @@ export function DesignationListPage() {
         onSearchChange={listState.setSearch}
         preferencesKey="employee-admin-designations"
         getRowId={(row) => row.id}
+        mobileCard={{
+          primaryField: 'name',
+          metaFields: ['code', 'departmentId'],
+          statusField: 'status',
+        }}
         height={520}
         showColumnVisibility
         rowActions={rowActions}

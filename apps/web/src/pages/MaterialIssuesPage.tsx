@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -9,6 +9,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { AttachSignatureDialog } from '@/material-issues/AttachSignatureDialog';
 import { IssueForm } from '@/material-issues/IssueForm';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   MaterialIssueFilters,
   type MaterialIssueFilterState,
@@ -109,10 +110,9 @@ export function MaterialIssuesPage() {
 
   return (
     <Stack spacing={2} data-testid="material-issues-page">
-      <Typography color="text.secondary">
-        Issue materials to work against a BOQ item, capture recipient
-        signature, confirm to reduce stock, and post returns from work.
-      </Typography>
+      <PageHeader
+        subtitle="Issue materials to work against a BOQ item, capture recipient signature, confirm to reduce stock, and post returns from work."
+      />
 
       <MaterialIssueTable
         rows={list.data?.items ?? []}

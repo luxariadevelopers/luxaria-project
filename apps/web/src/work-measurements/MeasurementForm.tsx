@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Alert,
   Box,
@@ -244,7 +245,7 @@ export function MeasurementForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 520 } } },
+        paper: { sx: formDrawerPaperSx(520) },
       }}
     >
       <Box

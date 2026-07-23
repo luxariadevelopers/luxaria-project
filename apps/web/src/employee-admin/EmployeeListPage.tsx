@@ -9,7 +9,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
@@ -17,6 +16,7 @@ import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DataTable, useListQueryState } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useUsersList } from '@/user-admin/useUsers';
 import {
   canCreateEmployee,
@@ -260,27 +260,21 @@ export function EmployeeListPage() {
 
   return (
     <Stack spacing={2} data-testid="employees-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Employees</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Search and administer employees, designations, and site access.
-          </Typography>
-        </Stack>
-        {canCreate ? (
-          <Button
-            component={RouterLink}
-            to="/administration/employees/new"
-            variant="contained"
-          >
-            Create Employee
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Employees"
+        subtitle="Search and administer employees, designations, and site access."
+        actions={
+          canCreate ? (
+            <Button
+              component={RouterLink}
+              to="/administration/employees/new"
+              variant="contained"
+            >
+              Create Employee
+            </Button>
+          ) : null
+        }
+      />
 
       <DataTable<PublicEmployee>
         title="Employee register"
@@ -335,6 +329,11 @@ export function EmployeeListPage() {
               void navigate(`/administration/employees/${row.id}/access`),
           },
         ]}
+        mobileCard={{
+          primaryField: 'displayName',
+          metaFields: ['employeeCode', 'designationId'],
+          statusField: 'status',
+        }}
         height={580}
         showColumnVisibility
       />

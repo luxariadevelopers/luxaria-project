@@ -11,22 +11,18 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { DetailHeader } from '@/components/entity-detail';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
@@ -46,7 +42,7 @@ import {
   useProjectUserOptions,
   useRevokeProjectTeam,
 } from './useProjects';
-import { ProjectTeamRole } from './types';
+import { ProjectTeamRole, type PublicProjectAssignment } from './types';
 
 type Props = {
   projectId?: string;
@@ -126,6 +122,60 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
     return (usersQuery.data ?? []).filter((user) => !assignedIds.has(user.id));
   }, [members, usersQuery.data]);
 
+  const columns = useMemo<GridColDef<PublicProjectAssignment>[]>(
+    () => [
+      {
+        field: 'userId',
+        headerName: 'User',
+        flex: 1,
+        minWidth: 160,
+        valueGetter: (_v, row) =>
+          userNameById.get(row.userId) ?? row.userId,
+      },
+      {
+        field: 'teamRole',
+        headerName: 'Team role',
+        width: 160,
+        valueGetter: (_v, row) =>
+          row.teamRole ? projectTeamRoleLabel(row.teamRole) : '—',
+      },
+      {
+        field: 'access',
+        headerName: 'Access',
+        flex: 1,
+        minWidth: 180,
+        valueGetter: (_v, row) => {
+          const start = formatDate(row.accessStartDate);
+          return row.accessEndDate
+            ? `${start} → ${formatDate(row.accessEndDate)}`
+            : start;
+        },
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 110,
+      },
+    ],
+    [userNameById],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<PublicProjectAssignment>[]>(
+    () => {
+      if (!canAssign) return [];
+      return [
+        {
+          id: 'revoke',
+          label: 'Revoke',
+          danger: true,
+          onClick: (row) => setRevokeId(row.id),
+          disabled: () => revokeMutation.isPending,
+        },
+      ];
+    },
+    [canAssign, revokeMutation.isPending],
+  );
+
   if (!access || (canView && (detailQuery.isLoading || teamQuery.isLoading))) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -190,57 +240,23 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
         }
       />
 
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        {members.length === 0 ? (
-          <EmptyState
-            title="No team members"
-            description="Assign users with an operational team role."
-          />
-        ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>Team role</TableCell>
-                <TableCell>Access</TableCell>
-                <TableCell>Status</TableCell>
-                {canAssign ? <TableCell align="right">Actions</TableCell> : null}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    {userNameById.get(member.userId) ?? member.userId}
-                  </TableCell>
-                  <TableCell>
-                    {projectTeamRoleLabel(member.teamRole)}
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(member.accessStartDate)}
-                    {member.accessEndDate
-                      ? ` → ${formatDate(member.accessEndDate)}`
-                      : ''}
-                  </TableCell>
-                  <TableCell>{member.status}</TableCell>
-                  {canAssign ? (
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        color="error"
-                        disabled={revokeMutation.isPending}
-                        onClick={() => setRevokeId(member.id)}
-                      >
-                        Revoke
-                      </Button>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Paper>
+      <DataTable
+        title="Team members"
+        rows={members}
+        columns={columns}
+        getRowId={(row) => row.id}
+        emptyTitle="No team members"
+        emptyDescription="Assign users with an operational team role."
+        height={420}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'userId',
+          metaFields: ['teamRole', 'access'],
+          statusField: 'status',
+        }}
+        showColumnVisibility={false}
+      />
 
       <Dialog
         open={dialogOpen}

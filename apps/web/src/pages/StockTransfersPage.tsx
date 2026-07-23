@@ -1,23 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   CreateStockTransferDrawer,
   canPostStockTransfer,
@@ -25,6 +16,7 @@ import {
   postStockTransfer,
   stockTransferScopeLabel,
   stockTransferStatusLabel,
+  type StockTransfer,
 } from '@/stock-transfers';
 
 export function StockTransfersPage() {
@@ -53,6 +45,73 @@ export function StockTransfersPage() {
     },
   });
 
+  const handlePost = (row: StockTransfer) => {
+    void (async () => {
+      try {
+        const posted = await post.mutateAsync(row.id);
+        success(`Transfer ${posted.transferNumber} posted`);
+      } catch (err) {
+        notifyError(getErrorMessage(err));
+      }
+    })();
+  };
+
+  const columns = useMemo<GridColDef<StockTransfer>[]>(
+    () => [
+      {
+        field: 'transferNumber',
+        headerName: 'Transfer #',
+        width: 150,
+      },
+      {
+        field: 'scope',
+        headerName: 'Scope',
+        width: 140,
+        valueGetter: (_v, row) => stockTransferScopeLabel(row.scope),
+      },
+      {
+        field: 'sourceLocation',
+        headerName: 'From',
+        flex: 1,
+        minWidth: 120,
+        valueGetter: (_v, row) => row.sourceLocation || '—',
+      },
+      {
+        field: 'destLocation',
+        headerName: 'To',
+        flex: 1,
+        minWidth: 120,
+        valueGetter: (_v, row) => row.destLocation || '—',
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        valueGetter: (_v, row) => stockTransferStatusLabel(row.status),
+        renderCell: (params) => (
+          <Chip
+            size="small"
+            label={stockTransferStatusLabel(params.row.status)}
+          />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<StockTransfer>[]>(() => {
+    if (!canPost) return [];
+    return [
+      {
+        id: 'post',
+        label: 'Post',
+        onClick: handlePost,
+        disabled: (row) =>
+          !canPostStockTransfer(row.status) || post.isPending,
+      },
+    ];
+  }, [canPost, post.isPending]);
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return <Alert severity="info">Select a project to view transfers.</Alert>;
@@ -68,97 +127,37 @@ export function StockTransfersPage() {
 
   const rows = query.data ?? [];
 
-  const handlePost = (id: string) => {
-    void (async () => {
-      try {
-        const row = await post.mutateAsync(id);
-        success(`Transfer ${row.transferNumber} posted`);
-      } catch (err) {
-        notifyError(getErrorMessage(err));
-      }
-    })();
-  };
-
   return (
     <Stack spacing={2} data-testid="stock-transfers-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{
-          alignItems: { sm: 'center' },
-          justifyContent: 'space-between',
-        }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Stock Transfers</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Warehouse / site / project transfers. Posting updates both source
-            and destination ledger rows.
-          </Typography>
-        </Stack>
-        {canCreate ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            New transfer
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Warehouse / site / project transfers. Posting updates both source and destination ledger rows."
+        actions={
+          canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New transfer
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <Paper variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Transfer #</TableCell>
-              <TableCell>Scope</TableCell>
-              <TableCell>From</TableCell>
-              <TableCell>To</TableCell>
-              <TableCell>Status</TableCell>
-              {canPost ? <TableCell align="right">Actions</TableCell> : null}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canPost ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No transfers yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.transferNumber}</TableCell>
-                  <TableCell>{stockTransferScopeLabel(row.scope)}</TableCell>
-                  <TableCell>{row.sourceLocation || '—'}</TableCell>
-                  <TableCell>{row.destLocation || '—'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={stockTransferStatusLabel(row.status)}
-                    />
-                  </TableCell>
-                  {canPost ? (
-                    <TableCell align="right">
-                      {canPostStockTransfer(row.status) ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={post.isPending}
-                          onClick={() => handlePost(row.id)}
-                        >
-                          Post
-                        </Button>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+      <DataTable
+        title="Stock transfers"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No transfers"
+        emptyDescription="No transfers yet."
+        height={520}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'transferNumber',
+          metaFields: ['scope', 'sourceLocation'],
+          statusField: 'status',
+        }}
+        showColumnVisibility={false}
+      />
 
       {canCreate ? (
         <CreateStockTransferDrawer

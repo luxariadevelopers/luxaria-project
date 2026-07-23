@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Alert,
   MenuItem,
@@ -53,7 +54,7 @@ export function SiteExecutionReportsPage() {
     );
   }
   if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
+    return <RetryPanel error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   const data = query.data as SeReportRows | undefined;
@@ -66,7 +67,7 @@ export function SiteExecutionReportsPage() {
   return (
     <Stack spacing={3}>
       <div>
-        <Typography variant="h5">Site Execution Reports</Typography>
+        <PageHeader subtitle="Site execution report packs for the active project." />
         <Typography variant="body2" color="text.secondary">
           Tabular registers from DPR, labour, ledger, and optional SE modules.
         </Typography>

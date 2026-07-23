@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { ApprovalStatus } from '@luxaria/shared-types';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   ApprovalFilters,
   type ApprovalFilterState,
@@ -161,16 +162,15 @@ export function ApprovalsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        {selectedProject
-          ? `${selectedProject.projectCode} · `
-          : null}
-        Work queue for requests in the selected project
-        {filters.status === ApprovalStatus.Pending
-          ? ' (default: pending)'
-          : null}
-        .
-      </Typography>
+      <PageHeader
+        subtitle={
+          `${selectedProject ? `${selectedProject.projectCode} · ` : ''}Work queue for requests in the selected project${
+            filters.status === ApprovalStatus.Pending
+              ? ' (default: pending)'
+              : ''
+          }.`
+        }
+      />
 
       <ApprovalSummaryChips
         pendingTotal={pending}

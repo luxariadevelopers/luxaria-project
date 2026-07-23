@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { resolveUnitHandoverCapabilities } from '@/unit-handovers/roleAccess';
 import { UnitHandoverTable } from '@/unit-handovers/UnitHandoverTable';
 import { useUnitHandoversList } from '@/unit-handovers/useUnitHandovers';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function UnitHandoversPage() {
   const { hasPermission, access } = useAuth();
@@ -39,9 +40,10 @@ export function UnitHandoversPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Possession handovers — scheduling, snag list, and customer acknowledgement.
-      </Typography>
+      <PageHeader
+        title="Unit handovers"
+        subtitle="Possession handovers — scheduling, snag list, and customer acknowledgement."
+      />
       <UnitHandoverTable
         rows={query.data?.items ?? []}
         loading={query.isLoading || query.isFetching}

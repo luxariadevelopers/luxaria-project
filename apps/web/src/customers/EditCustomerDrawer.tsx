@@ -10,6 +10,7 @@ import { fundingTypeLabel } from './kycState';
 import type { CustomerListRow } from './types';
 import { CustomerFundingType } from './types';
 import { useUpdateCustomer } from './useCustomers';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   customerCreateSchema,
   type CustomerCreateFormValues,
@@ -118,7 +119,7 @@ export function EditCustomerDrawer({ customer, open, onClose }: Props) {
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box

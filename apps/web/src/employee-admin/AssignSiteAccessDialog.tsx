@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Divider,
+  Drawer,
   FormControl,
   InputLabel,
   MenuItem,
   Select,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
 import type { PublicSite } from './types';
 import { useCreateSiteAssignment } from './useEmployees';
@@ -100,16 +101,23 @@ export function AssignSiteAccessDialog({
   };
 
   return (
-    <Dialog
+    <Drawer
+      anchor="right"
       open={open}
       onClose={busy ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
+      slotProps={{ paper: { sx: formDrawerPaperSx(460) } }}
       data-testid="assign-site-access-dialog"
     >
-      <DialogTitle>Add person to site</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+      <Box
+        sx={{
+          p: 3,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Typography variant="h6">Add person to site</Typography>
           <FormControl fullWidth required disabled={busy}>
             <InputLabel id="assign-user">Person</InputLabel>
             <Select
@@ -182,24 +190,25 @@ export function AssignSiteAccessDialog({
           </TextField>
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => void submit()}
-          disabled={busy}
-          data-testid="assign-site-access-submit"
-        >
-          {busy ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            'Add to site'
-          )}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <Divider sx={{ my: 2 }} />
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void submit()}
+            disabled={busy}
+            data-testid="assign-site-access-submit"
+          >
+            {busy ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              'Add to site'
+            )}
+          </Button>
+        </Stack>
+      </Box>
+    </Drawer>
   );
 }

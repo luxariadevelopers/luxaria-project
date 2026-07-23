@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Autocomplete,
   Button,
@@ -190,7 +191,7 @@ export function CreateStockTransferDrawer({
       open={open}
       onClose={handleClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 480 }, p: 2.5 } },
+        paper: { sx: { ...formDrawerPaperSx(480), p: 2.5 } },
       }}
     >
       <Stack spacing={2} data-testid="create-stock-transfer-drawer">

@@ -34,6 +34,7 @@ import {
 } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { formatInr } from '@/format';
 import { isJournalBalanced } from '@/journals/balance';
 import { JournalLinesGrid } from '@/journals/JournalLinesGrid';
@@ -214,10 +215,10 @@ export function JournalCreatePage() {
         void handleSubmit((values) => persist(values, false))();
       }}
     >
-      <Typography color="text.secondary">
-        Create a balanced manual journal draft. Submit sends it for approval
-        (draft → pending_approval). Posting is a later step (`journal.post`).
-      </Typography>
+      <PageHeader
+        title="New journal"
+        subtitle="Create a balanced manual journal draft. Submit sends it for approval (draft → pending_approval). Posting is a later step (`journal.post`)."
+      />
 
       <Alert severity="info" variant="outlined">
         Debit must equal credit; a line cannot have both debit and credit.

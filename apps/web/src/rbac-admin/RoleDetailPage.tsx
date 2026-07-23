@@ -1,31 +1,33 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
-  Button,
   Chip,
   CircularProgress,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   DetailHeader,
+  EntityActionBar,
   EntityDetailLayout,
+  resolveVisibleActions,
   SummaryCards,
+  type EntityDetailAction,
 } from '@/components/entity-detail';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { formatDateTime } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import { CloneRoleDialog } from './CloneRoleDialog';
 import { RolePermissionPanel } from './RolePermissionPanel';
 import {
   canAssignRolesFromRbac,
-  canCreateRole,
   canEditRole,
   canOpenRoles,
   canViewPermissionCatalog,
@@ -182,8 +184,54 @@ export function RoleDetailPage({ roleId: roleIdProp }: Props = {}) {
       ]
     : [];
 
+  const actions = useMemo<EntityDetailAction[]>(() => {
+    if (!role) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        permission: 'role.update',
+        allowedStatuses: Object.values(RoleStatus),
+        variant: 'contained',
+        onClick: () =>
+          void navigate(`/administration/roles/${role.id}/edit`),
+      },
+      {
+        id: 'clone',
+        label: 'Clone',
+        permission: 'role.create',
+        allowedStatuses: Object.values(RoleStatus),
+        variant: 'outlined',
+        onClick: () => {
+          setCloneError(undefined);
+          setCloneOpen(true);
+        },
+      },
+      {
+        id: 'deactivate',
+        label: 'Deactivate',
+        permission: 'role.update',
+        allowedStatuses: [RoleStatus.Active],
+        color: 'warning',
+        variant: 'outlined',
+        disabled: role.bypassPermissions,
+        onClick: () => setStatusAction('deactivate'),
+      },
+      {
+        id: 'activate',
+        label: 'Activate',
+        permission: 'role.update',
+        allowedStatuses: [RoleStatus.Inactive],
+        color: 'success',
+        variant: 'outlined',
+        onClick: () => setStatusAction('activate'),
+      },
+    ];
+  }, [navigate, role]);
+
   return (
     <>
+      <PageHeader hideTitle />
       <EntityDetailLayout
         canView={canView}
         loading={roleQuery.isLoading}
@@ -227,54 +275,16 @@ export function RoleDetailPage({ roleId: roleIdProp }: Props = {}) {
           ) : undefined
         }
         actionBar={
-          role ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              sx={{ flexWrap: 'wrap' }}
-            >
-              {canUpdate ? (
-                <Button
-                  component={RouterLink}
-                  to={`/administration/roles/${role.id}/edit`}
-                  variant="contained"
-                >
-                  Edit
-                </Button>
-              ) : null}
-              {canCreateRole(access) ? (
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setCloneError(undefined);
-                    setCloneOpen(true);
-                  }}
-                >
-                  Clone
-                </Button>
-              ) : null}
-              {canUpdate &&
-              role.status === RoleStatus.Active &&
-              !role.bypassPermissions ? (
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  onClick={() => setStatusAction('deactivate')}
-                >
-                  Deactivate
-                </Button>
-              ) : null}
-              {canUpdate && role.status === RoleStatus.Inactive ? (
-                <Button
-                  variant="outlined"
-                  color="success"
-                  onClick={() => setStatusAction('activate')}
-                >
-                  Activate
-                </Button>
-              ) : null}
-            </Stack>
+          role &&
+          resolveVisibleActions(actions, {
+            status: role.status,
+            hasPermission,
+          }).length > 0 ? (
+            <EntityActionBar
+              actions={actions}
+              status={role.status}
+              hasPermission={hasPermission}
+            />
           ) : undefined
         }
         summary={role ? <SummaryCards fields={summary} /> : undefined}

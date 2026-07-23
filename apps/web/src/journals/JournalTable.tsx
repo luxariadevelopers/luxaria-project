@@ -143,6 +143,11 @@ export function JournalTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       preferencesKey="journals-list"
+      mobileCard={{
+        primaryField: 'journalNumber',
+        metaFields: ['journalDate', 'totalDebit'],
+        statusField: 'status',
+      }}
       filterSlot={
         <Stack spacing={1}>
           {filterSlot}

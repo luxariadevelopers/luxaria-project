@@ -1,8 +1,16 @@
 import type { ReactNode } from 'react';
-import { Avatar, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import { DetailHeader, SummaryCards } from '@/components/entity-detail';
+import { Avatar, Box, Chip, Paper, Stack, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/auth/AuthContext';
+import {
+  DetailHeader,
+  EntityActionBar,
+  EntityDetailLayout,
+  SummaryCards,
+  type EntityDetailAction,
+} from '@/components/entity-detail';
 import { formatDateTime, formatInr } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import { COMPANY_STATUS_LABELS, financialYearMonthLabel } from './constants';
 import { CurrentCompanyBoundary, type CurrentCompanyRenderState } from './CurrentCompanyBoundary';
 import { CompanyHistoryPanel } from './CompanyHistoryPanel';
@@ -58,6 +66,8 @@ function CompanyOverview({
   canUploadLogo,
   configurationPath,
 }: CurrentCompanyRenderState & { configurationPath?: string }) {
+  const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const summary = [
     {
       id: 'authorised-capital',
@@ -86,109 +96,136 @@ function CompanyOverview({
     },
   ];
 
+  const actions: EntityDetailAction[] =
+    configurationPath && (canUpdate || canUploadLogo)
+      ? [
+          {
+            id: 'configure',
+            label: 'Configure company',
+            permission: canUpdate ? 'company.update' : 'company.upload_logo',
+            allowedStatuses: [company.status],
+            variant: 'contained',
+            onClick: () => void navigate(configurationPath),
+          },
+        ]
+      : [];
+
   return (
-    <Stack spacing={2.5} data-testid="company-detail-page">
-      <DetailHeader
-        title={company.tradeName}
-        code={company.companyCode}
-        subtitle={company.legalName}
-        meta={
-          <Chip
-            size="small"
-            label={COMPANY_STATUS_LABELS[company.status]}
-            color={company.status === 'active' ? 'success' : 'default'}
+    <>
+      <PageHeader hideTitle />
+      <EntityDetailLayout
+        canView
+        header={
+          <DetailHeader
+            title={company.tradeName}
+            code={company.companyCode}
+            subtitle={company.legalName}
+            meta={
+              <Chip
+                size="small"
+                label={COMPANY_STATUS_LABELS[company.status]}
+                color={company.status === 'active' ? 'success' : 'default'}
+              />
+            }
           />
         }
-      />
-
-      {configurationPath && (canUpdate || canUploadLogo) ? (
-        <Box>
-          <Button component={RouterLink} to={configurationPath} variant="contained">
-            Configure company
-          </Button>
-        </Box>
-      ) : null}
-
-      <SummaryCards fields={summary} />
-
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
-        <CompanyLogo company={company} />
-      </Paper>
-
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
-        <Typography variant="h6" sx={{ mb: 1.5 }}>
-          Profile
-        </Typography>
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'repeat(4, minmax(0, 1fr))',
-            },
-          }}
-        >
-          <Fact label="Trade name" value={company.tradeName} />
-          <Fact label="Legal name" value={company.legalName} />
-          <Fact label="Email" value={company.email} />
-          <Fact label="Phone" value={company.phone} />
-          <Fact label="Website" value={company.website} />
-          <Fact
-            label="Financial year starts"
-            value={financialYearMonthLabel(company.financialYearStartMonth)}
-          />
-          <Fact label="Company code" value={company.companyCode} />
-          <Fact label="Primary company" value={company.isPrimary ? 'Yes' : 'No'} />
-        </Box>
-      </Paper>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-        }}
+        actionBar={
+          actions.length > 0 ? (
+            <EntityActionBar
+              actions={actions}
+              status={company.status}
+              hasPermission={hasPermission}
+              emptyHint=""
+            />
+          ) : undefined
+        }
+        summary={<SummaryCards fields={summary} />}
       >
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            Registered address
-          </Typography>
-          <Typography variant="body2">{formatCompanyAddress(company.registeredAddress)}</Typography>
-        </Paper>
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            Corporate address
-          </Typography>
-          <Typography variant="body2">{formatCompanyAddress(company.corporateAddress)}</Typography>
-        </Paper>
-      </Box>
+        <Stack spacing={2.5} data-testid="company-detail-page">
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
+            <CompanyLogo company={company} />
+          </Paper>
 
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
-        <Typography variant="h6" sx={{ mb: 1.5 }}>
-          Statutory details
-        </Typography>
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'repeat(4, minmax(0, 1fr))',
-            },
-          }}
-        >
-          <Fact label="CIN" value={company.cin} />
-          <Fact label="PAN" value={company.pan} />
-          <Fact label="TAN" value={company.tan} />
-          <Fact label="GSTIN" value={company.gstin} />
-        </Box>
-      </Paper>
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
+            <Typography variant="h6" sx={{ mb: 1.5 }}>
+              Profile
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
+                },
+              }}
+            >
+              <Fact label="Trade name" value={company.tradeName} />
+              <Fact label="Legal name" value={company.legalName} />
+              <Fact label="Email" value={company.email} />
+              <Fact label="Phone" value={company.phone} />
+              <Fact label="Website" value={company.website} />
+              <Fact
+                label="Financial year starts"
+                value={financialYearMonthLabel(company.financialYearStartMonth)}
+              />
+              <Fact label="Company code" value={company.companyCode} />
+              <Fact label="Primary company" value={company.isPrimary ? 'Yes' : 'No'} />
+            </Box>
+          </Paper>
 
-      <CompanyHistoryPanel companyId={company.id} />
-    </Stack>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+            }}
+          >
+            <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Registered address
+              </Typography>
+              <Typography variant="body2">
+                {formatCompanyAddress(company.registeredAddress)}
+              </Typography>
+            </Paper>
+            <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Corporate address
+              </Typography>
+              <Typography variant="body2">
+                {formatCompanyAddress(company.corporateAddress)}
+              </Typography>
+            </Paper>
+          </Box>
+
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
+            <Typography variant="h6" sx={{ mb: 1.5 }}>
+              Statutory details
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
+                },
+              }}
+            >
+              <Fact label="CIN" value={company.cin} />
+              <Fact label="PAN" value={company.pan} />
+              <Fact label="TAN" value={company.tan} />
+              <Fact label="GSTIN" value={company.gstin} />
+            </Box>
+          </Paper>
+
+          <CompanyHistoryPanel companyId={company.id} />
+        </Stack>
+      </EntityDetailLayout>
+    </>
   );
 }
 

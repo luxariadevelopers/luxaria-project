@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { spacing, typography } from '@/theme';
 import type { AttendanceWorkerDraft } from './buildAttendanceCreatePayload';
 import { WorkerChecklist } from './WorkerChecklist';
 
@@ -25,7 +25,15 @@ export function IndividualAttendanceSection({ workers, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { marginTop: 12 },
-  heading: { color: colors.text, fontWeight: '700', marginBottom: 4 },
-  hint: { color: colors.textMuted, marginBottom: 8, fontSize: 13 },
+  root: {
+    marginBottom: spacing.md,
+  },
+  heading: {
+    ...typography.bodyStrong,
+    marginBottom: spacing.xs,
+  },
+  hint: {
+    ...typography.meta,
+    marginBottom: spacing.sm,
+  },
 });

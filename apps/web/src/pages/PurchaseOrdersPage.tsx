@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -105,25 +106,19 @@ export function PurchaseOrdersPage() {
 
   return (
     <Stack spacing={2} data-testid="purchase-orders-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Typography color="text.secondary">
-          Monitor purchase orders for the active project — delivery status,
-          received value, and open balance. Open a row for full lifecycle and
-          revisions.
-        </Typography>
-        {caps.canCreate ? (
-          <Button
-            variant="contained"
-            onClick={() => navigate(PURCHASE_ORDER_ROUTES.create)}
-          >
-            New purchase order
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Monitor purchase orders for the active project — delivery status, received value, and open balance. Open a row for full lifecycle and revisions."
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              onClick={() => navigate(PURCHASE_ORDER_ROUTES.create)}
+            >
+              New purchase order
+            </Button>
+          ) : undefined
+        }
+      />
 
       {!validated.ready ? (
         <>

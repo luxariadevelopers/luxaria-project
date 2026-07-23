@@ -9,6 +9,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { contributionTypeLabel } from './labels';
 import { ContributionType } from './types';
 import { useCreateCommitment } from './useCommitments';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   commitmentCreateSchema,
   type CommitmentCreateFormValues,
@@ -85,7 +86,7 @@ export function CreateCommitmentDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box sx={{ p: 2.5 }} component="form" onSubmit={handleSubmit(onSubmit)}>

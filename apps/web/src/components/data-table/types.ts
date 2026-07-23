@@ -17,6 +17,20 @@ export type DataTableRowAction<R extends GridValidRowModel> = {
   disabled?: (row: R) => boolean;
 };
 
+/**
+ * Narrow-viewport card layout for DataTable (below `sm`).
+ * When omitted, fields are inferred from columns (first = primary,
+ * next two non-status = meta, `*status*` = chip).
+ */
+export type DataTableMobileCardConfig = {
+  primaryField?: string;
+  /** Up to two secondary fields shown under the primary label. */
+  metaFields?: readonly string[];
+  statusField?: string;
+  /** Force spreadsheet layout on all breakpoints. */
+  disabled?: boolean;
+};
+
 export type DataTableProps<R extends GridValidRowModel> = {
   title?: string;
   rows: readonly R[];
@@ -89,4 +103,10 @@ export type DataTableProps<R extends GridValidRowModel> = {
   /** Hide export when user lacks this permission. */
   exportPermission?: string;
   showColumnVisibility?: boolean;
+
+  /**
+   * Card/list row mapping for viewports below `sm`.
+   * Defaults to auto-inferred columns when omitted.
+   */
+  mobileCard?: DataTableMobileCardConfig;
 };

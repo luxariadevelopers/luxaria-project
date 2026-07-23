@@ -1,21 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Box,
-  Button,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   fetchSiteDiaryEntries,
   type PublicSiteDiaryEntry,
@@ -53,6 +44,57 @@ export function SiteDiaryPage() {
     setDrawerOpen(true);
   };
 
+  const columns = useMemo<GridColDef<PublicSiteDiaryEntry>[]>(
+    () => [
+      {
+        field: 'entryDate',
+        headerName: 'Date',
+        width: 120,
+        valueGetter: (_v, row) => row.entryDate.slice(0, 10),
+      },
+      {
+        field: 'entryType',
+        headerName: 'Type',
+        width: 140,
+      },
+      {
+        field: 'title',
+        headerName: 'Title',
+        flex: 1,
+        minWidth: 180,
+      },
+      {
+        field: 'visitors',
+        headerName: 'Visitors',
+        flex: 1,
+        minWidth: 140,
+        valueGetter: (_v, row) =>
+          row.visitors.length === 0
+            ? '—'
+            : row.visitors.map((v) => v.name).join(', '),
+      },
+      {
+        field: 'photos',
+        headerName: 'Photos',
+        width: 90,
+        type: 'number',
+        valueGetter: (_v, row) => row.photoDocumentIds.length,
+      },
+    ],
+    [],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<PublicSiteDiaryEntry>[]>(() => {
+    if (!canManage) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        onClick: openEdit,
+      },
+    ];
+  }, [canManage]);
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return (
@@ -73,84 +115,33 @@ export function SiteDiaryPage() {
 
   return (
     <Stack spacing={2}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
+      <PageHeader
+        subtitle="Meetings, delays, visitors, instructions, and risks linked to project / DPR."
+        actions={
+          canManage ? (
+            <Button variant="contained" onClick={openCreate}>
+              New entry
+            </Button>
+          ) : undefined
+        }
+      />
+      <DataTable
+        title="Site diary"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No diary entries"
+        emptyDescription="No diary entries for this project."
+        height={520}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'title',
+          metaFields: ['entryDate', 'entryType'],
         }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Site Diary</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Meetings, delays, visitors, instructions, and risks linked to
-            project / DPR.
-          </Typography>
-        </Stack>
-        {canManage ? (
-          <Button variant="contained" onClick={openCreate}>
-            New entry
-          </Button>
-        ) : null}
-      </Box>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Title</TableCell>
-              <TableCell>Visitors</TableCell>
-              <TableCell align="right">Photos</TableCell>
-              {canManage ? <TableCell align="right">Actions</TableCell> : null}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No diary entries for this project.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell>{row.entryDate.slice(0, 10)}</TableCell>
-                  <TableCell>{row.entryType}</TableCell>
-                  <TableCell>{row.title}</TableCell>
-                  <TableCell>
-                    {row.visitors.length === 0
-                      ? '—'
-                      : row.visitors.map((v) => v.name).join(', ')}
-                  </TableCell>
-                  <TableCell align="right">
-                    {row.photoDocumentIds.length}
-                  </TableCell>
-                  {canManage ? (
-                    <TableCell align="right">
-                      <Button size="small" onClick={() => openEdit(row)}>
-                        Edit
-                      </Button>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+        showColumnVisibility={false}
+      />
 
       {canManage ? (
         <SiteDiaryFormDrawer

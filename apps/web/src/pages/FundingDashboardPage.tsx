@@ -20,6 +20,7 @@ import {
   useFundingDashboard,
   type FundingFilterState,
 } from '@/funding-dashboard';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Funding dashboard (Micro Phase 040).
@@ -84,11 +85,9 @@ export function FundingDashboardPage() {
 
   return (
     <Stack spacing={3} data-testid="funding-dashboard-page">
-      <Typography color="text.secondary">
-        Project funding — committed / received / pending gaps by participant,
-        plus accounting source and utilisation. Project and as-of date are
-        required.
-      </Typography>
+      <PageHeader
+        subtitle="Project funding — committed / received / pending gaps by participant, plus accounting source and utilisation. Project and as-of date are required."
+      />
 
       <FundingFilters
         value={filters}

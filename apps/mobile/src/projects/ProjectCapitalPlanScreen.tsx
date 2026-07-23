@@ -1,23 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   applyEqualDirectorCommitments,
   loadCapitalPlanDefaults,
@@ -68,6 +64,7 @@ export function ProjectCapitalPlanScreen(_props: Props) {
   const canViewInvestors = hasPermission('investor.view');
 
   const [loading, setLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -105,16 +102,19 @@ export function ProjectCapitalPlanScreen(_props: Props) {
     if (!canEdit) {
       setForbidden(true);
       setError('Need project.update or participant create/update');
+      setHydrated(false);
       setLoading(false);
       return;
     }
     if (!selectedProjectId) {
       setError('Select a project first');
+      setHydrated(false);
       setLoading(false);
       return;
     }
     if (!isOnline) {
       setError('Go online to edit capital plan');
+      setHydrated(false);
       setLoading(false);
       return;
     }
@@ -149,9 +149,11 @@ export function ProjectCapitalPlanScreen(_props: Props) {
       setInvestors(plan.capitalInvestors);
       setDirectorOptions(dirs);
       setInvestorOptions(invs);
+      setHydrated(true);
     } catch (err) {
       setForbidden(isForbiddenError(err));
       setError(getErrorMessage(err, 'Could not load capital plan'));
+      setHydrated(false);
     } finally {
       setLoading(false);
     }
@@ -239,7 +241,7 @@ export function ProjectCapitalPlanScreen(_props: Props) {
           : 'Select a project'
       }
     >
-      {loading || error || forbidden ? (
+      {loading || forbidden || !hydrated ? (
         <AsyncStatePanel
           loading={loading}
           error={error}
@@ -251,27 +253,34 @@ export function ProjectCapitalPlanScreen(_props: Props) {
         <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Text style={styles.label}>Approved budget</Text>
-          <TextInput
-            style={styles.input}
-            value={approvedBudget}
-            onChangeText={setApprovedBudget}
-            keyboardType="numeric"
-            editable={canUpdateProject}
-          />
-
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Equal director investment</Text>
-            <Switch
-              value={equalDirectorInvestment}
-              onValueChange={setEqualDirectorInvestment}
-              disabled={!canUpdateProject && !canSyncParticipants}
+          <FormSection title="Budget">
+            <TextField
+              label="Approved budget"
+              value={approvedBudget}
+              onChangeText={setApprovedBudget}
+              keyboardType="numeric"
+              editable={canUpdateProject}
             />
-          </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Equal director investment</Text>
+              <Switch
+                value={equalDirectorInvestment}
+                onValueChange={setEqualDirectorInvestment}
+                disabled={!canUpdateProject && !canSyncParticipants}
+              />
+            </View>
+          </FormSection>
 
-          <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Directors</Text>
-            <Pressable
+          <FormSection
+            title="Directors"
+            description={
+              directors.length === 0 ? 'No capital directors yet.' : undefined
+            }
+            framed={false}
+          >
+            <Button
+              label="+ Add director"
+              variant="ghost"
               onPress={() =>
                 setDirectors((prev) =>
                   rebalanceDirectors(
@@ -282,255 +291,226 @@ export function ProjectCapitalPlanScreen(_props: Props) {
                   ),
                 )
               }
-            >
-              <Text style={styles.link}>Add</Text>
-            </Pressable>
-          </View>
+              style={styles.addBtn}
+            />
 
-          {directors.length === 0 ? (
-            <Text style={styles.hint}>No capital directors yet.</Text>
-          ) : null}
-
-          {directors.map((row, index) => (
-            <View key={`d-${index}`} style={styles.rowCard}>
-              <Text style={styles.label}>Director</Text>
-              <View style={styles.chips}>
-                {directorOptions.map((opt) => (
-                  <Pressable
-                    key={opt.id}
-                    style={[
-                      styles.chip,
-                      row.directorId === opt.id && styles.chipActive,
-                    ]}
-                    onPress={() =>
+            {directors.map((row, index) => (
+              <FormSection key={`d-${index}`} title={`Director ${index + 1}`}>
+                <Text style={styles.label}>Director</Text>
+                <View style={styles.chips}>
+                  {directorOptions.map((opt) => (
+                    <Chip
+                      key={opt.id}
+                      label={opt.label}
+                      selected={row.directorId === opt.id}
+                      onPress={() =>
+                        setDirectors((prev) =>
+                          prev.map((r, i) =>
+                            i === index ? { ...r, directorId: opt.id } : r,
+                          ),
+                        )
+                      }
+                    />
+                  ))}
+                </View>
+                {!directorOptions.length ? (
+                  <TextField
+                    label="Director id"
+                    value={row.directorId}
+                    onChangeText={(v) =>
                       setDirectors((prev) =>
                         prev.map((r, i) =>
-                          i === index ? { ...r, directorId: opt.id } : r,
+                          i === index ? { ...r, directorId: v } : r,
                         ),
                       )
                     }
-                  >
-                    <Text style={styles.chipText}>{opt.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              {!directorOptions.length ? (
-                <TextInput
-                  style={styles.input}
-                  value={row.directorId}
+                    placeholder="Director id"
+                    autoCapitalize="none"
+                  />
+                ) : null}
+                <TextField
+                  label="Profit %"
+                  value={row.profitSharePercent}
                   onChangeText={(v) =>
                     setDirectors((prev) =>
                       prev.map((r, i) =>
-                        i === index ? { ...r, directorId: v } : r,
+                        i === index ? { ...r, profitSharePercent: v } : r,
                       ),
                     )
                   }
-                  placeholder="Director id"
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
+                  keyboardType="numeric"
                 />
-              ) : null}
-              <Text style={styles.label}>Profit %</Text>
-              <TextInput
-                style={styles.input}
-                value={row.profitSharePercent}
-                onChangeText={(v) =>
-                  setDirectors((prev) =>
-                    prev.map((r, i) =>
-                      i === index ? { ...r, profitSharePercent: v } : r,
-                    ),
-                  )
-                }
-                keyboardType="numeric"
-              />
-              <Text style={styles.label}>Commitment amount</Text>
-              <TextInput
-                style={styles.input}
-                value={row.commitmentAmount}
-                onChangeText={(v) =>
-                  setDirectors((prev) =>
-                    prev.map((r, i) =>
-                      i === index ? { ...r, commitmentAmount: v } : r,
-                    ),
-                  )
-                }
-                keyboardType="numeric"
-                editable={!equalDirectorInvestment}
-              />
-              <Pressable
-                onPress={() =>
-                  setDirectors((prev) =>
-                    rebalanceDirectors(
-                      prev.filter((_, i) => i !== index),
-                      investors,
-                      approvedBudget,
-                      equalDirectorInvestment,
-                    ),
-                  )
-                }
-              >
-                <Text style={styles.remove}>Remove</Text>
-              </Pressable>
-            </View>
-          ))}
+                <TextField
+                  label="Commitment amount"
+                  value={row.commitmentAmount}
+                  onChangeText={(v) =>
+                    setDirectors((prev) =>
+                      prev.map((r, i) =>
+                        i === index ? { ...r, commitmentAmount: v } : r,
+                      ),
+                    )
+                  }
+                  keyboardType="numeric"
+                  editable={!equalDirectorInvestment}
+                />
+                <Button
+                  label="Remove"
+                  variant="danger"
+                  onPress={() =>
+                    setDirectors((prev) =>
+                      rebalanceDirectors(
+                        prev.filter((_, i) => i !== index),
+                        investors,
+                        approvedBudget,
+                        equalDirectorInvestment,
+                      ),
+                    )
+                  }
+                />
+              </FormSection>
+            ))}
+          </FormSection>
 
-          <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Investors</Text>
-            <Pressable
+          <FormSection title="Investors" framed={false}>
+            <Button
+              label="+ Add investor"
+              variant="ghost"
               onPress={() => setInvestors((prev) => [...prev, emptyInvestor()])}
-            >
-              <Text style={styles.link}>Add</Text>
-            </Pressable>
-          </View>
+              style={styles.addBtn}
+            />
 
-          {investors.map((row, index) => (
-            <View key={`i-${index}`} style={styles.rowCard}>
-              <Text style={styles.label}>Investor</Text>
-              <View style={styles.chips}>
-                {investorOptions.map((opt) => (
-                  <Pressable
-                    key={opt.id}
-                    style={[
-                      styles.chip,
-                      row.investorId === opt.id && styles.chipActive,
-                    ]}
-                    onPress={() =>
+            {investors.map((row, index) => (
+              <FormSection key={`i-${index}`} title={`Investor ${index + 1}`}>
+                <Text style={styles.label}>Investor</Text>
+                <View style={styles.chips}>
+                  {investorOptions.map((opt) => (
+                    <Chip
+                      key={opt.id}
+                      label={opt.label}
+                      selected={row.investorId === opt.id}
+                      onPress={() =>
+                        setInvestors((prev) =>
+                          prev.map((r, i) =>
+                            i === index ? { ...r, investorId: opt.id } : r,
+                          ),
+                        )
+                      }
+                    />
+                  ))}
+                </View>
+                {!investorOptions.length ? (
+                  <TextField
+                    label="Investor id"
+                    value={row.investorId}
+                    onChangeText={(v) =>
                       setInvestors((prev) =>
                         prev.map((r, i) =>
-                          i === index ? { ...r, investorId: opt.id } : r,
+                          i === index ? { ...r, investorId: v } : r,
                         ),
                       )
                     }
-                  >
-                    <Text style={styles.chipText}>{opt.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              {!investorOptions.length ? (
-                <TextInput
-                  style={styles.input}
-                  value={row.investorId}
+                    placeholder="Investor id"
+                    autoCapitalize="none"
+                  />
+                ) : null}
+                <TextField
+                  label="Budget %"
+                  value={row.budgetInvestmentPercentage}
                   onChangeText={(v) =>
                     setInvestors((prev) =>
                       prev.map((r, i) =>
-                        i === index ? { ...r, investorId: v } : r,
+                        i === index
+                          ? { ...r, budgetInvestmentPercentage: v }
+                          : r,
                       ),
                     )
                   }
-                  placeholder="Investor id"
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
+                  keyboardType="numeric"
                 />
-              ) : null}
-              <Text style={styles.label}>Budget %</Text>
-              <TextInput
-                style={styles.input}
-                value={row.budgetInvestmentPercentage}
-                onChangeText={(v) =>
-                  setInvestors((prev) =>
-                    prev.map((r, i) =>
-                      i === index
-                        ? { ...r, budgetInvestmentPercentage: v }
-                        : r,
-                    ),
-                  )
-                }
-                keyboardType="numeric"
-              />
-              <Text style={styles.label}>Profit %</Text>
-              <TextInput
-                style={styles.input}
-                value={row.profitSharePercent}
-                onChangeText={(v) =>
-                  setInvestors((prev) =>
-                    prev.map((r, i) =>
-                      i === index ? { ...r, profitSharePercent: v } : r,
-                    ),
-                  )
-                }
-                keyboardType="numeric"
-              />
-              <Text style={styles.label}>Commitment amount</Text>
-              <TextInput
-                style={styles.input}
-                value={row.commitmentAmount}
-                onChangeText={(v) =>
-                  setInvestors((prev) =>
-                    prev.map((r, i) =>
-                      i === index ? { ...r, commitmentAmount: v } : r,
-                    ),
-                  )
-                }
-                keyboardType="numeric"
-              />
-              <Text style={styles.label}>Instrument</Text>
-              <View style={styles.chips}>
-                {(
-                  [
-                    ['project_investment', 'Investment'],
-                    ['unsecured_loan', 'Loan'],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Pressable
-                    key={value}
-                    style={[
-                      styles.chip,
-                      row.instrumentType === value && styles.chipActive,
-                    ]}
-                    onPress={() =>
-                      setInvestors((prev) =>
-                        prev.map((r, i) =>
-                          i === index
-                            ? {
-                                ...r,
-                                instrumentType: value,
-                                repaymentMode:
-                                  value === 'unsecured_loan'
-                                    ? r.repaymentMode || 'lumpsum'
-                                    : '',
-                              }
-                            : r,
-                        ),
-                      )
-                    }
-                  >
-                    <Text style={styles.chipText}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              {row.instrumentType === 'unsecured_loan' ? (
-                <>
-                  <Text style={styles.label}>Repayment</Text>
-                  <View style={styles.chips}>
-                    {(
-                      [
-                        ['lumpsum', 'Lumpsum'],
-                        ['with_interest', 'With interest'],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <Pressable
-                        key={value}
-                        style={[
-                          styles.chip,
-                          row.repaymentMode === value && styles.chipActive,
-                        ]}
-                        onPress={() =>
-                          setInvestors((prev) =>
-                            prev.map((r, i) =>
-                              i === index ? { ...r, repaymentMode: value } : r,
-                            ),
-                          )
-                        }
-                      >
-                        <Text style={styles.chipText}>{label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                  {row.repaymentMode === 'with_interest' ? (
-                    <>
-                      <Text style={styles.label}>Interest rate %</Text>
-                      <TextInput
-                        style={styles.input}
+                <TextField
+                  label="Profit %"
+                  value={row.profitSharePercent}
+                  onChangeText={(v) =>
+                    setInvestors((prev) =>
+                      prev.map((r, i) =>
+                        i === index ? { ...r, profitSharePercent: v } : r,
+                      ),
+                    )
+                  }
+                  keyboardType="numeric"
+                />
+                <TextField
+                  label="Commitment amount"
+                  value={row.commitmentAmount}
+                  onChangeText={(v) =>
+                    setInvestors((prev) =>
+                      prev.map((r, i) =>
+                        i === index ? { ...r, commitmentAmount: v } : r,
+                      ),
+                    )
+                  }
+                  keyboardType="numeric"
+                />
+                <Text style={styles.label}>Instrument</Text>
+                <View style={styles.chips}>
+                  {(
+                    [
+                      ['project_investment', 'Investment'],
+                      ['unsecured_loan', 'Loan'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Chip
+                      key={value}
+                      label={label}
+                      selected={row.instrumentType === value}
+                      onPress={() =>
+                        setInvestors((prev) =>
+                          prev.map((r, i) =>
+                            i === index
+                              ? {
+                                  ...r,
+                                  instrumentType: value,
+                                  repaymentMode:
+                                    value === 'unsecured_loan'
+                                      ? r.repaymentMode || 'lumpsum'
+                                      : '',
+                                }
+                              : r,
+                          ),
+                        )
+                      }
+                    />
+                  ))}
+                </View>
+                {row.instrumentType === 'unsecured_loan' ? (
+                  <>
+                    <Text style={styles.label}>Repayment</Text>
+                    <View style={styles.chips}>
+                      {(
+                        [
+                          ['lumpsum', 'Lumpsum'],
+                          ['with_interest', 'With interest'],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <Chip
+                          key={value}
+                          label={label}
+                          selected={row.repaymentMode === value}
+                          onPress={() =>
+                            setInvestors((prev) =>
+                              prev.map((r, i) =>
+                                i === index
+                                  ? { ...r, repaymentMode: value }
+                                  : r,
+                              ),
+                            )
+                          }
+                        />
+                      ))}
+                    </View>
+                    {row.repaymentMode === 'with_interest' ? (
+                      <TextField
+                        label="Interest rate %"
                         value={row.interestRate}
                         onChangeText={(v) =>
                           setInvestors((prev) =>
@@ -541,29 +521,26 @@ export function ProjectCapitalPlanScreen(_props: Props) {
                         }
                         keyboardType="numeric"
                       />
-                    </>
-                  ) : null}
-                </>
-              ) : null}
-              <Pressable
-                onPress={() =>
-                  setInvestors((prev) => prev.filter((_, i) => i !== index))
-                }
-              >
-                <Text style={styles.remove}>Remove</Text>
-              </Pressable>
-            </View>
-          ))}
+                    ) : null}
+                  </>
+                ) : null}
+                <Button
+                  label="Remove"
+                  variant="danger"
+                  onPress={() =>
+                    setInvestors((prev) => prev.filter((_, i) => i !== index))
+                  }
+                />
+              </FormSection>
+            ))}
+          </FormSection>
 
-          <Pressable
-            style={[styles.submit, saving && styles.disabled]}
+          <Button
+            label="Save capital plan"
+            loading={saving}
             disabled={saving}
             onPress={() => void save()}
-          >
-            <Text style={styles.submitText}>
-              {saving ? 'Saving…' : 'Save capital plan'}
-            </Text>
-          </Pressable>
+          />
         </>
       )}
     </Screen>
@@ -571,59 +548,20 @@ export function ProjectCapitalPlanScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 10, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
+  label: { ...typography.label, marginBottom: spacing.sm },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: spacing.sm,
   },
-  switchLabel: { color: colors.text, flex: 1, paddingRight: 12 },
-  sectionHead: {
+  switchLabel: { ...typography.body, flex: 1, paddingRight: spacing.md },
+  chips: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  sectionTitle: { color: colors.text, fontWeight: '700', fontSize: 16 },
-  link: { color: colors.primary, fontWeight: '700' },
-  hint: { color: colors.textMuted, marginBottom: 8 },
-  rowCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 12,
-    marginBottom: 10,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.background,
-  },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  remove: { color: colors.danger, marginTop: 10, fontWeight: '600' },
-  submit: {
-    marginTop: 20,
-    marginBottom: 32,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: colors.danger, marginBottom: 8 },
+  addBtn: { alignSelf: 'flex-start', marginBottom: spacing.sm },
+  error: { color: colors.danger, marginBottom: spacing.sm },
 });

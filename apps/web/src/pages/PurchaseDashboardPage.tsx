@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Stack, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -76,13 +77,15 @@ export function PurchaseDashboardPage() {
 
   return (
     <Stack spacing={3} data-testid="procurement-dashboard-page">
-      <Typography color="text.secondary">
-        Procurement overview — PR/PO pipeline, due deliveries, invoice match
-        exceptions and payments due. Date and project filters are required.
-        {dash.opsAvailable
-          ? ' Ops counts from /procurement/dashboard.'
-          : ' Using composed list counts (ops endpoint unavailable).'}
-      </Typography>
+      <PageHeader
+        subtitle={
+          `Procurement overview — PR/PO pipeline, due deliveries, invoice match exceptions and payments due. Date and project filters are required.${
+            dash.opsAvailable
+              ? ' Ops counts from /procurement/dashboard.'
+              : ' Using composed list counts (ops endpoint unavailable).'
+          }`
+        }
+      />
 
       <PurchaseFilters
         value={filters}

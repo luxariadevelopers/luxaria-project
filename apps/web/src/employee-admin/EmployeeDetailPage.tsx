@@ -1,31 +1,30 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
-  Button,
   Chip,
   CircularProgress,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   DetailHeader,
+  EntityActionBar,
   EntityDetailLayout,
   SummaryCards,
+  type EntityDetailAction,
 } from '@/components/entity-detail';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { formatDate } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useUsersList } from '@/user-admin/useUsers';
 import { EmployeeAccessPage } from './EmployeeAccessPage';
-import {
-  canDeactivateEmployee,
-  canOpenEmployees,
-} from './roleAccess';
+import { canOpenEmployees } from './roleAccess';
 import { EmployeeStatus } from './types';
 import {
   useDeactivateEmployee,
@@ -72,6 +71,7 @@ export function EmployeeDetailPage({
 }: Props = {}) {
   const params = useParams<{ employeeId: string }>();
   const employeeId = employeeIdProp ?? params.employeeId;
+  const navigate = useNavigate();
   const { access, hasPermission } = useAuth();
   const notify = useNotify();
   const canView = canOpenEmployees(access);
@@ -163,8 +163,33 @@ export function EmployeeDetailPage({
       ]
     : [];
 
+  const actions = useMemo<EntityDetailAction[]>(() => {
+    if (!employee) return [];
+    return [
+      {
+        id: 'access',
+        label: 'Access',
+        permission: 'employee.view',
+        allowedStatuses: Object.values(EmployeeStatus),
+        variant: 'outlined',
+        onClick: () =>
+          void navigate(`/administration/employees/${employee.id}/access`),
+      },
+      {
+        id: 'deactivate',
+        label: 'Deactivate',
+        permission: 'employee.deactivate',
+        allowedStatuses: [EmployeeStatus.Active],
+        color: 'warning',
+        variant: 'outlined',
+        onClick: () => setConfirmDeactivate(true),
+      },
+    ];
+  }, [employee, navigate]);
+
   return (
     <>
+      <PageHeader hideTitle />
       <EntityDetailLayout
         canView={canView}
         loading={employeeQuery.isLoading}
@@ -184,36 +209,24 @@ export function EmployeeDetailPage({
               backTo="/administration/employees"
               backLabel="Employees"
               meta={
-                <Stack direction="row" spacing={1}>
-                  <Chip
-                    size="small"
-                    label={employee.status}
-                    color={statusColor(employee.status)}
-                    variant="outlined"
-                  />
-                  <Button
-                    component={RouterLink}
-                    to={`/administration/employees/${employee.id}/access`}
-                    size="small"
-                    variant="outlined"
-                  >
-                    Access
-                  </Button>
-                  {canDeactivateEmployee(access) &&
-                  employee.status === EmployeeStatus.Active ? (
-                    <Button
-                      size="small"
-                      color="warning"
-                      variant="outlined"
-                      onClick={() => setConfirmDeactivate(true)}
-                    >
-                      Deactivate
-                    </Button>
-                  ) : null}
-                </Stack>
+                <Chip
+                  size="small"
+                  label={employee.status}
+                  color={statusColor(employee.status)}
+                  variant="outlined"
+                />
               }
             />
           ) : null
+        }
+        actionBar={
+          employee ? (
+            <EntityActionBar
+              actions={actions}
+              status={employee.status}
+              hasPermission={hasPermission}
+            />
+          ) : undefined
         }
       >
         {employee ? (

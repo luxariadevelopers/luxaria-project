@@ -1,26 +1,52 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
 import type { GridColDef } from '@mui/x-data-grid';
 import '@/test/mockAuth';
+import { luxariaTheme } from '@/theme/theme';
 import { DataTable } from './DataTable';
 
-
-type Row = { id: string; name: string; amount: number };
+type Row = { id: string; name: string; amount: number; status: string };
 
 const columns: GridColDef<Row>[] = [
   { field: 'name', headerName: 'Name', width: 160 },
   { field: 'amount', headerName: 'Amount', width: 120 },
+  { field: 'status', headerName: 'Status', width: 120 },
 ];
 
 const rows: Row[] = [
-  { id: '1', name: 'Alpha', amount: 100 },
-  { id: '2', name: 'Beta', amount: 200 },
+  { id: '1', name: 'Alpha', amount: 100, status: 'open' },
+  { id: '2', name: 'Beta', amount: 200, status: 'closed' },
 ];
+
+function renderTable(ui: ReactElement) {
+  return render(<ThemeProvider theme={luxariaTheme}>{ui}</ThemeProvider>);
+}
+
+function stubMatchMedia(matches: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
+afterEach(() => {
+  stubMatchMedia(false);
+});
 
 describe('DataTable', () => {
   it('shows loading state', () => {
-    render(
+    renderTable(
       <DataTable
         title="Items"
         rows={rows}
@@ -35,7 +61,7 @@ describe('DataTable', () => {
   });
 
   it('shows empty state when there are no rows', () => {
-    render(
+    renderTable(
       <DataTable
         rows={[]}
         columns={columns}
@@ -48,10 +74,9 @@ describe('DataTable', () => {
     expect(screen.getByText('Nothing here yet.')).toBeInTheDocument();
   });
 
-  it('shows error panel with retry', async () => {
-    const user = userEvent.setup();
+  it('shows error panel with retry', () => {
     const onRetry = vi.fn();
-    render(
+    renderTable(
       <DataTable
         rows={rows}
         columns={columns}
@@ -75,16 +100,35 @@ describe('DataTable', () => {
     );
     expect(screen.getByText('Server error')).toBeInTheDocument();
     expect(screen.getByText('Boom')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /try again/i }));
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('fires pagination callbacks (server mode)', async () => {
-    const user = userEvent.setup();
+  it('renders card rows below sm', () => {
+    stubMatchMedia(true);
+    renderTable(
+      <DataTable
+        rows={rows}
+        columns={columns}
+        getRowId={(r) => r.id}
+        paginationMode="client"
+        page={1}
+        pageSize={20}
+        onPageChange={() => undefined}
+        onPageSizeChange={() => undefined}
+      />,
+    );
+    expect(screen.getByTestId('data-table-mobile-list')).toBeInTheDocument();
+    expect(screen.getAllByTestId('data-table-mobile-row')).toHaveLength(2);
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('open')).toBeInTheDocument();
+  });
+
+  it('fires pagination callbacks (server mode)', () => {
     const onPageChange = vi.fn();
     const onPageSizeChange = vi.fn();
 
-    render(
+    renderTable(
       <DataTable
         rows={rows}
         columns={columns}
@@ -102,17 +146,19 @@ describe('DataTable', () => {
 
     // Next page button in DataGrid footer
     const next = screen.getByRole('button', { name: /go to next page/i });
-    await user.click(next);
+    fireEvent.click(next);
     expect(onPageChange).toHaveBeenCalledWith(2);
 
     // Change page size via the rows-per-page select if present
     const comboboxes = screen.queryAllByRole('combobox');
     if (comboboxes.length > 0) {
-      await user.click(comboboxes[comboboxes.length - 1]);
-      const listbox = await screen.findByRole('listbox');
-      const option = within(listbox).queryByRole('option', { name: '20' });
+      fireEvent.mouseDown(comboboxes[comboboxes.length - 1]!);
+      const listbox = screen.queryByRole('listbox');
+      const option = listbox
+        ? within(listbox).queryByRole('option', { name: '20' })
+        : null;
       if (option) {
-        await user.click(option);
+        fireEvent.click(option);
         expect(onPageSizeChange).toHaveBeenCalledWith(20);
       }
     }

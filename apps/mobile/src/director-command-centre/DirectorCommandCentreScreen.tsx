@@ -1,20 +1,16 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { formatInr, formatPercentage } from '@/format';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { FormSection } from '@/components/FormSection';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 import { fetchDirectorCommandCentreSummary } from './api';
 import type { MoneyTile } from './types';
 
@@ -80,10 +76,10 @@ export function DirectorCommandCentreScreen({ navigation }: Props) {
   if (!canView) {
     return (
       <Screen title="Command centre" subtitle="Permission required">
-        <Text style={styles.message}>
-          You need dashboard.view or analytics.dashboard.view to open the
-          director command centre.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="You need dashboard.view or analytics.dashboard.view to open the director command centre."
+        />
       </Screen>
     );
   }
@@ -105,17 +101,21 @@ export function DirectorCommandCentreScreen({ navigation }: Props) {
       }
       scroll={false}
     >
-      {summaryQuery.isLoading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : summaryQuery.error ? (
-        <Text style={styles.message}>
-          {getErrorMessage(summaryQuery.error)}
-        </Text>
+      {summaryQuery.isLoading || summaryQuery.error ? (
+        <AsyncStatePanel
+          loading={summaryQuery.isLoading}
+          error={
+            summaryQuery.error
+              ? getErrorMessage(summaryQuery.error)
+              : null
+          }
+          onRetry={() => void summaryQuery.refetch()}
+        />
       ) : summary && summary.filters.accessibleProjectCount === 0 ? (
-        <Text style={styles.message}>No projects in scope for this filter.</Text>
+        <AsyncStatePanel empty emptyLabel="No projects in scope for this filter." />
       ) : summary ? (
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.section}>Payables & collections</Text>
+          <FormSection title="Payables & collections">
           <View style={styles.grid}>
             <Metric
               label="Vendor payable"
@@ -158,8 +158,9 @@ export function DirectorCommandCentreScreen({ navigation }: Props) {
               meta={`${summary.investorContributionSummary.commitmentCount} commitments`}
             />
           </View>
+          </FormSection>
 
-          <Text style={styles.section}>Cash position</Text>
+          <FormSection title="Cash position">
           <View style={styles.grid}>
             <Metric
               label="Company bank"
@@ -172,173 +173,130 @@ export function DirectorCommandCentreScreen({ navigation }: Props) {
               meta={tileMeta(summary.totalCashBalance, 'accounts')}
             />
           </View>
+          </FormSection>
 
-          <Text style={styles.section}>Critical exceptions</Text>
+          <FormSection title="Critical exceptions" framed={false}>
           {summary.criticalExceptions.length === 0 &&
           summary.materialStockAlerts.count === 0 &&
           summary.labourShortfall.count === 0 ? (
             <Text style={styles.message}>No critical exceptions.</Text>
           ) : null}
           {summary.criticalExceptions.map((ex) => (
-            <View key={ex.code} style={styles.card}>
-              <Text style={styles.cardTitle}>
-                {ex.severity.toUpperCase()} · {ex.code}
-              </Text>
-              <Text style={styles.cardMeta}>
-                {ex.message} · {ex.count}
-              </Text>
-            </View>
+            <ListRow
+              key={ex.code}
+              title={`${ex.severity.toUpperCase()} · ${ex.code}`}
+              meta={`${ex.message} · ${ex.count}`}
+            />
           ))}
           {summary.materialStockAlerts.count > 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Material stock alerts</Text>
-              <Text style={styles.cardMeta}>
-                {summary.materialStockAlerts.count} alerts
-              </Text>
-            </View>
+            <ListRow
+              title="Material stock alerts"
+              meta={`${summary.materialStockAlerts.count} alerts`}
+            />
           ) : null}
           {summary.labourShortfall.count > 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Labour shortfall</Text>
-              <Text style={styles.cardMeta}>
-                {summary.labourShortfall.count} alerts
-              </Text>
-            </View>
+            <ListRow
+              title="Labour shortfall"
+              meta={`${summary.labourShortfall.count} alerts`}
+            />
           ) : null}
+          </FormSection>
 
-          <Text style={styles.section}>Project bank balances</Text>
+          <FormSection title="Project bank balances" framed={false}>
           {summary.projectWiseBankBalance.map((row) => (
-            <Pressable
+            <ListRow
               key={`bank-${row.projectId}`}
-              style={styles.card}
-              onPress={() => void openProjectDashboard(row.projectId)}
-              disabled={!row.projectId}
-            >
-              <Text style={styles.cardTitle}>
-                {row.projectCode ?? '—'} · {row.projectName ?? 'Project'}
-              </Text>
-              <Text style={styles.cardMeta}>Bank {money(row.amount)}</Text>
-              {row.projectId ? (
-                <Text style={styles.linkText}>Open project dashboard</Text>
-              ) : null}
-            </Pressable>
+              title={`${row.projectCode ?? '—'} · ${row.projectName ?? 'Project'}`}
+              meta={`Bank ${money(row.amount)}`}
+              onPress={
+                row.projectId
+                  ? () => void openProjectDashboard(row.projectId)
+                  : undefined
+              }
+            />
           ))}
           {summary.projectWiseBankBalance.length === 0 ? (
             <Text style={styles.message}>No project bank rows.</Text>
           ) : null}
+          </FormSection>
 
-          <Text style={styles.section}>Cost vs budget</Text>
+          <FormSection title="Cost vs budget" framed={false}>
           {summary.costVersusBudget.map((row) => (
-            <Pressable
+            <ListRow
               key={`cvb-${row.projectId}`}
-              style={styles.card}
-              onPress={() => void openProjectDashboard(row.projectId)}
-              disabled={!row.projectId}
-            >
-              <Text style={styles.cardTitle}>
-                {row.projectCode ?? '—'} · {row.projectName ?? 'Project'}
-              </Text>
-              <Text style={styles.cardMeta}>
-                Budget {money(row.budgetAmount)} · Actual{' '}
-                {money(row.actualCost)} · Variance {money(row.variance)} ·{' '}
-                {percent(row.utilisationPercent)}
-              </Text>
-            </Pressable>
+              title={`${row.projectCode ?? '—'} · ${row.projectName ?? 'Project'}`}
+              meta={`Budget ${money(row.budgetAmount)} · Actual ${money(row.actualCost)} · Variance ${money(row.variance)} · ${percent(row.utilisationPercent)}`}
+              onPress={
+                row.projectId
+                  ? () => void openProjectDashboard(row.projectId)
+                  : undefined
+              }
+            />
           ))}
           {summary.costVersusBudget.length === 0 ? (
             <Text style={styles.message}>No cost-vs-budget rows.</Text>
           ) : null}
+          </FormSection>
 
-          <Text style={styles.section}>Physical progress</Text>
+          <FormSection title="Physical progress" framed={false}>
           {summary.physicalProgress.map((row) => (
-            <Pressable
+            <ListRow
               key={`prog-${row.projectId}`}
-              style={styles.card}
-              onPress={() => void openProjectDashboard(row.projectId)}
-              disabled={!row.projectId}
-            >
-              <Text style={styles.cardTitle}>
-                {row.projectCode ?? '—'} · {row.projectName ?? 'Project'}
-              </Text>
-              <Text style={styles.cardMeta}>
-                Progress {percent(row.progressPercent)} · Measured{' '}
-                {row.measuredQuantity} / {row.plannedQuantity}
-              </Text>
-            </Pressable>
+              title={`${row.projectCode ?? '—'} · ${row.projectName ?? 'Project'}`}
+              meta={`Progress ${percent(row.progressPercent)} · Measured ${row.measuredQuantity} / ${row.plannedQuantity}`}
+              onPress={
+                row.projectId
+                  ? () => void openProjectDashboard(row.projectId)
+                  : undefined
+              }
+            />
           ))}
           {summary.physicalProgress.length === 0 ? (
             <Text style={styles.message}>No physical progress rows.</Text>
           ) : null}
+          </FormSection>
 
-          <Text style={styles.section}>BOQ utilisation</Text>
+          <FormSection title="BOQ utilisation" framed={false}>
           {summary.boqUtilisation.map((row) => (
-            <Pressable
+            <ListRow
               key={`boq-${row.projectId}`}
-              style={styles.card}
-              onPress={() => void openProjectDashboard(row.projectId)}
-              disabled={!row.projectId}
-            >
-              <Text style={styles.cardTitle}>
-                {row.projectCode ?? '—'} · {row.projectName ?? 'Project'}
-              </Text>
-              <Text style={styles.cardMeta}>
-                Planned {money(row.boqPlannedValue)} · Utilised{' '}
-                {percent(row.utilisedQuantityPercent)}
-              </Text>
-            </Pressable>
+              title={`${row.projectCode ?? '—'} · ${row.projectName ?? 'Project'}`}
+              meta={`Planned ${money(row.boqPlannedValue)} · Utilised ${percent(row.utilisedQuantityPercent)}`}
+              onPress={
+                row.projectId
+                  ? () => void openProjectDashboard(row.projectId)
+                  : undefined
+              }
+            />
           ))}
           {summary.boqUtilisation.length === 0 ? (
             <Text style={styles.message}>No BOQ utilisation rows.</Text>
           ) : null}
+          </FormSection>
         </ScrollView>
       ) : (
-        <Text style={styles.message}>Command centre summary unavailable.</Text>
+        <AsyncStatePanel empty emptyLabel="Command centre summary unavailable." />
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: 16, gap: 10, paddingBottom: 32 },
-  loader: { marginTop: 40 },
-  message: { padding: 16, color: colors.textMuted },
-  section: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  scroll: { paddingBottom: spacing.xxxl, gap: spacing.sm },
+  message: { ...typography.meta },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   metric: {
     width: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: radii.sm,
+    padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  metricLabel: { fontSize: 12, color: colors.textMuted },
+  metricLabel: { ...typography.meta, fontSize: 12 },
   metricValue: {
-    marginTop: 4,
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    marginTop: spacing.xs,
+    ...typography.bodyStrong,
   },
   metricMeta: { marginTop: 2, fontSize: 11, color: colors.textMuted },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-  cardMeta: { marginTop: 4, fontSize: 13, color: colors.textMuted },
-  linkText: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
 });

@@ -164,6 +164,11 @@ export function ReceiptTable({
         loading={loading}
         height={480}
         getRowId={(row) => row.id}
+        mobileCard={{
+          primaryField: 'receiptNumber',
+          metaFields: ['amount', 'receiptDate'],
+          statusField: 'status',
+        }}
       />
     </Stack>
   );

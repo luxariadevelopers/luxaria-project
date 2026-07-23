@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { resolveUnitRegistrationCapabilities } from '@/unit-registrations/roleAccess';
 import { UnitRegistrationTable } from '@/unit-registrations/UnitRegistrationTable';
 import { useUnitRegistrationsList } from '@/unit-registrations/useUnitRegistrations';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function UnitRegistrationsPage() {
   const { hasPermission, access } = useAuth();
@@ -41,9 +42,10 @@ export function UnitRegistrationsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Sub-registrar registration records for sold units.
-      </Typography>
+      <PageHeader
+        title="Unit registrations"
+        subtitle="Sub-registrar registration records for sold units."
+      />
       <UnitRegistrationTable
         rows={query.data?.items ?? []}
         loading={query.isLoading || query.isFetching}

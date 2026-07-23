@@ -178,6 +178,11 @@ export function CashAccountTable({
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
+      mobileCard={{
+        primaryField: 'accountName',
+        metaFields: ['accountCode', 'currentBalance'],
+        statusField: 'status',
+      }}
     />
   );
 }

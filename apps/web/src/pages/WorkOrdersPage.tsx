@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -7,6 +7,7 @@ import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { CancelWorkOrderDialog } from '@/work-orders/CancelWorkOrderDialog';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   WorkOrderFilters,
   type WorkOrderFilterState,
@@ -98,11 +99,9 @@ export function WorkOrdersPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Work orders</Typography>
-      <Typography color="text.secondary">
-        Contractor work orders with immutable commercial revisions. Amendments
-        never overwrite an approved snapshot silently.
-      </Typography>
+      <PageHeader
+        subtitle="Contractor work orders with immutable commercial revisions. Amendments never overwrite an approved snapshot silently."
+      />
 
       <WorkOrderTable
         rows={list.data?.items ?? []}

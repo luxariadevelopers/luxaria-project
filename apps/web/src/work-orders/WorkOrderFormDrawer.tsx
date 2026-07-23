@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Alert,
   Box,
@@ -123,7 +124,7 @@ export function WorkOrderFormDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 560, md: 720 } } },
+        paper: { sx: formDrawerPaperSx({ sm: 560, md: 720 }) },
       }}
     >
       <Box

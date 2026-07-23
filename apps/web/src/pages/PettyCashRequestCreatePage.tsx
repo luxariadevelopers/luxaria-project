@@ -36,6 +36,7 @@ import {
 } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { CurrentBalanceCard } from '@/petty-cash-requests/CurrentBalanceCard';
 import { RequirementItemsGrid } from '@/petty-cash-requests/RequirementItemsGrid';
 import { resolvePettyCashRequestCapabilities } from '@/petty-cash-requests/roleAccess';
@@ -263,10 +264,10 @@ export function PettyCashRequestCreatePage() {
         void handleSubmit((values) => persist(values, false))();
       }}
     >
-      <Typography color="text.secondary">
-        Create a weekly petty-cash requirement for {projectLabel}. Item amounts
-        must be positive and the week span cannot exceed 7 days.
-      </Typography>
+      <PageHeader
+        title="New petty cash request"
+        subtitle={`Create a weekly petty-cash requirement for ${projectLabel}. Item amounts must be positive and the week span cannot exceed 7 days.`}
+      />
 
       <Alert severity="info" variant="outlined">
         Nest snapshots current cash balance and previous unsettled float on

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Alert,
   Box,
@@ -236,7 +237,7 @@ export function PaymentForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 560, md: 640 } } },
+        paper: { sx: formDrawerPaperSx({ sm: 560, md: 640 }) },
       }}
     >
       <Box

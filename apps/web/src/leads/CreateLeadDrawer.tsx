@@ -11,6 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
 import { LEAD_SOURCE_OPTIONS } from './labels';
 import { useCreateLead } from './useLeads';
@@ -63,8 +64,13 @@ export function CreateLeadDrawer({ open, onClose, projectId }: Props) {
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={handleClose}>
-      <Stack spacing={2} sx={{ width: { xs: '100vw', sm: 420 }, p: 3 }}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={handleClose}
+      slotProps={{ paper: { sx: formDrawerPaperSx(420) } }}
+    >
+      <Stack spacing={2} sx={{ p: 3 }}>
         <Typography variant="h6">New lead</Typography>
         <TextField
           label="Full name"

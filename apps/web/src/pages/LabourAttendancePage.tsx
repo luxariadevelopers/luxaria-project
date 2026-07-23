@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Button,
   FormControl,
@@ -7,7 +8,6 @@ import {
   Select,
   Stack,
   TextField,
-  Typography,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
@@ -136,10 +136,9 @@ export function LabourAttendancePage() {
 
   return (
     <Stack spacing={2} data-testid="labour-attendance-page">
-      <Typography color="text.secondary">
-        Create or review daily contractor manpower sheets, skill breakdown,
-        GPS/photo evidence, and duplicate flags.
-      </Typography>
+      <PageHeader
+        subtitle="Create or review daily contractor manpower sheets, skill breakdown, GPS/photo evidence, and duplicate flags."
+      />
 
       <AttendanceTable
         rows={list.data?.items ?? []}

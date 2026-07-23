@@ -1,12 +1,15 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { apiGet, getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { FormSection } from '@/components/FormSection';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ExecutiveDashboard'>;
 
@@ -65,9 +68,10 @@ export function ExecutiveDashboardScreen(_props: Props) {
   if (!canView) {
     return (
       <Screen title="Executive" subtitle="Permission required">
-        <Text style={styles.message}>
-          You need analytics.dashboard.view to open the executive view.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="You need analytics.dashboard.view to open the executive view."
+        />
       </Screen>
     );
   }
@@ -80,42 +84,42 @@ export function ExecutiveDashboardScreen(_props: Props) {
       subtitle={query.data?.asOf ? `As of ${query.data.asOf.slice(0, 10)}` : 'Today'}
       scroll={false}
     >
-      {query.isLoading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : query.error ? (
-        <Text style={styles.message}>{getErrorMessage(query.error)}</Text>
+      {query.isLoading || query.error ? (
+        <AsyncStatePanel
+          loading={query.isLoading}
+          error={query.error ? getErrorMessage(query.error) : null}
+          onRetry={() => void query.refetch()}
+        />
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.section}>Today</Text>
-          <View style={styles.grid}>
-            <Metric label="Cash & bank" value={money(today?.cashAndBank)} />
-            <Metric label="Collections" value={money(today?.collections)} />
-            <Metric label="Payments due" value={money(today?.paymentsDue)} />
-            <Metric
-              label="Critical alerts"
-              value={String(today?.criticalAlerts ?? 0)}
-            />
-            <Metric
-              label="Approvals"
-              value={String(today?.pendingApprovals ?? 0)}
-            />
-          </View>
-
-          <Text style={styles.section}>Projects</Text>
-          {(query.data?.projects ?? []).map((p) => (
-            <View key={p.projectId} style={styles.card}>
-              <Text style={styles.cardTitle}>
-                {p.code ?? '—'} · {p.name ?? 'Project'}
-              </Text>
-              <Text style={styles.cardMeta}>
-                Progress {p.progress ?? 0}% · Margin forecast{' '}
-                {money(p.marginForecast ?? undefined)} · {p.health ?? 'n/a'}
-              </Text>
+          <FormSection title="Today">
+            <View style={styles.grid}>
+              <Metric label="Cash & bank" value={money(today?.cashAndBank)} />
+              <Metric label="Collections" value={money(today?.collections)} />
+              <Metric label="Payments due" value={money(today?.paymentsDue)} />
+              <Metric
+                label="Critical alerts"
+                value={String(today?.criticalAlerts ?? 0)}
+              />
+              <Metric
+                label="Approvals"
+                value={String(today?.pendingApprovals ?? 0)}
+              />
             </View>
-          ))}
-          {(query.data?.projects ?? []).length === 0 ? (
-            <Text style={styles.message}>No project KPIs in scope.</Text>
-          ) : null}
+          </FormSection>
+
+          <FormSection title="Projects" framed={false}>
+            {(query.data?.projects ?? []).map((p) => (
+              <ListRow
+                key={p.projectId}
+                title={`${p.code ?? '—'} · ${p.name ?? 'Project'}`}
+                meta={`Progress ${p.progress ?? 0}% · Margin forecast ${money(p.marginForecast ?? undefined)} · ${p.health ?? 'n/a'}`}
+              />
+            ))}
+            {(query.data?.projects ?? []).length === 0 ? (
+              <Text style={styles.message}>No project KPIs in scope.</Text>
+            ) : null}
+          </FormSection>
         </ScrollView>
       )}
     </Screen>
@@ -123,39 +127,20 @@ export function ExecutiveDashboardScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: 16, gap: 10, paddingBottom: 32 },
-  loader: { marginTop: 40 },
-  message: { padding: 16, color: colors.textMuted },
-  section: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  scroll: { paddingBottom: spacing.xxxl, gap: spacing.sm },
+  message: { ...typography.meta },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   metric: {
     width: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: radii.sm,
+    padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  metricLabel: { fontSize: 12, color: colors.textMuted },
+  metricLabel: { ...typography.meta, fontSize: 12 },
   metricValue: {
-    marginTop: 4,
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    marginTop: spacing.xs,
+    ...typography.bodyStrong,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-  cardMeta: { marginTop: 4, fontSize: 13, color: colors.textMuted },
 });

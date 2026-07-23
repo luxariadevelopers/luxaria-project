@@ -73,6 +73,11 @@ export function UnitRegistrationTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'registrationNumber',
+        metaFields: ['unitId', 'registrationDate'],
+        statusField: 'status',
+      }}
     />
   );
 }

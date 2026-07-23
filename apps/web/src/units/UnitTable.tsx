@@ -189,6 +189,11 @@ export function UnitTable({
             loading={loading}
             height={520}
             getRowId={(row) => row.id}
+            mobileCard={{
+              primaryField: 'unitNumber',
+              metaFields: ['block', 'totalPrice'],
+              statusField: 'status',
+            }}
           />
           <Box
             sx={{

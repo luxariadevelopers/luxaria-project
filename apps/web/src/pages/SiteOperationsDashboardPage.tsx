@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Stack, Typography } from '@mui/material';
+import { Alert, Box, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -77,12 +78,9 @@ export function SiteOperationsDashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography color="text.secondary">
-        Site activity for the selected project — DPR, attendance, GRNs, stock and
-        petty cash. As-of dates follow the Nest UTC calendar day (same as project
-        dashboard / DPR). Missing-DPR alerts appear after the evening cut-off
-        evaluation.
-      </Typography>
+      <PageHeader
+        subtitle="Site activity for the selected project — DPR, attendance, GRNs, stock and petty cash. As-of dates follow the Nest UTC calendar day (same as project dashboard / DPR). Missing-DPR alerts appear after the evening cut-off evaluation."
+      />
 
       <SiteOperationsFilters
         value={filters}

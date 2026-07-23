@@ -180,6 +180,11 @@ export function CancellationTable({
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
       onRowClick={onOpen ? (params) => onOpen(params.row) : undefined}
+      mobileCard={{
+        primaryField: 'cancellationNumber',
+        metaFields: ['cancellationDate', 'approvedRefund'],
+        statusField: 'status',
+      }}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   EmptyState,
   PermissionDenied,
@@ -73,11 +74,9 @@ export function FinanceDashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography color="text.secondary">
-        Daily finance workspace — liquidity, payables ageing, receivables,
-        pending postings and reconciliation. Select a financial year to load
-        totals (project filter is optional).
-      </Typography>
+      <PageHeader
+        subtitle="Daily finance workspace — liquidity, payables ageing, receivables, pending postings and reconciliation. Select a financial year to load totals (project filter is optional)."
+      />
 
       <FinanceFilters
         value={filters}

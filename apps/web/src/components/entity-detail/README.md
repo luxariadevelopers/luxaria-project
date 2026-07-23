@@ -6,9 +6,9 @@ Reusable information architecture for business-record detail screens.
 
 1. `DetailHeader` — title, code, back link  
 2. `StatusStrip` — catalog-backed status chip  
-3. `EntityActionBar` — permission + **explicit** status allow-list  
+3. `EntityActionBar` — permission + **explicit** status allow-list (sticky bottom on `xs`, sticky under chrome from `sm`)  
 4. `SummaryCards` — key facts  
-5. `EntityDetailTabs` — optional permission-gated tabs  
+5. `EntityDetailTabs` — scrollable, permission-gated tabs  
 6. Timeline slot — compose `WorkflowTimeline` (do not reimplement)  
 7. Extra `children`
 

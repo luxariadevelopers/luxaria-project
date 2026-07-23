@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   pickImageFromCamera,
   pickImageFromLibrary,
@@ -28,11 +25,6 @@ import {
   fetchWorkMeasurements,
 } from '@/work-measurement/api';
 import { buildMeasurementOfflineEnqueue } from '@/work-measurement/buildMeasurementOfflineEnqueue';
-import {
-  EmptyPanel,
-  ForbiddenPanel,
-  LoadingPanel,
-} from '@/work-measurement/components/StatePanels';
 import { resolveWorkMeasurementCapabilities } from '@/work-measurement/permissions';
 import type {
   WorkMeasurementBoqItemOption,
@@ -60,6 +52,7 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
   const [boqItems, setBoqItems] = useState<WorkMeasurementBoqItemOption[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupHint, setLookupHint] = useState<string | null>(null);
 
   const [contractorId, setContractorId] = useState('');
   const [boqItemId, setBoqItemId] = useState('');
@@ -92,7 +85,7 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
       return;
     }
     if (!isOnline) {
-      setLookupError(
+      setLookupHint(
         'Load contractors and BOQ items while online, then capture offline.',
       );
       return;
@@ -100,6 +93,7 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
 
     setLoadingLookups(true);
     setLookupError(null);
+    setLookupHint(null);
     try {
       const [contractorRows, boqRows] = await Promise.all([
         caps.canViewContractors
@@ -115,7 +109,7 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
       setContractors(contractorRows);
       setBoqItems(boqRows);
       if (!caps.canViewContractors || !caps.canViewBoq) {
-        setLookupError(
+        setLookupHint(
           'Enter contractor and BOQ item ids manually (missing contractor.view / boq.view).',
         );
       }
@@ -267,7 +261,10 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
   if (!caps.canCreate) {
     return (
       <Screen title="New measurement" subtitle="Site capture">
-        <ForbiddenPanel message="Missing permission measurement.create" />
+        <AsyncStatePanel
+          forbidden
+          error="Missing permission measurement.create"
+        />
       </Screen>
     );
   }
@@ -275,11 +272,13 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
   if (!selectedProject) {
     return (
       <Screen title="New measurement" subtitle="Site capture">
-        <EmptyPanel
-          title="No project selected"
-          description="Choose a project before capturing quantities."
-          actionLabel="Select project"
-          onAction={() => navigation.navigate('ProjectSelect')}
+        <AsyncStatePanel
+          empty
+          emptyLabel="Choose a project before capturing quantities."
+        />
+        <Button
+          label="Select project"
+          onPress={() => navigation.navigate('ProjectSelect')}
         />
       </Screen>
     );
@@ -289,75 +288,57 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
     <Screen
       title="New measurement"
       subtitle={`${selectedProject.projectCode} · evidence required`}
-      scroll={false}
     >
-      <ScrollView contentContainerStyle={styles.content}>
-        {loadingLookups ? (
-          <LoadingPanel label="Loading contractors and BOQ…" />
-        ) : null}
-        {lookupError ? <Text style={styles.warning}>{lookupError}</Text> : null}
+      {loadingLookups ? (
+        <AsyncStatePanel loading loadingLabel="Loading contractors and BOQ…" />
+      ) : null}
+      {lookupError ? (
+        <AsyncStatePanel
+          error={lookupError}
+          onRetry={() => void loadLookups()}
+        />
+      ) : null}
+      {lookupHint ? <Text style={styles.hint}>{lookupHint}</Text> : null}
 
+      <FormSection title="Scope">
         <Text style={styles.label}>Contractor</Text>
         {contractors.length > 0 ? (
-          <View style={styles.chipWrap}>
+          <View style={styles.chipRow}>
             {contractors.map((row) => (
-              <Pressable
+              <Chip
                 key={row.id}
-                style={[
-                  styles.chip,
-                  contractorId === row.id && styles.chipActive,
-                ]}
+                label={row.contractorCode}
+                selected={contractorId === row.id}
                 onPress={() => setContractorId(row.id)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    contractorId === row.id && styles.chipTextActive,
-                  ]}
-                >
-                  {row.contractorCode}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
         ) : null}
-        <TextInput
-          style={styles.input}
+        <TextField
           value={contractorId}
           onChangeText={setContractorId}
           autoCapitalize="none"
           placeholder="Contractor ObjectId"
-          placeholderTextColor={colors.textMuted}
         />
 
         <Text style={styles.label}>BOQ item</Text>
         {boqItems.length > 0 ? (
-          <View style={styles.chipWrap}>
+          <View style={styles.chipRow}>
             {boqItems.slice(0, 12).map((row) => (
-              <Pressable
+              <Chip
                 key={row.id}
-                style={[styles.chip, boqItemId === row.id && styles.chipActive]}
+                label={row.boqCode}
+                selected={boqItemId === row.id}
                 onPress={() => setBoqItemId(row.id)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    boqItemId === row.id && styles.chipTextActive,
-                  ]}
-                >
-                  {row.boqCode}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
         ) : null}
-        <TextInput
-          style={styles.input}
+        <TextField
           value={boqItemId}
           onChangeText={setBoqItemId}
           autoCapitalize="none"
           placeholder="BOQ item ObjectId"
-          placeholderTextColor={colors.textMuted}
         />
         {selectedBoq ? (
           <Text style={styles.meta}>
@@ -366,37 +347,35 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
           </Text>
         ) : null}
 
-        <Text style={styles.label}>Location</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Location"
           value={location}
           onChangeText={setLocation}
           placeholder="Block A / Floor 2 / Grid C-D"
-          placeholderTextColor={colors.textMuted}
         />
-
-        <Text style={styles.label}>Measurement date (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Measurement date (YYYY-MM-DD)"
           value={measurementDate}
           onChangeText={setMeasurementDate}
           autoCapitalize="none"
+          containerStyle={styles.fieldFlush}
         />
+      </FormSection>
 
+      <FormSection title="Quantities">
         <View style={styles.qtyRow}>
           <View style={styles.qtyBox}>
             <Text style={styles.label}>Previous</Text>
             <Text style={styles.qtyValue}>{roundQty(previousQuantity)}</Text>
           </View>
           <View style={styles.qtyBox}>
-            <Text style={styles.label}>Current</Text>
-            <TextInput
-              style={styles.input}
+            <TextField
+              label="Current"
               value={currentQuantityText}
               onChangeText={setCurrentQuantityText}
               keyboardType="decimal-pad"
               placeholder="0"
-              placeholderTextColor={colors.textMuted}
+              containerStyle={styles.fieldFlush}
             />
           </View>
           <View style={styles.qtyBox}>
@@ -413,131 +392,86 @@ export function WorkMeasurementFormScreen({ navigation }: Props) {
         {!cumulativeCheck.ok ? (
           <Text style={styles.danger}>{cumulativeCheck.message}</Text>
         ) : null}
+      </FormSection>
 
-        <Text style={styles.label}>Drawing reference</Text>
-        <TextInput
-          style={styles.input}
+      <FormSection title="Evidence" framed={false}>
+        <TextField
+          label="Drawing reference"
           value={drawingReference}
           onChangeText={setDrawingReference}
           placeholder="Optional drawing / sheet ref"
-          placeholderTextColor={colors.textMuted}
         />
-
-        <Text style={styles.label}>Notes</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
+        <TextField
+          label="Notes"
           value={notes}
           onChangeText={setNotes}
           multiline
           placeholder="Optional site notes"
-          placeholderTextColor={colors.textMuted}
+          style={styles.notes}
         />
+        <Button
+          label={`Photos (${photos.length})`}
+          variant="secondary"
+          onPress={onPickPhotos}
+        />
+      </FormSection>
 
-        <Pressable style={styles.secondaryButton} onPress={onPickPhotos}>
-          <Text style={styles.secondaryButtonText}>
-            Photos ({photos.length})
-          </Text>
-        </Pressable>
+      <Button
+        label={saving ? 'Queuing…' : 'Save offline & submit'}
+        loading={saving}
+        onPress={() => void onQueueSubmit()}
+        style={styles.submit}
+      />
 
-        <Pressable
-          style={[styles.primaryButton, saving && styles.disabled]}
-          disabled={saving}
-          onPress={() => void onQueueSubmit()}
-        >
-          <Text style={styles.primaryButtonText}>
-            {saving ? 'Queuing…' : 'Save offline & submit'}
-          </Text>
-        </Pressable>
-
-        <Text style={styles.meta}>
-          Captured at site, queued offline, verified later by an engineer
-          (measurement.certify).
-        </Text>
-      </ScrollView>
+      <Text style={styles.meta}>
+        Captured at site, queued offline, verified later by an engineer
+        (measurement.certify).
+      </Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 40 },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 6,
-    marginTop: 10,
+    ...typography.label,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
-  },
-  multiline: { minHeight: 72, textAlignVertical: 'top' },
-  meta: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
-  warning: {
+  meta: { ...typography.meta, marginTop: spacing.xs },
+  hint: {
+    ...typography.meta,
     color: colors.warning,
-    fontSize: 13,
-    marginBottom: 8,
+    marginBottom: spacing.md,
     lineHeight: 18,
   },
   danger: {
     color: colors.danger,
     fontSize: 13,
-    marginTop: 6,
+    marginTop: spacing.sm,
     lineHeight: 18,
   },
-  chipWrap: {
+  chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-  },
-  chipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  chipText: { color: colors.text, fontSize: 12 },
-  chipTextActive: { color: '#fff', fontWeight: '700' },
+  fieldFlush: { marginBottom: 0 },
   qtyRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: spacing.sm,
   },
   qtyBox: { flex: 1 },
   qtyValue: {
+    ...typography.bodyStrong,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     color: colors.text,
-    fontWeight: '600',
+    minHeight: 44,
   },
-  primaryButton: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: '#F4F0E6', fontWeight: '700' },
-  secondaryButton: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  secondaryButtonText: { color: colors.text, fontWeight: '600' },
-  disabled: { opacity: 0.6 },
+  notes: { minHeight: 72, textAlignVertical: 'top' },
+  submit: { marginTop: spacing.md, marginBottom: spacing.md },
 });

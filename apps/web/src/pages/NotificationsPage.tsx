@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Box,
   Button,
   CircularProgress,
   Pagination,
   Stack,
-  Typography,
 } from '@mui/material';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -60,27 +60,22 @@ export function NotificationsPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-        }}
-      >
-        <Typography color="text.secondary">
-          {unread > 0
+      <PageHeader
+        subtitle={
+          unread > 0
             ? `${unread} unread notification${unread === 1 ? '' : 's'}`
-            : 'No unread notifications'}
-        </Typography>
-        <Button
-          variant="outlined"
-          disabled={markAll.isPending || unread === 0}
-          onClick={() => markAll.mutate()}
-        >
-          Mark all read
-        </Button>
-      </Stack>
+            : 'No unread notifications'
+        }
+        actions={
+          <Button
+            variant="outlined"
+            disabled={markAll.isPending || unread === 0}
+            onClick={() => markAll.mutate()}
+          >
+            Mark all read
+          </Button>
+        }
+      />
 
       <NotificationFilters
         value={filters}

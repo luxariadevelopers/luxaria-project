@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import { getErrorMessage } from '@/api/client';
+import { formDrawerPaperSx } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
 import { fetchBooking } from '@/bookings/api';
 import { scheduleTypeLabel } from './labels';
@@ -153,7 +154,7 @@ export function GeneratePaymentScheduleForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 640 } } },
+        paper: { sx: formDrawerPaperSx(640) },
       }}
     >
       <Box sx={{ p: 2 }}>

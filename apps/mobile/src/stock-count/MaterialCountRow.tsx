@@ -1,5 +1,8 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
+import { TextField } from '@/components/TextField';
+import { colors, spacing, typography } from '@/theme';
 import type { CountLine } from './types';
 import type { CountLineFieldErrors } from './validation';
 import { computeDifference, differenceRequiresReason } from './variance';
@@ -31,15 +34,12 @@ export function MaterialCountRow({
     line.materialId;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.meta}>
-        System {line.systemQuantity} {line.baseUnit} · Variance {difference}
-      </Text>
-
-      <Text style={styles.label}>Physical qty</Text>
-      <TextInput
-        style={[styles.input, errors?.physicalQuantity ? styles.inputError : null]}
+    <FormSection
+      title={title}
+      description={`System ${line.systemQuantity} ${line.baseUnit} · Variance ${difference}`}
+    >
+      <TextField
+        label="Physical qty"
         keyboardType="decimal-pad"
         value={
           Number.isFinite(line.physicalQuantity)
@@ -48,39 +48,36 @@ export function MaterialCountRow({
         }
         onChangeText={onChangePhysical}
         placeholder="0"
-        placeholderTextColor={colors.textMuted}
+        error={errors?.physicalQuantity}
+        containerStyle={styles.field}
       />
-      {errors?.physicalQuantity ? (
-        <Text style={styles.error}>{errors.physicalQuantity}</Text>
-      ) : null}
 
       {needsReason ? (
-        <>
-          <Text style={styles.label}>Variance reason (required)</Text>
-          <TextInput
-            style={[styles.input, errors?.reason ? styles.inputError : null]}
-            value={line.reason}
-            onChangeText={onChangeReason}
-            placeholder="Explain the difference"
-            placeholderTextColor={colors.textMuted}
-            multiline
-          />
-          {errors?.reason ? (
-            <Text style={styles.error}>{errors.reason}</Text>
-          ) : null}
-        </>
+        <TextField
+          label="Variance reason (required)"
+          value={line.reason}
+          onChangeText={onChangeReason}
+          placeholder="Explain the difference"
+          multiline
+          error={errors?.reason}
+          containerStyle={styles.field}
+        />
       ) : null}
 
       <View style={styles.photoRow}>
-        <Pressable style={styles.photoBtn} onPress={onCapturePhoto}>
-          <Text style={styles.photoBtnText}>
-            {line.photoUri ? 'Retake photo' : 'Add photo'}
-          </Text>
-        </Pressable>
+        <Button
+          label={line.photoUri ? 'Retake photo' : 'Add photo'}
+          variant="secondary"
+          onPress={onCapturePhoto}
+          style={styles.photoBtn}
+        />
         {line.photoUri ? (
-          <Pressable onPress={onClearPhoto}>
-            <Text style={styles.clearPhoto}>Clear</Text>
-          </Pressable>
+          <Button
+            label="Clear"
+            variant="ghost"
+            onPress={onClearPhoto}
+            style={styles.clearBtn}
+          />
         ) : null}
       </View>
       {line.photoUri ? (
@@ -88,51 +85,23 @@ export function MaterialCountRow({
           Photo: {line.photoName ?? 'captured'}
         </Text>
       ) : null}
-    </View>
+    </FormSection>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  title: { color: colors.text, fontWeight: '600', fontSize: 15 },
-  meta: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
-  label: {
-    marginTop: 10,
-    marginBottom: 6,
-    color: colors.textMuted,
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
-    fontSize: 15,
-  },
-  inputError: { borderColor: '#B42318' },
-  error: { color: '#B42318', marginTop: 4, fontSize: 12 },
+  field: { marginBottom: spacing.md },
   photoRow: {
-    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
+    marginTop: spacing.xs,
   },
-  photoBtn: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+  photoBtn: { alignSelf: 'flex-start' },
+  clearBtn: { minWidth: 72 },
+  meta: {
+    ...typography.meta,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
   },
-  photoBtnText: { color: colors.primary, fontWeight: '600' },
-  clearPhoto: { color: colors.textMuted, fontWeight: '600' },
 });

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Button,
   FormControl,
@@ -121,19 +122,14 @@ export function ManpowerPlansPage() {
 
   return (
     <Stack spacing={2} data-testid="manpower-plans-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Typography color="text.secondary">
-          Plan daily contractor headcount and skill mix. One plan per contractor
-          per date; shortfall alerts compare against these plans.
-        </Typography>
-        <Button component={RouterLink} to={manpowerShortfallPath()} size="small">
-          View shortfall alerts
-        </Button>
-      </Stack>
+      <PageHeader
+        subtitle="Plan daily contractor headcount and skill mix. One plan per contractor per date; shortfall alerts compare against these plans."
+        actions={
+          <Button component={RouterLink} to={manpowerShortfallPath()} size="small">
+            View shortfall alerts
+          </Button>
+        }
+      />
 
       <PlansTable
         rows={rows}

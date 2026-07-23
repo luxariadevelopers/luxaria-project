@@ -16,6 +16,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { fundingTypeLabel } from './kycState';
 import { CustomerFundingType } from './types';
 import { useCreateCustomer } from './useCustomers';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   customerCreateSchema,
   type CustomerCreateFormValues,
@@ -124,7 +125,7 @@ export function CreateCustomerDrawer({ open, onClose, onCreated }: Props) {
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 480 } } },
+        paper: { sx: formDrawerPaperSx(480) },
       }}
     >
       <Box

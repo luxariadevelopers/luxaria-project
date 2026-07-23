@@ -6,7 +6,6 @@ import {
   CircularProgress,
   Paper,
   Stack,
-  Typography,
 } from '@mui/material';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -20,6 +19,7 @@ import {
   ExportDialog,
   accountingReportExportDescriptor,
 } from '@/export';
+import { PageHeader } from '@/layouts/PageHeader';
 import { BookFilters } from './BookFilters';
 import { BookSummary } from './BookSummary';
 import { BookTable } from './BookTable';
@@ -115,29 +115,22 @@ export function CashBankBookView({ kind, title, description }: Props) {
 
   return (
     <Stack spacing={2.5} data-testid={`${kind}-page`}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { sm: 'flex-start' },
-        }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h4">{title}</Typography>
-          <Typography color="text.secondary">{description}</Typography>
-        </Stack>
-        {caps.canExport ? (
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadOutlinedIcon />}
-            onClick={() => setExportOpen(true)}
-            disabled={!filterParse.ok}
-          >
-            Export
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title={title}
+        subtitle={description}
+        actions={
+          caps.canExport ? (
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadOutlinedIcon />}
+              onClick={() => setExportOpen(true)}
+              disabled={!filterParse.ok}
+            >
+              Export
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <BookFilters

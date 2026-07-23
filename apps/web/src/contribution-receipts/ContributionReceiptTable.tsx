@@ -193,6 +193,11 @@ export function ContributionReceiptTable({
       onSearchChange={onSearchChange}
       searchPlaceholder="Search receipt number…"
       preferencesKey="contribution-receipts-list"
+      mobileCard={{
+        primaryField: 'receiptNumber',
+        metaFields: ['amount', 'receivedDate'],
+        statusField: 'status',
+      }}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}

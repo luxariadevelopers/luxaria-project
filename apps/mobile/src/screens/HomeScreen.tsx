@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   useNavigation,
@@ -7,7 +8,9 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resolveApprovalCapabilities } from '@/approvals';
 import { useAuth } from '@/auth/AuthContext';
+import { Chip } from '@/components/Chip';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { resolveContributionReceiptCapabilities } from '@/contribution-receipts';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
@@ -27,7 +30,7 @@ import {
   canCreateSubmitStockCounts,
   canViewStockCounts,
 } from '@/stock-count';
-import { colors } from '@/theme/colors';
+import { colors, hitSlopMin, radii, spacing, typography } from '@/theme';
 import { resolveUserAdminCapabilities } from '@/user-admin';
 import { resolveWorkMeasurementCapabilities } from '@/work-measurement/permissions';
 
@@ -36,6 +39,14 @@ type HomeNavigation = CompositeNavigationProp<
   NativeStackNavigationProp<AppStackParamList>
 >;
 
+type ModuleItem = {
+  id: string;
+  label: string;
+  section: string;
+  onPress: () => void;
+  keywords?: string;
+};
+
 export function HomeScreen() {
   const { user, hasPermission } = useAuth();
   const { selectedProject } = useProject();
@@ -43,437 +54,439 @@ export function HomeScreen() {
   const { isOnline } = useNetwork();
   const { activeCount } = useOfflineSync();
   const navigation = useNavigation<HomeNavigation>();
+  const [query, setQuery] = useState('');
 
-  const workMeasurementCaps =
-    resolveWorkMeasurementCapabilities(hasPermission);
-  const canViewWorkOrders = hasPermission('work_order.view');
-  const attendanceCaps = resolveAttendanceCapabilities(hasPermission);
-  const expenseCaps = resolveExpenseCapabilities(hasPermission);
-  const projectFinanceCaps = resolveProjectFinanceCapabilities(hasPermission);
-  const journalCaps = resolveJournalCapabilities(hasPermission);
-  const approvalCaps = resolveApprovalCapabilities(hasPermission);
-  const pettyCashCaps = resolvePettyCashCapabilities(hasPermission);
-  const purchaseCaps = resolvePurchaseRequestCapabilities(hasPermission);
-  const canViewStockCount = canViewStockCounts(hasPermission);
-  const canCreateStockCount = canCreateSubmitStockCounts(hasPermission);
-  const canViewMaterialIssue = hasPermission('stock.view');
-  const canCreateMaterialIssue = hasPermission('stock.issue');
-  const canViewLabourVoucher = hasPermission(LABOUR_VOUCHER_PERMISSIONS.view);
-  const canCreateLabourVoucher = hasPermission(
-    LABOUR_VOUCHER_PERMISSIONS.createOrSubmit,
-  );
-  const canViewDpr = hasPermission('dpr.view') || hasPermission('dpr.create');
-  const canCreateGrn = hasPermission('grn.create');
-  const canViewStockLedger = hasPermission('stock.view');
-  const canViewQuality =
-    hasPermission('quality.view') || hasPermission('quality.inspect');
-  const canCaptureLead = hasPermission('lead.manage');
-  const canViewExecutive =
-    hasPermission('analytics.dashboard.view') ||
-    hasPermission('dashboard.view');
-  const canViewFinance = hasPermission('dashboard.view');
-  const canViewDirectorCommandCentre =
-    hasPermission('dashboard.view') ||
-    hasPermission('analytics.dashboard.view');
-  const userAdminCaps = resolveUserAdminCapabilities(hasPermission);
-  const directorCaps = resolveDirectorCapabilities(hasPermission);
-  const shareholdingCaps = resolveShareholdingCapabilities(hasPermission);
-  const contributionCaps =
-    resolveContributionReceiptCapabilities(hasPermission);
-  const canEditCapital =
-    hasPermission('project.update') ||
-    hasPermission('project_participant.create') ||
-    hasPermission('project_participant.update');
-  const showCapitalSection =
-    canEditCapital ||
-    directorCaps.canView ||
-    shareholdingCaps.canView ||
-    contributionCaps.canView ||
-    contributionCaps.canCreate;
-  const showFinanceSection =
-    projectFinanceCaps.canView ||
-    journalCaps.canView ||
-    canViewFinance ||
-    canViewDirectorCommandCentre;
-  const showAdminSection =
-    userAdminCaps.canView || userAdminCaps.canCreate;
+  const modules = useMemo(() => {
+    const workMeasurementCaps =
+      resolveWorkMeasurementCapabilities(hasPermission);
+    const canViewWorkOrders = hasPermission('work_order.view');
+    const attendanceCaps = resolveAttendanceCapabilities(hasPermission);
+    const expenseCaps = resolveExpenseCapabilities(hasPermission);
+    const projectFinanceCaps = resolveProjectFinanceCapabilities(hasPermission);
+    const journalCaps = resolveJournalCapabilities(hasPermission);
+    const approvalCaps = resolveApprovalCapabilities(hasPermission);
+    const pettyCashCaps = resolvePettyCashCapabilities(hasPermission);
+    const purchaseCaps = resolvePurchaseRequestCapabilities(hasPermission);
+    const canViewStockCount = canViewStockCounts(hasPermission);
+    const canCreateStockCount = canCreateSubmitStockCounts(hasPermission);
+    const canViewMaterialIssue = hasPermission('stock.view');
+    const canCreateMaterialIssue = hasPermission('stock.issue');
+    const canViewLabourVoucher = hasPermission(LABOUR_VOUCHER_PERMISSIONS.view);
+    const canCreateLabourVoucher = hasPermission(
+      LABOUR_VOUCHER_PERMISSIONS.createOrSubmit,
+    );
+    const canViewDpr = hasPermission('dpr.view') || hasPermission('dpr.create');
+    const canCreateGrn = hasPermission('grn.create');
+    const canViewStockLedger = hasPermission('stock.view');
+    const canViewQuality =
+      hasPermission('quality.view') || hasPermission('quality.inspect');
+    const canCaptureLead = hasPermission('lead.manage');
+    const canViewExecutive =
+      hasPermission('analytics.dashboard.view') ||
+      hasPermission('dashboard.view');
+    const canViewFinance = hasPermission('dashboard.view');
+    const canViewDirectorCommandCentre =
+      hasPermission('dashboard.view') ||
+      hasPermission('analytics.dashboard.view');
+    const userAdminCaps = resolveUserAdminCapabilities(hasPermission);
+    const directorCaps = resolveDirectorCapabilities(hasPermission);
+    const shareholdingCaps = resolveShareholdingCapabilities(hasPermission);
+    const contributionCaps =
+      resolveContributionReceiptCapabilities(hasPermission);
+    const canEditCapital =
+      hasPermission('project.update') ||
+      hasPermission('project_participant.create') ||
+      hasPermission('project_participant.update');
+
+    const items: ModuleItem[] = [];
+
+    if (canViewExecutive) {
+      items.push({
+        id: 'executive',
+        label: 'Executive summary',
+        section: 'Overview',
+        onPress: () => navigation.navigate('ExecutiveDashboard'),
+        keywords: 'analytics dashboard',
+      });
+    }
+    if (canCaptureLead) {
+      items.push({
+        id: 'lead',
+        label: 'Capture sales lead',
+        section: 'Sales',
+        onPress: () => navigation.navigate('LeadCapture'),
+        keywords: 'crm lead',
+      });
+    }
+    if (canViewDpr) {
+      items.push({
+        id: 'dpr',
+        label: 'Daily progress',
+        section: 'Site ops',
+        onPress: () => {
+          if (hasPermission('dpr.view')) navigation.navigate('DprList');
+          else navigation.navigate('DailyProgressReport');
+        },
+        keywords: 'dpr report',
+      });
+    }
+    if (canCreateGrn) {
+      items.push({
+        id: 'grn',
+        label: 'Record goods receipt',
+        section: 'Supply chain',
+        onPress: () => navigation.navigate('GoodsReceipt'),
+        keywords: 'grn receiving',
+      });
+    }
+    if (attendanceCaps.canView || attendanceCaps.canCreate) {
+      items.push({
+        id: 'attendance',
+        label: 'Labour attendance',
+        section: 'Site ops',
+        onPress: () => {
+          if (attendanceCaps.canView) navigation.navigate('LabourAttendanceList');
+          else navigation.navigate('LabourAttendanceForm');
+        },
+      });
+    }
+    if (expenseCaps.canView || expenseCaps.canCreate) {
+      items.push({
+        id: 'site-expense',
+        label: 'Site expenses',
+        section: 'Site ops',
+        onPress: () => {
+          if (expenseCaps.canView) navigation.navigate('SiteExpenseList');
+          else navigation.navigate('SiteExpenseForm');
+        },
+      });
+    }
+    if (approvalCaps.canView) {
+      items.push({
+        id: 'approvals',
+        label: 'Approvals',
+        section: 'Overview',
+        onPress: () => navigation.navigate('ApprovalsList'),
+      });
+    }
+    if (
+      pettyCashCaps.canView ||
+      pettyCashCaps.canRequest ||
+      pettyCashCaps.canViewCash
+    ) {
+      items.push({
+        id: 'petty-cash',
+        label: 'Petty cash',
+        section: 'Finance',
+        onPress: () => {
+          if (
+            pettyCashCaps.canView ||
+            pettyCashCaps.canViewCash ||
+            pettyCashCaps.canFund
+          ) {
+            navigation.navigate('PettyCashHome');
+          } else {
+            navigation.navigate('PettyCashForm');
+          }
+        },
+      });
+    }
+    if (purchaseCaps.canView || purchaseCaps.canRequest) {
+      items.push({
+        id: 'pr',
+        label: 'Purchase requests',
+        section: 'Supply chain',
+        onPress: () => {
+          if (purchaseCaps.canView) navigation.navigate('PurchaseRequestList');
+          else navigation.navigate('PurchaseRequestForm');
+        },
+        keywords: 'pr purchase',
+      });
+    }
+    if (workMeasurementCaps.canView || workMeasurementCaps.canCreate) {
+      items.push({
+        id: 'measurement',
+        label: 'Work measurement',
+        section: 'Site ops',
+        onPress: () => {
+          if (workMeasurementCaps.canView) {
+            navigation.navigate('WorkMeasurementList');
+          } else {
+            navigation.navigate('WorkMeasurementForm');
+          }
+        },
+      });
+    }
+    if (canViewWorkOrders) {
+      items.push({
+        id: 'work-orders',
+        label: 'Work orders',
+        section: 'Site ops',
+        onPress: () => navigation.navigate('WorkOrderList'),
+      });
+    }
+    if (canViewStockCount || canCreateStockCount) {
+      items.push({
+        id: 'stock-count',
+        label: 'Stock count',
+        section: 'Supply chain',
+        onPress: () => {
+          if (canViewStockCount) navigation.navigate('StockCountList');
+          else navigation.navigate('StockCountEntry');
+        },
+        keywords: 'inventory count',
+      });
+    }
+    if (canViewStockLedger) {
+      items.push({
+        id: 'stock-ledger',
+        label: 'Stock ledger',
+        section: 'Supply chain',
+        onPress: () => navigation.navigate('StockLedger'),
+      });
+    }
+    if (canViewMaterialIssue || canCreateMaterialIssue) {
+      items.push({
+        id: 'material-issue',
+        label: 'Material issue',
+        section: 'Supply chain',
+        onPress: () => {
+          if (canViewMaterialIssue) navigation.navigate('MaterialIssue');
+          else navigation.navigate('MaterialIssueForm');
+        },
+      });
+    }
+    if (canViewQuality) {
+      items.push({
+        id: 'quality',
+        label: 'Quality inspections',
+        section: 'Site ops',
+        onPress: () => navigation.navigate('QualityInspectionList'),
+      });
+    }
+    if (canViewLabourVoucher || canCreateLabourVoucher) {
+      items.push({
+        id: 'labour-voucher',
+        label: 'Labour voucher',
+        section: 'Site ops',
+        onPress: () => {
+          if (canViewLabourVoucher) navigation.navigate('LabourVoucherHistory');
+          else navigation.navigate('NewLabourVoucher');
+        },
+      });
+    }
+    if (canEditCapital) {
+      items.push({
+        id: 'capital-plan',
+        label: 'Capital plan',
+        section: 'Capital',
+        onPress: () => navigation.navigate('ProjectCapitalPlan'),
+      });
+    }
+    if (directorCaps.canView) {
+      items.push({
+        id: 'directors',
+        label: 'Directors',
+        section: 'Capital',
+        onPress: () => navigation.navigate('DirectorsList'),
+      });
+    }
+    if (shareholdingCaps.canView) {
+      items.push({
+        id: 'shareholding',
+        label: 'Shareholding',
+        section: 'Capital',
+        onPress: () => navigation.navigate('Shareholding'),
+      });
+    }
+    if (contributionCaps.canView || contributionCaps.canCreate) {
+      items.push({
+        id: 'contribution',
+        label: 'Contribution receipts',
+        section: 'Capital',
+        onPress: () => {
+          if (contributionCaps.canView) {
+            navigation.navigate('ContributionReceiptList');
+          } else {
+            navigation.navigate('ContributionReceiptForm');
+          }
+        },
+      });
+    }
+    if (projectFinanceCaps.canView) {
+      items.push({
+        id: 'project-finance',
+        label: 'Project expense & income',
+        section: 'Finance',
+        onPress: () => navigation.navigate('ProjectFinanceList'),
+      });
+    }
+    if (journalCaps.canView) {
+      items.push({
+        id: 'journals',
+        label: 'Journals',
+        section: 'Finance',
+        onPress: () => navigation.navigate('JournalList'),
+      });
+    }
+    if (canViewFinance) {
+      items.push({
+        id: 'finance-dash',
+        label: 'Finance dashboard',
+        section: 'Finance',
+        onPress: () => navigation.navigate('FinanceDashboard'),
+      });
+    }
+    if (canViewDirectorCommandCentre) {
+      items.push({
+        id: 'command-centre',
+        label: 'Director command centre',
+        section: 'Finance',
+        onPress: () => navigation.navigate('DirectorCommandCentre'),
+      });
+    }
+    if (userAdminCaps.canView || userAdminCaps.canCreate) {
+      items.push({
+        id: 'users',
+        label: 'Users',
+        section: 'Admin',
+        onPress: () => {
+          if (userAdminCaps.canView) navigation.navigate('UsersList');
+          else navigation.navigate('UserForm', {});
+        },
+      });
+    }
+
+    return items;
+  }, [hasPermission, navigation]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return modules;
+    return modules.filter((item) => {
+      const hay = `${item.label} ${item.section} ${item.keywords ?? ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [modules, query]);
+
+  const sections = useMemo(() => {
+    const order = [
+      'Overview',
+      'Site ops',
+      'Supply chain',
+      'Sales',
+      'Finance',
+      'Capital',
+      'Admin',
+    ];
+    const map = new Map<string, ModuleItem[]>();
+    for (const item of filtered) {
+      const list = map.get(item.section) ?? [];
+      list.push(item);
+      map.set(item.section, list);
+    }
+    return order
+      .filter((name) => map.has(name))
+      .map((name) => ({ name, items: map.get(name)! }));
+  }, [filtered]);
+
+  const cycleSite = () => {
+    if (sites.length < 2) return;
+    const currentIndex = selectedSite
+      ? sites.findIndex((s) => s.id === selectedSite.id)
+      : -1;
+    const next = sites[(currentIndex + 1) % sites.length];
+    if (next) void setSelectedSiteId(next.id);
+  };
 
   return (
     <Screen
       title="Home"
       subtitle={`Welcome, ${user?.fullName ?? 'team member'}`}
       scroll={false}
+      showHeader
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Active project</Text>
-          <Text style={styles.cardValue}>
-            {selectedProject
-              ? `${selectedProject.projectCode} · ${selectedProject.projectName}`
-              : 'No project selected'}
-          </Text>
-          {sites.length > 0 ? (
-            <>
-              <Text style={[styles.cardLabel, styles.siteLabel]}>
-                Active site
-              </Text>
-              <Text style={styles.cardValue}>
-                {selectedSite
-                  ? `${selectedSite.siteCode} · ${selectedSite.siteName}`
-                  : 'No site selected'}
-              </Text>
-              {sites.length > 1 ? (
-                <Pressable
-                  style={styles.linkButton}
-                  onPress={() => {
-                    const currentIndex = selectedSite
-                      ? sites.findIndex((s) => s.id === selectedSite.id)
-                      : -1;
-                    const next = sites[(currentIndex + 1) % sites.length];
-                    if (next) {
-                      void setSelectedSiteId(next.id);
-                    }
-                  }}
-                >
-                  <Text style={styles.linkText}>Change site</Text>
-                </Pressable>
-              ) : null}
-            </>
-          ) : null}
-          <Pressable
-            style={styles.linkButton}
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.chipRow}>
+          <Chip
+            hint="Project"
+            label={
+              selectedProject
+                ? `${selectedProject.projectCode}`
+                : 'Select project'
+            }
             onPress={() => navigation.navigate('ProjectSelect')}
-          >
-            <Text style={styles.linkText}>Change project</Text>
-          </Pressable>
+            style={styles.chip}
+          />
+          {sites.length > 0 ? (
+            <Chip
+              hint="Site"
+              label={
+                selectedSite ? selectedSite.siteCode : 'Select site'
+              }
+              onPress={sites.length > 1 ? cycleSite : undefined}
+              style={styles.chip}
+            />
+          ) : null}
         </View>
 
-        <View style={styles.row}>
+        {selectedProject ? (
+          <Text style={styles.projectName} numberOfLines={2}>
+            {selectedProject.projectName}
+            {selectedSite ? ` · ${selectedSite.siteName}` : ''}
+          </Text>
+        ) : null}
+
+        <View style={styles.stats}>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>
-              {isOnline ? 'Online' : 'Offline'}
-            </Text>
+            <Text style={styles.statValue}>{isOnline ? 'Online' : 'Offline'}</Text>
             <Text style={styles.statLabel}>Network</Text>
           </View>
-          <View style={styles.stat}>
+          <Pressable
+            style={styles.stat}
+            onPress={() => navigation.navigate('PendingSync')}
+          >
             <Text style={styles.statValue}>{activeCount}</Text>
             <Text style={styles.statLabel}>Pending sync</Text>
-          </View>
+          </Pressable>
         </View>
 
-        {canViewExecutive ? (
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('ExecutiveDashboard')}
-          >
-            <Text style={styles.primaryButtonText}>Executive summary</Text>
-          </Pressable>
-        ) : null}
+        <TextField
+          label="Search modules"
+          value={query}
+          onChangeText={setQuery}
+          placeholder="DPR, approvals, stock…"
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+          containerStyle={styles.search}
+        />
 
-        {canCaptureLead ? (
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('LeadCapture')}
-          >
-            <Text style={styles.primaryButtonText}>Capture sales lead</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewDpr ? (
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => {
-              if (hasPermission('dpr.view')) {
-                navigation.navigate('DprList');
-              } else {
-                navigation.navigate('DailyProgressReport');
-              }
-            }}
-          >
-            <Text style={styles.primaryButtonText}>Daily progress</Text>
-          </Pressable>
-        ) : null}
-
-        {canCreateGrn ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('GoodsReceipt')}
-          >
-            <Text style={styles.secondaryButtonText}>Record goods receipt</Text>
-          </Pressable>
-        ) : null}
-
-        {attendanceCaps.canView || attendanceCaps.canCreate ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (attendanceCaps.canView) {
-                navigation.navigate('LabourAttendanceList');
-              } else {
-                navigation.navigate('LabourAttendanceForm');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Labour attendance</Text>
-          </Pressable>
-        ) : null}
-
-        {expenseCaps.canView || expenseCaps.canCreate ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (expenseCaps.canView) {
-                navigation.navigate('SiteExpenseList');
-              } else {
-                navigation.navigate('SiteExpenseForm');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Site expenses</Text>
-          </Pressable>
-        ) : null}
-
-        {approvalCaps.canView ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('ApprovalsList')}
-          >
-            <Text style={styles.secondaryButtonText}>Approvals</Text>
-          </Pressable>
-        ) : null}
-
-        {pettyCashCaps.canView ||
-        pettyCashCaps.canRequest ||
-        pettyCashCaps.canViewCash ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (
-                pettyCashCaps.canView ||
-                pettyCashCaps.canViewCash ||
-                pettyCashCaps.canFund
-              ) {
-                navigation.navigate('PettyCashHome');
-              } else {
-                navigation.navigate('PettyCashForm');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Petty cash</Text>
-          </Pressable>
-        ) : null}
-
-        {purchaseCaps.canView || purchaseCaps.canRequest ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (purchaseCaps.canView) {
-                navigation.navigate('PurchaseRequestList');
-              } else {
-                navigation.navigate('PurchaseRequestForm');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Purchase requests</Text>
-          </Pressable>
-        ) : null}
-
-        {workMeasurementCaps.canView || workMeasurementCaps.canCreate ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (workMeasurementCaps.canView) {
-                navigation.navigate('WorkMeasurementList');
-              } else {
-                navigation.navigate('WorkMeasurementForm');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Work measurement</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewWorkOrders ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('WorkOrderList')}
-          >
-            <Text style={styles.secondaryButtonText}>Work orders</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewStockCount || canCreateStockCount ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (canViewStockCount) {
-                navigation.navigate('StockCountList');
-              } else {
-                navigation.navigate('StockCountEntry');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Stock count</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewStockLedger ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('StockLedger')}
-          >
-            <Text style={styles.secondaryButtonText}>Stock ledger</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewMaterialIssue || canCreateMaterialIssue ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (canViewMaterialIssue) {
-                navigation.navigate('MaterialIssue');
-              } else {
-                navigation.navigate('MaterialIssueForm');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Material issue</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewQuality ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('QualityInspectionList')}
-          >
-            <Text style={styles.secondaryButtonText}>Quality inspections</Text>
-          </Pressable>
-        ) : null}
-
-        {canViewLabourVoucher || canCreateLabourVoucher ? (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (canViewLabourVoucher) {
-                navigation.navigate('LabourVoucherHistory');
-              } else {
-                navigation.navigate('NewLabourVoucher');
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Labour voucher</Text>
-          </Pressable>
-        ) : null}
-
-        {showCapitalSection ? (
-          <>
-            <Text style={styles.sectionLabel}>Capital</Text>
-            {canEditCapital ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('ProjectCapitalPlan')}
-              >
-                <Text style={styles.secondaryButtonText}>Capital plan</Text>
-              </Pressable>
-            ) : null}
-            {directorCaps.canView ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('DirectorsList')}
-              >
-                <Text style={styles.secondaryButtonText}>Directors</Text>
-              </Pressable>
-            ) : null}
-            {shareholdingCaps.canView ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('Shareholding')}
-              >
-                <Text style={styles.secondaryButtonText}>Shareholding</Text>
-              </Pressable>
-            ) : null}
-            {contributionCaps.canView || contributionCaps.canCreate ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => {
-                  if (contributionCaps.canView) {
-                    navigation.navigate('ContributionReceiptList');
-                  } else {
-                    navigation.navigate('ContributionReceiptForm');
-                  }
-                }}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Contribution receipts
-                </Text>
-              </Pressable>
-            ) : null}
-          </>
-        ) : null}
-
-        {showFinanceSection ? (
-          <>
-            <Text style={styles.sectionLabel}>Finance</Text>
-            {projectFinanceCaps.canView ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('ProjectFinanceList')}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Project expense & income
-                </Text>
-              </Pressable>
-            ) : null}
-            {journalCaps.canView ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('JournalList')}
-              >
-                <Text style={styles.secondaryButtonText}>Journals</Text>
-              </Pressable>
-            ) : null}
-            {canViewFinance ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('FinanceDashboard')}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Finance dashboard
-                </Text>
-              </Pressable>
-            ) : null}
-            {canViewDirectorCommandCentre ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('DirectorCommandCentre')}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Director command centre
-                </Text>
-              </Pressable>
-            ) : null}
-          </>
-        ) : null}
-
-        {showAdminSection ? (
-          <>
-            <Text style={styles.sectionLabel}>Admin</Text>
-            {userAdminCaps.canView || userAdminCaps.canCreate ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => {
-                  if (userAdminCaps.canView) {
-                    navigation.navigate('UsersList');
-                  } else {
-                    navigation.navigate('UserForm', {});
-                  }
-                }}
-              >
-                <Text style={styles.secondaryButtonText}>Users</Text>
-              </Pressable>
-            ) : null}
-          </>
-        ) : null}
+        {sections.length === 0 ? (
+          <Text style={styles.empty}>
+            No modules match your search or permissions.
+          </Text>
+        ) : (
+          sections.map((section) => (
+            <View key={section.name} style={styles.section}>
+              <Text style={styles.sectionLabel}>{section.name}</Text>
+              {section.items.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  onPress={item.onPress}
+                  style={({ pressed }) => [
+                    styles.moduleRow,
+                    pressed && styles.modulePressed,
+                  ]}
+                >
+                  <Text style={styles.moduleLabel}>{item.label}</Text>
+                  <Text style={styles.chevron}>›</Text>
+                </Pressable>
+              ))}
+            </View>
+          ))
+        )}
 
         <Text style={styles.note}>
           Site capture flows keep the selected project context and queue
@@ -485,73 +498,89 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 32 },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginBottom: 16,
+  scroll: { paddingBottom: spacing.xxxl },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  cardLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
+  chip: {
+    flexGrow: 1,
+    flexBasis: '40%',
   },
-  cardValue: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 12,
+  projectName: {
+    ...typography.meta,
+    marginBottom: spacing.lg,
   },
-  siteLabel: { marginTop: 4 },
-  linkButton: { alignSelf: 'flex-start', marginBottom: 8 },
-  linkText: { color: colors.primary, fontWeight: '600' },
-  row: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  stats: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
   stat: {
     flex: 1,
+    minHeight: hitSlopMin,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    justifyContent: 'center',
   },
   statValue: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 4,
+    ...typography.title,
+    fontSize: 18,
+    marginBottom: 2,
   },
-  statLabel: { color: colors.textMuted, fontSize: 13 },
-  note: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 16,
+  statLabel: {
+    ...typography.meta,
   },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
+  search: {
+    marginBottom: spacing.md,
+  },
+  section: {
+    marginBottom: spacing.lg,
+  },
+  sectionLabel: {
+    ...typography.label,
+    marginBottom: spacing.sm,
+  },
+  moduleRow: {
+    minHeight: hitSlopMin,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  secondaryButton: {
-    marginTop: 12,
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingVertical: 14,
-    alignItems: 'center',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
   },
-  secondaryButtonText: { color: colors.text, fontWeight: '700' },
-  primaryButtonText: { color: '#F4F0E6', fontWeight: '700', fontSize: 15 },
-  sectionLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 20,
-    marginBottom: 4,
+  modulePressed: {
+    opacity: 0.88,
+    backgroundColor: '#F8F5EE',
+  },
+  moduleLabel: {
+    ...typography.bodyStrong,
+    flex: 1,
+  },
+  chevron: {
+    color: colors.secondary,
+    fontSize: 22,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
+  },
+  empty: {
+    ...typography.meta,
+    marginVertical: spacing.xl,
+    textAlign: 'center',
+  },
+  note: {
+    ...typography.meta,
+    lineHeight: 21,
+    marginTop: spacing.md,
   },
 });

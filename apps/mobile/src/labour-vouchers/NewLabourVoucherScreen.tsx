@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,11 +11,16 @@ import * as Crypto from 'expo-crypto';
 import * as Device from 'expo-device';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, hitSlopMin, spacing, typography } from '@/theme';
 import type { LocalFile } from '@/utils/fileUpload';
 import { getCurrentPosition } from '@/utils/permissions';
 import {
@@ -33,7 +34,6 @@ import {
   deriveLabourAmounts,
 } from './calculations';
 import { AmountSummary } from './components/AmountSummary';
-import { AsyncStatePanel } from './components/AsyncStatePanel';
 import { SignatureCaptureField } from './components/SignatureCaptureField';
 import { LABOUR_VOUCHER_PERMISSIONS } from './permissions';
 import type {
@@ -327,75 +327,69 @@ export function NewLabourVoucherScreen({ navigation }: Props) {
           ? `${selectedProject.projectCode} · create & submit`
           : 'Select a project first'
       }
-      scroll={false}
     >
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>Recipient / gang</Text>
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          style={styles.input}
+      <FormSection title="Recipient / gang">
+        <TextField
+          label="Name"
           value={form.recipientName}
           onChangeText={(v) => patch('recipientName', v)}
           placeholder="Worker or gang name"
-          placeholderTextColor={colors.textMuted}
+          containerStyle={styles.field}
         />
-        <Text style={styles.label}>Mobile (optional)</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Mobile (optional)"
           value={form.recipientMobile}
           onChangeText={(v) => patch('recipientMobile', v)}
           keyboardType="phone-pad"
-          placeholderTextColor={colors.textMuted}
+          containerStyle={styles.fieldLast}
         />
+      </FormSection>
 
-        <Text style={styles.section}>Work</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
+      <FormSection title="Work">
+        <TextField
+          label="Work description"
           value={form.workDescription}
           onChangeText={(v) => patch('workDescription', v)}
           multiline
-          placeholder="Work description"
-          placeholderTextColor={colors.textMuted}
+          style={styles.multiline}
+          containerStyle={styles.fieldLast}
         />
+      </FormSection>
 
-        <Text style={styles.section}>Attendance / quantity & rate</Text>
+      <FormSection title="Attendance / quantity & rate">
         <View style={styles.row}>
-          <View style={styles.flex}>
-            <Text style={styles.label}>Quantity</Text>
-            <TextInput
-              style={styles.input}
-              value={form.attendanceQuantity}
-              onChangeText={(v) => patch('attendanceQuantity', v)}
-              keyboardType="decimal-pad"
-            />
-          </View>
-          <View style={styles.flex}>
-            <Text style={styles.label}>Rate</Text>
-            <TextInput
-              style={styles.input}
-              value={form.rate}
-              onChangeText={(v) => patch('rate', v)}
-              keyboardType="decimal-pad"
-            />
-          </View>
+          <TextField
+            label="Quantity"
+            value={form.attendanceQuantity}
+            onChangeText={(v) => patch('attendanceQuantity', v)}
+            keyboardType="decimal-pad"
+            containerStyle={styles.half}
+          />
+          <TextField
+            label="Rate"
+            value={form.rate}
+            onChangeText={(v) => patch('rate', v)}
+            keyboardType="decimal-pad"
+            containerStyle={styles.half}
+          />
         </View>
-        <Text style={styles.label}>Deductions</Text>
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Deductions"
           value={form.deductions}
           onChangeText={(v) => patch('deductions', v)}
           keyboardType="decimal-pad"
+          containerStyle={styles.fieldLast}
         />
         <AmountSummary amounts={amounts} reconcileOk={reconcileOk} />
         {'error' in derived ? (
           <Text style={styles.warn}>{derived.error}</Text>
         ) : null}
+      </FormSection>
 
-        <Text style={styles.section}>Payment mode</Text>
-        <Text style={styles.hint}>
-          Nest vouchers pay from project petty cash (no alternate payment-mode
-          field).
-        </Text>
+      <FormSection
+        title="Payment mode"
+        description="Nest vouchers pay from project petty cash (no alternate payment-mode field)."
+      >
         {accountsLoading || accountsError || accountsForbidden ? (
           <AsyncStatePanel
             loading={accountsLoading}
@@ -410,23 +404,15 @@ export function NewLabourVoucherScreen({ navigation }: Props) {
             onRetry={() => void loadAccounts()}
           />
         ) : (
-          <View style={styles.chipRow}>
-            {accounts.map((account) => {
-              const active = form.pettyCashAccountId === account.id;
-              return (
-                <Pressable
-                  key={account.id}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => patch('pettyCashAccountId', account.id)}
-                >
-                  <Text
-                    style={[styles.chipText, active && styles.chipTextActive]}
-                  >
-                    {account.accountCode} · {account.accountName}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          <View style={styles.chips}>
+            {accounts.map((account) => (
+              <Chip
+                key={account.id}
+                label={`${account.accountCode} · ${account.accountName}`}
+                selected={form.pettyCashAccountId === account.id}
+                onPress={() => patch('pettyCashAccountId', account.id)}
+              />
+            ))}
           </View>
         )}
 
@@ -444,8 +430,9 @@ export function NewLabourVoucherScreen({ navigation }: Props) {
             onValueChange={(v) => patch('requiresRecipientPhoto', v)}
           />
         </View>
+      </FormSection>
 
-        <Text style={styles.section}>Signatures</Text>
+      <FormSection title="Signatures" framed={false}>
         <SignatureCaptureField
           label="Recipient signature"
           required
@@ -474,114 +461,82 @@ export function NewLabourVoucherScreen({ navigation }: Props) {
           onCaptured={setRecipientPhoto}
           disabled={saving}
         />
+      </FormSection>
 
-        <Pressable style={styles.secondaryButton} onPress={() => void captureGps()}>
-          <Text style={styles.secondaryButtonText}>
-            {gps
-              ? `GPS ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}`
-              : 'Capture GPS (optional)'}
-          </Text>
-        </Pressable>
+      <Button
+        label={
+          gps
+            ? `GPS ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}`
+            : 'Capture GPS (optional)'
+        }
+        variant="secondary"
+        onPress={() => void captureGps()}
+        style={styles.action}
+      />
 
-        {draft ? (
-          <Text style={styles.hint}>
-            Draft {draft.voucherNumber} created — retry will reuse this voucher.
-          </Text>
-        ) : null}
+      {draft ? (
+        <Text style={styles.hint}>
+          Draft {draft.voucherNumber} created — retry will reuse this voucher.
+        </Text>
+      ) : null}
 
-        <Pressable
-          style={[styles.primaryButton, saving && styles.disabled]}
-          disabled={saving || !reconcileOk}
-          onPress={() => void onSubmit()}
-        >
-          {saving ? (
-            <ActivityIndicator color="#F4F0E6" />
-          ) : (
-            <Text style={styles.primaryButtonText}>
-              Create, sign & submit
-            </Text>
-          )}
-        </Pressable>
-      </ScrollView>
+      <Button
+        label="Create, sign & submit"
+        loading={saving}
+        disabled={!reconcileOk}
+        onPress={() => void onSubmit()}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 40 },
-  section: {
-    marginTop: 18,
-    marginBottom: 6,
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
+  field: {
+    marginBottom: spacing.md,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 6,
-    marginTop: 10,
+  fieldLast: {
+    marginBottom: 0,
   },
-  labelInline: {
+  half: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
+    marginBottom: spacing.md,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  multiline: { minHeight: 88, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 10 },
-  flex: { flex: 1 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.surface,
+  multiline: {
+    minHeight: 88,
+    textAlignVertical: 'top',
   },
-  chipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  chipText: { color: colors.text, fontSize: 12 },
-  chipTextActive: { color: '#fff', fontWeight: '700' },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 14,
+    gap: spacing.md,
+    minHeight: hitSlopMin,
+    marginTop: spacing.sm,
+  },
+  labelInline: {
+    flex: 1,
+    ...typography.bodyStrong,
+    fontSize: 13,
   },
   hint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
+    ...typography.meta,
+    marginBottom: spacing.md,
   },
-  warn: { color: colors.danger, marginTop: 8, fontSize: 13 },
-  primaryButton: {
-    marginTop: 22,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
+  warn: {
+    color: colors.danger,
+    marginTop: spacing.sm,
+    fontSize: 13,
   },
-  primaryButtonText: { color: '#F4F0E6', fontWeight: '700' },
-  secondaryButton: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
+  action: {
+    marginBottom: spacing.md,
   },
-  secondaryButtonText: { color: colors.text, fontWeight: '600' },
-  disabled: { opacity: 0.6 },
 });

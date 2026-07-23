@@ -20,6 +20,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { DataTable, useListQueryState } from '@/components/data-table';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { formatDateTime } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   canCreateRole,
   canEditRole,
@@ -241,27 +242,21 @@ export function RoleListPage() {
 
   return (
     <Stack spacing={2} data-testid="roles-list-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Roles and permissions</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage canonical permission sets and user role assignment.
-          </Typography>
-        </Stack>
-        {canCreateRole(access) ? (
-          <Button
-            component={RouterLink}
-            to="/administration/roles/new"
-            variant="contained"
-          >
-            New role
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Roles and permissions"
+        subtitle="Manage canonical permission sets and user role assignment."
+        actions={
+          canCreateRole(access) ? (
+            <Button
+              component={RouterLink}
+              to="/administration/roles/new"
+              variant="contained"
+            >
+              New role
+            </Button>
+          ) : null
+        }
+      />
 
       <EffectiveAccessPanel />
 
@@ -331,6 +326,11 @@ export function RoleListPage() {
               ]
             : []),
         ]}
+        mobileCard={{
+          primaryField: 'name',
+          metaFields: ['code', 'description'],
+          statusField: 'status',
+        }}
         height={540}
         showColumnVisibility
       />

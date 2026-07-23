@@ -1,22 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { listEquipment, type Equipment } from '@/equipment/api';
 import { EquipmentFormDrawer } from '@/equipment/EquipmentFormDrawer';
 
@@ -48,6 +38,53 @@ export function EquipmentPage() {
     setDrawerOpen(true);
   };
 
+  const columns = useMemo<GridColDef<Equipment>[]>(
+    () => [
+      {
+        field: 'code',
+        headerName: 'Code',
+        width: 130,
+      },
+      {
+        field: 'name',
+        headerName: 'Name',
+        flex: 1,
+        minWidth: 160,
+      },
+      {
+        field: 'type',
+        headerName: 'Type',
+        width: 140,
+        valueGetter: (_v, row) => row.type || '—',
+      },
+      {
+        field: 'ownership',
+        headerName: 'Ownership',
+        width: 120,
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params) => (
+          <Chip size="small" label={params.row.status} />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<Equipment>[]>(() => {
+    if (!canManage) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        onClick: openEdit,
+      },
+    ];
+  }, [canManage]);
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return <Alert severity="info">Select a project to view equipment.</Alert>;
@@ -66,81 +103,34 @@ export function EquipmentPage() {
 
   return (
     <Stack spacing={2}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
+      <PageHeader
+        subtitle="Master register with allocation, fuel, maintenance, breakdown, and DPR utilization. Enable via project setting equipmentEnabled before logging utilization."
+        actions={
+          canManage ? (
+            <Button variant="contained" onClick={openCreate}>
+              New equipment
+            </Button>
+          ) : undefined
+        }
+      />
+      <DataTable
+        title="Equipment"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No equipment"
+        emptyDescription="No equipment yet."
+        height={520}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'code',
+          metaFields: ['name', 'ownership'],
+          statusField: 'status',
         }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Equipment</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Master register with allocation, fuel, maintenance, breakdown, and
-            DPR utilization. Enable via project setting equipmentEnabled before
-            logging utilization.
-          </Typography>
-        </Stack>
-        {canManage ? (
-          <Button variant="contained" onClick={openCreate}>
-            New equipment
-          </Button>
-        ) : null}
-      </Box>
-      <Paper variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Code</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Ownership</TableCell>
-              <TableCell>Status</TableCell>
-              {canManage ? <TableCell align="right">Actions</TableCell> : null}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No equipment yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell>{row.code}</TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.type || '—'}</TableCell>
-                  <TableCell>{row.ownership}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={row.status} />
-                  </TableCell>
-                  {canManage ? (
-                    <TableCell align="right">
-                      <Button size="small" onClick={() => openEdit(row)}>
-                        Edit
-                      </Button>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+        showColumnVisibility={false}
+      />
 
       {canManage ? (
         <EquipmentFormDrawer

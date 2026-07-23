@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   BookingFilters,
   type BookingFilterState,
@@ -72,10 +73,22 @@ export function BookingsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Unit bookings for the selected project. Open a row for workflow actions
-        (reserved → booked → agreement → registered).
-      </Typography>
+      <PageHeader
+        title="Bookings"
+        subtitle="Unit bookings for the selected project. Open a row for workflow actions (reserved → booked → agreement → registered)."
+        actions={
+          caps.canCreate ? (
+            <Button
+              component={RouterLink}
+              to={BOOKING_ROUTES.create}
+              variant="contained"
+              data-testid="booking-create-link"
+            >
+              New booking
+            </Button>
+          ) : undefined
+        }
+      />
 
       <BookingTable
         rows={rows}
@@ -105,18 +118,6 @@ export function BookingsPage() {
           />
         }
         labels={labels}
-        toolbarActions={
-          caps.canCreate ? (
-            <Button
-              component={RouterLink}
-              to={BOOKING_ROUTES.create}
-              variant="contained"
-              data-testid="booking-create-link"
-            >
-              New booking
-            </Button>
-          ) : null
-        }
         onRowClick={(params) => navigate(BOOKING_ROUTES.detail(params.row.id))}
       />
     </Stack>

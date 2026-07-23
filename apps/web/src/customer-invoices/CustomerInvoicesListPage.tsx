@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import { Stack } from '@mui/material';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   CustomerInvoiceFilters,
   type CustomerInvoiceFilterState,
@@ -75,9 +76,10 @@ export function CustomerInvoicesListPage() {
 
   return (
     <Stack spacing={2} data-testid="customer-invoices-page">
-      <Typography color="text.secondary">
-        Customer revenue invoices — draft, post for revenue recognition, and GST sync.
-      </Typography>
+      <PageHeader
+        title="Customer invoices"
+        subtitle="Customer revenue invoices — draft, post for revenue recognition, and GST sync."
+      />
 
       {list.error ? (
         <>

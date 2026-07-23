@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import { Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   DprFilters,
   DPRTable,
@@ -89,11 +90,9 @@ export function DprListPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Site DPRs for mobile and web. Submit from the field app (offline-ready);
-        review and PDF on the backend. One DPR per project per date unless
-        reopened.
-      </Typography>
+      <PageHeader
+        subtitle="Site DPRs for mobile and web. Submit from the field app (offline-ready); review and PDF on the backend. One DPR per project per date unless reopened."
+      />
 
       <MissingDayIndicators
         dprs={rows}

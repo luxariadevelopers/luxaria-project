@@ -36,15 +36,25 @@ export function DetailHeader({
           flexWrap: 'wrap',
         }}
       >
-        <Box>
-          <Typography variant="h5" component="h2">
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            variant="h5"
+            component="h2"
+            sx={{
+              fontSize: { xs: '1.25rem', sm: '1.5rem' },
+              wordBreak: 'break-word',
+            }}
+          >
             {title}
           </Typography>
           {code ? (
             <Typography
               variant="subtitle1"
               color="text.secondary"
-              sx={{ fontFamily: 'ui-monospace, monospace' }}
+              sx={{
+                fontFamily: 'ui-monospace, monospace',
+                wordBreak: 'break-all',
+              }}
             >
               {code}
             </Typography>

@@ -2,6 +2,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Button, Paper, Stack, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 
 export function DashboardPage() {
   const { user, hasPermission } = useAuth();
@@ -10,6 +11,9 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={2}>
+      <PageHeader
+        subtitle="Home overview for day-to-day work across projects and modules."
+      />
       <Paper variant="outlined" sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
           Welcome, {user?.fullName ?? 'User'}

@@ -1,22 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { listSiteQuality, type SiteQuality } from '@/site-quality/api';
 import { SiteQualityFormDrawer } from '@/site-quality/SiteQualityFormDrawer';
 
@@ -52,6 +42,63 @@ export function SiteQualityPage() {
     setDrawerOpen(true);
   };
 
+  const columns = useMemo<GridColDef<SiteQuality>[]>(
+    () => [
+      {
+        field: 'title',
+        headerName: 'Title',
+        flex: 1,
+        minWidth: 180,
+      },
+      {
+        field: 'ncrNumber',
+        headerName: 'NCR #',
+        width: 120,
+        valueGetter: (_v, row) => row.ncrNumber || '—',
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params) => (
+          <Chip size="small" label={params.row.status} />
+        ),
+      },
+      {
+        field: 'findings',
+        headerName: 'Findings',
+        flex: 1,
+        minWidth: 160,
+        valueGetter: (_v, row) => {
+          if (!row.findings) return '—';
+          return row.findings.length > 60
+            ? `${row.findings.slice(0, 60)}…`
+            : row.findings;
+        },
+      },
+      {
+        field: 'punchItems',
+        headerName: 'Punch items',
+        width: 120,
+        type: 'number',
+        valueGetter: (_v, row) => row.punchItems?.length ?? 0,
+      },
+    ],
+    [],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<SiteQuality>[]>(() => {
+    if (!canManage) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        onClick: openEdit,
+        disabled: (row) => !canEditQuality(row),
+      },
+    ];
+  }, [canManage]);
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return (
@@ -72,92 +119,34 @@ export function SiteQualityPage() {
 
   return (
     <Stack spacing={2}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
+      <PageHeader
+        subtitle="Workmanship inspections, NCRs, punch lists, and re-inspections. Separate from GRN / vendor quality inspections."
+        actions={
+          canManage ? (
+            <Button variant="contained" onClick={openCreate}>
+              New inspection
+            </Button>
+          ) : undefined
+        }
+      />
+      <DataTable
+        title="Site quality"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No site quality records"
+        emptyDescription="No site quality records yet."
+        height={520}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'title',
+          metaFields: ['ncrNumber', 'punchItems'],
+          statusField: 'status',
         }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Site Quality</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Workmanship inspections, NCRs, punch lists, and re-inspections.
-            Separate from GRN / vendor quality inspections.
-          </Typography>
-        </Stack>
-        {canManage ? (
-          <Button variant="contained" onClick={openCreate}>
-            New inspection
-          </Button>
-        ) : null}
-      </Box>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Title</TableCell>
-              <TableCell>NCR #</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Findings</TableCell>
-              <TableCell>Punch items</TableCell>
-              {canManage ? <TableCell align="right">Actions</TableCell> : null}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No site quality records yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell>{row.title}</TableCell>
-                  <TableCell>{row.ncrNumber || '—'}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={row.status} />
-                  </TableCell>
-                  <TableCell>
-                    {row.findings
-                      ? row.findings.length > 60
-                        ? `${row.findings.slice(0, 60)}…`
-                        : row.findings
-                      : '—'}
-                  </TableCell>
-                  <TableCell>{row.punchItems?.length ?? 0}</TableCell>
-                  {canManage ? (
-                    <TableCell align="right">
-                      {canEditQuality(row) ? (
-                        <Button size="small" onClick={() => openEdit(row)}>
-                          Edit
-                        </Button>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          —
-                        </Typography>
-                      )}
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+        showColumnVisibility={false}
+      />
 
       {canManage ? (
         <SiteQualityFormDrawer

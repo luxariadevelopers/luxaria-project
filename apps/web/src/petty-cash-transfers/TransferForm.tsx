@@ -3,6 +3,7 @@ import { Alert, Box, Button, Drawer, Stack, Typography } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { getErrorMessage, isConflictError } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
 import { useNotify } from '@/components/NotificationProvider';
@@ -159,7 +160,7 @@ export function TransferForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 520 } } },
+        paper: { sx: formDrawerPaperSx(520) },
       }}
     >
       <Box

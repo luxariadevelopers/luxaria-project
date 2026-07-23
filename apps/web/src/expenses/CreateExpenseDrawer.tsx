@@ -14,6 +14,7 @@ import { executeDocumentUpload } from '@luxaria/shared-types';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
 import { useNotify } from '@/components/NotificationProvider';
@@ -225,7 +226,7 @@ export function CreateExpenseDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 460 } } },
+        paper: { sx: formDrawerPaperSx(460) },
       }}
     >
       <Box sx={{ p: 2.5 }} component="form" onSubmit={handleSubmit(onSubmit)}>

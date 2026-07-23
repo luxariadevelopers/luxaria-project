@@ -2,11 +2,11 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import {
+  Box,
   Button,
   Chip,
-  Dialog,
-  DialogContent,
-  DialogTitle,
+  Divider,
+  Drawer,
   Link,
   Stack,
   Typography,
@@ -20,6 +20,7 @@ import {
   DataTable,
   type DataTableRowAction,
 } from '@/components/data-table';
+import { formDrawerPaperSx } from '@/components/forms';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { formatDateTime } from '@/format';
@@ -222,47 +223,73 @@ export function DocumentTable({
         height={520}
         showColumnVisibility
         preferencesKey="document-library"
+        mobileCard={{
+          primaryField: 'originalFileName',
+          metaFields: ['documentCode', 'documentType'],
+          statusField: 'status',
+        }}
       />
 
-      <Dialog
+      <Drawer
+        anchor="right"
         open={previewDoc != null}
         onClose={() => setPreviewDoc(null)}
-        fullWidth
-        maxWidth="md"
+        slotProps={{ paper: { sx: formDrawerPaperSx({ sm: 480, md: 640 }) } }}
       >
-        <DialogTitle>
-          {previewDoc?.originalFileName ?? 'Document'}
-          {canArchive && previewDoc?.status === DocumentStatus.Active ? (
-            <Button
-              size="small"
-              color="error"
-              startIcon={<ArchiveOutlinedIcon />}
-              sx={{ ml: 2 }}
-              onClick={() => {
-                if (!previewDoc) return;
-                void (async () => {
-                  try {
-                    await archiveDocument(previewDoc.id);
-                    success('Document archived');
-                    setPreviewDoc(null);
-                    onArchived();
-                  } catch (err) {
-                    if (isForbiddenError(err)) {
-                      setArchiveDenied(err);
+        <Box
+          sx={{
+            p: 3,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6" sx={{ minWidth: 0, wordBreak: 'break-word' }}>
+              {previewDoc?.originalFileName ?? 'Document'}
+            </Typography>
+            {canArchive && previewDoc?.status === DocumentStatus.Active ? (
+              <Button
+                size="small"
+                color="error"
+                startIcon={<ArchiveOutlinedIcon />}
+                onClick={() => {
+                  if (!previewDoc) return;
+                  void (async () => {
+                    try {
+                      await archiveDocument(previewDoc.id);
+                      success('Document archived');
+                      setPreviewDoc(null);
+                      onArchived();
+                    } catch (err) {
+                      if (isForbiddenError(err)) {
+                        setArchiveDenied(err);
+                      }
+                      notifyError(getErrorMessage(err, 'Archive failed'));
                     }
-                    notifyError(getErrorMessage(err, 'Archive failed'));
-                  }
-                })();
-              }}
-            >
-              Archive
-            </Button>
-          ) : null}
-        </DialogTitle>
-        <DialogContent dividers>
-          {previewDoc ? <DocumentPreview document={previewDoc} /> : null}
-        </DialogContent>
-      </Dialog>
+                  })();
+                }}
+              >
+                Archive
+              </Button>
+            ) : null}
+          </Stack>
+          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            {previewDoc ? <DocumentPreview document={previewDoc} /> : null}
+          </Box>
+        </Box>
+      </Drawer>
     </>
   );
 }

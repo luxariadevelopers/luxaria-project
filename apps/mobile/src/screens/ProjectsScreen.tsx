@@ -39,6 +39,7 @@ export function ProjectsScreen() {
       title="Projects"
       subtitle="Select the site project you are working on"
       scroll={false}
+      showHeader
     >
       {isLoading ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />

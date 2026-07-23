@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -13,6 +13,7 @@ import {
 } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useCustomersList } from '@/customers/useCustomers';
 import { UnitStatus } from '@/units/types';
 import { useUnitsList } from '@/units/useUnits';
@@ -155,24 +156,19 @@ export function BookingCreatePage() {
 
   return (
     <Stack spacing={3} component="form" onSubmit={handleSubmit(onSubmit)}>
-      <Stack
-        direction="row"
-        sx={{ justifyContent: 'space-between', alignItems: 'center' }}
-      >
-        <Typography variant="h5">New booking</Typography>
-        <Button
-          variant="text"
-          onClick={() => navigate(BOOKING_ROUTES.list)}
-          disabled={create.isPending}
-        >
-          Back to list
-        </Button>
-      </Stack>
-
-      <Typography color="text.secondary">
-        Creates a hold or pending-approval booking via Nest POST /bookings.
-        Over-limit discounts require booking.approve before marking reserved.
-      </Typography>
+      <PageHeader
+        title="New booking"
+        subtitle="Creates a hold or pending-approval booking via Nest POST /bookings. Over-limit discounts require booking.approve before marking reserved."
+        actions={
+          <Button
+            variant="text"
+            onClick={() => navigate(BOOKING_ROUTES.list)}
+            disabled={create.isPending}
+          >
+            Back to list
+          </Button>
+        }
+      />
 
       <BookingForm
         control={control}

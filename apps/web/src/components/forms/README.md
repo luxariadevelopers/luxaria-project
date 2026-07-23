@@ -19,6 +19,7 @@ Reusable, accessible form building blocks for create/update screens.
 - `shapeCreatePayload` / `shapeUpdatePayload` — DTO shaping (no invented keys)
 - `applyServerFieldErrors` / `applyApiFieldErrors` — map API `details` onto RHF
 - `isFormEditable({ hasPermission, statusAllowsEdit })`
+- `formDrawerPaperSx(width?)` — Drawer paper full-width on `xs`, fixed from `sm` (`slotProps.paper.sx`)
 
 ## Validation
 

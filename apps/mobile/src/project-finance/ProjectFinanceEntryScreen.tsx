@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import { formatInr } from '@/format';
@@ -22,7 +24,7 @@ import {
   submitJournal,
 } from '@/journals';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { fetchBookAccounts, fetchCostCentres, fetchAccounts } from './api';
 import { resolveProjectFinanceCapabilities } from './permissions';
 import {
@@ -80,22 +82,17 @@ function OptionChips({
       {options.length === 0 ? (
         <Text style={styles.hint}>No options loaded</Text>
       ) : (
-        options.map((opt) => {
-          const selected = opt.id === value;
-          return (
-            <Pressable
+        <View style={styles.chipWrap}>
+          {options.map((opt) => (
+            <Chip
               key={opt.id || '__none'}
-              style={[styles.chip, selected && styles.chipSelected]}
+              label={opt.label}
+              selected={opt.id === value}
               onPress={() => onChange(opt.id)}
-            >
-              <Text
-                style={[styles.chipText, selected && styles.chipTextSelected]}
-              >
-                {opt.label}
-              </Text>
-            </Pressable>
-          );
-        })
+              style={styles.chip}
+            />
+          ))}
+        </View>
       )}
     </View>
   );
@@ -342,189 +339,150 @@ export function ProjectFinanceEntryScreen({ navigation, route }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
-          value={journalDate}
-          onChangeText={setJournalDate}
-          autoCapitalize="none"
-        />
+        <FormSection title="Entry">
+          <TextField
+            label="Date (YYYY-MM-DD)"
+            value={journalDate}
+            onChangeText={setJournalDate}
+            autoCapitalize="none"
+          />
+          <TextField
+            label="Amount"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+          />
+          {Number(amount) > 0 ? (
+            <Text style={styles.hint}>{formatInr(Number(amount))}</Text>
+          ) : null}
+          <TextField
+            label="Narration"
+            value={narration}
+            onChangeText={setNarration}
+            multiline
+            style={styles.multiline}
+          />
+        </FormSection>
 
-        <Text style={styles.label}>Amount</Text>
-        <TextInput
-          style={styles.input}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-          placeholder="0.00"
-          placeholderTextColor={colors.textMuted}
-        />
-        {Number(amount) > 0 ? (
-          <Text style={styles.hint}>{formatInr(Number(amount))}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Narration</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={narration}
-          onChangeText={setNarration}
-          multiline
-        />
-
-        <View style={styles.row}>
-          <Pressable
-            style={[styles.tab, bookKind === 'bank' && styles.tabActive]}
-            onPress={() => setBookKind('bank')}
-          >
-            <Text style={styles.tabText}>
-              {kind === 'transfer' ? 'From bank' : 'Bank book'}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.tab, bookKind === 'cash' && styles.tabActive]}
-            onPress={() => setBookKind('cash')}
-          >
-            <Text style={styles.tabText}>
-              {kind === 'transfer' ? 'From cash' : 'Cash book'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <OptionChips
-          label={kind === 'transfer' ? 'From account' : 'Book account'}
-          options={bookOptions}
-          value={bookAccountId}
-          onChange={setBookAccountId}
-        />
+        <FormSection title={kind === 'transfer' ? 'From book' : 'Book'}>
+          <View style={styles.row}>
+            <Chip
+              label={kind === 'transfer' ? 'From bank' : 'Bank book'}
+              selected={bookKind === 'bank'}
+              onPress={() => setBookKind('bank')}
+              style={styles.tab}
+            />
+            <Chip
+              label={kind === 'transfer' ? 'From cash' : 'Cash book'}
+              selected={bookKind === 'cash'}
+              onPress={() => setBookKind('cash')}
+              style={styles.tab}
+            />
+          </View>
+          <OptionChips
+            label={kind === 'transfer' ? 'From account' : 'Book account'}
+            options={bookOptions}
+            value={bookAccountId}
+            onChange={setBookAccountId}
+          />
+        </FormSection>
 
         {kind === 'transfer' ? (
-          <View style={styles.row}>
-            <Pressable
-              style={[styles.tab, toBookKind === 'bank' && styles.tabActive]}
-              onPress={() => setToBookKind('bank')}
-            >
-              <Text style={styles.tabText}>To bank</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.tab, toBookKind === 'cash' && styles.tabActive]}
-              onPress={() => setToBookKind('cash')}
-            >
-              <Text style={styles.tabText}>To cash</Text>
-            </Pressable>
-          </View>
+          <FormSection title="To book">
+            <View style={styles.row}>
+              <Chip
+                label="To bank"
+                selected={toBookKind === 'bank'}
+                onPress={() => setToBookKind('bank')}
+                style={styles.tab}
+              />
+              <Chip
+                label="To cash"
+                selected={toBookKind === 'cash'}
+                onPress={() => setToBookKind('cash')}
+                style={styles.tab}
+              />
+            </View>
+          </FormSection>
         ) : null}
 
-        <OptionChips
-          label={
+        <FormSection
+          title={
             kind === 'transfer'
               ? 'To account'
               : kind === 'income'
                 ? 'Income from'
                 : 'Expense / payment to'
           }
-          options={contraOptions}
-          value={contraAccountId}
-          onChange={setContraAccountId}
-        />
-
-        {kind === 'expense' ? (
+        >
           <OptionChips
-            label="Cost centre (optional)"
-            options={costCentreOptions}
-            value={costCentreId}
-            onChange={setCostCentreId}
+            label="Account"
+            options={contraOptions}
+            value={contraAccountId}
+            onChange={setContraAccountId}
           />
+          {kind === 'expense' ? (
+            <OptionChips
+              label="Cost centre (optional)"
+              options={costCentreOptions}
+              value={costCentreId}
+              onChange={setCostCentreId}
+            />
+          ) : null}
+        </FormSection>
+
+        {kind === 'expense' &&
+        (caps.canManageAccounts || caps.canManageCostCentres) ? (
+          <FormSection title="Quick create" framed={false}>
+            <View style={styles.quickRow}>
+              {caps.canManageAccounts ? (
+                <Button
+                  label="+ Expense account"
+                  variant="ghost"
+                  onPress={() =>
+                    navigation.navigate('QuickCreateExpenseAccount', {
+                      returnKind: 'expense',
+                    })
+                  }
+                />
+              ) : null}
+              {caps.canManageCostCentres ? (
+                <Button
+                  label="+ Cost centre"
+                  variant="ghost"
+                  onPress={() =>
+                    navigation.navigate('QuickCreateCostCentre', {
+                      returnKind: 'expense',
+                    })
+                  }
+                />
+              ) : null}
+            </View>
+          </FormSection>
         ) : null}
 
-        <View style={styles.quickRow}>
-          {kind === 'expense' && caps.canManageAccounts ? (
-            <Pressable
-              style={styles.linkBtn}
-              onPress={() =>
-                navigation.navigate('QuickCreateExpenseAccount', {
-                  returnKind: 'expense',
-                })
-              }
-            >
-              <Text style={styles.linkText}>+ Expense account</Text>
-            </Pressable>
-          ) : null}
-          {kind === 'expense' && caps.canManageCostCentres ? (
-            <Pressable
-              style={styles.linkBtn}
-              onPress={() =>
-                navigation.navigate('QuickCreateCostCentre', {
-                  returnKind: 'expense',
-                })
-              }
-            >
-              <Text style={styles.linkText}>+ Cost centre</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <Pressable
-          style={[styles.btn, saving && styles.disabled]}
+        <Button
+          label={journalCaps.canPost ? 'Save & post' : 'Save & submit'}
+          loading={saving}
           disabled={saving}
           onPress={() => void submit()}
-        >
-          <Text style={styles.btnText}>
-            {saving
-              ? 'Saving…'
-              : journalCaps.canPost
-                ? 'Save & post'
-                : 'Save & submit'}
-          </Text>
-        </Pressable>
+        />
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 40 },
-  block: { marginBottom: 8 },
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    padding: 10,
-    backgroundColor: colors.surface,
-  },
+  scroll: { paddingBottom: spacing.xxxl },
+  block: { marginBottom: spacing.sm },
+  label: { ...typography.label, marginBottom: spacing.sm },
+  hint: { ...typography.meta, marginTop: spacing.xs, fontSize: 13 },
+  error: { color: colors.danger, marginBottom: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  tab: { flex: 1 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { marginBottom: spacing.xs },
   multiline: { minHeight: 72, textAlignVertical: 'top' },
-  hint: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
-  error: { color: colors.danger, marginBottom: 8 },
-  row: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  tab: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  tabActive: { borderColor: colors.primary, backgroundColor: '#E8EEF1' },
-  tabText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 10,
-    marginBottom: 6,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: { borderColor: colors.primary, backgroundColor: '#E8EEF1' },
-  chipText: { color: colors.text, fontSize: 13 },
-  chipTextSelected: { fontWeight: '700' },
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
-  linkBtn: { paddingVertical: 6 },
-  linkText: { color: colors.primary, fontWeight: '700' },
-  btn: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

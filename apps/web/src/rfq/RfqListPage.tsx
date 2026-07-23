@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Button, Chip, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
@@ -11,6 +11,7 @@ import { CreateRfqDialog } from './CreateRfqDialog';
 import { resolveRfqCapabilities } from './roleAccess';
 import type { PublicRfq } from './types';
 import { useRfqsList } from './useRfqs';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * RFQ list — Nest `GET /rfqs` (`quotation.view`).
@@ -112,20 +113,16 @@ export function RfqListPage() {
 
   return (
     <Stack spacing={2} data-testid="rfq-list-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Typography color="text.secondary">
-          Request-for-quotation drafts and issued invites for this project.
-        </Typography>
-        {caps.canManage ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            Create from PR
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Request-for-quotation drafts and issued invites for this project."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              Create from PR
+            </Button>
+          ) : undefined
+        }
+      />
 
       <DataTable<PublicRfq>
         title="RFQs"

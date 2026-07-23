@@ -6,7 +6,6 @@ import {
   Chip,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
@@ -18,6 +17,7 @@ import {
 } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import { PageHeader } from '@/layouts/PageHeader';
 import { DepartmentFormDialog } from './DepartmentFormDialog';
 import { canManageDepartments, canOpenDepartments } from './roleAccess';
 import { DepartmentStatus, type PublicDepartment } from './types';
@@ -205,29 +205,23 @@ export function DepartmentListPage() {
 
   return (
     <Stack spacing={2} data-testid="departments-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Departments</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Organisation departments used for employee placement.
-          </Typography>
-        </Stack>
-        {canManage ? (
-          <Button
-            variant="contained"
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
-            Create department
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Departments"
+        subtitle="Organisation departments used for employee placement."
+        actions={
+          canManage ? (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              Create department
+            </Button>
+          ) : null
+        }
+      />
 
       {canManage ? (
         <Alert severity="info">
@@ -266,6 +260,11 @@ export function DepartmentListPage() {
         onSearchChange={listState.setSearch}
         preferencesKey="employee-admin-departments"
         getRowId={(row) => row.id}
+        mobileCard={{
+          primaryField: 'name',
+          metaFields: ['code', 'description'],
+          statusField: 'status',
+        }}
         height={520}
         showColumnVisibility
         rowActions={rowActions}

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { CreateLeadDrawer } from '@/leads/CreateLeadDrawer';
 import { LeadFilters, type LeadFilterState } from '@/leads/LeadFilters';
 import { LeadTable } from '@/leads/LeadTable';
@@ -53,9 +54,17 @@ export function LeadsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        CRM leads — capture, pipeline transitions, and conversion to customers.
-      </Typography>
+      <PageHeader
+        title="Leads"
+        subtitle="CRM leads — capture, pipeline transitions, and conversion to customers."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New lead
+            </Button>
+          ) : undefined
+        }
+      />
       <LeadTable
         rows={leadsQuery.data?.items ?? []}
         loading={leadsQuery.isLoading || leadsQuery.isFetching}
@@ -82,13 +91,6 @@ export function LeadsPage() {
               setPage(1);
             }}
           />
-        }
-        toolbarActions={
-          caps.canManage ? (
-            <Button variant="contained" onClick={() => setCreateOpen(true)}>
-              New lead
-            </Button>
-          ) : undefined
         }
         canManage={caps.canManage}
         onTransition={setTransitionTarget}

@@ -1,11 +1,11 @@
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
+import { Button } from './Button';
 
 type Props = {
   loading?: boolean;
@@ -43,9 +43,7 @@ export function AsyncStatePanel({
           {error || 'Access denied. Contact MD'}
         </Text>
         {onRetry ? (
-          <Pressable style={styles.retry} onPress={onRetry}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+          <Button label="Retry" onPress={onRetry} style={styles.retry} />
         ) : null}
       </View>
     );
@@ -57,9 +55,7 @@ export function AsyncStatePanel({
         <Text style={styles.title}>Something went wrong</Text>
         <Text style={styles.text}>{error}</Text>
         {onRetry ? (
-          <Pressable style={styles.retry} onPress={onRetry}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+          <Button label="Retry" onPress={onRetry} style={styles.retry} />
         ) : null}
       </View>
     );
@@ -70,9 +66,12 @@ export function AsyncStatePanel({
       <View style={styles.panel}>
         <Text style={styles.text}>{emptyLabel}</Text>
         {onRetry ? (
-          <Pressable style={styles.retry} onPress={onRetry}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+          <Button
+            label="Retry"
+            variant="secondary"
+            onPress={onRetry}
+            style={styles.retry}
+          />
         ) : null}
       </View>
     );
@@ -86,29 +85,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    padding: 20,
+    borderRadius: radii.md,
+    padding: spacing.xl,
     alignItems: 'center',
-    gap: 10,
-    marginVertical: 12,
+    gap: spacing.md,
+    marginVertical: spacing.md,
   },
   title: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
+    ...typography.bodyStrong,
   },
   text: {
-    color: colors.textMuted,
+    ...typography.meta,
     textAlign: 'center',
+    fontSize: 14,
     lineHeight: 20,
   },
   retry: {
-    marginTop: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.primary,
-  },
-  retryText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
+    alignSelf: 'center',
+    minWidth: 120,
+    marginTop: spacing.xs,
   },
 });

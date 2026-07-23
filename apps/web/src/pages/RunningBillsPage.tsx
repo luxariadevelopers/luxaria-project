@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   applyRunningBillClientFilters,
   hasRunningBillClientFilters,
@@ -108,30 +109,20 @@ export function RunningBillsPage() {
 
   return (
     <Stack spacing={2} data-testid="running-bills-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-        }}
-      >
-        <div>
-          <Typography variant="h5">Running bills</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Contractor RA claim work queue — certified value, deductions, payable.
-          </Typography>
-        </div>
-        {caps.canCreate ? (
-          <Button
-            variant="contained"
-            onClick={() => navigate('/contractors/running-bills/new')}
-            data-testid="running-bill-create"
-          >
-            New running bill
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Contractor RA claim work queue — certified value, deductions, payable."
+        actions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              onClick={() => navigate('/contractors/running-bills/new')}
+              data-testid="running-bill-create"
+            >
+              New running bill
+            </Button>
+          ) : undefined
+        }
+      />
 
       <RunningBillTable
         rows={clientFiltered}

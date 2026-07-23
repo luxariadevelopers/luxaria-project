@@ -153,6 +153,11 @@ export function RoleUserAssignmentPanel({
                 setUsagePage(1);
               }}
               getRowId={(user) => user.id}
+              mobileCard={{
+                primaryField: 'fullName',
+                metaFields: ['userCode', 'email'],
+                statusField: 'status',
+              }}
               height={330}
               showColumnVisibility={false}
             />

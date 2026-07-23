@@ -1,5 +1,13 @@
 export { DataTable } from './DataTable';
-export type { DataTableProps, DataTableRowAction } from './types';
+export type {
+  DataTableMobileCardConfig,
+  DataTableProps,
+  DataTableRowAction,
+} from './types';
+export {
+  getMobileCellText,
+  resolveMobileCardFields,
+} from './mobileCard';
 export {
   DEFAULT_LIST_PAGE_SIZE,
   LIST_PAGE_SIZE_OPTIONS,

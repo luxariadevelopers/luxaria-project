@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Alert,
   Box,
@@ -105,7 +106,7 @@ export function EditMaterialDrawer({ open, onClose, material }: Props) {
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box

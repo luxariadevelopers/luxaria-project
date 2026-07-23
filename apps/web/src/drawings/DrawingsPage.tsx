@@ -1,20 +1,13 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
-import { listDrawings } from '@/drawings/api';
+import { PageHeader } from '@/layouts/PageHeader';
+import { listDrawings, type Drawing } from '@/drawings/api';
 
 export function DrawingsPage() {
   const { hasPermission } = useAuth();
@@ -31,59 +24,76 @@ export function DrawingsPage() {
     enabled: canView && Boolean(selectedProjectId),
   });
 
+  const columns = useMemo<GridColDef<Drawing>[]>(
+    () => [
+      {
+        field: 'drawingNumber',
+        headerName: 'Drawing #',
+        width: 140,
+      },
+      {
+        field: 'title',
+        headerName: 'Title',
+        flex: 1,
+        minWidth: 180,
+      },
+      {
+        field: 'discipline',
+        headerName: 'Discipline',
+        width: 140,
+        valueGetter: (_v, row) => row.discipline || '—',
+      },
+      {
+        field: 'revision',
+        headerName: 'Rev',
+        width: 80,
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params) => (
+          <Chip size="small" label={params.row.status} />
+        ),
+      },
+    ],
+    [],
+  );
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return <Alert severity="info">Select a project to view drawings.</Alert>;
   }
   if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
+    return (
+      <RetryPanel error={query.error} onRetry={() => void query.refetch()} />
+    );
   }
 
   const rows = query.data ?? [];
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Drawing Register</Typography>
-      <Typography variant="body2" color="text.secondary">
-        Latest revisions only. Upload a new revision to supersede the previous
-        issue. Files are stored via the documents module.
-      </Typography>
-      <Paper variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Drawing #</TableCell>
-              <TableCell>Title</TableCell>
-              <TableCell>Discipline</TableCell>
-              <TableCell>Rev</TableCell>
-              <TableCell>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No drawings yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.drawingNumber}</TableCell>
-                  <TableCell>{row.title}</TableCell>
-                  <TableCell>{row.discipline || '—'}</TableCell>
-                  <TableCell>{row.revision}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={row.status} />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+      <PageHeader
+        subtitle="Latest revisions only. Upload a new revision to supersede the previous issue. Files are stored via the documents module."
+      />
+      <DataTable
+        title="Drawings"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No drawings"
+        emptyDescription="No drawings yet."
+        height={520}
+        paginationMode="client"
+        mobileCard={{
+          primaryField: 'drawingNumber',
+          metaFields: ['title', 'revision'],
+          statusField: 'status',
+        }}
+        showColumnVisibility={false}
+      />
     </Stack>
   );
 }

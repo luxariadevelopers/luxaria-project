@@ -1,23 +1,23 @@
 import { useCallback, useState } from 'react';
 import {
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
 import { resolvePettyCashTransferCapabilities } from '@/petty-cash-transfers';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { listPettyCashRequirements } from './api';
 import { BalanceCard } from './BalanceCard';
 import {
@@ -160,7 +160,7 @@ export function PettyCashHomeScreen({ navigation }: Props) {
               previousUnsettledTotal={unsettledTotal}
             />
           ) : (
-            <View style={styles.noteCard}>
+            <FormSection title="Balances">
               <Text style={styles.noteText}>
                 Cash balances require cash.view. You can still open requests and
                 transfers with your petty-cash permissions.
@@ -170,37 +170,34 @@ export function PettyCashHomeScreen({ navigation }: Props) {
                   Previous unsettled (from requests): recorded on open weeks.
                 </Text>
               ) : null}
-            </View>
+            </FormSection>
           )}
 
-          <Text style={styles.section}>Actions</Text>
-
-          {caps.canView ? (
-            <Pressable
-              style={styles.linkBtn}
-              onPress={() => navigation.navigate('PettyCashList')}
-            >
-              <Text style={styles.linkBtnText}>Request list</Text>
-            </Pressable>
-          ) : null}
-
-          {caps.canRequest ? (
-            <Pressable
-              style={styles.primaryBtn}
-              onPress={() => navigation.navigate('PettyCashForm')}
-            >
-              <Text style={styles.primaryBtnText}>New request</Text>
-            </Pressable>
-          ) : null}
-
-          {transferCaps.canView ? (
-            <Pressable
-              style={styles.linkBtn}
-              onPress={() => navigation.navigate('PettyCashTransfersList')}
-            >
-              <Text style={styles.linkBtnText}>Fund transfers</Text>
-            </Pressable>
-          ) : null}
+          <FormSection title="Actions" framed={false}>
+            {caps.canView ? (
+              <Button
+                label="Request list"
+                variant="secondary"
+                onPress={() => navigation.navigate('PettyCashList')}
+                style={styles.action}
+              />
+            ) : null}
+            {caps.canRequest ? (
+              <Button
+                label="New request"
+                onPress={() => navigation.navigate('PettyCashForm')}
+                style={styles.action}
+              />
+            ) : null}
+            {transferCaps.canView ? (
+              <Button
+                label="Fund transfers"
+                variant="secondary"
+                onPress={() => navigation.navigate('PettyCashTransfersList')}
+                style={styles.action}
+              />
+            ) : null}
+          </FormSection>
         </ScrollView>
       )}
     </Screen>
@@ -208,38 +205,8 @@ export function PettyCashHomeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 32 },
-  noteCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 14,
-    marginBottom: 14,
-  },
-  noteText: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
-  unsettled: { marginTop: 8, color: colors.text },
-  section: {
-    color: colors.textMuted,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  linkBtn: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  linkBtnText: { color: colors.text, fontWeight: '700' },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  primaryBtnText: { color: '#F4F0E6', fontWeight: '700' },
+  scroll: { paddingBottom: spacing.xxxl },
+  noteText: { ...typography.meta, fontSize: 14, lineHeight: 20 },
+  unsettled: { marginTop: spacing.sm, color: colors.text },
+  action: { marginBottom: spacing.sm },
 });

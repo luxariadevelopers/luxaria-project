@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/api/errors';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
 import { useNotify } from '@/components/NotificationProvider';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   createSiteSafety,
   updateSiteSafety,
@@ -208,7 +209,7 @@ export function SiteSafetyFormDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 460 } } },
+        paper: { sx: formDrawerPaperSx(460) },
       }}
     >
       <Box

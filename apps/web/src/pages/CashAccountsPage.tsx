@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -25,6 +25,7 @@ import {
   RetryPanel,
 } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 
 type HandoverMode = 'transfer' | 'confirm' | 'cancel';
 
@@ -148,22 +149,17 @@ export function CashAccountsPage() {
 
   return (
     <Stack spacing={2} data-testid="cash-accounts-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Typography color="text.secondary">
-          Site cash and petty-cash floats with custodian accountability. One
-          active custodian per open account; changes require dual handover
-          confirmation. Close requires a zero system balance.
-        </Typography>
-        {caps.canManage ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            New cash account
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Cash accounts"
+        subtitle="Site cash and petty-cash floats with custodian accountability. One active custodian per open account; changes require dual handover confirmation. Close requires a zero system balance."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New cash account
+            </Button>
+          ) : undefined
+        }
+      />
 
       {list.error ? (
         <RetryPanel

@@ -206,6 +206,11 @@ export function CustomerTable({
       onSearchChange={onSearchChange}
       searchPlaceholder="Search name, code, PAN, phone…"
       preferencesKey="customers-list"
+      mobileCard={{
+        primaryField: 'fullName',
+        metaFields: ['customerCode', 'phone'],
+        statusField: 'status',
+      }}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}

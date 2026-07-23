@@ -34,6 +34,7 @@ import {
   useAllocatableDemands,
   useCreateCustomerReceipt,
 } from './useCustomerReceipts';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   customerReceiptCreateSchema,
   isDuplicateTransactionReferenceMessage,
@@ -180,7 +181,7 @@ export function ReceiptForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 480 } } },
+        paper: { sx: formDrawerPaperSx(480) },
       }}
     >
       <Box

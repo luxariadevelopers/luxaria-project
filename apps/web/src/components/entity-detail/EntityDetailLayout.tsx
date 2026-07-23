@@ -79,7 +79,11 @@ export function EntityDetailLayout({
   }
 
   return (
-    <Stack spacing={2.5} data-testid="entity-detail-layout">
+    <Stack
+      spacing={{ xs: 2, sm: 2.5 }}
+      data-testid="entity-detail-layout"
+      sx={{ minWidth: 0, pb: { xs: actionBar ? 1 : 0, sm: 0 } }}
+    >
       {header}
       {statusStrip}
       {actionBar}

@@ -1,17 +1,17 @@
 import { useEffect } from 'react';
 import {
   Alert,
+  Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
+  Divider,
+  Drawer,
   Stack,
+  Typography,
 } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { FormTextField } from '@/components/forms/FormTextField';
 import {
   cloneRoleSchema,
@@ -56,27 +56,31 @@ export function CloneRoleDialog({
   }, [open, reset, sourceName]);
 
   return (
-    <Dialog
+    <Drawer
+      anchor="right"
       open={open}
       onClose={loading ? undefined : onClose}
-      maxWidth="sm"
-      fullWidth
+      slotProps={{ paper: { sx: formDrawerPaperSx(440) } }}
     >
-      <DialogTitle>Clone role</DialogTitle>
-      <DialogContent>
-        <Stack
-          component="form"
-          id="clone-role-form"
-          spacing={2}
-          sx={{ pt: 0.5 }}
-          onSubmit={(event) => {
-            void handleSubmit(onSubmit)(event);
-          }}
-        >
-          <DialogContentText>
+      <Box
+        component="form"
+        id="clone-role-form"
+        onSubmit={(event) => {
+          void handleSubmit(onSubmit)(event);
+        }}
+        sx={{
+          p: 3,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Typography variant="h6">Clone role</Typography>
+          <Typography variant="body2" color="text.secondary">
             Permissions are copied from {sourceName}. Permission bypass is
             never copied by the server.
-          </DialogContentText>
+          </Typography>
           {serverError ? (
             <Alert severity="error">
               {getErrorMessage(serverError, 'Role clone failed')}
@@ -102,20 +106,16 @@ export function CloneRoleDialog({
             minRows={2}
           />
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          form="clone-role-form"
-          variant="contained"
-          disabled={loading}
-        >
-          {loading ? 'Cloning…' : 'Clone role'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <Divider sx={{ my: 2 }} />
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="contained" disabled={loading}>
+            {loading ? 'Cloning…' : 'Clone role'}
+          </Button>
+        </Stack>
+      </Box>
+    </Drawer>
   );
 }

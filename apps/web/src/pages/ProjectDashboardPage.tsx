@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Link as RouterLink,
   Navigate,
   useNavigate,
   useParams,
 } from 'react-router-dom';
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Stack } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import {
   EmptyState,
@@ -115,27 +116,19 @@ export function ProjectDashboardPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-        }}
-      >
-        <Typography color="text.secondary">
-          Project manager command screen — progress, budget, commitments,
-          stock, labour, DPR alerts, cash and site photos.
-        </Typography>
-        <Button
-          component={RouterLink}
-          to="/projects"
-          size="small"
-          variant="text"
-        >
-          Projects list
-        </Button>
-      </Stack>
+      <PageHeader
+        subtitle="Project manager command screen — progress, budget, commitments, stock, labour, DPR alerts, cash and site photos."
+        actions={
+          <Button
+            component={RouterLink}
+            to="/projects"
+            size="small"
+            variant="text"
+          >
+            Projects list
+          </Button>
+        }
+      />
 
       {dashboardQuery.isError ? (
         <RetryPanel

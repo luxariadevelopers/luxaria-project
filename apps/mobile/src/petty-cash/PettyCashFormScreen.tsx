@@ -1,23 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import { formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { createPettyCashRequirement, submitPettyCashRequirement } from './api';
 import { fetchPettyCashAccounts } from './cashBalanceApi';
 import { resolvePettyCashCapabilities } from './permissions';
@@ -259,34 +255,32 @@ export function PettyCashFormScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.label}>Petty-cash account</Text>
-        {loadingAccounts ? (
-          <Text style={styles.hint}>Loading accounts…</Text>
-        ) : (
-          accounts.map((a) => {
-            const selectedRow = a.id === accountId;
-            return (
-              <Pressable
-                key={a.id}
-                style={[styles.chip, selectedRow && styles.chipActive]}
-                onPress={() => setAccountId(a.id)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selectedRow && styles.chipTextActive,
-                  ]}
-                >
-                  {a.accountCode} · {a.accountName}
-                </Text>
-              </Pressable>
-            );
-          })
-        )}
+        <FormSection title="Petty-cash account">
+          {loadingAccounts ? (
+            <Text style={styles.hint}>Loading accounts…</Text>
+          ) : (
+            <View style={styles.chipWrap}>
+              {accounts.map((a) => (
+                <Chip
+                  key={a.id}
+                  label={`${a.accountCode} · ${a.accountName}`}
+                  selected={a.id === accountId}
+                  onPress={() => setAccountId(a.id)}
+                  style={styles.chip}
+                />
+              ))}
+            </View>
+          )}
+        </FormSection>
 
-        <View style={styles.rowBetween}>
-          <Text style={styles.section}>Requirement items</Text>
-          <Pressable
+        <FormSection
+          title="Requirement items"
+          description="Each category (e.g. Labour) can only appear on one line."
+          framed={false}
+        >
+          <Button
+            label="+ Add item"
+            variant="ghost"
             disabled={!nextUnusedCategory}
             onPress={() => {
               if (!nextUnusedCategory) return;
@@ -295,177 +289,98 @@ export function PettyCashFormScreen({ navigation }: Props) {
                 newLine({ expenseCategory: nextUnusedCategory.value }),
               ]);
             }}
-            style={[styles.addBtn, !nextUnusedCategory && styles.disabled]}
-          >
-            <Text style={styles.addBtnText}>+ Add item</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.hint}>
-          Each category (e.g. Labour) can only appear on one line.
-        </Text>
+            style={styles.addBtn}
+          />
 
-        {items.map((row, index) => (
-          <View key={row.key} style={styles.itemCard}>
-            <Text style={styles.itemTitle}>Item {index + 1}</Text>
-            <Text style={styles.label}>Category</Text>
-            <View style={styles.chipWrap}>
-              {CATEGORY_OPTIONS.map((opt) => {
-                const selectedCat = opt.value === row.expenseCategory;
-                const takenByOther =
-                  usedCategories.has(opt.value) && !selectedCat;
-                return (
-                  <Pressable
-                    key={opt.value}
-                    disabled={takenByOther}
-                    style={[
-                      styles.chip,
-                      selectedCat && styles.chipActive,
-                      takenByOther && styles.chipDisabled,
-                    ]}
-                    onPress={() =>
-                      updateItem(row.key, { expenseCategory: opt.value })
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedCat && styles.chipTextActive,
-                        takenByOther && styles.chipTextDisabled,
-                      ]}
-                    >
-                      {opt.label}
-                      {takenByOther ? ' (used)' : ''}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={styles.input}
-              value={row.description}
-              onChangeText={(v) => updateItem(row.key, { description: v })}
-              placeholder="What the cash is for"
-              placeholderTextColor={colors.textMuted}
-            />
-            <Text style={styles.label}>Amount</Text>
-            <TextInput
-              style={styles.input}
-              value={row.estimatedAmount}
-              onChangeText={(v) =>
-                updateItem(row.key, { estimatedAmount: v })
-              }
-              keyboardType="decimal-pad"
-            />
-            {items.length > 1 ? (
-              <Pressable
-                onPress={() =>
-                  setItems((prev) => prev.filter((r) => r.key !== row.key))
+          {items.map((row, index) => (
+            <FormSection key={row.key} title={`Item ${index + 1}`}>
+              <Text style={styles.label}>Category</Text>
+              <View style={styles.chipWrap}>
+                {CATEGORY_OPTIONS.map((opt) => {
+                  const selectedCat = opt.value === row.expenseCategory;
+                  const takenByOther =
+                    usedCategories.has(opt.value) && !selectedCat;
+                  return (
+                    <Chip
+                      key={opt.value}
+                      label={takenByOther ? `${opt.label} (used)` : opt.label}
+                      selected={selectedCat}
+                      disabled={takenByOther}
+                      onPress={() =>
+                        updateItem(row.key, { expenseCategory: opt.value })
+                      }
+                      style={styles.chip}
+                    />
+                  );
+                })}
+              </View>
+              <TextField
+                label="Description"
+                value={row.description}
+                onChangeText={(v) => updateItem(row.key, { description: v })}
+                placeholder="What the cash is for"
+              />
+              <TextField
+                label="Amount"
+                value={row.estimatedAmount}
+                onChangeText={(v) =>
+                  updateItem(row.key, { estimatedAmount: v })
                 }
-                style={styles.removeBtn}
-              >
-                <Text style={styles.removeText}>Remove item</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ))}
+                keyboardType="decimal-pad"
+              />
+              {items.length > 1 ? (
+                <Button
+                  label="Remove item"
+                  variant="danger"
+                  onPress={() =>
+                    setItems((prev) => prev.filter((r) => r.key !== row.key))
+                  }
+                />
+              ) : null}
+            </FormSection>
+          ))}
+        </FormSection>
 
-        <Text style={styles.total}>
-          Requested total: {formatInr(total)}
-        </Text>
+        <Text style={styles.total}>Requested total: {formatInr(total)}</Text>
 
-        <Text style={styles.label}>Justification (required)</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={justification}
-          onChangeText={setJustification}
-          multiline
-          placeholder="Why this week’s float is needed — for PM/finance approval"
-          placeholderTextColor={colors.textMuted}
-        />
-        <Text style={styles.hint}>
-          Required by the server for approval. Line items alone are not enough.
-        </Text>
+        <FormSection title="Approval">
+          <TextField
+            label="Justification (required)"
+            value={justification}
+            onChangeText={setJustification}
+            multiline
+            style={styles.multiline}
+            placeholder="Why this week’s float is needed — for PM/finance approval"
+          />
+          <Text style={styles.hint}>
+            Required by the server for approval. Line items alone are not
+            enough.
+          </Text>
+        </FormSection>
 
-        <Pressable
-          style={[styles.submit, (saving || loadingAccounts) && styles.disabled]}
+        <Button
+          label="Create & submit"
+          loading={saving || loadingAccounts}
           disabled={saving || loadingAccounts}
           onPress={() => void submit()}
-        >
-          <Text style={styles.submitText}>
-            {saving ? 'Saving…' : 'Create & submit'}
-          </Text>
-        </Pressable>
+        />
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 40 },
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  section: {
-    color: colors.text,
-    fontWeight: '700',
-    marginTop: 16,
-    fontSize: 15,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  addBtn: { paddingVertical: 8, paddingHorizontal: 4 },
-  addBtnText: { color: colors.primary, fontWeight: '700' },
-  itemCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 12,
-    marginTop: 10,
-  },
-  itemTitle: { color: colors.text, fontWeight: '700', marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
+  scroll: { paddingBottom: spacing.xxxl },
+  label: { ...typography.label, marginBottom: spacing.sm },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { marginBottom: spacing.xs },
+  addBtn: { alignSelf: 'flex-start', marginBottom: spacing.sm },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.surface,
-    marginBottom: 6,
-    marginRight: 6,
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: '#E8EEF1' },
-  chipDisabled: { opacity: 0.45 },
-  chipText: { color: colors.text, fontSize: 13 },
-  chipTextActive: { fontWeight: '700' },
-  chipTextDisabled: { color: colors.textMuted },
-  removeBtn: { marginTop: 10 },
-  removeText: { color: colors.danger, fontWeight: '600' },
   total: {
-    marginTop: 12,
-    color: colors.text,
-    fontWeight: '700',
+    ...typography.bodyStrong,
     textAlign: 'right',
+    marginBottom: spacing.lg,
   },
-  hint: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
-  submit: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: colors.danger, marginBottom: 8 },
+  hint: { ...typography.meta, fontSize: 12, marginTop: spacing.xs },
+  error: { color: colors.danger, marginBottom: spacing.sm },
 });

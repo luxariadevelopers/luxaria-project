@@ -20,6 +20,7 @@ import {
   useWatch,
 } from 'react-hook-form';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { FormTextField } from '@/components/forms/FormTextField';
 import { RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
@@ -241,7 +242,7 @@ export function QuotationEntryDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', md: 720 } } },
+        paper: { sx: formDrawerPaperSx({ sm: 720, md: 720 }) },
       }}
     >
       <Box

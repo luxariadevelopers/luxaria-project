@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   Alert,
   Button,
@@ -103,24 +104,16 @@ export function ContractorRecoveriesPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
-      >
-        <div>
-          <Typography variant="h5">Contractor Recoveries</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Advances, retention, material, TDS and manual recoveries against
-            contractors. Draft → approve → post (optionally onto a bill).
-          </Typography>
-        </div>
-        {caps.canManage ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            New recovery
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Advances, retention, material, TDS and manual recoveries against contractors. Draft → approve → post (optionally onto a bill)."
+        actions={
+          caps.canManage ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New recovery
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <TextField

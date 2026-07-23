@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState, PermissionDenied } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { CancelInspectionDialog } from '@/quality-inspections/CancelInspectionDialog';
 import { InspectionForm } from '@/quality-inspections/InspectionForm';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   QualityInspectionFilters,
   type QualityInspectionFilterState,
@@ -93,10 +94,9 @@ export function QualityInspectionsPage() {
 
   return (
     <Stack spacing={2} data-testid="quality-inspections-page">
-      <Typography color="text.secondary">
-        Review and record material quality decisions against goods receipts.
-        Completing an inspection updates the GRN and vendor quality score.
-      </Typography>
+      <PageHeader
+        subtitle="Review and record material quality decisions against goods receipts. Completing an inspection updates the GRN and vendor quality score."
+      />
 
       <QualityInspectionTable
         rows={inspectionsQuery.data?.items ?? []}

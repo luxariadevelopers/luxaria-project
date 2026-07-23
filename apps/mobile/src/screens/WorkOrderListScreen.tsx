@@ -1,25 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
-import { Screen } from '@/components/Screen';
+import { ListRow } from '@/components/ListRow';
+import { ListScreen } from '@/components/ListScreen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
 import { fetchWorkOrders, type PublicWorkOrder } from '@/work-orders/api';
-import {
-  EmptyPanel,
-  ErrorPanel,
-  ForbiddenPanel,
-  LoadingPanel,
-} from '@/work-measurement/components/StatePanels';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkOrderList'>;
 
@@ -30,30 +19,34 @@ export function WorkOrderListScreen(_props: Props) {
   const canView = hasPermission('work_order.view');
 
   const [items, setItems] = useState<PublicWorkOrder[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<unknown>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   const load = useCallback(
     async (mode: 'initial' | 'refresh' = 'initial') => {
-      if (!canView) return;
+      if (!canView) {
+        setForbidden(true);
+        setError('Missing permission work_order.view');
+        setLoading(false);
+        return;
+      }
       if (!selectedProject?.id) {
-        setItems([]);
-        setError(null);
+        setError('Select a project first');
+        setLoading(false);
         return;
       }
       if (!isOnline) {
-        setError(
-          new Error(
-            'Work orders require a network connection to load.',
-          ),
-        );
+        setError('Work orders require a network connection to load.');
+        setLoading(false);
         return;
       }
 
       if (mode === 'refresh') setRefreshing(true);
       else setLoading(true);
       setError(null);
+      setForbidden(false);
       try {
         const result = await fetchWorkOrders({
           projectId: selectedProject.id,
@@ -62,7 +55,8 @@ export function WorkOrderListScreen(_props: Props) {
         });
         setItems(result.items);
       } catch (err) {
-        setError(err);
+        setForbidden(isForbiddenError(err));
+        setError(getErrorMessage(err, 'Could not load work orders'));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -71,77 +65,36 @@ export function WorkOrderListScreen(_props: Props) {
     [canView, isOnline, selectedProject?.id],
   );
 
-  useEffect(() => {
-    void load('initial');
-  }, [load]);
-
-  if (!canView) {
-    return (
-      <Screen title="Work orders" subtitle="Assigned scope">
-        <ForbiddenPanel message="Missing permission work_order.view" />
-      </Screen>
-    );
-  }
+  useFocusEffect(
+    useCallback(() => {
+      void load('initial');
+    }, [load]),
+  );
 
   return (
-    <Screen
+    <ListScreen
       title="Work orders"
       subtitle={
         selectedProject
           ? `${selectedProject.projectCode} · issued / in progress`
           : 'Select a project'
       }
-      scroll={false}
-    >
-      {loading ? <LoadingPanel /> : null}
-      {error ? (
-        <ErrorPanel error={error} onRetry={() => void load('initial')} />
-      ) : null}
-      {!loading && !error && items.length === 0 ? (
-        <EmptyPanel
-          title="No work orders"
-          description="No work orders for this project."
+      data={items}
+      keyExtractor={(item) => item.id}
+      loading={loading}
+      refreshing={refreshing}
+      onRefresh={() => void load('refresh')}
+      error={error}
+      forbidden={forbidden}
+      emptyLabel="No work orders for this project"
+      onRetry={() => void load('initial')}
+      renderItem={({ item }) => (
+        <ListRow
+          title={item.workOrderNumber}
+          meta={`${item.startDate.slice(0, 10)} → ${item.endDate.slice(0, 10)} · value ${Number(item.contractValue).toLocaleString()}`}
+          status={item.status.replace(/_/g, ' ')}
         />
-      ) : null}
-      {!loading && !error && items.length > 0 ? (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void load('refresh')}
-            />
-          }
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.code}>{item.workOrderNumber}</Text>
-              <Text style={styles.meta}>
-                {item.status.replace(/_/g, ' ')} · value{' '}
-                {Number(item.contractValue).toLocaleString()}
-              </Text>
-              <Text style={styles.dates}>
-                {item.startDate.slice(0, 10)} → {item.endDate.slice(0, 10)}
-              </Text>
-            </View>
-          )}
-        />
-      ) : null}
-    </Screen>
+      )}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  list: { padding: 16, gap: 10, paddingBottom: 40 },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  code: { fontSize: 16, fontWeight: '600', color: colors.text },
-  meta: { marginTop: 4, fontSize: 13, color: colors.textMuted },
-  dates: { marginTop: 2, fontSize: 12, color: colors.textMuted },
-});

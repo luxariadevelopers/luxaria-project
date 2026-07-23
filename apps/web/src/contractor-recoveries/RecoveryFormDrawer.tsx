@@ -12,6 +12,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { RECOVERY_TYPE_OPTIONS } from './labels';
 import type { PublicContractorRecovery } from './api';
 import { useCreateContractorRecovery } from './useContractorRecoveries';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   defaultRecoveryFormValues,
   formValuesToCreateInput,
@@ -73,7 +74,7 @@ export function RecoveryFormDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 480 } } },
+        paper: { sx: formDrawerPaperSx(480) },
       }}
     >
       <Box

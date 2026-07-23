@@ -1,18 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
-import { AsyncStatePanel } from '@/components/AsyncStatePanel';
-import { Screen } from '@/components/Screen';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { ListRow } from '@/components/ListRow';
+import { ListScreen, ListScreenHeader } from '@/components/ListScreen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import { fetchDirectors } from '@/directors/api';
@@ -21,7 +16,7 @@ import { formatDate, formatInr } from '@/format';
 import { fetchJournal, resolveJournalCapabilities } from '@/journals';
 import type { PublicJournalEntry } from '@/journals/types';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 import { fetchCashBankBook, fetchFinancialYearOptions } from './api';
 import { resolveProjectFinanceCapabilities } from './permissions';
 import {
@@ -90,7 +85,6 @@ export function ProjectFinanceListScreen({ navigation }: Props) {
         const [bank, cash, companyBank] = await Promise.all([
           fetchCashBankBook('bank-book', bookQuery),
           fetchCashBankBook('cash-book', bookQuery),
-          // Company bank (no project) — share capital receipts live here.
           fetchCashBankBook('bank-book', { financialYearId: fyId }),
         ]);
 
@@ -178,229 +172,142 @@ export function ProjectFinanceListScreen({ navigation }: Props) {
     navigation.navigate('ProjectFinanceEntry', { kind });
   };
 
-  const showList = !loading && !error && !forbidden;
-
   return (
-    <Screen
+    <ListScreen
       title="Expense & income"
       subtitle={
         selectedProject ? selectedProject.projectCode : 'Select a project'
       }
-      scroll={false}
-    >
-      {journalCaps.canCreate ? (
-        <View style={styles.actionBar} testID="project-finance-actions">
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => openEntry('income')}
-            accessibilityRole="button"
-            accessibilityLabel="Add income"
-          >
-            <Text style={styles.actionBtnText}>Income</Text>
-          </Pressable>
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => openEntry('expense')}
-            accessibilityRole="button"
-            accessibilityLabel="Add expense"
-          >
-            <Text style={styles.actionBtnText}>Expense</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.actionBtn, styles.actionBtnTransfer]}
-            onPress={() => openEntry('transfer')}
-            accessibilityRole="button"
-            accessibilityLabel="Add transfer"
-          >
-            <Text style={styles.actionBtnText}>Transfer</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {loading || error || forbidden ? (
-        <AsyncStatePanel
-          loading={loading}
-          error={error}
-          forbidden={forbidden}
-          empty={false}
-          emptyLabel="No bank/cash entries yet"
-          onRetry={() => void load('initial')}
-        />
-      ) : null}
-
-      {showList ? (
-        <>
-          <View style={styles.summary}>
-            <View style={styles.kpiRow}>
-              <View style={styles.kpi}>
-                <Text style={styles.kpiLabel}>Income</Text>
-                <Text style={styles.kpiValue}>
-                  {formatInr(summary.income)}
-                </Text>
+      header={
+        !loading && !error && !forbidden ? (
+          <ListScreenHeader>
+            {journalCaps.canCreate ? (
+              <View style={styles.actionBar} testID="project-finance-actions">
+                <Button
+                  label="Income"
+                  onPress={() => openEntry('income')}
+                  style={styles.actionBtn}
+                />
+                <Button
+                  label="Expense"
+                  onPress={() => openEntry('expense')}
+                  style={styles.actionBtn}
+                />
+                <Button
+                  label="Transfer"
+                  variant="secondary"
+                  onPress={() => openEntry('transfer')}
+                  style={styles.actionBtn}
+                />
               </View>
-              <View style={styles.kpi}>
-                <Text style={styles.kpiLabel}>Expense</Text>
-                <Text style={styles.kpiValue}>
-                  {formatInr(summary.expense)}
-                </Text>
-              </View>
-              <View style={styles.kpi}>
-                <Text style={styles.kpiLabel}>Net</Text>
-                <Text style={styles.kpiValue}>{formatInr(summary.net)}</Text>
-              </View>
-            </View>
-            <Text style={styles.breakdown}>
-              Capital {formatInr(summary.capitalIncome)} · Loans{' '}
-              {formatInr(summary.loanIncome)} · Other{' '}
-              {formatInr(summary.otherIncome)}
-            </Text>
-          </View>
+            ) : null}
 
-          <View style={styles.filters}>
-            {(
-              [
-                ['all', 'All'],
-                ['income', 'Income'],
-                ['expense', 'Expense'],
-                ['transfer', 'Transfer'],
-              ] as const
-            ).map(([id, label]) => {
-              const selected = filterKind === id;
-              return (
-                <Pressable
-                  key={id}
-                  style={[styles.filterChip, selected && styles.filterSelected]}
-                  onPress={() => setFilterKind(id)}
-                >
-                  <Text
-                    style={[
-                      styles.filterText,
-                      selected && styles.filterTextSelected,
-                    ]}
-                  >
-                    {label}
+            <View style={styles.summary}>
+              <View style={styles.kpiRow}>
+                <View style={styles.kpi}>
+                  <Text style={styles.kpiLabel}>Income</Text>
+                  <Text style={styles.kpiValue}>
+                    {formatInr(summary.income)}
                   </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <FlatList
-            data={visibleRows}
-            keyExtractor={(item) => item.id}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => void load('refresh')}
-                tintColor={colors.primary}
-              />
-            }
-            ListEmptyComponent={
-              <Text style={styles.empty}>
-                No {filterKind === 'all' ? 'bank/cash' : filterKind} entries yet.
-                Use Income, Expense, or Transfer above.
+                </View>
+                <View style={styles.kpi}>
+                  <Text style={styles.kpiLabel}>Expense</Text>
+                  <Text style={styles.kpiValue}>
+                    {formatInr(summary.expense)}
+                  </Text>
+                </View>
+                <View style={styles.kpi}>
+                  <Text style={styles.kpiLabel}>Net</Text>
+                  <Text style={styles.kpiValue}>{formatInr(summary.net)}</Text>
+                </View>
+              </View>
+              <Text style={styles.breakdown}>
+                Capital {formatInr(summary.capitalIncome)} · Loans{' '}
+                {formatInr(summary.loanIncome)} · Other{' '}
+                {formatInr(summary.otherIncome)}
               </Text>
-            }
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.card}
-                onPress={() =>
-                  navigation.navigate('JournalDetail', {
-                    journalId: item.journalId,
-                  })
-                }
-              >
-                <Text style={styles.code}>
-                  {financeRowVoucherLabel(item) ?? '—'} ·{' '}
-                  {financeRowTypeLabel(item)}
-                </Text>
-                <Text style={styles.meta}>
-                  {formatDate(item.journalDate)} · {item.book} ·{' '}
-                  {formatInr(item.amount)}
-                </Text>
-                <Text style={styles.meta} numberOfLines={2}>
-                  {item.accountCode} · {item.narration}
-                </Text>
-              </Pressable>
-            )}
-          />
-        </>
-      ) : null}
-    </Screen>
+            </View>
+
+            <View style={styles.filters}>
+              {(
+                [
+                  ['all', 'All'],
+                  ['income', 'Income'],
+                  ['expense', 'Expense'],
+                  ['transfer', 'Transfer'],
+                ] as const
+              ).map(([id, label]) => (
+                <Chip
+                  key={id}
+                  label={label}
+                  selected={filterKind === id}
+                  onPress={() => setFilterKind(id)}
+                />
+              ))}
+            </View>
+          </ListScreenHeader>
+        ) : null
+      }
+      data={visibleRows}
+      keyExtractor={(item) => item.id}
+      loading={loading}
+      refreshing={refreshing}
+      onRefresh={() => void load('refresh')}
+      error={error}
+      forbidden={forbidden}
+      emptyLabel={
+        filterKind === 'all'
+          ? 'No bank/cash entries yet. Use Income, Expense, or Transfer above.'
+          : `No ${filterKind} entries yet.`
+      }
+      onRetry={() => void load('initial')}
+      renderItem={({ item }) => (
+        <ListRow
+          title={`${financeRowVoucherLabel(item) ?? '—'} · ${financeRowTypeLabel(item)}`}
+          meta={`${formatDate(item.journalDate)} · ${item.book} · ${formatInr(item.amount)} · ${item.accountCode} · ${item.narration}`}
+          onPress={() =>
+            navigation.navigate('JournalDetail', {
+              journalId: item.journalId,
+            })
+          }
+        />
+      )}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   actionBar: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  actionBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 4,
-  },
-  actionBtnTransfer: {
-    backgroundColor: '#1B3A4B',
-  },
-  actionBtnText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  actionBtn: { flex: 1 },
   summary: {
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  kpiRow: { flexDirection: 'row', gap: 8 },
+  kpiRow: { flexDirection: 'row', gap: spacing.sm },
   kpi: { flex: 1 },
-  kpiLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  kpiValue: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 2 },
+  kpiLabel: { ...typography.label, color: colors.textMuted, fontSize: 11 },
+  kpiValue: {
+    ...typography.bodyStrong,
+    fontSize: 13,
+    marginTop: 2,
+  },
   breakdown: {
-    color: colors.textMuted,
+    ...typography.meta,
     fontSize: 11,
-    marginTop: 10,
+    marginTop: spacing.sm,
     lineHeight: 16,
   },
   filters: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
   },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-  },
-  filterSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  filterText: { color: colors.text, fontSize: 12, fontWeight: '600' },
-  filterTextSelected: { color: '#F4F0E6' },
-  empty: {
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: 24,
-    paddingHorizontal: 16,
-    fontSize: 14,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 14,
-    marginBottom: 10,
-  },
-  code: { color: colors.text, fontWeight: '700', fontSize: 15 },
-  meta: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
 });

@@ -72,6 +72,11 @@ export function CustomerWarrantyTable({
       onPageSizeChange={onPageSizeChange}
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
+      mobileCard={{
+        primaryField: 'ticketNumber',
+        metaFields: ['category', 'raisedAt'],
+        statusField: 'status',
+      }}
     />
   );
 }

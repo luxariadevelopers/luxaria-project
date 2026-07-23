@@ -1,7 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import {
   ApprovalDetailScreen,
   ApprovalsListScreen,
@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/auth/AuthContext';
 import { shouldForceChangePassword } from '@/auth/shouldForceChangePassword';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { TabIcon } from '@/components/TabIcon';
 import { useProject } from '@/context/ProjectContext';
 import { DprDetailScreen, DprListScreen } from '@/dpr';
 import {
@@ -21,6 +22,7 @@ import {
   LabourVoucherHistoryScreen,
   NewLabourVoucherScreen,
 } from '@/labour-vouchers';
+import { useOfflineSync } from '@/offline';
 import {
   PettyCashDetailScreen,
   PettyCashFormScreen,
@@ -102,7 +104,7 @@ import {
   UsersListScreen,
 } from '@/user-admin';
 import { appNavigationRef } from '@/navigation/navigationRef';
-import { colors } from '@/theme/colors';
+import { colors, typography } from '@/theme';
 import type {
   AppStackParamList,
   AuthStackParamList,
@@ -113,11 +115,13 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
+const TAB_BAR_HEIGHT = 49;
+
 function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   return (
     <Text
       style={{
-        fontSize: 11,
+        ...typography.tab,
         fontWeight: focused ? '700' : '500',
         color: focused ? colors.primary : colors.textMuted,
       }}
@@ -128,6 +132,8 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 }
 
 function MainTabs() {
+  const { activeCount } = useOfflineSync();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -137,6 +143,12 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? 20 : 8),
+          paddingTop: 4,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+        },
+        tabBarItemStyle: {
+          minHeight: TAB_BAR_HEIGHT,
         },
       }}
     >
@@ -147,6 +159,9 @@ function MainTabs() {
           tabBarLabel: ({ focused }) => (
             <TabLabel label="Home" focused={focused} />
           ),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="home" focused={focused} />
+          ),
         }}
       />
       <Tab.Screen
@@ -156,6 +171,9 @@ function MainTabs() {
           tabBarLabel: ({ focused }) => (
             <TabLabel label="Projects" focused={focused} />
           ),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="projects" focused={focused} />
+          ),
         }}
       />
       <Tab.Screen
@@ -163,8 +181,18 @@ function MainTabs() {
         component={PendingSyncScreen}
         options={{
           title: 'Sync',
+          tabBarBadge: activeCount > 0 ? activeCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.secondary,
+            color: colors.primaryDark,
+            fontSize: 10,
+            fontWeight: '700',
+          },
           tabBarLabel: ({ focused }) => (
             <TabLabel label="Sync" focused={focused} />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="sync" focused={focused} />
           ),
         }}
       />
@@ -174,6 +202,9 @@ function MainTabs() {
         options={{
           tabBarLabel: ({ focused }) => (
             <TabLabel label="Profile" focused={focused} />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="profile" focused={focused} />
           ),
         }}
       />

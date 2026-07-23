@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, Stack, Typography } from '@mui/material';
+import { Alert, Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -23,6 +23,7 @@ import {
   RetryPanel,
 } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 
 /**
  * Bank accounts list — `/accounting/bank-accounts` (Micro Phase 046).
@@ -115,28 +116,21 @@ export function BankAccountsPage() {
 
   return (
     <Stack spacing={2} data-testid="bank-accounts-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Bank Accounts</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Company and project bank accounts. Account numbers are always masked
-            in the list.
-          </Typography>
-        </Stack>
-        {caps.canManage ? (
-          <Button
-            variant="contained"
-            onClick={() => setCreateOpen(true)}
-            disabled={!canPickLedger}
-          >
-            New bank account
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Bank accounts"
+        subtitle="Company and project bank accounts. Account numbers are always masked in the list."
+        actions={
+          caps.canManage ? (
+            <Button
+              variant="contained"
+              onClick={() => setCreateOpen(true)}
+              disabled={!canPickLedger}
+            >
+              New bank account
+            </Button>
+          ) : undefined
+        }
+      />
 
       {caps.canManage && !canPickLedger ? (
         <Alert severity="warning">

@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   createUser,
   fetchUser,
@@ -299,327 +297,274 @@ export function UserFormScreen({ navigation, route }: Props) {
             : 'Email or mobile is the login ID'
       }
     >
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <Text style={styles.label}>Full name *</Text>
-      <TextInput
-        style={styles.input}
-        value={fullName}
-        onChangeText={setFullName}
-        autoCapitalize="words"
-      />
-
-      <Text style={styles.label}>Email (login)</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <Text style={styles.label}>Mobile (login)</Text>
-      <TextInput
-        style={styles.input}
-        value={mobile}
-        onChangeText={setMobile}
-        autoCapitalize="none"
-        keyboardType="phone-pad"
-      />
-
-      {mode === 'create' ? (
-        <>
-          <Text style={styles.label}>Initial temporary password *</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-          <Text style={styles.hint}>
-            Share securely. They must set a permanent password on first login.
-          </Text>
-          <Text style={styles.label}>Initial status</Text>
-          <View style={styles.chips}>
-            {[UserStatus.Active, UserStatus.Inactive].map((value) => (
-              <Pressable
-                key={value}
-                style={[styles.chip, status === value && styles.chipActive]}
-                onPress={() => setStatus(value)}
-              >
-                <Text style={styles.chipText}>{value}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
+      {loading ? (
+        <AsyncStatePanel
+          loading
+          error={error}
+          onRetry={() => void load()}
+        />
       ) : (
         <>
-          <Text style={styles.label}>Set / reset temporary password</Text>
-          <TextInput
-            style={styles.input}
-            value={temporaryPassword}
-            onChangeText={setTemporaryPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholder="Leave blank to keep current"
-            placeholderTextColor={colors.textMuted}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <FormSection title="Login">
+            <TextField
+              label="Full name *"
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
+            />
+            <TextField
+              label="Email (login)"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <TextField
+              label="Mobile (login)"
+              value={mobile}
+              onChangeText={setMobile}
+              autoCapitalize="none"
+              keyboardType="phone-pad"
+            />
+
+            {mode === 'create' ? (
+              <>
+                <TextField
+                  label="Initial temporary password *"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <Text style={styles.hint}>
+                  Share securely. They must set a permanent password on first
+                  login.
+                </Text>
+                <Text style={styles.label}>Initial status</Text>
+                <View style={styles.chips}>
+                  {[UserStatus.Active, UserStatus.Inactive].map((value) => (
+                    <Chip
+                      key={value}
+                      label={value}
+                      selected={status === value}
+                      onPress={() => setStatus(value)}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : (
+              <TextField
+                label="Set / reset temporary password"
+                value={temporaryPassword}
+                onChangeText={setTemporaryPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                placeholder="Leave blank to keep current"
+              />
+            )}
+          </FormSection>
+
+          <FormSection
+            title="Employment"
+            description={
+              lockedEmployeeId
+                ? 'Employee ID is assigned and locked'
+                : employeeIdDisplay
+                  ? 'Final number is assigned when you save (DEPT-DESIG-######)'
+                  : 'Choose department and designation to preview'
+            }
+          >
+            <TextField
+              label="Employee ID"
+              value={employeeIdDisplay}
+              editable={false}
+              placeholder="Select department & designation"
+            />
+
+            <Text style={styles.label}>Department</Text>
+            <View style={styles.chips}>
+              {USER_DEPARTMENT_NAMES.map((name) => (
+                <Chip
+                  key={name}
+                  label={name}
+                  selected={department === name}
+                  onPress={() => setDepartment(name === department ? '' : name)}
+                />
+              ))}
+            </View>
+
+            <Text style={styles.label}>
+              {department.trim()
+                ? 'Designation'
+                : 'Designation (select department first)'}
+            </Text>
+            <View style={styles.chips}>
+              {designations.map((name) => (
+                <Chip
+                  key={name}
+                  label={name}
+                  selected={designation === name}
+                  onPress={() =>
+                    setDesignation(name === designation ? '' : name)
+                  }
+                />
+              ))}
+            </View>
+
+            <TextField
+              label="Joining date (YYYY-MM-DD)"
+              value={joiningDate}
+              onChangeText={setJoiningDate}
+              autoCapitalize="none"
+              placeholder="2026-01-15"
+            />
+          </FormSection>
+
+          <FormSection
+            title="Reporting & approvals"
+            description="Optional. Leave empty for top-level roles."
+          >
+            <View style={styles.chips}>
+              {managers.map((manager) => {
+                const selected = reportingOfficers.includes(manager.id);
+                return (
+                  <Chip
+                    key={manager.id}
+                    label={`${manager.fullName} · ${manager.userCode}`}
+                    selected={selected}
+                    onPress={() => {
+                      setReportingOfficers((prev) => {
+                        const next = selected
+                          ? prev.filter((id) => id !== manager.id)
+                          : [...prev, manager.id];
+                        if (!next.length) {
+                          setReportingManager('');
+                        } else if (!next.includes(reportingManager)) {
+                          setReportingManager(next[0] ?? '');
+                        }
+                        return next;
+                      });
+                    }}
+                  />
+                );
+              })}
+            </View>
+            {reportingOfficers.length > 0 ? (
+              <>
+                <Text style={styles.label}>Primary reporting officer</Text>
+                <View style={styles.chips}>
+                  {reportingOfficers.map((id) => {
+                    const manager = managers.find((m) => m.id === id);
+                    return (
+                      <Chip
+                        key={id}
+                        label={manager?.fullName ?? id}
+                        selected={reportingManager === id}
+                        onPress={() => setReportingManager(id)}
+                      />
+                    );
+                  })}
+                </View>
+                <Text style={styles.label}>Approval rule</Text>
+                <View style={styles.chips}>
+                  <Chip
+                    label="Any one can approve"
+                    selected={
+                      reportingApprovalMode === ReportingApprovalMode.Any
+                    }
+                    onPress={() =>
+                      setReportingApprovalMode(ReportingApprovalMode.Any)
+                    }
+                  />
+                  <Chip
+                    label="All must approve"
+                    selected={
+                      reportingApprovalMode === ReportingApprovalMode.All
+                    }
+                    onPress={() =>
+                      setReportingApprovalMode(ReportingApprovalMode.All)
+                    }
+                  />
+                </View>
+              </>
+            ) : null}
+          </FormSection>
+
+          {allowRoleAssignment ? (
+            <FormSection title="Initial roles">
+              <View style={styles.chips}>
+                {roles.map((role) => {
+                  const selected = roleIds.includes(role.id);
+                  return (
+                    <Chip
+                      key={role.id}
+                      label={`${role.name} · ${role.code}`}
+                      selected={selected}
+                      onPress={() =>
+                        setRoleIds((prev) =>
+                          selected
+                            ? prev.filter((id) => id !== role.id)
+                            : [...prev, role.id],
+                        )
+                      }
+                    />
+                  );
+                })}
+              </View>
+            </FormSection>
+          ) : null}
+
+          {allowProjectAssignment ? (
+            <FormSection title="Initial projects">
+              <View style={styles.chips}>
+                {projects.map((project) => {
+                  const selected = assignedProjects.includes(project.id);
+                  return (
+                    <Chip
+                      key={project.id}
+                      label={`${project.projectCode} · ${project.projectName}`}
+                      selected={selected}
+                      onPress={() =>
+                        setAssignedProjects((prev) =>
+                          selected
+                            ? prev.filter((id) => id !== project.id)
+                            : [...prev, project.id],
+                        )
+                      }
+                    />
+                  );
+                })}
+              </View>
+            </FormSection>
+          ) : null}
+
+          <Button
+            label={mode === 'create' ? 'Create user' : 'Save changes'}
+            loading={saving}
+            disabled={saving || loading}
+            onPress={() => void submit()}
           />
         </>
       )}
-
-      <Text style={styles.section}>Employment</Text>
-      <Text style={styles.label}>Employee ID</Text>
-      <TextInput
-        style={[styles.input, styles.inputDisabled]}
-        value={employeeIdDisplay}
-        editable={false}
-        placeholder="Select department & designation"
-        placeholderTextColor={colors.textMuted}
-      />
-      <Text style={styles.hint}>
-        {lockedEmployeeId
-          ? 'Assigned and locked'
-          : employeeIdDisplay
-            ? 'Final number is assigned when you save (DEPT-DESIG-######)'
-            : 'Choose department and designation to preview'}
-      </Text>
-
-      <Text style={styles.label}>Department</Text>
-      <View style={styles.chips}>
-        {USER_DEPARTMENT_NAMES.map((name) => (
-          <Pressable
-            key={name}
-            style={[styles.chip, department === name && styles.chipActive]}
-            onPress={() => setDepartment(name === department ? '' : name)}
-          >
-            <Text style={styles.chipText}>{name}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>
-        {department.trim()
-          ? 'Designation'
-          : 'Designation (select department first)'}
-      </Text>
-      <View style={styles.chips}>
-        {designations.map((name) => (
-          <Pressable
-            key={name}
-            style={[styles.chip, designation === name && styles.chipActive]}
-            onPress={() => setDesignation(name === designation ? '' : name)}
-          >
-            <Text style={styles.chipText}>{name}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Joining date (YYYY-MM-DD)</Text>
-      <TextInput
-        style={styles.input}
-        value={joiningDate}
-        onChangeText={setJoiningDate}
-        autoCapitalize="none"
-        placeholder="2026-01-15"
-        placeholderTextColor={colors.textMuted}
-      />
-
-      <Text style={styles.section}>Reporting & approvals</Text>
-      <Text style={styles.hint}>
-        Optional. Leave empty for top-level roles.
-      </Text>
-      <View style={styles.chips}>
-        {managers.map((manager) => {
-          const selected = reportingOfficers.includes(manager.id);
-          return (
-            <Pressable
-              key={manager.id}
-              style={[styles.chip, selected && styles.chipActive]}
-              onPress={() => {
-                setReportingOfficers((prev) => {
-                  const next = selected
-                    ? prev.filter((id) => id !== manager.id)
-                    : [...prev, manager.id];
-                  if (!next.length) {
-                    setReportingManager('');
-                  } else if (!next.includes(reportingManager)) {
-                    setReportingManager(next[0] ?? '');
-                  }
-                  return next;
-                });
-              }}
-            >
-              <Text style={styles.chipText}>
-                {manager.fullName} · {manager.userCode}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      {reportingOfficers.length > 0 ? (
-        <>
-          <Text style={styles.label}>Primary reporting officer</Text>
-          <View style={styles.chips}>
-            {reportingOfficers.map((id) => {
-              const manager = managers.find((m) => m.id === id);
-              return (
-                <Pressable
-                  key={id}
-                  style={[
-                    styles.chip,
-                    reportingManager === id && styles.chipActive,
-                  ]}
-                  onPress={() => setReportingManager(id)}
-                >
-                  <Text style={styles.chipText}>
-                    {manager?.fullName ?? id}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={styles.label}>Approval rule</Text>
-          <View style={styles.chips}>
-            <Pressable
-              style={[
-                styles.chip,
-                reportingApprovalMode === ReportingApprovalMode.Any &&
-                  styles.chipActive,
-              ]}
-              onPress={() => setReportingApprovalMode(ReportingApprovalMode.Any)}
-            >
-              <Text style={styles.chipText}>Any one can approve</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.chip,
-                reportingApprovalMode === ReportingApprovalMode.All &&
-                  styles.chipActive,
-              ]}
-              onPress={() => setReportingApprovalMode(ReportingApprovalMode.All)}
-            >
-              <Text style={styles.chipText}>All must approve</Text>
-            </Pressable>
-          </View>
-        </>
-      ) : null}
-
-      {allowRoleAssignment ? (
-        <>
-          <Text style={styles.section}>Initial roles</Text>
-          <View style={styles.chips}>
-            {roles.map((role) => {
-              const selected = roleIds.includes(role.id);
-              return (
-                <Pressable
-                  key={role.id}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  onPress={() =>
-                    setRoleIds((prev) =>
-                      selected
-                        ? prev.filter((id) => id !== role.id)
-                        : [...prev, role.id],
-                    )
-                  }
-                >
-                  <Text style={styles.chipText}>
-                    {role.name} · {role.code}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
-
-      {allowProjectAssignment ? (
-        <>
-          <Text style={styles.section}>Initial projects</Text>
-          <View style={styles.chips}>
-            {projects.map((project) => {
-              const selected = assignedProjects.includes(project.id);
-              return (
-                <Pressable
-                  key={project.id}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  onPress={() =>
-                    setAssignedProjects((prev) =>
-                      selected
-                        ? prev.filter((id) => id !== project.id)
-                        : [...prev, project.id],
-                    )
-                  }
-                >
-                  <Text style={styles.chipText}>
-                    {project.projectCode} · {project.projectName}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
-
-      <Pressable
-        style={[styles.submit, (saving || loading) && styles.disabled]}
-        disabled={saving || loading}
-        onPress={() => void submit()}
-      >
-        <Text style={styles.submitText}>
-          {saving
-            ? 'Saving…'
-            : mode === 'create'
-              ? 'Create user'
-              : 'Save changes'}
-        </Text>
-      </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  section: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-    marginTop: 20,
-    marginBottom: 4,
+  label: { ...typography.label, marginBottom: spacing.sm },
+  hint: {
+    ...typography.meta,
+    fontSize: 12,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
   },
-  hint: { color: colors.textMuted, fontSize: 12, marginTop: 4, lineHeight: 18 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  inputDisabled: { opacity: 0.7 },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-  },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  submit: {
-    marginTop: 24,
-    marginBottom: 32,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: '#B42318', marginBottom: 8 },
+  error: { color: colors.danger, marginBottom: spacing.sm },
 });

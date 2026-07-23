@@ -1,20 +1,31 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { formatDate, formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { fetchJournal } from './api';
 import { resolveJournalCapabilities } from './permissions';
 import { JournalStatus, type PublicJournalEntry } from './types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'JournalDetail'>;
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
+}
 
 export function JournalDetailScreen({ navigation, route }: Props) {
   const { journalId } = route.params;
@@ -74,77 +85,68 @@ export function JournalDetailScreen({ navigation, route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>Status: {item.status}</Text>
-          <Text style={styles.row}>Date: {formatDate(item.journalDate)}</Text>
-          <Text style={styles.row}>
-            Debit: {formatInr(item.totalDebit)} · Credit:{' '}
-            {formatInr(item.totalCredit)}
-          </Text>
-          <Text style={styles.row}>Narration: {item.narration}</Text>
-          {item.sourceModule ? (
-            <Text style={styles.row}>
-              Source: {item.sourceModule}
-              {item.sourceEntityType ? ` / ${item.sourceEntityType}` : ''}
-            </Text>
-          ) : null}
-          <Text style={styles.section}>Lines</Text>
-          {item.lines.map((line) => (
-            <View key={line.id} style={styles.line}>
-              <Text style={styles.meta}>
-                {line.accountId.slice(-6)} · Dr {formatInr(line.debit)} · Cr{' '}
-                {formatInr(line.credit)}
-              </Text>
-              {line.description ? (
-                <Text style={styles.meta}>{line.description}</Text>
-              ) : null}
-            </View>
-          ))}
+        <>
+          <FormSection title="Entry">
+            <Field label="Status" value={item.status} />
+            <Field label="Date" value={formatDate(item.journalDate)} />
+            <Field
+              label="Totals"
+              value={`Debit ${formatInr(item.totalDebit)} · Credit ${formatInr(item.totalCredit)}`}
+            />
+            <Field label="Narration" value={item.narration} />
+            {item.sourceModule ? (
+              <Field
+                label="Source"
+                value={`${item.sourceModule}${
+                  item.sourceEntityType ? ` / ${item.sourceEntityType}` : ''
+                }`}
+              />
+            ) : null}
+          </FormSection>
+
+          <FormSection title="Lines" framed={false}>
+            {item.lines.map((line) => (
+              <View key={line.id} style={styles.line}>
+                <Text style={styles.meta}>
+                  {line.accountId.slice(-6)} · Dr {formatInr(line.debit)} · Cr{' '}
+                  {formatInr(line.credit)}
+                </Text>
+                {line.description ? (
+                  <Text style={styles.meta}>{line.description}</Text>
+                ) : null}
+              </View>
+            ))}
+          </FormSection>
+
           {canReverse ? (
-            <Pressable
-              style={styles.btn}
+            <Button
+              label="Reverse journal"
               onPress={() =>
                 navigation.navigate('ReverseJournal', { journalId: item.id })
               }
-            >
-              <Text style={styles.btnText}>Reverse journal</Text>
-            </Pressable>
+            />
           ) : null}
-        </View>
+        </>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  field: { gap: 2, marginBottom: spacing.sm },
+  fieldLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  fieldValue: { ...typography.body, color: colors.text },
+  line: {
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
+    borderRadius: 8,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  row: { color: colors.text, fontSize: 15 },
-  section: {
-    marginTop: 12,
-    color: colors.textMuted,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-  line: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 8,
-    marginTop: 4,
-  },
-  meta: { color: colors.textMuted, fontSize: 13 },
-  btn: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
+  meta: { ...typography.meta, fontSize: 13 },
 });

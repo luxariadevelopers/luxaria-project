@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { createCostCentre, fetchCostCentres } from './api';
 import { resolveProjectFinanceCapabilities } from './permissions';
 import { suggestCostCentreCode } from './suggestCostCentreCode';
@@ -135,71 +131,52 @@ export function QuickCreateCostCentreScreen({ navigation, route }: Props) {
       subtitle={selectedProject?.projectCode ?? 'Company-wide'}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="e.g. Footing"
-        placeholderTextColor={colors.textMuted}
-      />
-      <Text style={styles.label}>Code (auto)</Text>
-      <TextInput
-        style={styles.input}
-        value={code}
-        onChangeText={(v) => {
-          setCodeTouched(true);
-          setCode(v.toUpperCase());
-        }}
-        editable={!loadingCode}
-        placeholder="LUX-2026-MADAMB-CC-001"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="characters"
-      />
-      <Text style={styles.label}>Notes (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-      />
-      <View style={styles.hintBox}>
-        <Text style={styles.hint}>
-          {codeTouched
-            ? 'Custom code. Normal format: LUX-year-project-CC-number.'
-            : 'Auto: LUX-{year}-{project}-CC-{number}'}
-        </Text>
-      </View>
-      <Pressable
-        style={[styles.btn, (saving || loadingCode) && styles.disabled]}
+      <FormSection title="Cost centre">
+        <TextField
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="e.g. Footing"
+        />
+        <TextField
+          label="Code (auto)"
+          value={code}
+          onChangeText={(v) => {
+            setCodeTouched(true);
+            setCode(v.toUpperCase());
+          }}
+          editable={!loadingCode}
+          placeholder="LUX-2026-MADAMB-CC-001"
+          autoCapitalize="characters"
+        />
+        <TextField
+          label="Notes (optional)"
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          style={styles.multiline}
+        />
+        <View style={styles.hintBox}>
+          <Text style={styles.hint}>
+            {codeTouched
+              ? 'Custom code. Normal format: LUX-year-project-CC-number.'
+              : 'Auto: LUX-{year}-{project}-CC-{number}'}
+          </Text>
+        </View>
+      </FormSection>
+      <Button
+        label="Create"
+        loading={saving || loadingCode}
         disabled={saving || loadingCode}
         onPress={() => void submit()}
-      >
-        <Text style={styles.btnText}>{saving ? 'Creating…' : 'Create'}</Text>
-      </Pressable>
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    padding: 10,
-    backgroundColor: colors.surface,
-  },
   multiline: { minHeight: 72, textAlignVertical: 'top' },
-  error: { color: colors.danger, marginBottom: 8 },
-  hintBox: { marginTop: 12 },
-  hint: { color: colors.textMuted, fontSize: 13 },
-  btn: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
+  error: { color: colors.danger, marginBottom: spacing.sm },
+  hintBox: { marginTop: spacing.sm },
+  hint: { ...typography.meta, fontSize: 13 },
 });

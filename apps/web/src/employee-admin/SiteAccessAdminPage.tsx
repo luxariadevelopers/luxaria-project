@@ -9,7 +9,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
@@ -19,6 +18,7 @@ import { DataTable, useListQueryState } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { formatDate } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import { useProjectsList } from '@/projects/useProjects';
 import { useUsersList } from '@/user-admin/useUsers';
 import { AssignSiteAccessDialog } from './AssignSiteAccessDialog';
@@ -281,27 +281,21 @@ export function SiteAccessAdminPage() {
   return (
     <>
       <Stack spacing={2} data-testid="site-access-admin-page">
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1.5}
-          sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-        >
-          <Stack spacing={0.5}>
-            <Typography variant="h5">Site access</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Add people to a site or remove them from site access.
-            </Typography>
-          </Stack>
-          {canAssign ? (
-            <Button
-              variant="contained"
-              onClick={() => setAssignOpen(true)}
-              data-testid="add-site-access-button"
-            >
-              Add person
-            </Button>
-          ) : null}
-        </Stack>
+        <PageHeader
+          title="Site access"
+          subtitle="Add people to a site or remove them from site access."
+          actions={
+            canAssign ? (
+              <Button
+                variant="contained"
+                onClick={() => setAssignOpen(true)}
+                data-testid="add-site-access-button"
+              >
+                Add person
+              </Button>
+            ) : null
+          }
+        />
 
         <DataTable<PublicSiteAssignment>
           title="Site assignments"
@@ -353,6 +347,11 @@ export function SiteAccessAdminPage() {
                 ]
               : []
           }
+          mobileCard={{
+            primaryField: 'userId',
+            metaFields: ['projectId', 'siteId'],
+            statusField: 'status',
+          }}
           height={560}
           showColumnVisibility
         />

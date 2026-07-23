@@ -1,22 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Chip, Stack } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '@/auth/AuthContext';
+import { DataTable, type DataTableRowAction } from '@/components/DataTable';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { fetchSiteIssues, type PublicSiteIssue } from '@/site-issues/api';
 import { SiteIssueFormDrawer } from '@/site-issues/SiteIssueFormDrawer';
 
@@ -69,6 +59,58 @@ export function SiteIssuesPage() {
     setDrawerOpen(true);
   };
 
+  const columns = useMemo<GridColDef<PublicSiteIssue>[]>(
+    () => [
+      {
+        field: 'issueNumber',
+        headerName: 'Number',
+        width: 140,
+      },
+      {
+        field: 'title',
+        headerName: 'Title',
+        flex: 1,
+        minWidth: 180,
+      },
+      {
+        field: 'type',
+        headerName: 'Type',
+        width: 150,
+        valueGetter: (_v, row) => row.type.replaceAll('_', ' '),
+      },
+      {
+        field: 'severity',
+        headerName: 'Severity',
+        width: 120,
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params) => (
+          <Chip
+            size="small"
+            label={params.row.status}
+            color={statusColor(params.row.status)}
+          />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const rowActions = useMemo<DataTableRowAction<PublicSiteIssue>[]>(() => {
+    if (!canCreate) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        onClick: openEdit,
+        disabled: (row) => !canEditIssue(row),
+      },
+    ];
+  }, [canCreate]);
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return <Alert severity="info">Select a project to view site issues.</Alert>;
@@ -87,90 +129,34 @@ export function SiteIssuesPage() {
 
   return (
     <Stack spacing={2}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
+      <PageHeader
+        subtitle="Delays, shortages, equipment failures, and design clarifications. Workflow: open → assigned → resolved → closed."
+        actions={
+          canCreate ? (
+            <Button variant="contained" onClick={openCreate}>
+              New issue
+            </Button>
+          ) : undefined
+        }
+      />
+      <DataTable
+        title="Site issues"
+        rows={rows}
+        columns={columns}
+        loading={query.isLoading || query.isFetching}
+        getRowId={(row) => row.id}
+        emptyTitle="No site issues"
+        emptyDescription="No site issues for this project."
+        height={520}
+        paginationMode="client"
+        rowActions={rowActions.length > 0 ? rowActions : undefined}
+        mobileCard={{
+          primaryField: 'issueNumber',
+          metaFields: ['title', 'severity'],
+          statusField: 'status',
         }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Site Issues</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Delays, shortages, equipment failures, and design clarifications.
-            Workflow: open → assigned → resolved → closed.
-          </Typography>
-        </Stack>
-        {canCreate ? (
-          <Button variant="contained" onClick={openCreate}>
-            New issue
-          </Button>
-        ) : null}
-      </Box>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Number</TableCell>
-              <TableCell>Title</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Severity</TableCell>
-              <TableCell>Status</TableCell>
-              {canCreate ? <TableCell align="right">Actions</TableCell> : null}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={canCreate ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canCreate ? 6 : 5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No site issues for this project.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell>{row.issueNumber}</TableCell>
-                  <TableCell>{row.title}</TableCell>
-                  <TableCell>{row.type.replaceAll('_', ' ')}</TableCell>
-                  <TableCell>{row.severity}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={row.status}
-                      color={statusColor(row.status)}
-                    />
-                  </TableCell>
-                  {canCreate ? (
-                    <TableCell align="right">
-                      {canEditIssue(row) ? (
-                        <Button size="small" onClick={() => openEdit(row)}>
-                          Edit
-                        </Button>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          —
-                        </Typography>
-                      )}
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+        showColumnVisibility={false}
+      />
 
       {canCreate ? (
         <SiteIssueFormDrawer

@@ -1,13 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -19,12 +11,12 @@ import {
 } from '@/api/notifications';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
-import { Screen } from '@/components/Screen';
+import { Button } from '@/components/Button';
+import { ListScreen } from '@/components/ListScreen';
 import { useProject } from '@/context/ProjectContext';
 import { NotificationCard } from '@/notifications/NotificationCard';
 import { resolveNotificationDeepLink } from '@/notifications/resolveDeepLink';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Notifications'>;
 
@@ -229,156 +221,80 @@ export function NotificationsScreen({ navigation }: Props) {
     ],
   );
 
-  if (!canView) {
-    return (
-      <Screen title="Notifications" subtitle="In-app alerts for your account">
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Permission denied</Text>
-          <Text style={styles.stateBody}>
-            You need notification.view to open the notifications inbox.
-          </Text>
-        </View>
-      </Screen>
-    );
-  }
-
-  const forbidden = isForbiddenError(inboxQuery.error);
+  const forbidden = !canView || isForbiddenError(inboxQuery.error);
   const unreadCount = unreadQuery.data ?? 0;
+  const items = canView ? (inboxQuery.data?.items ?? []) : [];
+  const error = !canView
+    ? 'You need notification.view to open the notifications inbox.'
+    : inboxQuery.isError
+      ? getErrorMessage(
+          inboxQuery.error,
+          forbidden
+            ? 'You do not have access to notifications.'
+            : 'Check your connection and try again.',
+        )
+      : null;
 
   return (
-    <Screen
+    <ListScreen
       title="Notifications"
       subtitle={
         unreadCount > 0
           ? `${unreadCount} unread`
           : 'In-app alerts for your account'
       }
-      scroll={false}
       rightSlot={
-        unreadCount > 0 ? (
-          <Pressable
-            style={styles.markAll}
-            disabled={markAllMutation.isPending}
+        canView && unreadCount > 0 ? (
+          <Button
+            label="Mark all read"
+            variant="ghost"
+            loading={markAllMutation.isPending}
             onPress={() => {
-              void markAllMutation.mutateAsync().catch((error: unknown) => {
+              void markAllMutation.mutateAsync().catch((err: unknown) => {
                 Alert.alert(
                   'Notifications',
-                  getErrorMessage(error, 'Could not mark all read'),
+                  getErrorMessage(err, 'Could not mark all read'),
                 );
               });
             }}
-          >
-            <Text style={styles.markAllText}>
-              {markAllMutation.isPending ? '…' : 'Mark all read'}
-            </Text>
-          </Pressable>
+            style={styles.markAll}
+          />
         ) : null
       }
-    >
-      {inboxQuery.isLoading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : inboxQuery.isError ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>
-            {forbidden ? 'Permission denied' : 'Could not load notifications'}
-          </Text>
-          <Text style={styles.stateBody}>
-            {getErrorMessage(
-              inboxQuery.error,
-              forbidden
-                ? 'You do not have access to notifications.'
-                : 'Check your connection and try again.',
-            )}
-          </Text>
-          <Pressable
-            style={styles.retry}
+      data={items}
+      keyExtractor={(item) => item.id}
+      loading={canView && inboxQuery.isLoading}
+      refreshing={inboxQuery.isFetching && !inboxQuery.isLoading}
+      onRefresh={() => {
+        void inboxQuery.refetch();
+        void unreadQuery.refetch();
+      }}
+      error={error}
+      forbidden={forbidden}
+      emptyLabel="No notifications yet."
+      onRetry={() => {
+        void inboxQuery.refetch();
+        void unreadQuery.refetch();
+      }}
+      renderItem={({ item }) => (
+        <View style={openingId === item.id ? styles.opening : undefined}>
+          <NotificationCard
+            notification={item}
+            actionable={previewActionable(item)}
             onPress={() => {
-              void inboxQuery.refetch();
-              void unreadQuery.refetch();
+              void openNotification(item);
             }}
-          >
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+          />
         </View>
-      ) : (
-        <FlatList
-          data={inboxQuery.data?.items ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshing={inboxQuery.isFetching && !inboxQuery.isLoading}
-          onRefresh={() => {
-            void inboxQuery.refetch();
-            void unreadQuery.refetch();
-          }}
-          ListEmptyComponent={
-            <Text style={styles.empty}>No notifications yet.</Text>
-          }
-          renderItem={({ item }) => (
-            <View style={openingId === item.id ? styles.opening : undefined}>
-              <NotificationCard
-                notification={item}
-                actionable={previewActionable(item)}
-                onPress={() => {
-                  void openNotification(item);
-                }}
-              />
-            </View>
-          )}
-        />
       )}
-    </Screen>
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  loader: {
-    marginTop: 40,
-  },
-  list: {
-    paddingBottom: 28,
-  },
-  empty: {
-    color: colors.textMuted,
-    marginTop: 24,
-    fontSize: 15,
-  },
-  stateBox: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginTop: 8,
-  },
-  stateTitle: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  stateBody: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  retry: {
-    marginTop: 14,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  retryText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
-  },
   markAll: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  markAllText: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 13,
+    minWidth: 120,
+    paddingVertical: 8,
   },
   opening: {
     opacity: 0.7,

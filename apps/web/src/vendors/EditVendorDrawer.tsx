@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Box,
   Button,
@@ -90,7 +91,7 @@ export function EditVendorDrawer({ vendor, open, onClose }: Props) {
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box sx={{ p: 3 }} data-testid="edit-vendor-drawer">

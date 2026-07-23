@@ -5,11 +5,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { getPettyCashRequirement } from './api';
 import { resolvePettyCashCapabilities } from './permissions';
 import {
@@ -18,6 +19,15 @@ import {
 } from './types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PettyCashDetail'>;
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
+}
 
 export function PettyCashDetailScreen({ route }: Props) {
   const { requestId } = route.params;
@@ -30,12 +40,22 @@ export function PettyCashDetailScreen({ route }: Props) {
   const [forbidden, setForbidden] = useState(false);
 
   const load = useCallback(async () => {
-    if (!caps.canView) { setForbidden(true); setError('Missing petty_cash.view'); setLoading(false); return; }
-    if (!isOnline) { setError('Go online'); setLoading(false); return; }
+    if (!caps.canView) {
+      setForbidden(true);
+      setError('Missing petty_cash.view');
+      setLoading(false);
+      return;
+    }
+    if (!isOnline) {
+      setError('Go online');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       setItem(await getPettyCashRequirement(requestId));
-      setError(null); setForbidden(false);
+      setError(null);
+      setForbidden(false);
     } catch (err) {
       setForbidden(isForbiddenError(err));
       setError(getErrorMessage(err, 'Could not load request'));
@@ -44,7 +64,11 @@ export function PettyCashDetailScreen({ route }: Props) {
     }
   }, [caps.canView, isOnline, requestId]);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   return (
     <Screen
@@ -52,25 +76,41 @@ export function PettyCashDetailScreen({ route }: Props) {
       subtitle={item ? requestNumberOf(item) : requestId}
     >
       {loading || error || forbidden || !item ? (
-        <AsyncStatePanel loading={loading} error={error} forbidden={forbidden} empty={!loading && !item} emptyLabel="Not found" onRetry={() => void load()} />
+        <AsyncStatePanel
+          loading={loading}
+          error={error}
+          forbidden={forbidden}
+          empty={!loading && !item}
+          emptyLabel="Not found"
+          onRetry={() => void load()}
+        />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>Status: {item.status}</Text>
-          <Text style={styles.row}>Week: {String(item.weekStartDate).slice(0, 10)} → {String(item.weekEndDate).slice(0, 10)}</Text>
-          <Text style={styles.row}>Justification: {item.justification}</Text>
+        <FormSection title="Request">
+          <Field label="Status" value={item.status} />
+          <Field
+            label="Week"
+            value={`${String(item.weekStartDate).slice(0, 10)} → ${String(item.weekEndDate).slice(0, 10)}`}
+          />
+          <Field label="Justification" value={item.justification} />
           {item.previousUnsettledAmount != null &&
           item.previousUnsettledAmount > 0 ? (
-            <Text style={styles.row}>
-              Previous unsettled: {formatInr(item.previousUnsettledAmount)}
-            </Text>
+            <Field
+              label="Previous unsettled"
+              value={formatInr(item.previousUnsettledAmount)}
+            />
           ) : null}
-        </View>
+        </FormSection>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 16, gap: 8 },
-  row: { color: colors.text, fontSize: 15 },
+  field: { gap: 2, marginBottom: spacing.sm },
+  fieldLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  fieldValue: { ...typography.body, color: colors.text },
 });

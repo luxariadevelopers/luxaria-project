@@ -1,15 +1,17 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import {
   acknowledgePettyCashFundTransfer,
   fetchPettyCashFundTransfer,
@@ -27,6 +29,15 @@ type Props = NativeStackScreenProps<
   AppStackParamList,
   'PettyCashTransferDetail'
 >;
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
+}
 
 export function PettyCashTransferDetailScreen({ route }: Props) {
   const { transferId } = route.params;
@@ -125,101 +136,83 @@ export function PettyCashTransferDetailScreen({ route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.row}>
-            Status: {transferStatusLabel(item.status)}
-          </Text>
-          <Text style={styles.row}>Amount: {formatInr(item.amount)}</Text>
-          <Text style={styles.row}>
-            Date: {String(item.transferDate).slice(0, 10)}
-          </Text>
-          <Text style={styles.row}>Request: …{item.requestId.slice(-8)}</Text>
-          {item.transactionReference ? (
-            <Text style={styles.row}>Ref: {item.transactionReference}</Text>
-          ) : (
-            <Text style={styles.meta}>No transaction reference yet</Text>
-          )}
-          {item.paymentProof ? (
-            <Text style={styles.meta}>Payment proof attached</Text>
-          ) : (
-            <Text style={styles.meta}>No payment proof yet</Text>
-          )}
-          {item.journalEntryId ? (
-            <Text style={styles.meta}>
-              Journal: …{item.journalEntryId.slice(-8)}
-            </Text>
-          ) : null}
-          {item.cancellationReason ? (
-            <Text style={styles.row}>
-              Cancelled: {item.cancellationReason}
-            </Text>
-          ) : null}
+        <>
+          <FormSection title="Transfer">
+            <Field
+              label="Status"
+              value={transferStatusLabel(item.status)}
+            />
+            <Field label="Amount" value={formatInr(item.amount)} />
+            <Field
+              label="Date"
+              value={String(item.transferDate).slice(0, 10)}
+            />
+            <Field label="Request" value={`…${item.requestId.slice(-8)}`} />
+            <Field
+              label="Transaction ref"
+              value={item.transactionReference || 'Not set'}
+            />
+            <Field
+              label="Payment proof"
+              value={item.paymentProof ? 'Attached' : 'Not attached'}
+            />
+            {item.journalEntryId ? (
+              <Field
+                label="Journal"
+                value={`…${item.journalEntryId.slice(-8)}`}
+              />
+            ) : null}
+            {item.cancellationReason ? (
+              <Field label="Cancelled" value={item.cancellationReason} />
+            ) : null}
+          </FormSection>
 
-          {actions.includes('acknowledge') ? (
-            <Pressable
-              style={[styles.btn, acting && styles.disabled]}
-              disabled={acting}
-              onPress={() => void runAcknowledge()}
-            >
-              <Text style={styles.btnText}>
-                {acting ? 'Working…' : 'Acknowledge'}
+          {actions.includes('acknowledge') || actions.includes('post') ? (
+            <FormSection title="Actions" framed={false}>
+              {actions.includes('acknowledge') ? (
+                <Button
+                  label="Acknowledge"
+                  loading={acting}
+                  disabled={acting}
+                  onPress={() => void runAcknowledge()}
+                  style={styles.action}
+                />
+              ) : null}
+              {actions.includes('post') ? (
+                <Button
+                  label="Post to ledger"
+                  variant="secondary"
+                  loading={acting}
+                  disabled={acting}
+                  onPress={() => void runPost()}
+                  style={styles.action}
+                />
+              ) : null}
+              <Text style={styles.hint}>
+                Acknowledge calls Nest verify (draft → verified). Post creates
+                the journal entry.
               </Text>
-            </Pressable>
+            </FormSection>
           ) : null}
-
-          {actions.includes('post') ? (
-            <Pressable
-              style={[styles.btnSecondary, acting && styles.disabled]}
-              disabled={acting}
-              onPress={() => void runPost()}
-            >
-              <Text style={styles.btnSecondaryText}>
-                {acting ? 'Working…' : 'Post to ledger'}
-              </Text>
-            </Pressable>
-          ) : null}
-
-          <Text style={styles.hint}>
-            Acknowledge calls Nest verify (draft → verified). Post creates the
-            journal entry.
-          </Text>
-        </View>
+        </>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 8,
-  },
-  row: { color: colors.text, fontSize: 15 },
-  meta: { color: colors.textMuted, fontSize: 13 },
-  hint: {
-    marginTop: 12,
+  field: { gap: 2, marginBottom: spacing.sm },
+  fieldLabel: {
+    ...typography.label,
     color: colors.textMuted,
     fontSize: 12,
+  },
+  fieldValue: { ...typography.body, color: colors.text },
+  action: { marginBottom: spacing.sm },
+  hint: {
+    ...typography.meta,
+    fontSize: 12,
     lineHeight: 17,
+    marginTop: spacing.xs,
   },
-  btn: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnText: { color: '#F4F0E6', fontWeight: '700' },
-  btnSecondary: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnSecondaryText: { color: colors.text, fontWeight: '700' },
-  disabled: { opacity: 0.6 },
 });

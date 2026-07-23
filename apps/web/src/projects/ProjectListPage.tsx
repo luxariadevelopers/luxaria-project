@@ -9,7 +9,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
@@ -18,6 +17,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { DataTable, useListQueryState } from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
 import { formatDate, formatInr } from '@/format';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   PROJECT_LIST_FILTER_KEYS,
   PROJECT_LIST_SORT_KEYS,
@@ -287,27 +287,20 @@ export function ProjectListPage() {
 
   return (
     <Stack spacing={2} data-testid="projects-list-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Projects</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Search, filter, and manage projects available to your access scope.
-          </Typography>
-        </Stack>
-        {hasPermission('project.create') ? (
-          <Button
-            component={RouterLink}
-            to="/projects/new"
-            variant="contained"
-          >
-            New project
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle="Search, filter, and manage projects available to your access scope."
+        actions={
+          hasPermission('project.create') ? (
+            <Button
+              component={RouterLink}
+              to="/projects/new"
+              variant="contained"
+            >
+              New project
+            </Button>
+          ) : undefined
+        }
+      />
 
       <DataTable<PublicProject>
         title="Project register"
@@ -342,6 +335,11 @@ export function ProjectListPage() {
         onSearchChange={listState.setSearch}
         filterSlot={filterSlot}
         preferencesKey="projects-register"
+        mobileCard={{
+          primaryField: 'projectName',
+          metaFields: ['projectCode', 'projectType'],
+          statusField: 'status',
+        }}
         allowedFilterKeys={PROJECT_LIST_FILTER_KEYS}
         filterValues={listState.state.filters}
         onApplySavedQuery={listState.applySaved}

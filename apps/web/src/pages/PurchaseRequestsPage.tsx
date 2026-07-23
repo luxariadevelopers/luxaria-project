@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import { RequestTable } from '@/purchase-requests/RequestTable';
 import { resolvePurchaseRequestCapabilities } from '@/purchase-requests/roleAccess';
 import { usePurchaseRequestsList } from '@/purchase-requests/usePurchaseRequests';
@@ -95,28 +96,23 @@ export function PurchaseRequestsPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Purchase requests</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {selectedProject
-              ? `${selectedProject.projectCode ?? ''} ${selectedProject.projectName}`.trim()
-              : 'Active project'}
-          </Typography>
-        </Stack>
-        {caps.canRequest ? (
-          <Button
-            variant="contained"
-            onClick={() => navigate('/procurement/purchase-requests/new')}
-          >
-            New request
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        subtitle={
+          selectedProject
+            ? `${selectedProject.projectCode ?? ''} ${selectedProject.projectName}`.trim()
+            : 'Active project'
+        }
+        actions={
+          caps.canRequest ? (
+            <Button
+              variant="contained"
+              onClick={() => navigate('/procurement/purchase-requests/new')}
+            >
+              New request
+            </Button>
+          ) : undefined
+        }
+      />
 
       <RequestTable
         rows={list.data?.items ?? []}

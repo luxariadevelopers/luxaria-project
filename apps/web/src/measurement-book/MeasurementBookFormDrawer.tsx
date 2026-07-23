@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   Alert,
   Box,
@@ -112,7 +113,7 @@ export function MeasurementBookFormDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 520, md: 640 } } },
+        paper: { sx: formDrawerPaperSx({ sm: 520, md: 640 }) },
       }}
     >
       <Box

@@ -1,31 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
-import { Screen } from '@/components/Screen';
+import { Button } from '@/components/Button';
+import { ListScreen } from '@/components/ListScreen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
 import {
   acknowledgeWorkMeasurement,
   fetchWorkMeasurements,
 } from '@/work-measurement/api';
 import { MeasurementRow } from '@/work-measurement/components/MeasurementRow';
-import {
-  EmptyPanel,
-  ErrorPanel,
-  ForbiddenPanel,
-  LoadingPanel,
-} from '@/work-measurement/components/StatePanels';
 import { resolveWorkMeasurementCapabilities } from '@/work-measurement/permissions';
 import type { PublicWorkMeasurement } from '@/work-measurement/types';
 
@@ -38,9 +26,10 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
   const caps = resolveWorkMeasurementCapabilities(hasPermission);
 
   const [items, setItems] = useState<PublicWorkMeasurement[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<unknown>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
 
   const onAcknowledge = useCallback(
@@ -63,7 +52,7 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
       } catch (err) {
         Alert.alert(
           'Acknowledge failed',
-          err instanceof Error ? err.message : 'Unable to acknowledge',
+          getErrorMessage(err, 'Unable to acknowledge'),
         );
       } finally {
         setAcknowledgingId(null);
@@ -75,28 +64,29 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
   const load = useCallback(
     async (mode: 'initial' | 'refresh' = 'initial') => {
       if (!caps.canView) {
+        setForbidden(true);
+        setError('Missing permission measurement.view');
+        setLoading(false);
         return;
       }
       if (!selectedProject?.id) {
+        setError('Select a project first');
         setItems([]);
-        setError(null);
+        setLoading(false);
         return;
       }
       if (!isOnline) {
         setError(
-          new Error(
-            'Work measurements require a network connection to load. Capture new measurements offline from New measurement.',
-          ),
+          'Work measurements require a network connection to load. Capture new measurements offline from New measurement.',
         );
+        setLoading(false);
         return;
       }
 
-      if (mode === 'refresh') {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (mode === 'refresh') setRefreshing(true);
+      else setLoading(true);
       setError(null);
+      setForbidden(false);
       try {
         const result = await fetchWorkMeasurements({
           projectId: selectedProject.id,
@@ -105,7 +95,8 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
         });
         setItems(result.items);
       } catch (err) {
-        setError(err);
+        setForbidden(isForbiddenError(err));
+        setError(getErrorMessage(err, 'Could not load measurements'));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -114,127 +105,49 @@ export function WorkMeasurementListScreen({ navigation }: Props) {
     [caps.canView, isOnline, selectedProject?.id],
   );
 
-  useEffect(() => {
-    void load('initial');
-  }, [load]);
-
-  if (!caps.canView) {
-    return (
-      <Screen title="Work Measurement" subtitle="Site quantities">
-        <ForbiddenPanel message="Missing permission measurement.view" />
-      </Screen>
-    );
-  }
+  useFocusEffect(
+    useCallback(() => {
+      void load('initial');
+    }, [load]),
+  );
 
   return (
-    <Screen
+    <ListScreen
       title="Work Measurement"
       subtitle={
         selectedProject
           ? `${selectedProject.projectCode} · verified quantities with evidence`
           : 'Select a project first'
       }
-      scroll={false}
       rightSlot={
         caps.canCreate ? (
-          <Pressable
-            style={styles.newBtn}
+          <Button
+            label="New"
             onPress={() => navigation.navigate('WorkMeasurementForm')}
-          >
-            <Text style={styles.newBtnText}>New</Text>
-          </Pressable>
+            style={{ minWidth: 72 }}
+          />
         ) : null
       }
-    >
-      {!selectedProject ? (
-        <EmptyPanel
-          title="No project selected"
-          description="Choose an active project before listing measurements."
-          actionLabel="Select project"
-          onAction={() => navigation.navigate('ProjectSelect')}
-        />
-      ) : loading && items.length === 0 ? (
-        <LoadingPanel label="Loading measurements…" />
-      ) : error ? (
-        <ErrorPanel error={error} onRetry={() => void load('initial')} />
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void load('refresh')}
-              tintColor={colors.primary}
-            />
-          }
-          ListEmptyComponent={
-            <EmptyPanel
-              title="No measurements yet"
-              description="Capture site quantities with photos for later engineer verification."
-              actionLabel={caps.canCreate ? 'New measurement' : undefined}
-              onAction={
-                caps.canCreate
-                  ? () => navigation.navigate('WorkMeasurementForm')
-                  : undefined
-              }
-            />
-          }
-          renderItem={({ item }) => (
-            <MeasurementRow
-              item={item}
-              acknowledging={acknowledgingId === item.id}
-              onAcknowledge={
-                caps.canAcknowledge && item.status === 'submitted'
-                  ? () => void onAcknowledge(item.id)
-                  : undefined
-              }
-            />
-          )}
-          ListFooterComponent={
-            caps.canCreate ? (
-              <View style={styles.footer}>
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={() => navigation.navigate('WorkMeasurementForm')}
-                >
-                  <Text style={styles.primaryButtonText}>New measurement</Text>
-                </Pressable>
-              </View>
-            ) : null
+      data={items}
+      keyExtractor={(item) => item.id}
+      loading={loading}
+      refreshing={refreshing}
+      onRefresh={() => void load('refresh')}
+      error={error}
+      forbidden={forbidden}
+      emptyLabel="No measurements yet — capture site quantities with photos"
+      onRetry={() => void load('initial')}
+      renderItem={({ item }) => (
+        <MeasurementRow
+          item={item}
+          acknowledging={acknowledgingId === item.id}
+          onAcknowledge={
+            caps.canAcknowledge && item.status === 'submitted'
+              ? () => void onAcknowledge(item.id)
+              : undefined
           }
         />
       )}
-    </Screen>
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  list: {
-    paddingBottom: 40,
-    flexGrow: 1,
-  },
-  newBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  newBtnText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  footer: {
-    marginTop: 8,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
-  },
-});

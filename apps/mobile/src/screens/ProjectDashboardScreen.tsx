@@ -1,21 +1,17 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { formatInr } from '@luxaria/shared-format';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { apiGet, getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
 import type { CapitalPlanSummary } from '@/projects/types';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ProjectDashboard'>;
 
@@ -84,15 +80,16 @@ function CapitalPlanBlock({
   const investors = plan?.investors ?? [];
 
   return (
-    <View style={styles.capitalSection} testID="capital-plan-section">
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>Capital plan</Text>
-        {canEdit ? (
-          <Pressable onPress={onEdit}>
-            <Text style={styles.link}>Edit</Text>
-          </Pressable>
-        ) : null}
-      </View>
+    <View testID="capital-plan-section">
+    <FormSection title="Capital plan" framed={false} style={styles.capitalSection}>
+      {canEdit ? (
+        <Button
+          label="Edit capital plan"
+          variant="secondary"
+          onPress={onEdit}
+          style={styles.capitalEdit}
+        />
+      ) : null}
 
       <View style={styles.grid}>
         <Metric
@@ -177,6 +174,7 @@ function CapitalPlanBlock({
           on the capital plan.
         </Text>
       ) : null}
+    </FormSection>
     </View>
   );
 }
@@ -200,9 +198,10 @@ export function ProjectDashboardScreen({ navigation }: Props) {
   if (!canView) {
     return (
       <Screen title="Project dashboard" subtitle="Permission required">
-        <Text style={styles.message}>
-          You need dashboard.view to open the project dashboard.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="You need dashboard.view to open the project dashboard."
+        />
       </Screen>
     );
   }
@@ -210,9 +209,10 @@ export function ProjectDashboardScreen({ navigation }: Props) {
   if (!selectedProjectId || !selectedProject) {
     return (
       <Screen title="Project dashboard" subtitle="No project selected">
-        <Text style={styles.message}>
-          Select a project first, then open the dashboard.
-        </Text>
+        <AsyncStatePanel
+          empty
+          emptyLabel="Select a project first, then open the dashboard."
+        />
       </Screen>
     );
   }
@@ -225,52 +225,61 @@ export function ProjectDashboardScreen({ navigation }: Props) {
       subtitle={`${selectedProject.projectCode} · ${selectedProject.projectName}`}
       scroll={false}
     >
-      {dashboardQuery.isLoading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : dashboardQuery.error ? (
-        <Text style={styles.message}>
-          {isForbiddenError(dashboardQuery.error)
-            ? 'You do not have access to this project dashboard.'
-            : getErrorMessage(dashboardQuery.error)}
-        </Text>
+      {dashboardQuery.isLoading || dashboardQuery.error ? (
+        <AsyncStatePanel
+          loading={dashboardQuery.isLoading}
+          forbidden={
+            Boolean(dashboardQuery.error) &&
+            isForbiddenError(dashboardQuery.error)
+          }
+          error={
+            dashboardQuery.error
+              ? isForbiddenError(dashboardQuery.error)
+                ? 'You do not have access to this project dashboard.'
+                : getErrorMessage(dashboardQuery.error)
+              : null
+          }
+          onRetry={() => void dashboardQuery.refetch()}
+        />
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Status</Text>
+          <FormSection title="Status">
             <Text style={styles.cardBody}>
               {summary?.project?.status ?? selectedProject.status ?? '—'}
               {summary?.project?.projectStage
                 ? ` · ${summary.project.projectStage}`
                 : ''}
             </Text>
-          </View>
+          </FormSection>
 
-          <View style={styles.grid}>
-            <Metric
-              label="Pending approvals"
-              value={String(summary?.pendingApprovalsCount ?? 0)}
-            />
-            <Metric
-              label="Pending POs"
-              value={String(summary?.pendingPoCount ?? 0)}
-            />
-            <Metric
-              label="Pending GRNs"
-              value={String(summary?.pendingGrnCount ?? 0)}
-            />
-            <Metric
-              label="Physical %"
-              value={`${summary?.physicalCompletion?.percent ?? 0}%`}
-            />
-            <Metric
-              label="Financial %"
-              value={`${summary?.financialCompletion?.percent ?? 0}%`}
-            />
-            <Metric
-              label="DPR submitted"
-              value={String(summary?.dprStatusSummary?.submitted ?? 0)}
-            />
-          </View>
+          <FormSection title="Snapshot">
+            <View style={styles.grid}>
+              <Metric
+                label="Pending approvals"
+                value={String(summary?.pendingApprovalsCount ?? 0)}
+              />
+              <Metric
+                label="Pending POs"
+                value={String(summary?.pendingPoCount ?? 0)}
+              />
+              <Metric
+                label="Pending GRNs"
+                value={String(summary?.pendingGrnCount ?? 0)}
+              />
+              <Metric
+                label="Physical %"
+                value={`${summary?.physicalCompletion?.percent ?? 0}%`}
+              />
+              <Metric
+                label="Financial %"
+                value={`${summary?.financialCompletion?.percent ?? 0}%`}
+              />
+              <Metric
+                label="DPR submitted"
+                value={String(summary?.dprStatusSummary?.submitted ?? 0)}
+              />
+            </View>
+          </FormSection>
 
           <CapitalPlanBlock
             plan={summary?.capitalPlan}
@@ -285,91 +294,58 @@ export function ProjectDashboardScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  loader: {
-    marginTop: 40,
-  },
   scroll: {
-    paddingBottom: 24,
-    gap: 12,
-  },
-  message: {
-    color: colors.textMuted,
-    marginTop: 24,
-    lineHeight: 20,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-  },
-  cardTitle: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
-    textTransform: 'uppercase',
+    paddingBottom: spacing.xxxl,
+    gap: spacing.sm,
   },
   cardBody: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.bodyStrong,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: spacing.sm,
   },
   metric: {
     width: '47%',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
+    borderRadius: radii.sm,
+    padding: spacing.md,
   },
   metricLabel: {
-    color: colors.textMuted,
+    ...typography.meta,
     fontSize: 12,
-    marginBottom: 6,
+    marginBottom: spacing.xs,
   },
   metricValue: {
-    color: colors.text,
+    ...typography.bodyStrong,
     fontSize: 18,
-    fontWeight: '700',
   },
   capitalSection: {
-    marginTop: 8,
-    gap: 10,
+    marginTop: spacing.xs,
   },
-  sectionHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  capitalEdit: {
+    marginBottom: spacing.sm,
   },
-  sectionTitle: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  link: { color: colors.primary, fontWeight: '700' },
   equalNote: {
-    color: colors.textMuted,
+    ...typography.meta,
     fontSize: 13,
     lineHeight: 18,
   },
   subTitle: {
-    color: colors.text,
-    fontWeight: '600',
-    marginTop: 4,
+    ...typography.bodyStrong,
+    marginTop: spacing.xs,
   },
   partyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 12,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  partyName: { color: colors.text, fontWeight: '700', marginBottom: 4 },
-  partyMeta: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  partyName: { ...typography.bodyStrong, marginBottom: spacing.xs },
+  partyMeta: { ...typography.meta, fontSize: 13, marginTop: 2 },
 });

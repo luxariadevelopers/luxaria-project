@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -9,6 +9,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { buildPurchaseOrderCreatePath } from '@/purchase-orders/validation';
 import { quotationComparisonPath } from '@/quotation-comparisons/paths';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   QuotationEntryDrawer,
   type QuotationEntryMode,
@@ -123,25 +124,15 @@ export function QuotationsPage() {
 
   return (
     <Stack spacing={2} data-testid="quotations-page">
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-        }}
-      >
-        <div>
-          <Typography variant="h5">Quotations</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Capture multiple vendor quotations against purchase requests
-            {selectedProject
+      <PageHeader
+        subtitle={
+          `Capture multiple vendor quotations against purchase requests${
+            selectedProject
               ? ` · ${selectedProject.projectName ?? selectedProject.projectCode}`
-              : ''}
-            .
-          </Typography>
-        </div>
-      </Stack>
+              : ''
+          }.`
+        }
+      />
 
       <QuotationTable
         rows={list.data?.items ?? []}

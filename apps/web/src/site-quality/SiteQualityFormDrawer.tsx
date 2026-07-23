@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getErrorMessage } from '@/api/errors';
 import { FormTextField } from '@/components/forms/FormTextField';
 import { useNotify } from '@/components/NotificationProvider';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   createSiteQuality,
   updateSiteQuality,
@@ -125,7 +126,7 @@ export function SiteQualityFormDrawer({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box

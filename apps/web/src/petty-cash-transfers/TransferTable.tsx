@@ -161,6 +161,11 @@ export function TransferTable({
       filterSlot={filterSlot}
       toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
+      mobileCard={{
+        primaryField: 'transferNumber',
+        metaFields: ['amount', 'transferDate'],
+        statusField: 'status',
+      }}
     />
   );
 }

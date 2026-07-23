@@ -15,6 +15,7 @@ export {
   getPageTitle,
   getRouteById,
   getRouteLabel,
+  humanizeRouteSegment,
   requireRouteById,
   toRelativeAppPath,
 } from './routeRegistry';

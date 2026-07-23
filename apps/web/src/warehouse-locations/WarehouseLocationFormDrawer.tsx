@@ -11,6 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { getErrorMessage } from '@/api/errors';
+import { formDrawerPaperSx } from '@/components/forms';
 import { useNotify } from '@/components/NotificationProvider';
 import {
   requiredParentLevel,
@@ -152,10 +153,15 @@ export function WarehouseLocationFormDrawer({
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      slotProps={{ paper: { sx: formDrawerPaperSx(440) } }}
+    >
       <Stack
         spacing={2}
-        sx={{ width: { xs: 320, sm: 440 }, p: 2.5 }}
+        sx={{ p: 2.5 }}
         data-testid="warehouse-location-form-drawer"
       >
         <Typography variant="h6">

@@ -1,14 +1,16 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, spacing, typography } from '@/theme';
 import { fetchActiveShareholding, fetchDirector } from './api';
 import { resolveDirectorCapabilities } from './permissions';
 import type { PublicDirector, PublicShareholding } from './types';
@@ -86,14 +88,13 @@ export function DirectorDetailScreen({ navigation, route }: Props) {
       subtitle={item?.directorCode ?? directorId}
       rightSlot={
         caps.canUpdate && item ? (
-          <Pressable
-            style={styles.editBtn}
+          <Button
+            label="Edit"
             onPress={() =>
               navigation.navigate('DirectorForm', { directorId: item.id })
             }
-          >
-            <Text style={styles.editBtnText}>Edit</Text>
-          </Pressable>
+            style={{ minWidth: 80 }}
+          />
         ) : null
       }
     >
@@ -107,9 +108,7 @@ export function DirectorDetailScreen({ navigation, route }: Props) {
           onRetry={() => void load()}
         />
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.name}>{item.fullName}</Text>
-          <Text style={styles.status}>{item.status}</Text>
+        <FormSection title={item.fullName} description={item.status}>
           <Field label="Director code" value={item.directorCode} />
           <Field label="Linked user" value={item.userCode ?? '—'} />
           {item.employeeId ? (
@@ -133,40 +132,19 @@ export function DirectorDetailScreen({ navigation, route }: Props) {
           {item.isPlaceholder ? (
             <Text style={styles.note}>Seed placeholder director</Text>
           ) : null}
-        </View>
+        </FormSection>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  editBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  editBtnText: { color: '#F4F0E6', fontWeight: '700' },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 10,
-  },
-  name: { color: colors.text, fontSize: 20, fontWeight: '700' },
-  status: {
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  field: { gap: 2 },
+  field: { gap: 2, marginBottom: spacing.sm },
   fieldLabel: {
+    ...typography.label,
     color: colors.textMuted,
     fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
   },
-  fieldValue: { color: colors.text, fontSize: 15 },
-  note: { color: colors.textMuted, marginTop: 8, fontSize: 13 },
+  fieldValue: { ...typography.body, color: colors.text },
+  note: { ...typography.meta, marginTop: spacing.sm, fontSize: 13 },
 });

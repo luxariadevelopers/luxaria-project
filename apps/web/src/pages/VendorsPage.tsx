@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -8,6 +8,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { BlockVendorDialog } from '@/vendors/BlockVendorDialog';
 import { CreateVendorDrawer } from '@/vendors/CreateVendorDrawer';
 import { EditVendorDrawer } from '@/vendors/EditVendorDrawer';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   VendorFilters,
   type VendorFilterState,
@@ -78,10 +79,9 @@ export function VendorsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary">
-        Vendor master — search, verification, activation, and blocking. Bank
-        account numbers are never shown in this list.
-      </Typography>
+      <PageHeader
+        subtitle="Vendor master — search, verification, activation, and blocking. Bank account numbers are never shown in this list."
+      />
 
       <VendorTable
         rows={vendorsQuery.data?.items ?? []}

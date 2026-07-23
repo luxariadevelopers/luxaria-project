@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, Stack, Typography } from '@mui/material';
+import { Alert, Button, Stack } from '@mui/material';
 import { getErrorMessage, isForbiddenError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   ProofPanel,
   ReceiptFilters,
@@ -105,20 +106,19 @@ export function CollectionsPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
-      >
-        <BoxTitle
-          projectName={selectedProject?.projectName}
-        />
-        {caps.canCreate ? (
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            Record receipt
-          </Button>
-        ) : null}
-      </Stack>
+      <PageHeader
+        title="Collections"
+        subtitle={`Customer receipts${
+          selectedProject ? ` — ${selectedProject.projectName}` : ''
+        }. Record, allocate demands, post, and download PDFs. Duplicate bank transaction references are rejected by Nest (409).`}
+        actions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              Record receipt
+            </Button>
+          ) : undefined
+        }
+      />
 
       <ReceiptFilters value={filters} onChange={setFilters} />
 
@@ -212,20 +212,6 @@ export function CollectionsPage() {
           })();
         }}
       />
-    </Stack>
-  );
-}
-
-function BoxTitle({ projectName }: { projectName?: string }) {
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="h4">Collections</Typography>
-      <Typography color="text.secondary">
-        Customer receipts
-        {projectName ? ` — ${projectName}` : ''}. Record, allocate demands,
-        post, and download PDFs. Duplicate bank transaction references are
-        rejected by Nest (409).
-      </Typography>
     </Stack>
   );
 }

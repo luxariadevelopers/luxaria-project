@@ -10,6 +10,7 @@ import { EmptyState, RetryPanel } from '@/components/errors';
 import { grnStatusLabel } from './labels';
 import type { InspectableGrnOption } from './types';
 import { useCreateQualityInspection } from './useQualityInspections';
+import { formDrawerPaperSx } from '@/components/forms';
 import {
   inspectionCreateSchema,
   type InspectionCreateFormValues,
@@ -86,7 +87,7 @@ export function InspectionForm({
       open={open}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { width: { xs: '100%', sm: 440 } } },
+        paper: { sx: formDrawerPaperSx(440) },
       }}
     >
       <Box sx={{ p: 2.5 }} component="form" onSubmit={handleSubmit(onSubmit)}>

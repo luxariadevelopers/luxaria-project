@@ -1,21 +1,17 @@
 import { useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { formatInr } from '@/format';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { FormSection } from '@/components/FormSection';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
-import { colors } from '@/theme/colors';
+import { colors, radii, spacing, typography } from '@/theme';
 import {
   fetchFinanceDashboardSummary,
   fetchFinancialYearFilterOptions,
@@ -116,9 +112,10 @@ export function FinanceDashboardScreen({ navigation }: Props) {
   if (!canView) {
     return (
       <Screen title="Finance" subtitle="Permission required">
-        <Text style={styles.message}>
-          You need dashboard.view to open the finance dashboard.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="You need dashboard.view to open the finance dashboard."
+        />
       </Screen>
     );
   }
@@ -127,6 +124,7 @@ export function FinanceDashboardScreen({ navigation }: Props) {
   const fyName =
     summary?.filters.financialYearName ??
     fyQuery.data?.find((fy) => fy.id === financialYearId)?.name;
+  const loading = summaryQuery.isLoading || (canListFy && fyQuery.isLoading);
 
   return (
     <Screen
@@ -138,15 +136,21 @@ export function FinanceDashboardScreen({ navigation }: Props) {
       }
       scroll={false}
     >
-      {summaryQuery.isLoading || (canListFy && fyQuery.isLoading) ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : summaryQuery.error ? (
-        <Text style={styles.message}>{getErrorMessage(summaryQuery.error)}</Text>
+      {loading || summaryQuery.error ? (
+        <AsyncStatePanel
+          loading={loading}
+          error={
+            summaryQuery.error
+              ? getErrorMessage(summaryQuery.error)
+              : null
+          }
+          onRetry={() => void summaryQuery.refetch()}
+        />
       ) : summary && summary.filters.accessibleProjectCount === 0 ? (
-        <Text style={styles.message}>No projects in scope for this filter.</Text>
+        <AsyncStatePanel empty emptyLabel="No projects in scope for this filter." />
       ) : summary ? (
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.section}>Urgent actions</Text>
+          <FormSection title="Urgent actions">
           <View style={styles.grid}>
             <Metric
               label="Overdue payments"
@@ -169,8 +173,9 @@ export function FinanceDashboardScreen({ navigation }: Props) {
               meta={tileMeta(summary.journalErrors, 'entries')}
             />
           </View>
+          </FormSection>
 
-          <Text style={styles.section}>Bank & cash</Text>
+          <FormSection title="Bank & cash">
           <View style={styles.grid}>
             <Metric
               label="Company bank"
@@ -196,8 +201,9 @@ export function FinanceDashboardScreen({ navigation }: Props) {
               }
             />
           </View>
+          </FormSection>
 
-          <Text style={styles.section}>Payables & receivables</Text>
+          <FormSection title="Payables & receivables">
           <AgeingBlock title="Vendor ageing" ageing={summary.vendorAgeing} />
           <AgeingBlock
             title="Contractor ageing"
@@ -225,10 +231,11 @@ export function FinanceDashboardScreen({ navigation }: Props) {
               meta={tileMeta(summary.unsettledPettyCash)}
             />
           </View>
+          </FormSection>
 
-          <Text style={styles.section}>
-            Cash-flow forecast ({summary.cashFlowForecast.horizonDays}d)
-          </Text>
+          <FormSection
+            title={`Cash-flow forecast (${summary.cashFlowForecast.horizonDays}d)`}
+          >
           <View style={styles.grid}>
             <Metric
               label="Inflows"
@@ -240,84 +247,59 @@ export function FinanceDashboardScreen({ navigation }: Props) {
             />
             <Metric label="Net" value={money(summary.cashFlowForecast.net)} />
           </View>
+          </FormSection>
 
-          <Text style={styles.section}>Project fund position</Text>
+          <FormSection title="Project fund position" framed={false}>
           {summary.projectFundPosition.map((row) => (
-            <Pressable
+            <ListRow
               key={row.projectId}
-              style={styles.card}
-              onPress={() => void openProjectDashboard(row.projectId)}
-              disabled={!row.projectId}
-            >
-              <Text style={styles.cardTitle}>
-                {row.projectCode ?? '—'} · {row.projectName ?? 'Project'}
-              </Text>
-              <Text style={styles.cardMeta}>
-                Liquidity {money(row.totalLiquidity)} · Net{' '}
-                {money(row.netFundPosition)}
-              </Text>
-              <Text style={styles.cardMeta}>
-                Bank {money(row.bankBalance)} · Cash {money(row.cashBalance)} ·
-                Vendor {money(row.vendorPayable)} · Contractor{' '}
-                {money(row.contractorPayable)}
-              </Text>
-              {row.projectId ? (
-                <Text style={styles.linkText}>Open project dashboard</Text>
-              ) : null}
-            </Pressable>
+              title={`${row.projectCode ?? '—'} · ${row.projectName ?? 'Project'}`}
+              meta={`Liquidity ${money(row.totalLiquidity)} · Net ${money(row.netFundPosition)} · Bank ${money(row.bankBalance)} · Cash ${money(row.cashBalance)}`}
+              onPress={
+                row.projectId
+                  ? () => void openProjectDashboard(row.projectId)
+                  : undefined
+              }
+            />
           ))}
           {summary.projectFundPosition.length === 0 ? (
             <Text style={styles.message}>No project fund rows in scope.</Text>
           ) : null}
+          </FormSection>
         </ScrollView>
       ) : (
-        <Text style={styles.message}>Finance summary unavailable.</Text>
+        <AsyncStatePanel empty emptyLabel="Finance summary unavailable." />
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: 16, gap: 10, paddingBottom: 32 },
-  loader: { marginTop: 40 },
-  message: { padding: 16, color: colors.textMuted },
-  section: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  scroll: { paddingBottom: spacing.xxxl, gap: spacing.sm },
+  message: { ...typography.meta },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   metric: {
     width: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: radii.sm,
+    padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  metricLabel: { fontSize: 12, color: colors.textMuted },
+  metricLabel: { ...typography.meta, fontSize: 12 },
   metricValue: {
-    marginTop: 4,
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    marginTop: spacing.xs,
+    ...typography.bodyStrong,
   },
   metricMeta: { marginTop: 2, fontSize: 11, color: colors.textMuted },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: radii.sm,
+    padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    marginBottom: spacing.sm,
   },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-  cardMeta: { marginTop: 4, fontSize: 13, color: colors.textMuted },
-  linkText: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
+  cardTitle: { ...typography.bodyStrong, fontSize: 15 },
+  cardMeta: { ...typography.meta, marginTop: spacing.xs, fontSize: 13 },
 });

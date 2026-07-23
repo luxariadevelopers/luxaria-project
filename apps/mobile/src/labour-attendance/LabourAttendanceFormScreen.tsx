@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Crypto from 'expo-crypto';
 import { getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { AsyncStatePanel } from '@/components/AsyncStatePanel';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import type { AppStackParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
-import { colors } from '@/theme/colors';
+import { colors, spacing } from '@/theme';
 import {
   createLabourAttendance,
   listContractorsForAttendance,
@@ -94,9 +92,10 @@ export function LabourAttendanceFormScreen({ navigation }: Props) {
   if (!caps.canCreate) {
     return (
       <Screen title="New attendance" subtitle="Permission required">
-        <Text style={styles.error}>
-          You need attendance.create to submit labour attendance.
-        </Text>
+        <AsyncStatePanel
+          forbidden
+          error="You need attendance.create to submit labour attendance."
+        />
       </Screen>
     );
   }
@@ -168,168 +167,157 @@ export function LabourAttendanceFormScreen({ navigation }: Props) {
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
-      <TextInput
-        style={styles.input}
-        value={attendanceDate}
-        onChangeText={setAttendanceDate}
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Entry mode</Text>
-      <View style={styles.chips}>
-        <Pressable
-          style={[
-            styles.chip,
-            entryMode === LabourAttendanceEntryMode.Group && styles.chipActive,
-          ]}
-          onPress={() => setEntryMode(LabourAttendanceEntryMode.Group)}
-        >
-          <Text style={styles.chipText}>Group</Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.chip,
-            entryMode === LabourAttendanceEntryMode.Individual &&
-              styles.chipActive,
-          ]}
-          onPress={() => setEntryMode(LabourAttendanceEntryMode.Individual)}
-        >
-          <Text style={styles.chipText}>Individual</Text>
-        </Pressable>
-      </View>
-
-      <Text style={styles.label}>Contractor id</Text>
-      <TextInput
-        style={styles.input}
-        value={contractorId}
-        onChangeText={setContractorId}
-        autoCapitalize="none"
-        placeholder="Paste or pick below"
-      />
-      <View style={styles.chips}>
-        {contractors.slice(0, 6).map((c) => (
-          <Pressable
-            key={c.id}
-            style={[styles.chip, contractorId === c.id && styles.chipActive]}
-            onPress={() => setContractorId(c.id)}
-          >
-            <Text style={styles.chipText}>{c.contractorCode || c.legalName}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Labour category id</Text>
-      <TextInput
-        style={styles.input}
-        value={categoryId}
-        onChangeText={setCategoryId}
-        autoCapitalize="none"
-      />
-      <View style={styles.chips}>
-        {categories.slice(0, 6).map((c) => (
-          <Pressable
-            key={c.id}
-            style={[styles.chip, categoryId === c.id && styles.chipActive]}
-            onPress={() => setCategoryId(c.id)}
-          >
-            <Text style={styles.chipText}>
-              {c.categoryCode || c.categoryName || c.id.slice(-6)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {entryMode === LabourAttendanceEntryMode.Group ? (
-        <>
-          <Text style={styles.label}>Worker count</Text>
-          <TextInput
-            style={styles.input}
-            value={workerCount}
-            onChangeText={setWorkerCount}
-            keyboardType="numeric"
+      <FormSection title="Basics">
+        <TextField
+          label="Date (YYYY-MM-DD)"
+          value={attendanceDate}
+          onChangeText={setAttendanceDate}
+          autoCapitalize="none"
+          containerStyle={styles.field}
+        />
+        <Text style={styles.chipLabel}>Entry mode</Text>
+        <View style={styles.chips}>
+          <Chip
+            label="Group"
+            selected={entryMode === LabourAttendanceEntryMode.Group}
+            onPress={() => setEntryMode(LabourAttendanceEntryMode.Group)}
           />
-
-          <Text style={styles.label}>Overtime hours</Text>
-          <TextInput
-            style={styles.input}
-            value={overtimeHours}
-            onChangeText={setOvertimeHours}
-            keyboardType="numeric"
+          <Chip
+            label="Individual"
+            selected={entryMode === LabourAttendanceEntryMode.Individual}
+            onPress={() => setEntryMode(LabourAttendanceEntryMode.Individual)}
           />
-        </>
-      ) : (
-        <>
-          <IndividualAttendanceSection
-            workers={workers}
-            onChange={setWorkers}
-          />
-          <Text style={styles.label}>Line overtime hours (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={overtimeHours}
-            onChangeText={setOvertimeHours}
-            keyboardType="numeric"
-          />
-        </>
-      )}
+        </View>
+      </FormSection>
 
-      <Text style={styles.label}>Work location</Text>
-      <TextInput
-        style={styles.input}
-        value={workLocation}
-        onChangeText={setWorkLocation}
-      />
+      <FormSection title="Contractor & category">
+        <TextField
+          label="Contractor id"
+          value={contractorId}
+          onChangeText={setContractorId}
+          autoCapitalize="none"
+          placeholder="Paste or pick below"
+          containerStyle={styles.field}
+        />
+        <View style={styles.chips}>
+          {contractors.slice(0, 6).map((c) => (
+            <Chip
+              key={c.id}
+              label={c.contractorCode || c.legalName}
+              selected={contractorId === c.id}
+              onPress={() => setContractorId(c.id)}
+            />
+          ))}
+        </View>
+        <TextField
+          label="Labour category id"
+          value={categoryId}
+          onChangeText={setCategoryId}
+          autoCapitalize="none"
+          containerStyle={styles.field}
+        />
+        <View style={styles.chips}>
+          {categories.slice(0, 6).map((c) => (
+            <Chip
+              key={c.id}
+              label={c.categoryCode || c.categoryName || c.id.slice(-6)}
+              selected={categoryId === c.id}
+              onPress={() => setCategoryId(c.id)}
+            />
+          ))}
+        </View>
+      </FormSection>
 
-      <Text style={styles.label}>Remarks</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        value={remarks}
-        onChangeText={setRemarks}
-        multiline
-      />
+      <FormSection title="Headcount">
+        {entryMode === LabourAttendanceEntryMode.Group ? (
+          <>
+            <TextField
+              label="Worker count"
+              value={workerCount}
+              onChangeText={setWorkerCount}
+              keyboardType="numeric"
+              containerStyle={styles.field}
+            />
+            <TextField
+              label="Overtime hours"
+              value={overtimeHours}
+              onChangeText={setOvertimeHours}
+              keyboardType="numeric"
+              containerStyle={styles.fieldLast}
+            />
+          </>
+        ) : (
+          <>
+            <IndividualAttendanceSection
+              workers={workers}
+              onChange={setWorkers}
+            />
+            <TextField
+              label="Line overtime hours (optional)"
+              value={overtimeHours}
+              onChangeText={setOvertimeHours}
+              keyboardType="numeric"
+              containerStyle={styles.fieldLast}
+            />
+          </>
+        )}
+      </FormSection>
 
-      <Pressable
-        style={[styles.submit, saving && styles.disabled]}
-        disabled={saving}
+      <FormSection title="Notes">
+        <TextField
+          label="Work location"
+          value={workLocation}
+          onChangeText={setWorkLocation}
+          containerStyle={styles.field}
+        />
+        <TextField
+          label="Remarks"
+          value={remarks}
+          onChangeText={setRemarks}
+          multiline
+          style={styles.multiline}
+          containerStyle={styles.fieldLast}
+        />
+      </FormSection>
+
+      <Button
+        label={
+          saving ? 'Saving…' : isOnline ? 'Submit attendance' : 'Queue offline'
+        }
+        loading={saving}
         onPress={() => void submit()}
-      >
-        <Text style={styles.submitText}>
-          {saving ? 'Saving…' : isOnline ? 'Submit attendance' : 'Queue offline'}
-        </Text>
-      </Pressable>
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  field: {
+    marginBottom: spacing.md,
   },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
+  fieldLast: {
+    marginBottom: 0,
   },
-  chipActive: { borderColor: colors.primary },
-  chipText: { color: colors.text, fontSize: 12 },
-  submit: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    alignItems: 'center',
+  chipLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
   },
-  submitText: { color: '#F4F0E6', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { color: colors.danger, marginBottom: 8 },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  multiline: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  error: {
+    color: colors.danger,
+    marginBottom: spacing.sm,
+  },
 });

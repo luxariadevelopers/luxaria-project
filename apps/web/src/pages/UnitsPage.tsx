@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
 import {
-  Box,
   Button,
   CircularProgress,
   Stack,
-  Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -12,6 +10,7 @@ import {
   PermissionDenied,
 } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/layouts/PageHeader';
 import {
   UnitFilters,
   type UnitFilterState,
@@ -112,27 +111,17 @@ export function UnitsPage() {
 
   return (
     <Stack spacing={2} data-testid="units-page">
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { sm: 'center' },
-          gap: 1.5,
-        }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h4">Units</Typography>
-          <Typography color="text.secondary">
-            Project / block / floor inventory with pricing and status.
-          </Typography>
-        </Stack>
-        {caps.canCreate ? (
-          <Button variant="contained" onClick={openCreate}>
-            New unit
-          </Button>
-        ) : null}
-      </Box>
+      <PageHeader
+        title="Units"
+        subtitle="Project / block / floor inventory with pricing and status."
+        actions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={openCreate}>
+              New unit
+            </Button>
+          ) : undefined
+        }
+      />
 
       <UnitTable
         rows={list.data?.items ?? []}

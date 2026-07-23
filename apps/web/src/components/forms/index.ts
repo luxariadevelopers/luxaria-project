@@ -18,3 +18,5 @@ export {
   shapeCreatePayload,
   shapeUpdatePayload,
 } from './formHelpers';
+export { formDrawerPaperSx } from './formDrawer';
+export type { FormDrawerWidth } from './formDrawer';

@@ -1,9 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
+  Box,
   Chip,
-  Dialog,
-  DialogContent,
-  DialogTitle,
+  Drawer,
   Stack,
   Typography,
 } from '@mui/material';
@@ -16,6 +15,7 @@ import {
   DataTable,
   type DataTableRowAction,
 } from '@/components/data-table';
+import { formDrawerPaperSx } from '@/components/forms';
 import { formatDateTime } from '@/format';
 import { AuditDiffView } from './AuditDiffView';
 
@@ -144,55 +144,61 @@ export function AuditTable({
         preferencesKey="audit-logs-viewer"
         // Explicitly no export/edit — auditors trace only.
         showExport={false}
+        mobileCard={{
+          primaryField: 'module',
+          metaFields: ['action', 'timestamp'],
+        }}
       />
 
-      <Dialog
+      <Drawer
+        anchor="right"
         open={selected != null}
         onClose={() => setSelected(null)}
-        fullWidth
-        maxWidth="lg"
+        slotProps={{ paper: { sx: formDrawerPaperSx({ sm: 480, md: 720 }) } }}
       >
-        <DialogTitle>
-          {selected
-            ? `${labelTimelineAction(selected.action)} · ${selected.module}`
-            : 'Audit entry'}
-        </DialogTitle>
-        <DialogContent dividers>
-          {selected ? (
-            <Stack spacing={2}>
-              <Stack spacing={0.5}>
-                <Typography variant="body2">
-                  <strong>When:</strong> {formatDateTime(selected.timestamp)}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Actor:</strong> {selected.userId ?? '—'}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Request id:</strong>{' '}
-                  <Typography
-                    component="span"
-                    variant="body2"
-                    sx={{ fontFamily: 'ui-monospace, monospace' }}
-                  >
-                    {selected.requestId ?? '—'}
+        <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+          <Stack spacing={2}>
+            <Typography variant="h6">
+              {selected
+                ? `${labelTimelineAction(selected.action)} · ${selected.module}`
+                : 'Audit entry'}
+            </Typography>
+            {selected ? (
+              <>
+                <Stack spacing={0.5}>
+                  <Typography variant="body2">
+                    <strong>When:</strong> {formatDateTime(selected.timestamp)}
                   </Typography>
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Entity:</strong> {selected.entityType}
-                  {selected.entityId ? ` · ${selected.entityId}` : ''}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Read-only · no edit capability
-                </Typography>
-              </Stack>
-              <AuditDiffView
-                beforeData={selected.beforeData}
-                afterData={selected.afterData}
-              />
-            </Stack>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+                  <Typography variant="body2">
+                    <strong>Actor:</strong> {selected.userId ?? '—'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Request id:</strong>{' '}
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      sx={{ fontFamily: 'ui-monospace, monospace' }}
+                    >
+                      {selected.requestId ?? '—'}
+                    </Typography>
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Entity:</strong> {selected.entityType}
+                    {selected.entityId ? ` · ${selected.entityId}` : ''}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Read-only · no edit capability
+                  </Typography>
+                </Stack>
+                <AuditDiffView
+                  beforeData={selected.beforeData}
+                  afterData={selected.afterData}
+                />
+              </>
+            ) : null}
+          </Stack>
+        </Box>
+      </Drawer>
     </>
   );
 }

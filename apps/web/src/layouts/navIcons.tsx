@@ -14,7 +14,7 @@ import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
-import type { NavIconId } from '@/navigation/routeRegistry';
+import type { NavIconId, NavPillarId } from '@/navigation/routeRegistry';
 
 const ICONS: Record<NavIconId, ReactElement> = {
   dashboard: <DashboardOutlinedIcon fontSize="small" />,
@@ -34,6 +34,20 @@ const ICONS: Record<NavIconId, ReactElement> = {
   company: <BusinessOutlinedIcon fontSize="small" />,
 };
 
+const PILLAR_ICON: Record<NavPillarId, NavIconId> = {
+  overview: 'dashboard',
+  analytics: 'reports',
+  projects: 'projects',
+  supply: 'purchase',
+  sales: 'sales',
+  finance: 'finance',
+  admin: 'settings',
+};
+
 export function navIcon(id: NavIconId): ReactElement {
   return ICONS[id];
+}
+
+export function pillarIcon(id: NavPillarId): ReactElement {
+  return navIcon(PILLAR_ICON[id]);
 }

@@ -141,6 +141,11 @@ export function PaymentScheduleTable({
       emptyTitle="No payment schedules"
       emptyDescription="Generate a schedule from an eligible booking."
       getRowId={(row) => row.id}
+      mobileCard={{
+        primaryField: 'scheduleNumber',
+        metaFields: ['totalAmount', 'scheduleType'],
+        statusField: 'status',
+      }}
     />
   );
 }

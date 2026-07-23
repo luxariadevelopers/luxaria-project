@@ -25,7 +25,6 @@ type Props = {
   search: string;
   onSearchChange: (value: string) => void;
   filterSlot?: ReactNode;
-  toolbarActions?: ReactNode;
   caps: ExpenseCapabilities;
   onVerify?: (row: PublicSiteExpenseVoucher) => void;
   onApprove?: (row: PublicSiteExpenseVoucher) => void;
@@ -45,7 +44,6 @@ export function ExpenseTable({
   search,
   onSearchChange,
   filterSlot,
-  toolbarActions,
   caps,
   onVerify,
   onApprove,
@@ -170,8 +168,12 @@ export function ExpenseTable({
       searchPlaceholder="Search voucher or payee…"
       preferencesKey="site-expenses-list"
       filterSlot={filterSlot}
-      toolbarActions={toolbarActions}
       rowActions={rowActions.length > 0 ? rowActions : undefined}
+      mobileCard={{
+        primaryField: 'voucherNumber',
+        metaFields: ['paidTo', 'amount'],
+        statusField: 'status',
+      }}
     />
   );
 }

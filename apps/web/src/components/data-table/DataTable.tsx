@@ -5,7 +5,9 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   DataGrid,
   type GridColDef,
@@ -13,6 +15,7 @@ import {
   type GridValidRowModel,
 } from '@mui/x-data-grid';
 import { EmptyState, RetryPanel } from '@/components/errors';
+import { DataTableMobileList } from './DataTableMobileList';
 import { ExportButton } from './ExportButton';
 import {
   DEFAULT_LIST_PAGE_SIZE,
@@ -21,12 +24,22 @@ import {
   sanitizeSortBy,
   sanitizeSortOrder,
 } from './listQuery';
+import { resolveMobileCardFields } from './mobileCard';
 import { RowActionsMenu } from './RowActionsMenu';
 import { TableSettingsPanel } from './TableSettingsPanel';
 import type { DataTableProps } from './types';
 import { useTablePreferences } from './useTablePreferences';
 
 export type { DataTableProps, DataTableRowAction } from './types';
+
+function resolveRowId<R extends GridValidRowModel>(
+  row: R,
+  getRowId?: DataTableProps<R>['getRowId'],
+): string | number {
+  if (getRowId) return getRowId(row);
+  const id = (row as { id?: string | number }).id;
+  return id ?? String(row);
+}
 
 export function DataTable<R extends GridValidRowModel>({
   title,
@@ -71,7 +84,10 @@ export function DataTable<R extends GridValidRowModel>({
   exportFileName = 'export',
   exportPermission,
   showColumnVisibility = true,
+  mobileCard,
 }: DataTableProps<R>) {
+  const theme = useTheme();
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'));
   const prefsScope = preferencesKey ?? savedFiltersKey;
   const [searchDraft, setSearchDraft] = useState(search ?? '');
   const pageSizeHydrated = useRef(false);
@@ -155,6 +171,28 @@ export function DataTable<R extends GridValidRowModel>({
     return [{ field: sortBy, sort: sortOrder }];
   }, [sortBy, sortOrder, allowedSortKeys]);
 
+  const mobileFields = useMemo(
+    () =>
+      resolveMobileCardFields(
+        columns,
+        mobileCard,
+        prefs.columnVisibility,
+      ),
+    [columns, mobileCard, prefs.columnVisibility],
+  );
+
+  const useMobileCards = isNarrow && mobileFields != null;
+
+  const mobileRows = useMemo(() => {
+    if (!useMobileCards) return rows;
+    if (paginationMode === 'server') return rows;
+    const start = Math.max(0, page - 1) * safePageSize;
+    return rows.slice(start, start + safePageSize);
+  }, [useMobileCards, paginationMode, rows, page, safePageSize]);
+
+  const effectiveRowCount =
+    paginationMode === 'server' ? (rowCount ?? rows.length) : rows.length;
+
   const showSettings =
     prefs.enabled &&
     (Boolean(onApplySavedQuery) || showColumnVisibility);
@@ -185,7 +223,7 @@ export function DataTable<R extends GridValidRowModel>({
     <Paper
       variant="outlined"
       sx={{
-        p: 2,
+        p: { xs: 1.5, sm: 2 },
         borderColor: 'divider',
         bgcolor: 'background.paper',
       }}
@@ -214,14 +252,14 @@ export function DataTable<R extends GridValidRowModel>({
                 }
               }}
               onBlur={() => onSearchChange(searchDraft)}
-              sx={{ minWidth: 220, flex: 1 }}
+              sx={{ minWidth: { xs: '100%', sm: 220 }, flex: 1 }}
               slotProps={{
                 htmlInput: { 'aria-label': 'Search' },
               }}
             />
           ) : null}
           {filterSlot}
-          <Box sx={{ flex: 1 }} />
+          <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
           {toolbarActions}
           {showSettings ? (
             <TableSettingsPanel
@@ -264,6 +302,45 @@ export function DataTable<R extends GridValidRowModel>({
 
       {isEmpty ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
+      ) : useMobileCards && mobileFields ? (
+        <DataTableMobileList
+          rows={mobileRows}
+          columns={columns}
+          fields={mobileFields}
+          loading={loading}
+          getRowId={
+            getRowId
+              ? (row) => resolveRowId(row, getRowId)
+              : undefined
+          }
+          onRowClick={
+            onRowClick
+              ? (row) => {
+                  const id = resolveRowId(row, getRowId);
+                  onRowClick(
+                    { id, row } as Parameters<
+                      NonNullable<typeof onRowClick>
+                    >[0],
+                    {} as Parameters<NonNullable<typeof onRowClick>>[1],
+                    {} as Parameters<NonNullable<typeof onRowClick>>[2],
+                  );
+                }
+              : undefined
+          }
+          rowActions={rowActions}
+          page={page}
+          pageSize={safePageSize}
+          rowCount={effectiveRowCount}
+          pageSizeOptions={safeOptions}
+          onPageChange={onPageChange}
+          onPageSizeChange={(nextSize) => {
+            const clamped = clampListLimit(nextSize);
+            onPageSizeChange?.(clamped);
+            if (prefs.enabled) {
+              prefs.setPageSizePreference(clamped);
+            }
+          }}
+        />
       ) : (
         <Box sx={{ height, width: '100%' }}>
           <DataGrid

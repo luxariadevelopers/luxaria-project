@@ -1,19 +1,22 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { StyleSheet, View } from 'react-native';
+import { Button } from '@/components/Button';
+import { ListRow } from '@/components/ListRow';
+import { spacing } from '@/theme';
 import type { PublicWorkMeasurement } from '../types';
 
-function statusColor(status: string): string {
+function statusTone(
+  status: string,
+): 'default' | 'success' | 'warning' | 'danger' {
   switch (status) {
     case 'verified':
-      return colors.success;
+      return 'success';
     case 'submitted':
-      return colors.secondary;
+      return 'warning';
     case 'rejected':
-      return colors.danger;
     case 'cancelled':
-      return colors.textMuted;
+      return 'danger';
     default:
-      return colors.primary;
+      return 'default';
   }
 }
 
@@ -31,113 +34,37 @@ export function MeasurementRow({
   acknowledging,
 }: Props) {
   const date = String(item.measurementDate).slice(0, 10);
-  const content = (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.number}>{item.measurementNumber}</Text>
-        <Text style={[styles.status, { color: statusColor(item.status) }]}>
-          {item.status}
-        </Text>
-      </View>
-      <Text style={styles.meta}>
-        {item.boqCode ?? item.boqItemId.slice(-6)} · {date}
-      </Text>
-      <Text style={styles.location} numberOfLines={2}>
-        {item.location}
-      </Text>
-      <Text style={styles.qty}>
-        Prev {item.previousQuantity} + Curr {item.currentQuantity} ={' '}
-        {item.cumulativeQuantity} {item.unit}
-        {' · '}BOQ {item.boqPlannedQuantity}
-      </Text>
-      {item.drawingReference ? (
-        <Text style={styles.meta}>Drawing {item.drawingReference}</Text>
-      ) : null}
-      <Text style={styles.meta}>
-        Photos {item.photos.length}
-        {item.rejectionReason ? ` · ${item.rejectionReason}` : ''}
-      </Text>
-      {onAcknowledge ? (
-        <Pressable
-          style={[styles.ackBtn, acknowledging ? styles.ackBtnDisabled : null]}
-          disabled={acknowledging}
-          onPress={onAcknowledge}
-          accessibilityRole="button"
-          accessibilityLabel="Acknowledge measurement"
-        >
-          <Text style={styles.ackBtnText}>
-            {acknowledging ? 'Acknowledging…' : 'Acknowledge'}
-          </Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-
-  if (!onPress) {
-    return content;
-  }
+  const boq = item.boqCode ?? item.boqItemId.slice(-6);
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
-      {content}
-    </Pressable>
+    <View>
+      <ListRow
+        title={item.measurementNumber}
+        meta={`${boq} · ${date} · ${item.location} · Prev ${item.previousQuantity} + Curr ${item.currentQuantity} = ${item.cumulativeQuantity} ${item.unit}`}
+        status={item.status}
+        statusTone={statusTone(item.status)}
+        onPress={onPress}
+        style={onAcknowledge ? styles.rowWithAck : undefined}
+      />
+      {onAcknowledge ? (
+        <Button
+          label={acknowledging ? 'Acknowledging…' : 'Acknowledge'}
+          loading={acknowledging}
+          onPress={onAcknowledge}
+          style={styles.ackBtn}
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 14,
-    marginBottom: 10,
-    gap: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  number: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 15,
-    flex: 1,
-  },
-  status: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  meta: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  location: {
-    color: colors.text,
-    fontSize: 14,
-    marginTop: 2,
-  },
-  qty: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
+  rowWithAck: {
+    marginBottom: spacing.xs,
   },
   ackBtn: {
-    marginTop: 10,
     alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  ackBtnDisabled: {
-    opacity: 0.6,
-  },
-  ackBtnText: {
-    color: '#F4F0E6',
-    fontWeight: '700',
-    fontSize: 13,
+    minWidth: 140,
+    marginBottom: spacing.sm,
   },
 });
