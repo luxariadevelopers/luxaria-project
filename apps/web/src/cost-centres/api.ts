@@ -1,6 +1,7 @@
-import { apiGet } from '@/api/client';
+import { apiGet, apiPost } from '@/api/client';
 import type {
   CostCentreListRow,
+  CreateCostCentreInput,
   ListCostCentresQuery,
   PaginatedCostCentres,
   PublicCostCentre,
@@ -72,4 +73,23 @@ export async function fetchCostCentres(
       limit,
     ),
   };
+}
+
+/** `POST /cost-centres` — `cost_centre.manage` */
+export async function createCostCentre(
+  input: CreateCostCentreInput,
+): Promise<PublicCostCentre> {
+  const res = await apiPost<PublicCostCentre>('/cost-centres', {
+    code: input.code.trim(),
+    name: input.name.trim(),
+    kind: input.kind,
+    companyId: input.companyId || undefined,
+    projectId: input.projectId || undefined,
+    parentId: input.parentId || undefined,
+    notes: input.notes?.trim() || undefined,
+  });
+  if (!res.data) {
+    throw new Error(res.message || 'Cost centre was not created');
+  }
+  return normalise(res.data);
 }

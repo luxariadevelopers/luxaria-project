@@ -34,6 +34,8 @@ export type DocumentUploadPanelProps = {
   context: DocumentUploadContext;
   title?: string;
   documentTypeOptions?: string[];
+  /** When false, locks the type to `documentTypeOptions` / context.documentType. */
+  allowCustomType?: boolean;
   /** Called whenever the set of confirmed document ids changes. */
   onConfirmedChange?: (documents: PublicDocument[]) => void;
   multiple?: boolean;
@@ -47,6 +49,7 @@ export function DocumentUploadPanel({
   context,
   title = 'Documents',
   documentTypeOptions,
+  allowCustomType = true,
   onConfirmedChange,
   multiple = true,
 }: DocumentUploadPanelProps) {
@@ -92,6 +95,7 @@ export function DocumentUploadPanel({
           value={meta}
           onChange={setMeta}
           documentTypeOptions={documentTypeOptions}
+          allowCustomType={allowCustomType}
         />
 
         <input

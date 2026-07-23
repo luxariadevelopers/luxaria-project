@@ -36,6 +36,7 @@ import { ProjectCommitmentsService } from '../project-commitments/project-commit
 import {
   CommitmentStatus,
   ContributionCommitment,
+  ContributionType,
 } from '../project-commitments/schemas/contribution-commitment.schema';
 import {
   ParticipantApprovalStatus,
@@ -608,7 +609,7 @@ export class ContributionReceiptsService {
   }
 
   /**
-   * Phase 8: Dr Bank/Cash · Cr Investor or Director equity/loan account.
+   * Dr Bank/Cash · Cr Director/Investor capital, or Cr Loans for director loan.
    */
   private async postContributionJournal(
     row: ContributionReceiptDocument,
@@ -621,8 +622,21 @@ export class ContributionReceiptsService {
       throw new NotFoundException('Project participant not found for journal');
     }
 
-    const creditCategory =
-      participant.participantType === ParticipantType.Director
+    const commitment = await this.commitmentModel
+      .findById(row.commitmentId)
+      .lean()
+      .exec();
+    if (!commitment) {
+      throw new NotFoundException('Contribution commitment not found for journal');
+    }
+
+    const isDirectorLoan =
+      participant.participantType === ParticipantType.Director &&
+      commitment.contributionType === ContributionType.Loan;
+
+    const creditCategory = isDirectorLoan
+      ? AccountCategory.Loan
+      : participant.participantType === ParticipantType.Director
         ? AccountCategory.DirectorAccount
         : AccountCategory.InvestorAccount;
     const creditAccount = await this.requireAccountByCategory(creditCategory);
@@ -651,6 +665,11 @@ export class ContributionReceiptsService {
       participant.participantType === ParticipantType.Director
         ? JournalPartyType.Director
         : JournalPartyType.Investor;
+    const creditFundingSource = isDirectorLoan
+      ? JournalFundingSource.Loan
+      : participant.participantType === ParticipantType.Director
+        ? JournalFundingSource.Director
+        : JournalFundingSource.Investor;
 
     const journal = await this.journalService.create(
       {
@@ -659,7 +678,9 @@ export class ContributionReceiptsService {
         sourceModule: 'contribution_receipt',
         sourceEntityType: 'contribution_receipt',
         sourceEntityId: String(row._id),
-        postingPurpose: 'capital_receipt',
+        postingPurpose: isDirectorLoan
+          ? 'director_loan_receipt'
+          : 'capital_receipt',
         narration:
           `Contribution receipt ${row.receiptNumber} (ref ${row.transactionReference ?? 'n/a'})`.slice(
             0,
@@ -671,7 +692,9 @@ export class ContributionReceiptsService {
             debit: row.amount,
             credit: 0,
             projectId,
-            description: `Contribution received ${row.receiptNumber}`,
+            description: isDirectorLoan
+              ? `Director loan received ${row.receiptNumber}`
+              : `Contribution received ${row.receiptNumber}`,
             fundingSource: JournalFundingSource.ProjectFunds,
           },
           {
@@ -679,13 +702,12 @@ export class ContributionReceiptsService {
             debit: 0,
             credit: row.amount,
             projectId,
-            description: `Contribution liability ${row.receiptNumber}`,
+            description: isDirectorLoan
+              ? `Director loan to project ${row.receiptNumber}`
+              : `Contribution capital ${row.receiptNumber}`,
             partyType,
             partyId: String(participant.participantId),
-            fundingSource:
-              participant.participantType === ParticipantType.Director
-                ? JournalFundingSource.Director
-                : JournalFundingSource.Investor,
+            fundingSource: creditFundingSource,
           },
         ],
         post: true,

@@ -6,6 +6,14 @@ export const UserStatus = {
 
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 
+export const ReportingApprovalMode = {
+  Any: 'any',
+  All: 'all',
+} as const;
+
+export type ReportingApprovalMode =
+  (typeof ReportingApprovalMode)[keyof typeof ReportingApprovalMode];
+
 export type PublicUser = {
   id: string;
   userCode: string;
@@ -20,6 +28,9 @@ export type PublicUser = {
   assignedProjects: string[];
   roleIds: string[];
   reportingManager: string | null;
+  reportingOfficers: string[];
+  reportingApprovalMode: ReportingApprovalMode | string;
+  mustChangePassword?: boolean;
   joiningDate: string | null;
   lastLoginAt: string | null;
   createdAt?: string;
@@ -65,6 +76,8 @@ export type CreateUserInput = {
   assignedProjects?: string[];
   roleIds?: string[];
   reportingManager?: string | null;
+  reportingOfficers?: string[];
+  reportingApprovalMode?: ReportingApprovalMode;
   joiningDate?: string | null;
 };
 
@@ -77,5 +90,8 @@ export type UpdateUserInput = {
   department?: string | null;
   profilePhoto?: string | null;
   reportingManager?: string | null;
+  reportingOfficers?: string[];
+  reportingApprovalMode?: ReportingApprovalMode;
+  temporaryPassword?: string;
   joiningDate?: string | null;
 };

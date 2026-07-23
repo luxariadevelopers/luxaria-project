@@ -10,6 +10,8 @@ export type AuthUser = {
    * (user.companyId or primary company). Never taken from the client.
    */
   companyId: string | null;
+  /** When true, client must force a password change before normal use. */
+  mustChangePassword: boolean;
 };
 
 export type JwtPayload = {

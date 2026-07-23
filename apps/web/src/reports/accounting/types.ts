@@ -47,6 +47,7 @@ export type LedgerLineRow = {
   projectId: string | null;
   partyType: string | null;
   partyId: string | null;
+  fundingSource: string | null;
   sourceModule: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;

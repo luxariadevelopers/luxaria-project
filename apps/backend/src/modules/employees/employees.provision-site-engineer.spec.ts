@@ -84,8 +84,15 @@ describe('EmployeesService.provisionSiteEngineer', () => {
     await departmentModel.syncIndexes();
     await designationModel.syncIndexes();
 
-    const departmentsService = new DepartmentsService(departmentModel);
-    const designationsService = new DesignationsService(designationModel);
+    const departmentsService = new DepartmentsService(
+      departmentModel,
+      designationModel,
+      employeeModel,
+    );
+    const designationsService = new DesignationsService(
+      designationModel,
+      employeeModel,
+    );
 
     service = new EmployeesService(
       employeeModel,

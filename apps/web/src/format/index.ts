@@ -12,6 +12,7 @@ export {
   formatFinancialYearFromStart,
   formatIndianNumber,
   formatInr,
+  formatInrInWords,
   formatPercentage,
   formatQuantity,
   formatTime,

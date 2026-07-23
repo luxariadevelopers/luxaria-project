@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import {
   InstrumentType,
   ParticipantType,
+  RepaymentMode,
 } from './schemas/project-participant.schema';
 
 const PERCENT_TOLERANCE = 0.0001;
@@ -18,19 +19,59 @@ export function buildParticipantKey(
   return `${participantType}:${participantId}`;
 }
 
+/**
+ * Loan interest rules:
+ * - repaymentMode = lumpsum → interest optional
+ * - repaymentMode = with_interest → interest required
+ * - repaymentMode unset + loan instrument → interest required (legacy)
+ */
 export function assertInterestRateForInstrument(
   instrumentType: InstrumentType,
   interestRate: number | null | undefined,
+  repaymentMode?: RepaymentMode | null,
 ): void {
-  if (LOAN_INSTRUMENTS.has(instrumentType)) {
+  if (!LOAN_INSTRUMENTS.has(instrumentType)) {
+    return;
+  }
+
+  if (repaymentMode === RepaymentMode.Lumpsum) {
+    if (
+      interestRate !== null &&
+      interestRate !== undefined &&
+      (!Number.isFinite(interestRate) || interestRate < 0)
+    ) {
+      throw new BadRequestException('interestRate must be a non-negative number');
+    }
+    return;
+  }
+
+  const requiresInterest =
+    repaymentMode === RepaymentMode.WithInterest ||
+    repaymentMode === null ||
+    repaymentMode === undefined;
+
+  if (requiresInterest) {
     if (interestRate === null || interestRate === undefined) {
       throw new BadRequestException(
-        'interestRate is required for loan instruments',
+        repaymentMode === RepaymentMode.WithInterest
+          ? 'interestRate is required when repayment mode is with interest'
+          : 'interestRate is required for loan instruments',
       );
     }
     if (!Number.isFinite(interestRate) || interestRate < 0) {
       throw new BadRequestException('interestRate must be a non-negative number');
     }
+  }
+}
+
+export function assertBudgetInvestmentPercentage(
+  value: number | null | undefined,
+): void {
+  if (value === null || value === undefined) return;
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    throw new BadRequestException(
+      'budgetInvestmentPercentage must be between 0 and 100',
+    );
   }
 }
 

@@ -34,7 +34,17 @@ import {
   DprStatus,
 } from '../daily-progress-reports/schemas/daily-progress-report.schema';
 import {
+  ContributionReceipt,
+  ContributionReceiptStatus,
+} from '../contribution-receipts/schemas/contribution-receipt.schema';
+import {
+  Director,
+  DirectorStatus,
+} from '../directors/schemas/director.schema';
+import { CompanyShareholding } from '../directors/schemas/company-shareholding.schema';
+import {
   JournalEntry,
+  JournalPartyType,
   JournalStatus,
 } from '../journal/schemas/journal-entry.schema';
 import {
@@ -47,9 +57,11 @@ import {
   ContributionCommitment,
 } from '../project-commitments/schemas/contribution-commitment.schema';
 import {
+  InstrumentType,
   ParticipantApprovalStatus,
   ParticipantType,
   ProjectParticipant,
+  RepaymentMode,
 } from '../project-participants/schemas/project-participant.schema';
 import {
   ProjectDocumentCategory,
@@ -84,6 +96,8 @@ import {
 } from '../work-measurements/schemas/work-measurement.schema';
 import type { ProjectDashboardQueryDto } from './dto/project-dashboard-query.dto';
 import type {
+  CapitalPlanPartyRow,
+  CapitalPlanSummary,
   ContractorProgressRow,
   CriticalAlert,
   DrillDownLink,
@@ -123,8 +137,14 @@ export class ProjectDashboardService {
     private readonly customerReceiptModel: Model<CustomerReceipt>,
     @InjectModel(ContributionCommitment.name)
     private readonly commitmentModel: Model<ContributionCommitment>,
+    @InjectModel(ContributionReceipt.name)
+    private readonly contributionReceiptModel: Model<ContributionReceipt>,
     @InjectModel(ProjectParticipant.name)
     private readonly participantModel: Model<ProjectParticipant>,
+    @InjectModel(Director.name)
+    private readonly directorModel: Model<Director>,
+    @InjectModel(CompanyShareholding.name)
+    private readonly shareholdingModel: Model<CompanyShareholding>,
     @InjectModel(CompanyBankAccount.name)
     private readonly bankModel: Model<CompanyBankAccount>,
     @InjectModel(CashAccount.name)
@@ -183,6 +203,7 @@ export class ProjectDashboardService {
       committed,
       customerCollections,
       investorFunding,
+      capitalPlan,
       bankBalance,
       cashBalance,
       materialStock,
@@ -198,6 +219,7 @@ export class ProjectDashboardService {
       this.committedCost(pid),
       this.customerCollections(pid, scope),
       this.investorFunding(pid, scope),
+      this.buildCapitalPlan(project, pid, scope),
       this.bankBalance(pid, scope),
       this.cashBalance(pid, scope),
       this.materialStock(pid),
@@ -327,6 +349,7 @@ export class ProjectDashboardService {
       ]),
       customerCollections,
       investorFunding,
+      capitalPlan,
       bankBalance,
       cashBalance,
       materialStock,
@@ -544,6 +567,382 @@ export class ProjectDashboardService {
         `${API}/customer-receipts?projectId=${projectId}`,
       ),
     ]);
+  }
+
+  private async buildCapitalPlan(
+    project: {
+      approvedBudget?: number | null;
+      equalDirectorInvestment?: boolean;
+      companyId?: Types.ObjectId | null;
+    },
+    projectOid: Types.ObjectId,
+    scope: DateScope,
+  ): Promise<CapitalPlanSummary> {
+    const projectId = String(projectOid);
+    const approvedBudget = this.round2(project.approvedBudget ?? 0);
+    const equalDirectorInvestment = Boolean(project.equalDirectorInvestment);
+
+    type PartySource = {
+      participantRecordId: string;
+      partyId: string;
+      name: string;
+      profitSharePercent: number;
+      commitmentAmount: number;
+      budgetPercent: number | null;
+      instrumentType: string | null;
+      repaymentMode: string | null;
+      interestRate: number | null;
+      kind: 'director' | 'investor';
+    };
+
+    const openParticipants = await this.participantModel
+      .find({
+        projectId: projectOid,
+        effectiveTo: null,
+        status: {
+          $in: [
+            ParticipantApprovalStatus.Approved,
+            ParticipantApprovalStatus.Draft,
+            ParticipantApprovalStatus.Submitted,
+          ],
+        },
+        participantType: {
+          $in: [ParticipantType.Director, ParticipantType.OutsideInvestor],
+        },
+      })
+      .lean()
+      .exec();
+
+    // Prefer approved over draft/submitted per participantKey.
+    const byKey = new Map<string, (typeof openParticipants)[number]>();
+    for (const row of openParticipants) {
+      const existing = byKey.get(row.participantKey);
+      if (!existing) {
+        byKey.set(row.participantKey, row);
+        continue;
+      }
+      const preferApproved =
+        row.status === ParticipantApprovalStatus.Approved &&
+        existing.status !== ParticipantApprovalStatus.Approved;
+      const newerVersion =
+        row.status === existing.status && row.version > existing.version;
+      if (preferApproved || newerVersion) {
+        byKey.set(row.participantKey, row);
+      }
+    }
+
+    const selected = [...byKey.values()];
+    const parties: PartySource[] = selected.map((row) => ({
+      participantRecordId: String(row._id),
+      partyId: String(row.participantId),
+      name: row.participantLabel ?? String(row.participantId).slice(-6),
+      profitSharePercent: this.round2(row.approvedProfitSharePercentage ?? 0),
+      commitmentAmount: this.round2(row.commitmentAmount ?? 0),
+      budgetPercent: row.budgetInvestmentPercentage ?? null,
+      instrumentType: row.instrumentType ?? null,
+      repaymentMode: row.repaymentMode ?? null,
+      interestRate: row.interestRate ?? null,
+      kind:
+        row.participantType === ParticipantType.OutsideInvestor
+          ? 'investor'
+          : 'director',
+    }));
+
+    // No capital-plan participants yet → fall back to active company directors
+    // so the dashboard can still show invested vs still-to-invest from budget.
+    if (!parties.some((p) => p.kind === 'director') && project.companyId) {
+      const [companyDirectors, holdings] = await Promise.all([
+        this.directorModel
+          .find({
+            companyId: project.companyId,
+            status: DirectorStatus.Active,
+            userId: { $ne: null },
+          })
+          .select('_id fullName directorCode userId')
+          .lean()
+          .exec(),
+        this.shareholdingModel
+          .find({
+            companyId: project.companyId,
+            effectiveTo: null,
+          })
+          .select('directorId percentage')
+          .lean()
+          .exec(),
+      ]);
+      const profitByDirector = new Map(
+        holdings.map((h) => [String(h.directorId), this.round2(h.percentage ?? 0)]),
+      );
+      for (const director of companyDirectors) {
+        const partyId = String(director._id);
+        parties.push({
+          participantRecordId: `director:${partyId}`,
+          partyId,
+          name: `${director.directorCode} — ${director.fullName}`,
+          profitSharePercent: profitByDirector.get(partyId) ?? 0,
+          commitmentAmount: 0,
+          budgetPercent: null,
+          instrumentType: null,
+          repaymentMode: null,
+          interestRate: null,
+          kind: 'director',
+        });
+      }
+    }
+
+    const recordIds = selected.map((r) => r._id as Types.ObjectId);
+    const partyIds = parties
+      .map((p) => p.partyId)
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+
+    const receipts = recordIds.length
+      ? await this.contributionReceiptModel
+          .find({
+            projectId: projectOid,
+            participantId: { $in: recordIds },
+            status: ContributionReceiptStatus.Posted,
+          })
+          .select('participantId amount journalEntryId')
+          .lean()
+          .exec()
+      : [];
+
+    const receiptByRecord = new Map<string, number>();
+    const excludeJournalIds = new Set<string>();
+    for (const receipt of receipts) {
+      const key = String(receipt.participantId);
+      receiptByRecord.set(
+        key,
+        this.round2((receiptByRecord.get(key) ?? 0) + (receipt.amount ?? 0)),
+      );
+      if (receipt.journalEntryId) {
+        excludeJournalIds.add(String(receipt.journalEntryId));
+      }
+    }
+
+    const journalMatch: FilterQuery<JournalEntry> = {
+      status: JournalStatus.Posted,
+      $or: [{ projectId: projectOid }, { 'lines.projectId': projectOid }],
+      'lines.partyType': {
+        $in: [JournalPartyType.Director, JournalPartyType.Investor],
+      },
+    };
+    if (partyIds.length) {
+      journalMatch['lines.partyId'] = { $in: partyIds };
+    }
+    if (scope.rangeFrom || scope.rangeTo) {
+      journalMatch.journalDate = {};
+      if (scope.rangeFrom) {
+        (journalMatch.journalDate as Record<string, Date>).$gte = scope.rangeFrom;
+      }
+      if (scope.rangeTo) {
+        (journalMatch.journalDate as Record<string, Date>).$lte = scope.rangeTo;
+      }
+    }
+
+    const journals =
+      partyIds.length || !parties.length
+        ? partyIds.length
+          ? await this.journalModel
+              .find(journalMatch)
+              .select('_id lines projectId')
+              .lean()
+              .exec()
+          : []
+        : [];
+
+    const journalByParty = new Map<string, number>();
+    for (const journal of journals) {
+      if (excludeJournalIds.has(String(journal._id))) continue;
+      for (const line of journal.lines ?? []) {
+        if (!line.partyId) continue;
+        if (
+          line.partyType !== JournalPartyType.Director &&
+          line.partyType !== JournalPartyType.Investor
+        ) {
+          continue;
+        }
+        const lineProject = line.projectId ? String(line.projectId) : null;
+        const headerProject = journal.projectId
+          ? String(journal.projectId)
+          : null;
+        if (
+          lineProject &&
+          lineProject !== projectId &&
+          headerProject !== projectId
+        ) {
+          continue;
+        }
+        const partyKey = String(line.partyId);
+        const credit = Number(line.credit ?? 0);
+        if (credit > 0) {
+          journalByParty.set(
+            partyKey,
+            this.round2((journalByParty.get(partyKey) ?? 0) + credit),
+          );
+        }
+      }
+    }
+
+    const directorParties = parties
+      .filter((p) => p.kind === 'director')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const investorParties = parties
+      .filter((p) => p.kind === 'investor')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const investorExpectedTotal = this.round2(
+      investorParties.reduce((sum, row) => {
+        if (row.commitmentAmount > 0) return sum + row.commitmentAmount;
+        if (row.budgetPercent != null && row.budgetPercent > 0) {
+          return sum + (approvedBudget * row.budgetPercent) / 100;
+        }
+        return sum;
+      }, 0),
+    );
+
+    const directorCommitmentsMissing = directorParties.every(
+      (row) => row.commitmentAmount <= 0,
+    );
+    const useEqualSplit =
+      directorParties.length > 0 &&
+      (equalDirectorInvestment || directorCommitmentsMissing);
+    const equalAmounts = useEqualSplit
+      ? this.equalDirectorBudgetSplit(
+          approvedBudget,
+          directorParties.length,
+          investorExpectedTotal,
+        )
+      : [];
+
+    const toRow = (
+      row: PartySource,
+      expectedOverride: number | null,
+    ): CapitalPlanPartyRow => {
+      let expectedAmount = row.commitmentAmount;
+      if (row.kind === 'director') {
+        if (expectedOverride != null) {
+          expectedAmount = expectedOverride;
+        } else if (expectedAmount <= 0 && row.profitSharePercent > 0) {
+          expectedAmount = this.round2(
+            (approvedBudget * row.profitSharePercent) / 100,
+          );
+        }
+      } else if (expectedAmount <= 0 && row.budgetPercent != null) {
+        expectedAmount = this.round2(
+          (approvedBudget * row.budgetPercent) / 100,
+        );
+      }
+
+      const fromReceipts = receiptByRecord.get(row.participantRecordId) ?? 0;
+      const fromJournals = journalByParty.get(row.partyId) ?? 0;
+      const investedAmount = this.round2(fromReceipts + fromJournals);
+      const pendingAmount = this.round2(
+        Math.max(0, expectedAmount - investedAmount),
+      );
+
+      return {
+        participantRecordId: row.participantRecordId,
+        partyId: row.partyId,
+        name: row.name,
+        profitSharePercent: row.profitSharePercent,
+        expectedAmount,
+        investedAmount,
+        pendingAmount,
+        budgetPercent: row.budgetPercent,
+        instrumentType: row.instrumentType,
+        repaymentMode: row.repaymentMode,
+        interestRate: row.interestRate,
+        repayHint: this.repayHint(
+          expectedAmount,
+          row.instrumentType,
+          row.repaymentMode,
+          row.interestRate,
+        ),
+      };
+    };
+
+    const directors = directorParties.map((row, index) =>
+      toRow(row, useEqualSplit ? (equalAmounts[index] ?? 0) : null),
+    );
+    const investors = investorParties.map((row) => toRow(row, null));
+
+    const totalInvested = this.round2(
+      [...directors, ...investors].reduce((s, r) => s + r.investedAmount, 0),
+    );
+    const pendingToInvest = this.round2(
+      Math.max(0, approvedBudget - totalInvested),
+    );
+
+    const directorExpected = directors.map((d) => d.expectedAmount);
+    const directorsEqual =
+      directorExpected.length >= 2 &&
+      directorExpected.every((a) => Math.abs(a - directorExpected[0]) <= 1);
+
+    return {
+      approvedBudget,
+      totalInvested,
+      pendingToInvest,
+      equalDirectorInvestment:
+        equalDirectorInvestment || (useEqualSplit && directors.length >= 2),
+      directorsEqual,
+      directors,
+      investors,
+      drillDown: [
+        this.link(
+          'Project participants',
+          `${API}/projects/${projectId}/participants`,
+        ),
+        this.link(
+          'Contribution receipts',
+          `${API}/projects/${projectId}/contribution-receipts`,
+        ),
+        this.link('Project journals', `${API}/journals?projectId=${projectId}`),
+      ],
+    };
+  }
+
+  /** Split remaining approved budget equally; last director absorbs paise remainder. */
+  private equalDirectorBudgetSplit(
+    approvedBudget: number,
+    directorCount: number,
+    investorCommitmentTotal = 0,
+  ): number[] {
+    if (directorCount <= 0) return [];
+    const remaining = Math.max(
+      0,
+      this.round2(approvedBudget - investorCommitmentTotal),
+    );
+    const base = Math.floor((remaining / directorCount) * 100) / 100;
+    const amounts = Array.from({ length: directorCount }, () => base);
+    const allocated = this.round2(base * directorCount);
+    const delta = this.round2(remaining - allocated);
+    if (amounts.length) {
+      amounts[amounts.length - 1] = this.round2(
+        amounts[amounts.length - 1] + delta,
+      );
+    }
+    return amounts;
+  }
+
+  private repayHint(
+    principal: number,
+    instrumentType: string | null,
+    repaymentMode: string | null,
+    interestRate: number | null,
+  ): string | null {
+    const isLoan =
+      instrumentType === InstrumentType.DirectorLoan ||
+      instrumentType === InstrumentType.UnsecuredLoan;
+    if (!isLoan) return null;
+    if (repaymentMode === RepaymentMode.Lumpsum) {
+      return `Lump sum repayment of ₹${principal.toLocaleString('en-IN')}`;
+    }
+    if (repaymentMode === RepaymentMode.WithInterest || interestRate != null) {
+      const rate = interestRate ?? 0;
+      return `Principal ₹${principal.toLocaleString('en-IN')} + interest at ${rate}% p.a.`;
+    }
+    return `Loan principal ₹${principal.toLocaleString('en-IN')}`;
   }
 
   private async investorFunding(

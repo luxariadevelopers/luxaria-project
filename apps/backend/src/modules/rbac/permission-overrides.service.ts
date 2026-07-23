@@ -183,6 +183,92 @@ export class PermissionOverridesService {
     return created;
   }
 
+  /**
+   * Sync global (company-wide) deny overrides for a permission catalog.
+   * Creates missing denies, inactivates denies that are no longer desired.
+   * Scoped project/site overrides are left untouched.
+   */
+  async syncGlobalDenyOverrides(input: {
+    userId: string;
+    companyId: string;
+    denyPermissions: string[];
+    catalogPermissions: string[];
+    reason?: string | null;
+    actorId?: string;
+  }): Promise<{ created: number; inactivated: number; activeDenies: string[] }> {
+    if (!Types.ObjectId.isValid(input.userId)) {
+      throw new BadRequestException('Invalid userId');
+    }
+    if (!Types.ObjectId.isValid(input.companyId)) {
+      throw new BadRequestException('Invalid companyId');
+    }
+
+    const catalog = [
+      ...new Set(
+        input.catalogPermissions
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0),
+      ),
+    ];
+    const desired = new Set(
+      input.denyPermissions
+        .map((p) => p.trim())
+        .filter((p) => catalog.includes(p)),
+    );
+
+    const existing = await this.overrideModel
+      .find({
+        userId: new Types.ObjectId(input.userId),
+        companyId: new Types.ObjectId(input.companyId),
+        effect: PermissionOverrideEffect.Deny,
+        status: PermissionOverrideStatus.Active,
+        projectId: null,
+        siteId: null,
+        permission: { $in: catalog },
+      })
+      .exec();
+
+    const existingByPermission = new Map(
+      existing.map((row) => [row.permission, row]),
+    );
+
+    let created = 0;
+    let inactivated = 0;
+
+    for (const permission of catalog) {
+      const row = existingByPermission.get(permission);
+      if (desired.has(permission)) {
+        if (!row) {
+          await this.create(
+            {
+              userId: input.userId,
+              permission,
+              effect: PermissionOverrideEffect.Deny,
+              reason: input.reason ?? 'Module access deny',
+            },
+            input.companyId,
+            input.actorId,
+          );
+          created += 1;
+        }
+      } else if (row) {
+        row.status = PermissionOverrideStatus.Inactive;
+        row.set(
+          'updatedBy',
+          input.actorId ? new Types.ObjectId(input.actorId) : null,
+        );
+        await row.save();
+        inactivated += 1;
+      }
+    }
+
+    return {
+      created,
+      inactivated,
+      activeDenies: [...desired].sort(),
+    };
+  }
+
   async update(
     id: string,
     dto: UpdatePermissionOverrideDto,

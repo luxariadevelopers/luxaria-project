@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Alert,
@@ -19,6 +19,10 @@ import {
 } from 'react-hook-form';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
+import { CreateCashAccountDrawer } from '@/cash-accounts/CreateCashAccountDrawer';
+import { resolveCashAccountCapabilities } from '@/cash-accounts/roleAccess';
+import { CashAccountKind } from '@/cash-accounts/types';
+import { useCashAccountUserOptions } from '@/cash-accounts/useCashAccounts';
 import {
   applyApiFieldErrors,
   DateInput,
@@ -61,6 +65,8 @@ export function PettyCashRequestCreatePage() {
   const { selectedProjectId, selectedProject } = useProject();
   const { success, error: notifyError } = useNotify();
   const caps = resolvePettyCashRequestCapabilities(hasPermission);
+  const cashCaps = resolveCashAccountCapabilities(hasPermission);
+  const [createAccountOpen, setCreateAccountOpen] = useState(false);
 
   const create = useCreatePettyCashRequirement();
   const submit = useSubmitPettyCashRequirement();
@@ -68,6 +74,10 @@ export function PettyCashRequestCreatePage() {
   const accountsQuery = usePettyCashAccounts(
     selectedProjectId,
     Boolean(access) && caps.canRequest && caps.canViewCash,
+  );
+  const usersQuery = useCashAccountUserOptions(
+    selectedProjectId,
+    Boolean(selectedProjectId) && cashCaps.canManage,
   );
 
   const { control, handleSubmit, setError, setValue } =
@@ -103,6 +113,25 @@ export function PettyCashRequestCreatePage() {
         (a) => a.status === 'active' || a.status === 'pending_handover',
       ),
     [accountsQuery.data],
+  );
+
+  useEffect(() => {
+    if (!accountId && accounts[0]?.id) {
+      setValue('pettyCashAccountId', accounts[0].id, {
+        shouldValidate: true,
+      });
+    }
+  }, [accountId, accounts, setValue]);
+
+  const userOptions = useMemo(
+    () =>
+      (usersQuery.data ?? []).map((u) => ({
+        id: u.id,
+        label: u.fullName?.trim()
+          ? `${u.fullName}${u.userCode ? ` · ${u.userCode}` : ''}`
+          : u.userCode || u.id,
+      })),
+    [usersQuery.data],
   );
 
   if (access && !caps.canRequest) {
@@ -150,10 +179,50 @@ export function PettyCashRequestCreatePage() {
 
   if (accounts.length === 0) {
     return (
-      <EmptyState
-        title="No petty-cash accounts"
-        description="Create an active petty-cash account for this project before requesting weekly float."
-      />
+      <Stack spacing={2} data-testid="petty-cash-request-no-accounts">
+        <EmptyState
+          title="No petty-cash accounts"
+          description="Create an active petty-cash account for this project before requesting weekly float."
+        />
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {cashCaps.canManage && selectedProjectId ? (
+            <Button
+              variant="contained"
+              onClick={() => setCreateAccountOpen(true)}
+            >
+              Create petty-cash account
+            </Button>
+          ) : null}
+          <Button
+            variant="outlined"
+            component={RouterLink}
+            to="/accounting/cash-accounts"
+          >
+            Open Cash accounts
+          </Button>
+        </Stack>
+        {!cashCaps.canManage ? (
+          <Alert severity="info">
+            Creating an account needs <strong>cash.manage</strong>. Ask finance
+            to create a petty-cash account under Accounting → Cash accounts, then
+            return here.
+          </Alert>
+        ) : null}
+        {selectedProjectId ? (
+          <CreateCashAccountDrawer
+            open={createAccountOpen}
+            onClose={() => setCreateAccountOpen(false)}
+            projectId={selectedProjectId}
+            users={userOptions}
+            canViewUsers={hasPermission('user.view')}
+            canViewAccounts={hasPermission('account.view')}
+            lockKind={CashAccountKind.PettyCash}
+            onCreated={() => {
+              void accountsQuery.refetch();
+            }}
+          />
+        ) : null}
+      </Stack>
     );
   }
 
@@ -271,6 +340,7 @@ export function PettyCashRequestCreatePage() {
           multiline
           minRows={3}
           disabled={busy}
+          helperText="Required for PM/finance approval — why this week’s float is needed (not optional)."
         />
       </FormSection>
 

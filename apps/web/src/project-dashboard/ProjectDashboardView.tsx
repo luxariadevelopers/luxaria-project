@@ -3,6 +3,7 @@ import { KpiCard } from '@/director-command-centre/KpiCard';
 import { ProgressBarCell } from '@/director-command-centre/ProgressBarCell';
 import { formatOptionalMoney } from '@/director-command-centre/formatMetric';
 import type { ProjectDashboardSummary } from '@/director-command-centre/projectDashboardTypes';
+import { CapitalPlanSection } from './CapitalPlanSection';
 import { CriticalAlertsList } from './CriticalAlertsList';
 import { SitePhotosStrip } from './SitePhotosStrip';
 
@@ -45,6 +46,8 @@ export function ProjectDashboardView({
           </Typography>
         ) : null}
       </Stack>
+
+      <CapitalPlanSection plan={summary?.capitalPlan} loading={loading} />
 
       <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>
         Progress

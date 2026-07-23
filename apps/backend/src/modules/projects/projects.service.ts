@@ -152,6 +152,7 @@ export class ProjectsService {
         ? new Types.ObjectId(dto.defaultBankAccount)
         : null,
       approvedBudget: dto.approvedBudget ?? null,
+      equalDirectorInvestment: Boolean(dto.equalDirectorInvestment),
       projectStage: dto.projectStage ?? ProjectStage.Concept,
       reraDetails,
       companyId,
@@ -278,6 +279,9 @@ export class ProjectsService {
         : null;
     }
     if (dto.approvedBudget !== undefined) update.approvedBudget = dto.approvedBudget;
+    if (dto.equalDirectorInvestment !== undefined) {
+      update.equalDirectorInvestment = Boolean(dto.equalDirectorInvestment);
+    }
     if (dto.projectStage !== undefined) update.projectStage = dto.projectStage;
     if (dto.reraDetails !== undefined) {
       const reraDetails = this.mergeReraEmbed(
@@ -740,6 +744,7 @@ export class ProjectsService {
       assignedDirectors: [],
       defaultBankAccount: source.defaultBankAccount,
       approvedBudget: source.approvedBudget,
+      equalDirectorInvestment: Boolean(source.equalDirectorInvestment),
       projectStage: ProjectStage.Concept,
       reraDetails: source.reraDetails,
       companyId,
@@ -1235,7 +1240,13 @@ export class ProjectsService {
     companyId: Types.ObjectId,
   ) {
     const user = await this.findUserCompany(userId);
+    // Matches GET /users primary-company listing: null companyId users are
+    // treated as belonging to the primary company.
     if (!user.companyId) {
+      const primaryCompanyId = await this.resolvePrimaryCompanyId();
+      if (primaryCompanyId.equals(companyId)) {
+        return;
+      }
       throw new ForbiddenException(
         'Project assignees must belong to the authenticated company',
       );

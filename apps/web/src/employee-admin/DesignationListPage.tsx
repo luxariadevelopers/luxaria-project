@@ -1,25 +1,41 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Stack,
   Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
-import { isForbiddenError } from '@/api/errors';
+import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
-import { DataTable, useListQueryState } from '@/components/data-table';
+import {
+  DataTable,
+  type DataTableRowAction,
+  useListQueryState,
+} from '@/components/data-table';
 import { PermissionDenied } from '@/components/errors';
-import { canOpenDesignations } from './roleAccess';
+import { useNotify } from '@/components/NotificationProvider';
+import { DesignationFormDialog } from './DesignationFormDialog';
+import { canManageDesignations, canOpenDesignations } from './roleAccess';
 import { DesignationStatus, type PublicDesignation } from './types';
-import { useDepartmentsList, useDesignationsList } from './useEmployees';
+import {
+  useActivateDesignation,
+  useDeactivateDesignation,
+  useDeleteDesignation,
+  useDepartmentsList,
+  useDesignationsList,
+} from './useEmployees';
 
 const SORT_KEYS = ['code', 'name', 'status'] as const;
 
 export function DesignationListPage() {
   const { access, hasPermission } = useAuth();
+  const notify = useNotify();
   const canView = canOpenDesignations(access);
+  const canManage = canManageDesignations(access);
   const listState = useListQueryState({
     allowedSortKeys: SORT_KEYS,
     allowedFilterKeys: [],
@@ -30,6 +46,12 @@ export function DesignationListPage() {
   const departmentsQuery = useDepartmentsList(
     canView && hasPermission('department.view'),
   );
+  const activateMutation = useActivateDesignation();
+  const deactivateMutation = useDeactivateDesignation();
+  const deleteMutation = useDeleteDesignation();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<PublicDesignation | null>(null);
 
   const departmentById = useMemo(
     () =>
@@ -101,6 +123,84 @@ export function DesignationListPage() {
     [departmentById],
   );
 
+  const rowActions = useMemo<DataTableRowAction<PublicDesignation>[]>(() => {
+    if (!canManage) return [];
+    return [
+      {
+        id: 'edit',
+        label: 'Edit',
+        permission: 'designation.manage',
+        onClick: (row) => {
+          setEditing(row);
+          setDialogOpen(true);
+        },
+      },
+      {
+        id: 'deactivate',
+        label: 'Deactivate',
+        permission: 'designation.manage',
+        disabled: (row) => row.status !== DesignationStatus.Active,
+        onClick: (row) => {
+          void (async () => {
+            try {
+              await deactivateMutation.mutateAsync(row.id);
+              notify.success(`${row.name} deactivated`);
+            } catch (err) {
+              notify.error(getErrorMessage(err, 'Could not deactivate'));
+            }
+          })();
+        },
+      },
+      {
+        id: 'activate',
+        label: 'Activate',
+        permission: 'designation.manage',
+        disabled: (row) => row.status === DesignationStatus.Active,
+        onClick: (row) => {
+          void (async () => {
+            try {
+              await activateMutation.mutateAsync(row.id);
+              notify.success(`${row.name} activated`);
+            } catch (err) {
+              notify.error(getErrorMessage(err, 'Could not activate'));
+            }
+          })();
+        },
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        permission: 'designation.manage',
+        danger: true,
+        onClick: (row) => {
+          const ok = window.confirm(
+            `Delete designation "${row.name}"?\n\nAllowed only if no employees are assigned. If anyone is assigned, reassign or remove them first.`,
+          );
+          if (!ok) return;
+          void (async () => {
+            try {
+              await deleteMutation.mutateAsync(row.id);
+              notify.success(`${row.name} deleted`);
+            } catch (err) {
+              notify.error(
+                getErrorMessage(
+                  err,
+                  'Cannot delete while employees are still assigned. Reassign them first.',
+                ),
+              );
+            }
+          })();
+        },
+      },
+    ];
+  }, [
+    activateMutation,
+    canManage,
+    deactivateMutation,
+    deleteMutation,
+    notify,
+  ]);
+
   if (!access) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -130,12 +230,36 @@ export function DesignationListPage() {
 
   return (
     <Stack spacing={2} data-testid="designations-page">
-      <Stack spacing={0.5}>
-        <Typography variant="h5">Designations</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Job titles linked to departments and optional default roles.
-        </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="h5">Designations</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Job titles linked to departments and optional default roles.
+          </Typography>
+        </Stack>
+        {canManage ? (
+          <Button
+            variant="contained"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
+            Create designation
+          </Button>
+        ) : null}
       </Stack>
+
+      {canManage ? (
+        <Alert severity="info">
+          Delete is blocked while any employee is still assigned to the
+          designation. Reassign or remove those employees first, then delete.
+        </Alert>
+      ) : null}
 
       <DataTable<PublicDesignation>
         title="Designations"
@@ -145,7 +269,11 @@ export function DesignationListPage() {
         error={designationsQuery.error}
         onRetry={() => void designationsQuery.refetch()}
         emptyTitle="No designations"
-        emptyDescription="Designations will appear after seeding or creation."
+        emptyDescription={
+          canManage
+            ? 'Create the first designation for your organisation.'
+            : 'Designations will appear after seeding or creation.'
+        }
         paginationMode="client"
         sortingMode="client"
         page={listState.state.page}
@@ -164,6 +292,17 @@ export function DesignationListPage() {
         getRowId={(row) => row.id}
         height={520}
         showColumnVisibility
+        rowActions={rowActions}
+      />
+
+      <DesignationFormDialog
+        open={dialogOpen}
+        designation={editing}
+        departments={departmentsQuery.data ?? []}
+        onClose={() => {
+          setDialogOpen(false);
+          setEditing(null);
+        }}
       />
     </Stack>
   );

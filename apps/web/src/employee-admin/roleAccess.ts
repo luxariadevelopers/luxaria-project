@@ -78,12 +78,30 @@ export function canOpenDepartments(
   );
 }
 
+export function canManageDepartments(
+  access: UserAccess | null | undefined,
+): boolean {
+  return hasEmployeeAdminPermission(
+    access,
+    EMPLOYEE_ADMIN_PERMISSIONS.departmentManage,
+  );
+}
+
 export function canOpenDesignations(
   access: UserAccess | null | undefined,
 ): boolean {
   return hasEmployeeAdminPermission(
     access,
     EMPLOYEE_ADMIN_PERMISSIONS.designationView,
+  );
+}
+
+export function canManageDesignations(
+  access: UserAccess | null | undefined,
+): boolean {
+  return hasEmployeeAdminPermission(
+    access,
+    EMPLOYEE_ADMIN_PERMISSIONS.designationManage,
   );
 }
 
@@ -102,6 +120,16 @@ export function canManageSiteAccess(
   return hasEmployeeAdminPermission(
     access,
     EMPLOYEE_ADMIN_PERMISSIONS.siteAccessManage,
+  );
+}
+
+/** Assign or revoke people on sites (`site_access.assign`). */
+export function canAssignSiteAccess(
+  access: UserAccess | null | undefined,
+): boolean {
+  return hasEmployeeAdminPermission(
+    access,
+    EMPLOYEE_ADMIN_PERMISSIONS.siteAccessAssign,
   );
 }
 

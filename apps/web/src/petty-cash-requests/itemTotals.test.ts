@@ -134,6 +134,32 @@ describe('pettyCashRequestFormSchema item totals', () => {
     expect(parsed.success).toBe(false);
   });
 
+  it('rejects duplicate expense categories across items', () => {
+    const parsed = pettyCashRequestFormSchema.safeParse({
+      ...base,
+      requirementItems: [
+        {
+          expenseCategory: PettyCashExpenseCategory.Labour,
+          description: 'Labour cash',
+          estimatedAmount: 1000,
+        },
+        {
+          expenseCategory: PettyCashExpenseCategory.Labour,
+          description: 'More labour',
+          estimatedAmount: 500,
+        },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(
+        parsed.error.issues.some((i) =>
+          i.message.toLowerCase().includes('category'),
+        ),
+      ).toBe(true);
+    }
+  });
+
   it('rejects week longer than 7 days', () => {
     const parsed = pettyCashRequestFormSchema.safeParse({
       ...base,

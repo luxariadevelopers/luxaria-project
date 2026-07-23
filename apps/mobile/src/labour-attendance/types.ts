@@ -42,6 +42,15 @@ export type PublicLabourAttendance = {
   remarks: string | null;
 };
 
+export type CreateLabourAttendanceWorkerInput = {
+  workerName: string;
+  workerCode?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  overtimeHours?: number;
+  remarks?: string | null;
+};
+
 export type CreateLabourAttendanceInput = {
   projectId: string;
   siteId?: string | null;
@@ -55,6 +64,7 @@ export type CreateLabourAttendanceInput = {
     entryMode: LabourAttendanceEntryMode;
     workerCount?: number;
     overtimeHours?: number;
+    workers?: CreateLabourAttendanceWorkerInput[];
     remarks?: string | null;
   }>;
   remarks?: string | null;

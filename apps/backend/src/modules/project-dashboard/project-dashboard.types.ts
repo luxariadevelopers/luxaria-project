@@ -41,6 +41,32 @@ export type ContractorProgressRow = {
   drillDown: DrillDownLink[];
 };
 
+export type CapitalPlanPartyRow = {
+  participantRecordId: string;
+  partyId: string;
+  name: string;
+  profitSharePercent: number;
+  expectedAmount: number;
+  investedAmount: number;
+  pendingAmount: number;
+  budgetPercent: number | null;
+  instrumentType: string | null;
+  repaymentMode: string | null;
+  interestRate: number | null;
+  repayHint: string | null;
+};
+
+export type CapitalPlanSummary = {
+  approvedBudget: number;
+  totalInvested: number;
+  pendingToInvest: number;
+  equalDirectorInvestment: boolean;
+  directorsEqual: boolean;
+  directors: CapitalPlanPartyRow[];
+  investors: CapitalPlanPartyRow[];
+  drillDown: DrillDownLink[];
+};
+
 export type ProjectDashboardSummary = {
   filters: {
     projectId: string;
@@ -55,6 +81,7 @@ export type ProjectDashboardSummary = {
     projectStage: string;
     status: string;
   };
+  capitalPlan: CapitalPlanSummary;
   projectStage: {
     stage: string;
     status: string;

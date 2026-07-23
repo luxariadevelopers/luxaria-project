@@ -61,7 +61,9 @@ export function PettyCashRequestsPage() {
   const [actionRow, setActionRow] =
     useState<PublicPettyCashRequirement | null>(null);
 
-  const canView = Boolean(access) && caps.canView;
+  /** List: site creators + approvers. Create button uses canRequest only. */
+  const canOpenList =
+    Boolean(access) && (caps.canRequest || caps.canApprove || caps.canView);
   const projectId = selectedProjectId;
 
   const listQuery = useMemo(
@@ -78,7 +80,7 @@ export function PettyCashRequestsPage() {
 
   const list = usePettyCashRequirementsList(
     listQuery,
-    canView && Boolean(projectId),
+    canOpenList && Boolean(projectId),
   );
 
   const submit = useSubmitPettyCashRequirement();
@@ -187,11 +189,11 @@ export function PettyCashRequestsPage() {
     }
   };
 
-  if (access && !caps.canView) {
+  if (access && !canOpenList) {
     return (
       <PermissionDenied
         title="Fund requests unavailable"
-        message="You need the petty_cash.view permission to manage weekly funding requests."
+        message="You need petty_cash.request (create) or petty_cash.approve (review) to open fund requests."
       />
     );
   }

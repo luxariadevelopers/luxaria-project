@@ -30,7 +30,8 @@ export type DocumentUploadAdapters = {
   presign: (body: PresignUploadRequest) => Promise<PresignUploadResult>;
   /**
    * PUT bytes to the private S3 URL. Must send required headers from presign
-   * (Content-Type / Content-Length). Never use a public ACL.
+   * (Content-Type / x-amz-server-side-encryption). Never use a public ACL.
+   * Do not require Content-Length — browsers refuse that header on XHR.
    */
   putToPresignedUrl: (input: {
     url: string;

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchFinancialYearFilterOptions } from '@/director-command-centre/api';
+import { cashBankBookQueryKeys } from '@/reports/accounting/queryKeys';
 import {
   cancelJournal,
   createJournal,
@@ -8,6 +9,7 @@ import {
   postJournal,
   reverseJournal,
   submitJournal,
+  amendJournal,
   updateJournal,
 } from './api';
 import { journalsKeys } from './queryKeys';
@@ -57,6 +59,7 @@ function useInvalidateJournals() {
   const qc = useQueryClient();
   return () => {
     void qc.invalidateQueries({ queryKey: journalsKeys.all });
+    void qc.invalidateQueries({ queryKey: cashBankBookQueryKeys.all });
   };
 }
 
@@ -73,6 +76,15 @@ export function useUpdateJournal() {
   return useMutation({
     mutationFn: (args: { id: string; input: UpdateJournalInput }) =>
       updateJournal(args.id, args.input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAmendJournal() {
+  const invalidate = useInvalidateJournals();
+  return useMutation({
+    mutationFn: (args: { id: string; input: UpdateJournalInput }) =>
+      amendJournal(args.id, args.input),
     onSuccess: invalidate,
   });
 }

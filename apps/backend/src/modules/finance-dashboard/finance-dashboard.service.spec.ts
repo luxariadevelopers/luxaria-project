@@ -2,6 +2,18 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Connection, Model } from 'mongoose';
 import { Types, connect, disconnect } from 'mongoose';
 import {
+  BankReconciliationSessionStatus,
+  BankStatementLineStatus,
+} from '../bank-reconciliation/bank-reconciliation.constants';
+import {
+  BankReconciliationSession,
+  BankReconciliationSessionSchema,
+} from '../bank-reconciliation/schemas/bank-reconciliation-session.schema';
+import {
+  BankStatementLine,
+  BankStatementLineSchema,
+} from '../bank-reconciliation/schemas/bank-statement-line.schema';
+import {
   BankAccountStatus,
   BankAccountType,
   CompanyBankAccount,
@@ -162,6 +174,14 @@ describe('FinanceDashboardService', () => {
         FinancialYear.name,
         FinancialYearSchema,
       ) as Model<FinancialYear>,
+      connection.model(
+        BankReconciliationSession.name,
+        BankReconciliationSessionSchema,
+      ) as Model<BankReconciliationSession>,
+      connection.model(
+        BankStatementLine.name,
+        BankStatementLineSchema,
+      ) as Model<BankStatementLine>,
       projectAccess as unknown as ProjectAccessService,
     );
 
@@ -458,10 +478,86 @@ describe('FinanceDashboardService', () => {
     expect(data.unsettledPettyCash.amount).toBe(20_000);
     expect(data.journalErrors.count).toBe(1);
 
-    expect(data.bankReconciliationPending.available).toBe(false);
+    expect(data.bankReconciliationPending.available).toBe(true);
+    expect(data.bankReconciliationPending.pendingCount).toBe(0);
+    expect(data.bankReconciliationPending.amount).toBe(0);
+    expect(data.bankReconciliationPending.message).toBe(
+      'No open reconciliation sessions',
+    );
+    expect(data.bankReconciliationPending.drillDown[0].href).toBe(
+      '/api/v1/bank-reconciliation/sessions',
+    );
     expect(data.cashFlowForecast.totalInflows).toBeGreaterThan(0);
     expect(data.cashFlowForecast.series.length).toBeGreaterThan(0);
     expect(data.companyBankBalances.drillDown[0].href).toMatch(/^\/api\/v1\//);
+  });
+
+  it('aggregates open bank reconciliation sessions and unmatched amounts', async () => {
+    const bank = await connection.model(CompanyBankAccount.name).findOne({
+      accountCode: 'BANK-FD-001',
+    });
+    expect(bank).toBeTruthy();
+
+    const [session] = await connection
+      .model(BankReconciliationSession.name)
+      .create([
+        {
+          sessionNumber: 'BR-FD-000001',
+          bankAccountId: bank!._id,
+          ledgerAccountId: bank!.ledgerAccountId,
+          statementFrom: new Date('2026-07-01'),
+          statementTo: new Date('2026-07-15'),
+          statementOpeningBalance: 0,
+          statementClosingBalance: 25_000,
+          status: BankReconciliationSessionStatus.InProgress,
+          createdBy: new Types.ObjectId(),
+        },
+      ]);
+
+    await connection.model(BankStatementLine.name).create([
+      {
+        sessionId: session._id,
+        bankAccountId: bank!._id,
+        lineNumber: 1,
+        txnDate: new Date('2026-07-02'),
+        description: 'Deposit',
+        debit: 0,
+        credit: 10_000,
+        status: BankStatementLineStatus.Unmatched,
+      },
+      {
+        sessionId: session._id,
+        bankAccountId: bank!._id,
+        lineNumber: 2,
+        txnDate: new Date('2026-07-03'),
+        description: 'Charge',
+        debit: 500,
+        credit: 0,
+        status: BankStatementLineStatus.Unmatched,
+      },
+      {
+        sessionId: session._id,
+        bankAccountId: bank!._id,
+        lineNumber: 3,
+        txnDate: new Date('2026-07-04'),
+        description: 'Matched',
+        debit: 0,
+        credit: 1_000,
+        status: BankStatementLineStatus.Matched,
+      },
+    ]);
+
+    const res = await service.getSummary(
+      { date: '2026-07-20', horizonDays: 30, projectId },
+      actorId,
+    );
+    const kpi = res.data!.bankReconciliationPending;
+
+    expect(kpi.available).toBe(true);
+    expect(kpi.pendingCount).toBe(1);
+    expect(kpi.amount).toBe(10_500);
+    expect(kpi.message).toContain('1 open session');
+    expect(kpi.message).toContain('2 unmatched line');
   });
 
   it('exports csv and xlsx', async () => {

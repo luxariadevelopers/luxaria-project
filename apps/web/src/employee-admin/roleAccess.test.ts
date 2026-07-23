@@ -3,6 +3,7 @@ import type { UserAccess } from '@/api/types';
 import {
   canCreateEmployee,
   canDeactivateEmployee,
+  canManageDepartments,
   canManageSiteAccess,
   canManageSites,
   canOpenDepartments,
@@ -34,6 +35,21 @@ describe('employee administration role access', () => {
     expect(canManageSiteAccess(access(['site_access.manage']))).toBe(true);
     expect(canViewSites(access(['site.view']))).toBe(true);
     expect(canManageSites(access(['site.manage']))).toBe(true);
+  });
+
+  it('allows department manage separately from view', () => {
+    expect(
+      canManageDepartments({
+        bypassPermissions: false,
+        permissions: ['department.view'],
+      } as never),
+    ).toBe(false);
+    expect(
+      canManageDepartments({
+        bypassPermissions: false,
+        permissions: ['department.manage'],
+      } as never),
+    ).toBe(true);
   });
 
   it('requires the full provision permission set for Site Engineer', () => {

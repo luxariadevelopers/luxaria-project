@@ -61,5 +61,55 @@ describe('PermissionChecklist', () => {
     expect(
       screen.getAllByRole('button', { name: /module/i })[0],
     ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Select all' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Clear all' })).toBeDisabled();
+  });
+
+  it('selects and clears the full catalog', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <PermissionChecklist
+        catalog={catalog}
+        value={[]}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    expect(onChange).toHaveBeenCalledWith([
+      'role.view',
+      'user.update',
+      'user.view',
+    ]);
+
+    rerender(
+      <PermissionChecklist
+        catalog={catalog}
+        value={['role.view', 'user.update', 'user.view']}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all' }));
+    expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it('selects only matching permissions when filtered', () => {
+    const onChange = vi.fn();
+    render(
+      <PermissionChecklist
+        catalog={catalog}
+        value={['user.view']}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Filter permissions'), {
+      target: { value: 'role.' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select all matching' }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith(['role.view', 'user.view']);
   });
 });

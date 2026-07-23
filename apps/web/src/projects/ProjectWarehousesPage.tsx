@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Paper,
@@ -17,7 +19,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useParams } from 'react-router-dom';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DetailHeader } from '@/components/entity-detail';
@@ -27,13 +29,56 @@ import { WAREHOUSE_KIND_OPTIONS } from './constants';
 import {
   useCreateProjectWarehouse,
   useProjectDetail,
+  useProjectStructure,
   useProjectWarehouses,
 } from './useProjects';
-import { WarehouseKind } from './types';
+import {
+  StructureSiteType,
+  WarehouseKind,
+  type PublicProjectSiteNode,
+} from './types';
 
 type Props = {
   projectId?: string;
 };
+
+type SiteOption = { id: string; label: string; siteCode: string; siteName: string };
+
+/** Structure nodes only (not existing warehouses) for linking a store to a project site. */
+function flattenStructureSiteOptions(
+  nodes: PublicProjectSiteNode[],
+  depth = 0,
+): SiteOption[] {
+  return nodes.flatMap((node) => {
+    const childOptions = flattenStructureSiteOptions(node.children ?? [], depth + 1);
+    if (node.type === StructureSiteType.Warehouse) {
+      return childOptions;
+    }
+    return [
+      {
+        id: node.id,
+        label: `${'—'.repeat(depth)} ${node.siteCode} · ${node.siteName}`,
+        siteCode: node.siteCode,
+        siteName: node.siteName,
+      },
+      ...childOptions,
+    ];
+  });
+}
+
+function flattenSiteLabelMap(
+  nodes: PublicProjectSiteNode[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  const walk = (list: PublicProjectSiteNode[]) => {
+    for (const node of list) {
+      map.set(node.id, `${node.siteCode} · ${node.siteName}`);
+      walk(node.children ?? []);
+    }
+  };
+  walk(nodes);
+  return map;
+}
 
 export function ProjectWarehousesPage({
   projectId: projectIdProp,
@@ -46,6 +91,7 @@ export function ProjectWarehousesPage({
   const canManage = hasPermission('site.manage');
   const detailQuery = useProjectDetail(projectId, canView);
   const warehousesQuery = useProjectWarehouses(projectId, canView);
+  const structureQuery = useProjectStructure(projectId, canView);
   const createMutation = useCreateProjectWarehouse(projectId ?? '');
 
   const [siteCode, setSiteCode] = useState('');
@@ -53,9 +99,25 @@ export function ProjectWarehousesPage({
   const [warehouseKind, setWarehouseKind] = useState<string>(
     WarehouseKind.MainStore,
   );
+  const [parentSiteId, setParentSiteId] = useState('');
   const [address, setAddress] = useState('');
 
   const project = detailQuery.data;
+  const siteOptions = useMemo(
+    () => flattenStructureSiteOptions(structureQuery.data ?? []),
+    [structureQuery.data],
+  );
+  const siteLabelById = useMemo(
+    () => flattenSiteLabelMap(structureQuery.data ?? []),
+    [structureQuery.data],
+  );
+  const siteStoreRequiresParent =
+    warehouseKind === WarehouseKind.SiteStore;
+  const canSubmit =
+    Boolean(siteCode.trim()) &&
+    Boolean(siteName.trim()) &&
+    (!siteStoreRequiresParent || Boolean(parentSiteId)) &&
+    !createMutation.isPending;
 
   if (
     !access ||
@@ -108,6 +170,19 @@ export function ProjectWarehousesPage({
     value ??
     '—';
 
+  const applyParentSite = (nextParentId: string) => {
+    setParentSiteId(nextParentId);
+    const selected = siteOptions.find((option) => option.id === nextParentId);
+    if (!selected) return;
+    // Prefill from the project site when creating a store for that site.
+    if (!siteCode.trim()) {
+      setSiteCode(`${selected.siteCode}-WH`);
+    }
+    if (!siteName.trim()) {
+      setSiteName(`${selected.siteName} store`);
+    }
+  };
+
   return (
     <Stack spacing={2.5} data-testid="project-warehouses-page">
       <DetailHeader
@@ -121,7 +196,7 @@ export function ProjectWarehousesPage({
         {warehouses.length === 0 ? (
           <EmptyState
             title="No warehouses"
-            description="Create a main store, site store, temporary store, or scrap yard."
+            description="Create a main store, site store, temporary store, or scrap yard. Site stores can be linked to a project site from Structure."
           />
         ) : (
           <Table size="small">
@@ -130,6 +205,7 @@ export function ProjectWarehousesPage({
                 <TableCell>Code</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Kind</TableCell>
+                <TableCell>Site</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Address</TableCell>
               </TableRow>
@@ -140,6 +216,11 @@ export function ProjectWarehousesPage({
                   <TableCell>{warehouse.siteCode}</TableCell>
                   <TableCell>{warehouse.siteName}</TableCell>
                   <TableCell>{kindLabel(warehouse.warehouseKind)}</TableCell>
+                  <TableCell>
+                    {warehouse.parentSiteId
+                      ? (siteLabelById.get(warehouse.parentSiteId) ?? '—')
+                      : '—'}
+                  </TableCell>
                   <TableCell>{warehouse.status}</TableCell>
                   <TableCell>{warehouse.address ?? '—'}</TableCell>
                 </TableRow>
@@ -153,6 +234,34 @@ export function ProjectWarehousesPage({
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={2}>
             <Typography variant="h6">Create warehouse</Typography>
+            {structureQuery.isError ? (
+              <Alert severity="warning">
+                Project sites could not be loaded. You can still create a
+                warehouse without a linked site, or{' '}
+                <Button
+                  size="small"
+                  onClick={() => void structureQuery.refetch()}
+                >
+                  retry
+                </Button>
+                .
+              </Alert>
+            ) : null}
+            {!structureQuery.isLoading &&
+            !structureQuery.isError &&
+            siteOptions.length === 0 ? (
+              <Alert severity="info">
+                No project sites yet.{' '}
+                <Button
+                  component={RouterLink}
+                  to={`/projects/${project.id}/structure`}
+                  size="small"
+                >
+                  Add a site in Structure
+                </Button>{' '}
+                first, then link a site store here.
+              </Alert>
+            ) : null}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 label="Warehouse code"
@@ -169,21 +278,54 @@ export function ProjectWarehousesPage({
                 required
               />
             </Stack>
-            <FormControl fullWidth>
-              <InputLabel id="warehouse-kind">Kind</InputLabel>
-              <Select
-                labelId="warehouse-kind"
-                label="Kind"
-                value={warehouseKind}
-                onChange={(event) => setWarehouseKind(event.target.value)}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth>
+                <InputLabel id="warehouse-kind">Kind</InputLabel>
+                <Select
+                  labelId="warehouse-kind"
+                  label="Kind"
+                  value={warehouseKind}
+                  onChange={(event) => setWarehouseKind(event.target.value)}
+                >
+                  {WAREHOUSE_KIND_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl
+                fullWidth
+                required={siteStoreRequiresParent}
+                disabled={structureQuery.isLoading || siteOptions.length === 0}
               >
-                {WAREHOUSE_KIND_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                <InputLabel id="warehouse-parent-site">
+                  Project site
+                </InputLabel>
+                <Select
+                  labelId="warehouse-parent-site"
+                  label="Project site"
+                  value={parentSiteId}
+                  onChange={(event) => applyParentSite(event.target.value)}
+                >
+                  {!siteStoreRequiresParent ? (
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                  ) : null}
+                  {siteOptions.map((option) => (
+                    <MenuItem key={option.id} value={option.id}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {siteStoreRequiresParent
+                    ? 'Required for site store — choose a site from this project’s Structure.'
+                    : 'Optional — link this warehouse under a project site from Structure.'}
+                </FormHelperText>
+              </FormControl>
+            </Stack>
             <TextField
               label="Address"
               value={address}
@@ -192,21 +334,19 @@ export function ProjectWarehousesPage({
             />
             <Button
               variant="contained"
-              disabled={
-                !siteCode.trim() ||
-                !siteName.trim() ||
-                createMutation.isPending
-              }
+              disabled={!canSubmit}
               onClick={async () => {
                 try {
                   await createMutation.mutateAsync({
                     siteCode: siteCode.trim(),
                     siteName: siteName.trim(),
                     warehouseKind,
+                    parentSiteId: parentSiteId || null,
                     address: address.trim() || null,
                   });
                   setSiteCode('');
                   setSiteName('');
+                  setParentSiteId('');
                   setAddress('');
                   notify.success('Warehouse created');
                 } catch (error) {

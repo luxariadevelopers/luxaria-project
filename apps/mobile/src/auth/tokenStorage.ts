@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -6,6 +7,9 @@ const REFRESH_TOKEN_KEY = 'luxaria.refreshToken';
 const USER_KEY = 'luxaria.user';
 const PROJECT_ID_KEY = 'luxaria.selectedProjectId';
 const SITE_ID_KEY = 'luxaria.selectedSiteId';
+
+/** SecureStore is native-only; web uses AsyncStorage (localStorage). */
+const useSecureStore = Platform.OS !== 'web';
 
 type MemoryCache = {
   accessToken: string | null;
@@ -25,7 +29,22 @@ const memory: MemoryCache = {
   hydrated: false,
 };
 
+async function getSecure(key: string): Promise<string | null> {
+  if (!useSecureStore) {
+    return AsyncStorage.getItem(key);
+  }
+  return SecureStore.getItemAsync(key);
+}
+
 async function setSecure(key: string, value: string | null) {
+  if (!useSecureStore) {
+    if (value == null) {
+      await AsyncStorage.removeItem(key);
+      return;
+    }
+    await AsyncStorage.setItem(key, value);
+    return;
+  }
   if (value == null) {
     await SecureStore.deleteItemAsync(key);
     return;
@@ -37,8 +56,8 @@ export const tokenStorage = {
   async hydrate() {
     const [accessToken, refreshToken, userJson, selectedProjectId, selectedSiteId] =
       await Promise.all([
-        SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
-        SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
+        getSecure(ACCESS_TOKEN_KEY),
+        getSecure(REFRESH_TOKEN_KEY),
         AsyncStorage.getItem(USER_KEY),
         AsyncStorage.getItem(PROJECT_ID_KEY),
         AsyncStorage.getItem(SITE_ID_KEY),

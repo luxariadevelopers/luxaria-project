@@ -258,6 +258,65 @@ describe('DocumentsService', () => {
     );
   });
 
+  it('presigns company statutory types without projectId (pan/moa/aoa/coi/gst)', async () => {
+    const types = ['pan', 'moa', 'aoa', 'coi', 'gst'] as const;
+    for (const documentType of types) {
+      const created = await service.createPresignedUpload(
+        {
+          companyId: entityId,
+          module: 'company',
+          entityType: 'company',
+          entityId,
+          originalFileName: `${documentType}.pdf`,
+          mimeType: 'application/pdf',
+          size: 1024,
+          documentType,
+        },
+        actorId,
+      );
+      expect(created.data?.document.module).toBe('company');
+      expect(created.data?.document.entityType).toBe('company');
+      expect(created.data?.document.documentType).toBe(documentType);
+      expect(created.data?.document.projectId).toBeNull();
+      expect(created.data?.document.companyId).toBe(entityId);
+      expect(created.data?.upload.url).toContain('https://');
+    }
+
+    s3Mock.headObject.mockResolvedValue({
+      contentLength: 1024,
+      contentType: 'application/pdf',
+      checksumSha256: null,
+      eTag: 'statutory',
+    });
+
+    const panPending = await service.createPresignedUpload(
+      {
+        companyId: entityId,
+        module: 'company',
+        entityType: 'company',
+        entityId,
+        originalFileName: 'pan-card.pdf',
+        mimeType: 'application/pdf',
+        size: 1024,
+        documentType: 'pan',
+      },
+      actorId,
+    );
+    await service.confirmUpload(panPending.data!.document.id, {}, actorId);
+
+    const listed = await service.listEntityDocuments({
+      entityType: 'company',
+      entityId,
+      module: 'company',
+    });
+    expect(
+      listed.data?.some(
+        (d) =>
+          d.documentType === 'pan' && d.status === DocumentStatus.Active,
+      ),
+    ).toBe(true);
+  });
+
   it('archives documents', async () => {
     const created = await service.createPresignedUpload(
       {

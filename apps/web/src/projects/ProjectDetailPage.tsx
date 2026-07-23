@@ -386,6 +386,16 @@ export function ProjectDetailPage({ projectId: projectIdProp }: Props = {}) {
                 Warehouses
               </Button>
             ) : null}
+            {hasPermission('project.view') &&
+            hasPermission('report.view') ? (
+              <Button
+                component={RouterLink}
+                to={`/projects/${project.id}/expense-income`}
+                variant="outlined"
+              >
+                Expense &amp; income
+              </Button>
+            ) : null}
             {hasPermission('project.update') ? (
               <Button
                 component={RouterLink}

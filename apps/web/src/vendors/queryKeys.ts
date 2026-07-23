@@ -1,4 +1,4 @@
-import type { ListVendorsQuery } from './types';
+import type { ListVendorsQuery, VendorLedgerQuery } from './types';
 
 export const vendorsKeys = {
   all: ['vendors'] as const,
@@ -7,7 +7,8 @@ export const vendorsKeys = {
   detail: (id: string) => [...vendorsKeys.all, 'detail', id] as const,
   documents: (id: string) => [...vendorsKeys.all, 'documents', id] as const,
   projects: (id: string) => [...vendorsKeys.all, 'projects', id] as const,
-  ledger: (id: string) => [...vendorsKeys.all, 'ledger', id] as const,
+  ledger: (id: string, query: VendorLedgerQuery = {}) =>
+    [...vendorsKeys.all, 'ledger', id, query] as const,
   invoices: (id: string) => [...vendorsKeys.all, 'invoices', id] as const,
   payments: (id: string) => [...vendorsKeys.all, 'payments', id] as const,
   qualityScore: (id: string) =>

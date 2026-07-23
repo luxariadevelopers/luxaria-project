@@ -45,8 +45,8 @@ export class RbacController {
   listPermissions() {
     return createSuccessResponse(
       PERMISSIONS.map((code) => {
-        const [module, action] = code.split('.');
-        return { code, module, action };
+        const [module, ...actionParts] = code.split('.');
+        return { code, module, action: actionParts.join('.') };
       }),
       'Permissions catalog fetched successfully',
     );

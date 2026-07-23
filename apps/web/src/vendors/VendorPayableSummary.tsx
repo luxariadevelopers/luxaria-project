@@ -1,18 +1,18 @@
-import { Alert, Stack, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { formatInr } from '@/format';
 import { buildVendorPayableSummary } from './payableSummary';
 import type {
   PublicVendorInvoiceRow,
   PublicVendorPaymentRow,
-  VendorLedgerPlaceholder,
+  VendorLedgerReport,
 } from './types';
 
 type Props = {
   canView: boolean;
   invoices: readonly PublicVendorInvoiceRow[];
   payments: readonly PublicVendorPaymentRow[];
-  ledger: VendorLedgerPlaceholder | undefined;
+  ledger: VendorLedgerReport | undefined;
   loading?: boolean;
   error?: unknown;
   onRetry?: () => void;
@@ -78,11 +78,6 @@ export function VendorPayableSummary({
 
   return (
     <Stack spacing={2} data-testid="vendor-payable-summary">
-      {ledger?.note ? (
-        <Alert severity="info" variant="outlined">
-          {ledger.note}
-        </Alert>
-      ) : null}
       <Stack
         spacing={1.5}
         sx={{

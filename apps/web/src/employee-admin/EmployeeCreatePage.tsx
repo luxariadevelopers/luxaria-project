@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -12,7 +13,9 @@ import {
   FormControl,
   FormControlLabel,
   FormGroup,
+  FormHelperText,
   InputLabel,
+  ListItemText,
   MenuItem,
   Select,
   Stack,
@@ -35,10 +38,20 @@ import {
   canViewSites,
 } from './roleAccess';
 import {
+  SITE_ENGINEER_ACCESS_MODULES,
+  buildPermissionDeniesFromModules,
+  defaultEnabledModules,
+} from './siteEngineerAccessModules';
+import {
+  clearSiteEngineerWizardDraft,
+  loadSiteEngineerWizardDraft,
+  saveSiteEngineerWizardDraft,
+  toDraftValues,
+} from './siteEngineerWizardDraft';
+import {
   DEFAULT_DEPARTMENT_CODE,
   DEFAULT_DESIGNATION_CODE,
   DEFAULT_ROLE_CODE,
-  SITE_ENGINEER_OPTIONAL_DENY_PERMISSIONS,
 } from './types';
 import {
   useCreateSite,
@@ -52,7 +65,7 @@ const STEPS = [
   'Personal',
   'Organisation',
   'Login',
-  'Roles',
+  'Access',
   'Project & Site',
   'Review',
 ] as const;
@@ -66,11 +79,14 @@ type WizardValues = {
   employeeCode: string;
   departmentId: string;
   designationId: string;
+  reportingOfficerUserIds: string[];
   reportingManagerUserId: string;
+  reportingApprovalMode: 'any' | 'all';
   createLogin: boolean;
   password: string;
   confirmPassword: string;
-  permissionDenies: string[];
+  /** Module id → enabled. Unchecked modules become permission denies. */
+  enabledModules: Record<string, boolean>;
   projectId: string;
   siteId: string;
 };
@@ -84,14 +100,37 @@ const INITIAL: WizardValues = {
   employeeCode: '',
   departmentId: '',
   designationId: '',
+  reportingOfficerUserIds: [],
   reportingManagerUserId: '',
+  reportingApprovalMode: 'any',
   createLogin: true,
   password: '',
   confirmPassword: '',
-  permissionDenies: [],
+  enabledModules: defaultEnabledModules(),
   projectId: '',
   siteId: '',
 };
+
+function readWizardBootState(): {
+  activeStep: number;
+  values: WizardValues;
+  restored: boolean;
+} {
+  const draft = loadSiteEngineerWizardDraft();
+  if (!draft) {
+    return { activeStep: 0, values: INITIAL, restored: false };
+  }
+  return {
+    activeStep: draft.activeStep,
+    values: {
+      ...INITIAL,
+      ...draft.values,
+      password: '',
+      confirmPassword: '',
+    },
+    restored: true,
+  };
+}
 
 function CreateSiteDialog({
   open,
@@ -178,11 +217,33 @@ export function EmployeeCreatePage() {
   const navigate = useNavigate();
   const notify = useNotify();
   const allowed = canProvisionSiteEngineer(access);
-  const [activeStep, setActiveStep] = useState(0);
-  const [values, setValues] = useState<WizardValues>(INITIAL);
+  const [boot] = useState(readWizardBootState);
+  const [activeStep, setActiveStep] = useState(boot.activeStep);
+  const [values, setValues] = useState<WizardValues>(boot.values);
+  const [draftRestored, setDraftRestored] = useState(boot.restored);
   const [serverError, setServerError] = useState<unknown>();
   const [createSiteOpen, setCreateSiteOpen] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
+
+  useEffect(() => {
+    saveSiteEngineerWizardDraft({
+      activeStep,
+      values: toDraftValues(values),
+    });
+  }, [activeStep, values]);
+
+  const discardDraft = () => {
+    clearSiteEngineerWizardDraft();
+    setActiveStep(0);
+    setValues({
+      ...INITIAL,
+      reportingOfficerUserIds: [],
+      enabledModules: defaultEnabledModules(),
+    });
+    setDraftRestored(false);
+    setStepError(null);
+    setServerError(undefined);
+  };
 
   const departmentsQuery = useDepartmentsList(
     allowed && hasPermission('department.view'),
@@ -261,7 +322,7 @@ export function EmployeeCreatePage() {
         return 'Engineering department is required (or will use ENGINEERING code)';
       }
       if (!values.designationId && !siteEngineerDesig) {
-        return 'Site Engineer designation is required (or will use SITE_ENGINEER code)';
+        return 'Designation is required (defaults to Site Engineer if left empty)';
       }
     }
     if (step === 2) {
@@ -320,17 +381,28 @@ export function EmployeeCreatePage() {
         designationCode: values.designationId
           ? undefined
           : DEFAULT_DESIGNATION_CODE,
+        reportingOfficerUserIds:
+          values.reportingOfficerUserIds.length > 0
+            ? values.reportingOfficerUserIds
+            : undefined,
         reportingManagerUserId: values.reportingManagerUserId || null,
+        reportingApprovalMode:
+          values.reportingOfficerUserIds.length > 0
+            ? values.reportingApprovalMode
+            : undefined,
         createLogin: true,
         password: values.password,
         roleCode: DEFAULT_ROLE_CODE,
         projectId: values.projectId,
         siteId: values.siteId,
-        permissionDenies:
-          values.permissionDenies.length > 0
-            ? values.permissionDenies
-            : undefined,
+        permissionDenies: (() => {
+          const denies = buildPermissionDeniesFromModules(
+            values.enabledModules,
+          );
+          return denies.length > 0 ? denies : undefined;
+        })(),
       });
+      clearSiteEngineerWizardDraft();
       notify.success(
         `Employee ${result.employee.employeeCode} provisioned successfully`,
       );
@@ -339,7 +411,7 @@ export function EmployeeCreatePage() {
       });
     } catch (err) {
       setServerError(err);
-      notify.error(getErrorMessage(err, 'Could not provision Site Engineer'));
+      notify.error(getErrorMessage(err, 'Could not create employee'));
     }
   };
 
@@ -354,8 +426,8 @@ export function EmployeeCreatePage() {
   if (!allowed) {
     return (
       <PermissionDenied
-        title="Employee provision unavailable"
-        message="You need employee.create, user.create, project_access.assign, and site_access.assign to provision a Site Engineer."
+        title="Create employee unavailable"
+        message="You need employee.create, user.create, project_access.assign, and site_access.assign to create an employee."
       />
     );
   }
@@ -372,18 +444,28 @@ export function EmployeeCreatePage() {
   const siteName =
     (sitesQuery.data?.items ?? []).find((s) => s.id === values.siteId)
       ?.siteName ?? values.siteId;
-  const managerName =
-    (managersQuery.data?.items ?? []).find(
-      (u) => u.id === values.reportingManagerUserId,
-    )?.fullName ?? '—';
+  const managerOptions = managersQuery.data?.items ?? [];
+  const managerNames =
+    values.reportingOfficerUserIds.length === 0
+      ? '—'
+      : values.reportingOfficerUserIds
+          .map(
+            (id) =>
+              managerOptions.find((u) => u.id === id)?.fullName ?? id,
+          )
+          .join(', ');
+  const primaryManagerName = values.reportingManagerUserId
+    ? (managerOptions.find((u) => u.id === values.reportingManagerUserId)
+        ?.fullName ?? values.reportingManagerUserId)
+    : '—';
 
   return (
     <Stack spacing={2.5} data-testid="employee-create-page">
       <Stack spacing={0.5}>
-        <Typography variant="h5">Create Site Engineer</Typography>
+        <Typography variant="h5">Create Employee</Typography>
         <Typography variant="body2" color="text.secondary">
-          Provision employee, login, Site Engineer role, project and site
-          access in one flow.
+          Add employee details, choose designation (who they are appointed
+          as), set login, access, and project/site assignment.
         </Typography>
       </Stack>
 
@@ -395,10 +477,24 @@ export function EmployeeCreatePage() {
         ))}
       </Stepper>
 
+      {draftRestored ? (
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={discardDraft}>
+              Start over
+            </Button>
+          }
+        >
+          Progress restored after refresh. Passwords are not saved — re-enter
+          them on the Login step before submit.
+        </Alert>
+      ) : null}
+
       {stepError ? <Alert severity="warning">{stepError}</Alert> : null}
       {serverError ? (
         <Alert severity="error">
-          {getErrorMessage(serverError, 'Provision failed')}
+          {getErrorMessage(serverError, 'Create employee failed')}
         </Alert>
       ) : null}
 
@@ -488,22 +584,114 @@ export function EmployeeCreatePage() {
             Default: Site Engineer ({DEFAULT_DESIGNATION_CODE})
           </Typography>
           <FormControl fullWidth>
-            <InputLabel id="manager-select">Reporting manager</InputLabel>
+            <InputLabel id="manager-select">Reporting officers</InputLabel>
             <Select
               labelId="manager-select"
-              label="Reporting manager"
+              label="Reporting officers"
+              multiple
+              value={values.reportingOfficerUserIds}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const next = (
+                  typeof raw === 'string' ? raw.split(',') : raw
+                ).slice(0, 2);
+                const primary = values.reportingManagerUserId;
+                patch({
+                  reportingOfficerUserIds: next,
+                  reportingManagerUserId: !next.length
+                    ? ''
+                    : next.includes(primary)
+                      ? primary
+                      : (next[0] ?? ''),
+                });
+              }}
+              renderValue={(selected) => {
+                const ids = selected as string[];
+                if (!ids.length) return 'None';
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {ids.map((id) => (
+                      <Chip
+                        key={id}
+                        size="small"
+                        label={
+                          managerOptions.find((u) => u.id === id)?.fullName ??
+                          id
+                        }
+                      />
+                    ))}
+                  </Box>
+                );
+              }}
+            >
+              {managerOptions.map((row) => (
+                <MenuItem
+                  key={row.id}
+                  value={row.id}
+                  disabled={
+                    values.reportingOfficerUserIds.length >= 2 &&
+                    !values.reportingOfficerUserIds.includes(row.id)
+                  }
+                >
+                  <Checkbox
+                    checked={values.reportingOfficerUserIds.includes(row.id)}
+                  />
+                  <ListItemText primary={row.fullName} />
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>
+              Select 1 or 2 people. If one is unavailable, the other can still
+              cover (when approval rule is “Any one”).
+            </FormHelperText>
+          </FormControl>
+          <FormControl
+            fullWidth
+            disabled={values.reportingOfficerUserIds.length === 0}
+          >
+            <InputLabel id="primary-manager-select">
+              Primary reporting officer
+            </InputLabel>
+            <Select
+              labelId="primary-manager-select"
+              label="Primary reporting officer"
               value={values.reportingManagerUserId}
               onChange={(e) =>
                 patch({ reportingManagerUserId: e.target.value })
               }
             >
-              <MenuItem value="">None</MenuItem>
-              {(managersQuery.data?.items ?? []).map((row) => (
-                <MenuItem key={row.id} value={row.id}>
-                  {row.fullName}
+              {values.reportingOfficerUserIds.map((id) => (
+                <MenuItem key={id} value={id}>
+                  {managerOptions.find((u) => u.id === id)?.fullName ?? id}
                 </MenuItem>
               ))}
             </Select>
+          </FormControl>
+          <FormControl
+            fullWidth
+            disabled={values.reportingOfficerUserIds.length === 0}
+          >
+            <InputLabel id="approval-mode-select">Approval rule</InputLabel>
+            <Select
+              labelId="approval-mode-select"
+              label="Approval rule"
+              value={values.reportingApprovalMode}
+              onChange={(e) =>
+                patch({
+                  reportingApprovalMode: e.target.value as 'any' | 'all',
+                })
+              }
+            >
+              <MenuItem value="any">
+                Any one reporting officer can approve
+              </MenuItem>
+              <MenuItem value="all">
+                All reporting officers must approve
+              </MenuItem>
+            </Select>
+            <FormHelperText>
+              Use “Any one” so a second officer can approve if the first cannot.
+            </FormHelperText>
           </FormControl>
         </Stack>
       ) : null}
@@ -521,7 +709,7 @@ export function EmployeeCreatePage() {
           />
           {!values.createLogin ? (
             <Alert severity="warning">
-              This Site Engineer provision slice requires a login account.
+              A login account is required to create this employee.
             </Alert>
           ) : null}
           <TextField
@@ -547,37 +735,85 @@ export function EmployeeCreatePage() {
       ) : null}
 
       {activeStep === 3 ? (
-        <Stack spacing={2} sx={{ maxWidth: 640 }}>
+        <Stack spacing={2} sx={{ maxWidth: 720 }}>
           <Alert severity="info">
-            Role assigned for this flow: <strong>{DEFAULT_ROLE_CODE}</strong>{' '}
-            (Site Engineer) — read-only.
+            Module access only (not view / edit / approve). Tick what they
+            should see on the <strong>web dashboard</strong> and{' '}
+            <strong>mobile app</strong>. Untick to hide a module.
           </Alert>
-          <Typography variant="subtitle2">
-            Optional permission denies
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Select Site Engineer permissions to deny for this user (overrides).
-          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() =>
+                patch({ enabledModules: defaultEnabledModules() })
+              }
+            >
+              Enable all
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() =>
+                patch({
+                  enabledModules: Object.fromEntries(
+                    SITE_ENGINEER_ACCESS_MODULES.map((module) => [
+                      module.id,
+                      false,
+                    ]),
+                  ),
+                })
+              }
+            >
+              Disable all
+            </Button>
+          </Stack>
           <FormGroup>
-            {SITE_ENGINEER_OPTIONAL_DENY_PERMISSIONS.map((perm) => (
-              <FormControlLabel
-                key={perm.code}
-                control={
-                  <Checkbox
-                    checked={values.permissionDenies.includes(perm.code)}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...values.permissionDenies, perm.code]
-                        : values.permissionDenies.filter(
-                            (code) => code !== perm.code,
-                          );
-                      patch({ permissionDenies: next });
-                    }}
-                  />
-                }
-                label={`${perm.label} (${perm.code})`}
-              />
-            ))}
+            {SITE_ENGINEER_ACCESS_MODULES.map((module) => {
+              const surfaces = [
+                module.web ? 'Web' : null,
+                module.mobile ? 'Mobile' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ');
+              return (
+                <FormControlLabel
+                  key={module.id}
+                  control={
+                    <Checkbox
+                      checked={values.enabledModules[module.id] !== false}
+                      onChange={(e) =>
+                        patch({
+                          enabledModules: {
+                            ...values.enabledModules,
+                            [module.id]: e.target.checked,
+                          },
+                        })
+                      }
+                    />
+                  }
+                  label={
+                    <Stack spacing={0.15} sx={{ py: 0.25 }}>
+                      <Typography variant="body2">
+                        {module.label}
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ ml: 1 }}
+                        >
+                          {surfaces}
+                        </Typography>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {module.description}
+                      </Typography>
+                    </Stack>
+                  }
+                  sx={{ alignItems: 'flex-start', mb: 0.5 }}
+                />
+              );
+            })}
           </FormGroup>
         </Stack>
       ) : null}
@@ -667,19 +903,29 @@ export function EmployeeCreatePage() {
             <strong>Designation:</strong> {designationName}
           </Typography>
           <Typography variant="body2">
-            <strong>Manager:</strong> {managerName}
+            <strong>Reporting officers:</strong> {managerNames}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Primary officer:</strong> {primaryManagerName}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Approval rule:</strong>{' '}
+            {values.reportingOfficerUserIds.length === 0
+              ? '—'
+              : values.reportingApprovalMode === 'all'
+                ? 'All must approve'
+                : 'Any one can approve'}
           </Typography>
           <Typography variant="body2">
             <strong>Login:</strong> Yes (password set)
           </Typography>
           <Typography variant="body2">
-            <strong>Role:</strong> {DEFAULT_ROLE_CODE}
-          </Typography>
-          <Typography variant="body2">
-            <strong>Permission denies:</strong>{' '}
-            {values.permissionDenies.length > 0
-              ? values.permissionDenies.join(', ')
-              : 'None'}
+            <strong>Hidden modules:</strong>{' '}
+            {SITE_ENGINEER_ACCESS_MODULES.filter(
+              (module) => values.enabledModules[module.id] === false,
+            )
+              .map((module) => module.label)
+              .join(', ') || 'None (full module access)'}
           </Typography>
           <Typography variant="body2">
             <strong>Project:</strong> {projectName}
@@ -695,6 +941,7 @@ export function EmployeeCreatePage() {
           component={RouterLink}
           to="/administration/employees"
           disabled={provisionMutation.isPending}
+          onClick={() => clearSiteEngineerWizardDraft()}
         >
           Cancel
         </Button>
@@ -719,7 +966,7 @@ export function EmployeeCreatePage() {
             {provisionMutation.isPending ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
-              'Provision Site Engineer'
+              'Create Employee'
             )}
           </Button>
         )}
@@ -728,5 +975,5 @@ export function EmployeeCreatePage() {
   );
 }
 
-/** Alias for the multi-step Site Engineer provision wizard. */
+/** Alias for the multi-step employee create wizard. */
 export { EmployeeCreatePage as EmployeeCreateWizard };

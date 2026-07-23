@@ -28,6 +28,11 @@ describe('toPublicUser', () => {
     expect(publicUser.department).toBe('Projects');
     expect(publicUser.assignedProjects).toHaveLength(1);
     expect(publicUser.roleIds).toHaveLength(1);
+    expect(publicUser.reportingOfficers).toHaveLength(1);
+    expect(publicUser.reportingOfficers[0]).toBe(
+      String(publicUser.reportingManager),
+    );
+    expect(publicUser.mustChangePassword).toBe(false);
     expect(publicUser).not.toHaveProperty('passwordHash');
   });
 });

@@ -16,7 +16,10 @@ export type ProjectStatus =
   (typeof ProjectStatus)[keyof typeof ProjectStatus];
 
 export const ProjectType = {
+  /** Legacy — prefer flat / individual. Kept so existing projects still load. */
   Residential: 'residential',
+  ResidentialFlat: 'residential_flat',
+  ResidentialIndividual: 'residential_individual',
   Commercial: 'commercial',
   MixedUse: 'mixed_use',
   Plotting: 'plotting',
@@ -106,6 +109,7 @@ export type PublicProject = {
   assignedDirectors: string[];
   defaultBankAccount: string | null;
   approvedBudget: number | null;
+  equalDirectorInvestment: boolean;
   projectStage: ProjectStage;
   reraDetails: ProjectReraDetails;
   companyId: string | null;
@@ -163,6 +167,7 @@ export type CreateProjectInput = {
   assignedDirectors?: string[];
   defaultBankAccount?: string | null;
   approvedBudget?: number | null;
+  equalDirectorInvestment?: boolean;
   projectStage?: ProjectStage;
   reraDetails?: ProjectReraDetails;
   companyId?: string | null;
@@ -188,6 +193,7 @@ export type UpdateProjectInput = {
   timeZone?: string;
   defaultBankAccount?: string | null;
   approvedBudget?: number | null;
+  equalDirectorInvestment?: boolean;
   projectStage?: ProjectStage;
   reraDetails?: ProjectReraDetails;
 };
@@ -377,6 +383,12 @@ export type CreateStructureNodeInput = {
   contactPhone?: string | null;
   address?: string | null;
   siteManagerUserId?: string | null;
+};
+
+export type UpdateStructureNodeInput = {
+  siteName?: string;
+  type?: StructureSiteType | string;
+  parentSiteId?: string | null;
 };
 
 export type CreateWarehouseInput = {

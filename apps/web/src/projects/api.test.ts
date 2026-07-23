@@ -81,6 +81,7 @@ const project: PublicProject = {
   assignedDirectors: [],
   defaultBankAccount: null,
   approvedBudget: null,
+  equalDirectorInvestment: false,
   projectStage: ProjectStage.Concept,
   reraDetails: {
     reraNumber: null,

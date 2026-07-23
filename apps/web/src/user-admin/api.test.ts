@@ -11,7 +11,7 @@ import {
   resetUserPassword,
   updateUser,
 } from './api';
-import { UserStatus, type PublicUser } from './types';
+import { ReportingApprovalMode, UserStatus, type PublicUser } from './types';
 
 const apiGet = vi.fn();
 const apiPost = vi.fn();
@@ -21,6 +21,7 @@ vi.mock('@/api/client', () => ({
   apiGet: (...args: unknown[]) => apiGet(...args),
   apiPost: (...args: unknown[]) => apiPost(...args),
   apiPatch: (...args: unknown[]) => apiPatch(...args),
+  apiClient: { post: vi.fn() },
 }));
 
 const user: PublicUser = {
@@ -37,6 +38,8 @@ const user: PublicUser = {
   assignedProjects: [],
   roleIds: [],
   reportingManager: null,
+  reportingOfficers: [],
+  reportingApprovalMode: ReportingApprovalMode.Any,
   joiningDate: null,
   lastLoginAt: null,
 };

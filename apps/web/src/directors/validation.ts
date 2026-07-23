@@ -45,6 +45,7 @@ const panField = z
 
 export const directorFormSchema = z.object({
   fullName: z.string().trim().min(1, 'Full name is required'),
+  userId: z.string().trim().min(1, 'Linked user is required'),
   din: dinField,
   pan: panField,
   email: z

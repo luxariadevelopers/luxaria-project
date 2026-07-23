@@ -56,18 +56,21 @@ export function evaluateRouteAccess(
   return 'allow';
 }
 
-/** Sidebar: hide on deny; show while pending (guards still block URL). */
+/** Sidebar: only show items explicitly allowed for the loaded permission set. */
 export function isNavItemVisible(
   item: Pick<NavItemConfig, 'anyOf' | 'allOf'>,
   ctx: RouteAccessContext,
 ): boolean {
-  return evaluateRouteAccess(item, ctx) !== 'deny';
+  return evaluateRouteAccess(item, ctx) === 'allow';
 }
 
-/** Route guard: allow while pending; block on deny. */
+/**
+ * Route guard: enter only when allow.
+ * Pending waits in the guard (do not treat as allow — prevents URL flash).
+ */
 export function canEnterRoute(
   route: Pick<AppRouteDefinition, 'anyOf' | 'allOf'>,
   ctx: RouteAccessContext,
 ): boolean {
-  return evaluateRouteAccess(route, ctx) !== 'deny';
+  return evaluateRouteAccess(route, ctx) === 'allow';
 }

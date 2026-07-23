@@ -1,12 +1,14 @@
 import type { ApiResponse } from '@luxaria/shared-types';
-import { apiClient, apiGet, apiPost } from '@/api/client';
+import { apiClient, apiGet, apiPatch, apiPost } from '@/api/client';
 import type {
   CancelSiteExpenseInput,
+  CreateSiteExpenseInput,
   ListSiteExpenseVouchersQuery,
   PaginatedSiteExpenseVouchers,
   PublicSiteExpenseVoucher,
   RejectSiteExpenseInput,
   ReturnSiteExpenseInput,
+  UpdateSiteExpenseInput,
 } from './types';
 
 const BASE = '/site-expense-vouchers';
@@ -62,6 +64,47 @@ function readMeta(
     hasNextPage: Boolean(meta.hasNextPage),
     hasPrevPage: Boolean(meta.hasPrevPage),
   };
+}
+
+/** `POST /site-expense-vouchers` — `expense.create` */
+export async function createSiteExpenseVoucher(
+  input: CreateSiteExpenseInput,
+  idempotencyKey?: string,
+): Promise<PublicSiteExpenseVoucher> {
+  const { data } = await apiClient.post<ApiResponse<PublicSiteExpenseVoucher>>(
+    BASE,
+    input,
+    idempotencyKey
+      ? { headers: { 'Idempotency-Key': idempotencyKey } }
+      : undefined,
+  );
+  if (!data.data) {
+    throw new Error(data.message || 'Create expense failed');
+  }
+  return normaliseVoucher(data.data);
+}
+
+/** `PATCH /site-expense-vouchers/:id` — draft/returned; attach signatures before submit. */
+export async function updateSiteExpenseVoucher(
+  id: string,
+  input: UpdateSiteExpenseInput,
+): Promise<PublicSiteExpenseVoucher> {
+  const res = await apiPatch<PublicSiteExpenseVoucher>(`${BASE}/${id}`, input);
+  if (!res.data) {
+    throw new Error(res.message || 'Update expense failed');
+  }
+  return normaliseVoucher(res.data);
+}
+
+/** `POST /site-expense-vouchers/:id/submit` — `expense.create` */
+export async function submitSiteExpenseVoucher(
+  id: string,
+): Promise<PublicSiteExpenseVoucher> {
+  const res = await apiPost<PublicSiteExpenseVoucher>(`${BASE}/${id}/submit`);
+  if (!res.data) {
+    throw new Error(res.message || 'Submit failed');
+  }
+  return normaliseVoucher(res.data);
 }
 
 /** `GET /site-expense-vouchers` — `expense.view` */

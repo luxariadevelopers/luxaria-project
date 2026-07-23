@@ -49,6 +49,12 @@ export function DirectorTable({
     { field: 'directorCode', headerName: 'Code', width: 120 },
     { field: 'fullName', headerName: 'Name', flex: 1, minWidth: 180 },
     {
+      field: 'userCode',
+      headerName: 'User ID',
+      width: 130,
+      valueGetter: (_v, row) => row.userCode ?? '—',
+    },
+    {
       field: 'din',
       headerName: 'DIN',
       width: 120,

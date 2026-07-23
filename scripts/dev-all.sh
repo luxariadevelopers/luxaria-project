@@ -7,11 +7,19 @@ cd "$ROOT_DIR"
 PORTS=(9000 9001 9002)
 
 echo "Luxaria Developers ERP — starting 9000-series services"
-echo "  MongoDB   → 9017"
+echo "  MongoDB   → Atlas (MONGODB_URI in apps/backend/.env.development.local)"
 echo "  Backend   → 9000"
 echo "  Web       → 9001"
 echo "  Mobile    → 9002"
+echo "  S3        → Luxaria bucket via AWS_PROFILE (default: luxaria)"
 echo
+
+# Prefer Luxaria AWS login profile (not ClassicCart static keys)
+export AWS_PROFILE="${AWS_PROFILE:-luxaria}"
+export AWS_REGION="${AWS_REGION:-ap-south-1}"
+export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-$AWS_REGION}"
+# Ensure SDK default chain is not overridden by leftover ClassicCart env keys
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
 
 free_port() {
   local port="$1"
@@ -33,31 +41,24 @@ free_port() {
   fi
 }
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "Error: docker is required to start MongoDB on port 9017."
-  exit 1
-fi
-
 echo "→ Ensuring app ports are free..."
 for port in "${PORTS[@]}"; do
   free_port "${port}"
 done
 
-echo "→ Starting MongoDB (docker compose)..."
-docker compose up -d mongo
+if [[ ! -f apps/backend/.env.development.local ]] && [[ ! -f .env.docker ]]; then
+  echo "Error: set live Atlas MONGODB_URI in apps/backend/.env.development.local or .env.docker"
+  exit 1
+fi
 
-echo "→ Waiting for MongoDB..."
-for _ in $(seq 1 30); do
-  if docker compose exec -T mongo mongosh --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1; then
-    echo "→ MongoDB is ready on :9017"
-    break
-  fi
-  sleep 1
-done
+if command -v docker >/dev/null 2>&1; then
+  echo "→ Starting Redis (docker compose)..."
+  docker compose --env-file .env.docker up -d redis 2>/dev/null || docker compose up -d redis
+fi
 
 cleanup() {
   echo
-  echo "Stopping Node apps (MongoDB container left running)..."
+  echo "Stopping Node apps..."
   pids="$(jobs -p || true)"
   if [[ -n "${pids}" ]]; then
     # shellcheck disable=SC2086

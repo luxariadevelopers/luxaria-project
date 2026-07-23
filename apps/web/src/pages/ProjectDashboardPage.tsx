@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Link as RouterLink,
   Navigate,
   useNavigate,
   useParams,
 } from 'react-router-dom';
-import { Button, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import {
   EmptyState,
@@ -33,7 +33,6 @@ export function ProjectDashboardPage() {
     projects,
     selectedProjectId,
     setSelectedProjectId,
-    selectedProject,
   } = useProject();
   const [asOfDate, setAsOfDate] = useState(todayIsoDate);
 
@@ -48,6 +47,18 @@ export function ProjectDashboardPage() {
     selectedProjectId,
     accessibleProjectIds: accessibleIds,
   });
+
+  // If the URL names an accessible project, activate it (header may still be
+  // "All projects" after opening Dashboard from the project Edit screen).
+  useEffect(() => {
+    if (
+      (routeAccess === 'no_selection' || routeAccess === 'mismatch') &&
+      routeProjectId &&
+      accessibleIds.includes(routeProjectId)
+    ) {
+      setSelectedProjectId(routeProjectId);
+    }
+  }, [routeAccess, routeProjectId, accessibleIds, setSelectedProjectId]);
 
   const queryEnabled = canView && routeAccess === 'ok';
   const dashboardQuery = useProjectDashboard(
@@ -87,26 +98,17 @@ export function ProjectDashboardPage() {
 
   if (routeAccess === 'no_selection' || routeAccess === 'mismatch') {
     const target = projects.find((p) => p.id === routeProjectId);
+    if (target) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={32} />
+        </Box>
+      );
+    }
     return (
       <EmptyState
-        title={
-          routeAccess === 'mismatch'
-            ? 'Active project mismatch'
-            : 'Select this project'
-        }
-        description={
-          routeAccess === 'mismatch'
-            ? `This dashboard is for ${target?.projectCode ?? 'the requested project'}, but your active project is ${selectedProject?.projectCode ?? 'none'}. Switch the header project to continue.`
-            : 'Activate this project in the header to view its dashboard.'
-        }
-        actionLabel={
-          target ? `Switch to ${target.projectCode}` : undefined
-        }
-        onAction={
-          target
-            ? () => setSelectedProjectId(target.id)
-            : undefined
-        }
+        title="Select this project"
+        description="Activate this project in the header to view its dashboard."
       />
     );
   }

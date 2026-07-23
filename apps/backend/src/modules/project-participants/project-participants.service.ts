@@ -26,6 +26,7 @@ import {
 } from './project-participants.mapper';
 import {
   assertActiveProfitShareTotals100,
+  assertBudgetInvestmentPercentage,
   assertInterestRateForInstrument,
   assertPercent,
   buildParticipantKey,
@@ -66,9 +67,11 @@ export class ProjectParticipantsService {
     );
     assertPercent(dto.approvedProfitSharePercentage, 'approvedProfitSharePercentage');
     assertPercent(dto.lossSharePercentage, 'lossSharePercentage');
+    assertBudgetInvestmentPercentage(dto.budgetInvestmentPercentage);
     assertInterestRateForInstrument(
       dto.instrumentType,
       dto.interestRate ?? null,
+      dto.repaymentMode ?? null,
     );
 
     const participantKey = buildParticipantKey(
@@ -120,6 +123,8 @@ export class ProjectParticipantsService {
       approvedProfitSharePercentage: dto.approvedProfitSharePercentage,
       lossSharePercentage: dto.lossSharePercentage,
       interestRate: dto.interestRate ?? null,
+      budgetInvestmentPercentage: dto.budgetInvestmentPercentage ?? null,
+      repaymentMode: dto.repaymentMode ?? null,
       instrumentType: dto.instrumentType,
       effectiveFrom: dto.effectiveFrom
         ? new Date(dto.effectiveFrom)
@@ -190,7 +195,16 @@ export class ProjectParticipantsService {
     const instrumentType = dto.instrumentType ?? current.instrumentType;
     const interestRate =
       dto.interestRate !== undefined ? dto.interestRate : current.interestRate;
-    assertInterestRateForInstrument(instrumentType, interestRate);
+    const repaymentMode =
+      dto.repaymentMode !== undefined
+        ? dto.repaymentMode
+        : current.repaymentMode;
+    const budgetInvestmentPercentage =
+      dto.budgetInvestmentPercentage !== undefined
+        ? dto.budgetInvestmentPercentage
+        : current.budgetInvestmentPercentage;
+    assertBudgetInvestmentPercentage(budgetInvestmentPercentage);
+    assertInterestRateForInstrument(instrumentType, interestRate, repaymentMode);
 
     if (dto.agreementDocumentId) {
       await this.assertAgreementDocument(
@@ -219,6 +233,8 @@ export class ProjectParticipantsService {
       approvedProfitSharePercentage: dto.approvedProfitSharePercentage,
       lossSharePercentage: dto.lossSharePercentage,
       interestRate,
+      budgetInvestmentPercentage: budgetInvestmentPercentage ?? null,
+      repaymentMode: repaymentMode ?? null,
       instrumentType,
       effectiveFrom: dto.effectiveFrom
         ? new Date(dto.effectiveFrom)
@@ -259,7 +275,12 @@ export class ProjectParticipantsService {
     const instrumentType = dto.instrumentType ?? row.instrumentType;
     const interestRate =
       dto.interestRate !== undefined ? dto.interestRate : row.interestRate;
-    assertInterestRateForInstrument(instrumentType, interestRate);
+    const repaymentMode =
+      dto.repaymentMode !== undefined ? dto.repaymentMode : row.repaymentMode;
+    if (dto.budgetInvestmentPercentage !== undefined) {
+      assertBudgetInvestmentPercentage(dto.budgetInvestmentPercentage);
+    }
+    assertInterestRateForInstrument(instrumentType, interestRate, repaymentMode);
 
     if (dto.approvedProfitSharePercentage !== undefined) {
       assertPercent(
@@ -300,6 +321,10 @@ export class ProjectParticipantsService {
       update.lossSharePercentage = dto.lossSharePercentage;
     }
     if (dto.interestRate !== undefined) update.interestRate = dto.interestRate;
+    if (dto.budgetInvestmentPercentage !== undefined) {
+      update.budgetInvestmentPercentage = dto.budgetInvestmentPercentage;
+    }
+    if (dto.repaymentMode !== undefined) update.repaymentMode = dto.repaymentMode;
     if (dto.instrumentType !== undefined) update.instrumentType = instrumentType;
     if (dto.effectiveFrom !== undefined) {
       update.effectiveFrom = new Date(dto.effectiveFrom);

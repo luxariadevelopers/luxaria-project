@@ -41,7 +41,10 @@ export function DirectorCommandCentrePage() {
     financialYearId: '',
   }));
 
-  const canView = Boolean(access) && hasPermission('dashboard.view');
+  const canView =
+    Boolean(access) &&
+    (hasPermission('dashboard.view') ||
+      hasPermission('analytics.dashboard.view'));
   const canListDirectors = hasPermission('director.view');
   const canListFy = hasPermission('financial_year.view');
 
@@ -54,7 +57,7 @@ export function DirectorCommandCentrePage() {
     return (
       <PermissionDenied
         title="Director Command Centre unavailable"
-        message="You need the dashboard.view permission to open this summary."
+        message="You need dashboard.view or analytics.dashboard.view to open this summary."
       />
     );
   }

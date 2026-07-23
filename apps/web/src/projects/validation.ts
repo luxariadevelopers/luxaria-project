@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { FieldPath } from 'react-hook-form';
+import { InstrumentType, RepaymentMode } from '@/project-participants/types';
 import {
   ProjectAccessStatus,
   ProjectStage,
@@ -73,6 +74,27 @@ function nonNegativeInteger(label: string) {
   );
 }
 
+const capitalPercentOrAmount = nonNegativeNumber('Amount');
+
+const capitalDirectorRowSchema = z.object({
+  directorId: z.string(),
+  profitSharePercent: capitalPercentOrAmount,
+  commitmentAmount: capitalPercentOrAmount,
+});
+
+const capitalInvestorRowSchema = z.object({
+  investorId: z.string(),
+  budgetInvestmentPercentage: capitalPercentOrAmount,
+  commitmentAmount: capitalPercentOrAmount,
+  profitSharePercent: capitalPercentOrAmount,
+  instrumentType: z.enum([
+    InstrumentType.ProjectInvestment,
+    InstrumentType.UnsecuredLoan,
+  ]),
+  repaymentMode: z.enum(['', RepaymentMode.Lumpsum, RepaymentMode.WithInterest]),
+  interestRate: z.string(),
+});
+
 export const projectFormSchema = z
   .object({
     projectName: z.string().trim().min(1, 'Project name is required'),
@@ -114,6 +136,9 @@ export const projectFormSchema = z
     assignedDirectors: z.array(z.string()),
     defaultBankAccount: z.string(),
     approvedBudget: nonNegativeNumber('Approved budget'),
+    equalDirectorInvestment: z.boolean(),
+    capitalDirectors: z.array(capitalDirectorRowSchema),
+    capitalInvestors: z.array(capitalInvestorRowSchema),
     projectStage: z.enum(projectStages),
     clientName: z.string(),
     currency: z.string(),
@@ -171,6 +196,35 @@ export const projectFormSchema = z
         message: 'RERA validity must end on or after registration',
       });
     }
+
+    const profitTotal = values.capitalDirectors.reduce((sum, row) => {
+      const n = Number(row.profitSharePercent);
+      return sum + (Number.isFinite(n) ? n : 0);
+    }, 0) + values.capitalInvestors.reduce((sum, row) => {
+      const n = Number(row.profitSharePercent);
+      return sum + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    if (profitTotal > 100.0001) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['capitalDirectors'],
+        message: `Director + investor profit share totals ${profitTotal.toFixed(2)}% (must be ≤ 100%)`,
+      });
+    }
+
+    values.capitalInvestors.forEach((row, index) => {
+      if (
+        row.instrumentType === InstrumentType.UnsecuredLoan &&
+        row.repaymentMode === RepaymentMode.WithInterest &&
+        (row.interestRate.trim() === '' || Number(row.interestRate) < 0)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['capitalInvestors', index, 'interestRate'],
+          message: 'Interest rate is required for with-interest loan repayment',
+        });
+      }
+    });
   });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -194,7 +248,7 @@ export function buildProjectFormDefaults(
   return {
     projectName: project?.projectName ?? '',
     description: project?.description ?? '',
-    projectType: project?.projectType ?? ProjectType.Residential,
+    projectType: project?.projectType ?? ProjectType.ResidentialFlat,
     address: {
       line1: project?.address.line1 ?? '',
       line2: project?.address.line2 ?? '',
@@ -227,6 +281,9 @@ export function buildProjectFormDefaults(
     defaultBankAccount: project?.defaultBankAccount ?? '',
     approvedBudget:
       project?.approvedBudget == null ? '' : String(project.approvedBudget),
+    equalDirectorInvestment: Boolean(project?.equalDirectorInvestment),
+    capitalDirectors: [],
+    capitalInvestors: [],
     projectStage: project?.projectStage ?? ProjectStage.Concept,
     clientName: project?.clientName ?? '',
     currency: project?.currency ?? 'INR',
@@ -242,10 +299,23 @@ export function buildProjectFormDefaults(
   };
 }
 
+function toReraDetailsInput(values: ProjectFormValues['reraDetails']) {
+  const reraDetails = {
+    reraNumber: optionalString(values.reraNumber),
+    registrationDate: optionalDateValue(values.registrationDate),
+    validUntil: optionalDateValue(values.validUntil),
+    authority: optionalString(values.authority),
+    notes: optionalString(values.notes),
+  };
+  const hasAny = Object.values(reraDetails).some((value) => value != null);
+  return hasAny ? reraDetails : undefined;
+}
+
 export function toCreateProjectInput(
   values: ProjectFormValues,
   companyId?: string | null,
 ): CreateProjectInput {
+  const reraDetails = toReraDetailsInput(values.reraDetails);
   return {
     projectName: values.projectName.trim(),
     description: optionalString(values.description),
@@ -277,16 +347,9 @@ export function toCreateProjectInput(
     assignedDirectors: values.assignedDirectors,
     defaultBankAccount: optionalString(values.defaultBankAccount),
     approvedBudget: optionalNumericValue(values.approvedBudget),
+    equalDirectorInvestment: values.equalDirectorInvestment,
     projectStage: values.projectStage,
-    reraDetails: {
-      reraNumber: optionalString(values.reraDetails.reraNumber),
-      registrationDate: optionalDateValue(
-        values.reraDetails.registrationDate,
-      ),
-      validUntil: optionalDateValue(values.reraDetails.validUntil),
-      authority: optionalString(values.reraDetails.authority),
-      notes: optionalString(values.reraDetails.notes),
-    },
+    ...(reraDetails ? { reraDetails } : {}),
     // Omit when unknown — backend resolves the authenticated tenant.
     ...(companyId ? { companyId } : {}),
   };
@@ -316,8 +379,18 @@ export function toUpdateProjectInput(
     timeZone: createShape.timeZone,
     defaultBankAccount: createShape.defaultBankAccount,
     approvedBudget: createShape.approvedBudget,
+    equalDirectorInvestment: createShape.equalDirectorInvestment,
     projectStage: createShape.projectStage,
-    reraDetails: createShape.reraDetails,
+    // Always send on update so clearing RERA fields persists.
+    reraDetails: {
+      reraNumber: optionalString(values.reraDetails.reraNumber),
+      registrationDate: optionalDateValue(
+        values.reraDetails.registrationDate,
+      ),
+      validUntil: optionalDateValue(values.reraDetails.validUntil),
+      authority: optionalString(values.reraDetails.authority),
+      notes: optionalString(values.reraDetails.notes),
+    },
   };
 }
 

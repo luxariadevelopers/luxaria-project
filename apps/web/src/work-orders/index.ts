@@ -16,9 +16,37 @@ export {
   fetchWorkOrderAmendments,
   approveWorkOrderAmendment,
   rejectWorkOrderAmendment,
-  type PublicWorkOrder,
-  type PublicWorkOrderAmendment,
-  type WorkOrderStatus,
-  type WorkOrderAmendmentType,
-  type WorkOrderAmendmentStatus,
 } from './api';
+export type {
+  PublicWorkOrder,
+  PublicWorkOrderAmendment,
+  WorkOrderStatus,
+  WorkOrderAmendmentType,
+  WorkOrderAmendmentStatus,
+  CreateWorkOrderInput,
+  ListWorkOrdersQuery,
+} from './types';
+export {
+  useWorkOrdersList,
+  useWorkOrderDetail,
+  useWorkOrderAmendments,
+  useCreateWorkOrder,
+  useUpdateWorkOrder,
+  useSubmitWorkOrder,
+  useApproveWorkOrder,
+  useIssueWorkOrder,
+  useAcceptWorkOrder,
+  useStartWorkOrder,
+  usePartiallyCompleteWorkOrder,
+  useCompleteWorkOrder,
+  useCloseWorkOrder,
+  useCancelWorkOrder,
+  useCreateWorkOrderAmendment,
+  useApproveWorkOrderAmendment,
+  useRejectWorkOrderAmendment,
+} from './useWorkOrders';
+export { resolveWorkOrderCapabilities } from './roleAccess';
+export {
+  resolveWorkOrderActions,
+  resolveAmendmentActions,
+} from './workflowActions';

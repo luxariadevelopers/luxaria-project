@@ -28,6 +28,7 @@ describe('DIN / PAN validation', () => {
   it('rejects invalid DIN/PAN on form schema when provided', () => {
     const badDin = directorFormSchema.safeParse({
       fullName: 'Test',
+      userId: '507f1f77bcf86cd799439011',
       din: '12',
       pan: '',
       email: '',
@@ -40,6 +41,7 @@ describe('DIN / PAN validation', () => {
 
     const badPan = directorFormSchema.safeParse({
       fullName: 'Test',
+      userId: '507f1f77bcf86cd799439011',
       din: '10000001',
       pan: 'BAD',
       email: '',
@@ -50,8 +52,22 @@ describe('DIN / PAN validation', () => {
     });
     expect(badPan.success).toBe(false);
 
+    const missingUser = directorFormSchema.safeParse({
+      fullName: 'Director One',
+      userId: '',
+      din: '10000001',
+      pan: 'AAAAA1111A',
+      email: 'director1@luxariadevelopers.com',
+      phone: '',
+      address: '',
+      appointmentDate: '',
+      status: 'active',
+    });
+    expect(missingUser.success).toBe(false);
+
     const ok = directorFormSchema.safeParse({
       fullName: 'Director One',
+      userId: '507f1f77bcf86cd799439011',
       din: '10000001',
       pan: 'AAAAA1111A',
       email: 'director1@luxariadevelopers.com',

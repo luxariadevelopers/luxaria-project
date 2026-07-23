@@ -22,17 +22,33 @@ export function AuthLayout() {
           borderColor: 'divider',
         }}
       >
-        <Typography
-          variant="overline"
-          color="text.secondary"
-          sx={{ letterSpacing: 1.5 }}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            mb: 2,
+          }}
         >
-          Luxaria Developers
-        </Typography>
-        <Typography variant="h4" sx={{ mb: 0.5 }}>
+          <Box
+            component="img"
+            src="/luxaria-logo-sm.png"
+            alt="Luxaria Developers"
+            sx={{
+              width: 112,
+              height: 112,
+              objectFit: 'contain',
+              borderRadius: 1,
+            }}
+          />
+        </Box>
+        <Typography variant="h5" sx={{ mb: 0.5, textAlign: 'center' }}>
           Luxaria ERP
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mb: 3, textAlign: 'center' }}
+        >
           Sign in to the construction operations portal.
         </Typography>
         <Outlet />

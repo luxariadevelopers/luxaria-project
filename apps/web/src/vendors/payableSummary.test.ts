@@ -5,7 +5,7 @@ import {
   VendorPaymentStatus,
   type PublicVendorInvoiceRow,
   type PublicVendorPaymentRow,
-  type VendorLedgerPlaceholder,
+  type VendorLedgerReport,
 } from './types';
 
 const invoice = (
@@ -43,7 +43,7 @@ const payment = (
 
 describe('buildVendorPayableSummary', () => {
   it('sums invoice remaining/paid and payment amounts', () => {
-    const ledger: VendorLedgerPlaceholder = {
+    const ledger: VendorLedgerReport = {
       vendorId: 'v1',
       vendorCode: 'VEN-000001',
       legalName: 'Acme',
@@ -52,8 +52,10 @@ describe('buildVendorPayableSummary', () => {
       totalDebit: 1000,
       totalCredit: 200,
       closingBalance: 800,
-      entries: [],
-      note: 'placeholder',
+      rows: [],
+      filters: null,
+      reconciled: true,
+      reconciliationNotes: [],
       asOf: '2026-01-20T00:00:00.000Z',
     };
 

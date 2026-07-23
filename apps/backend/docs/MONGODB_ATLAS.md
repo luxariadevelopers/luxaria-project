@@ -1,6 +1,6 @@
 # MongoDB Atlas configuration — Luxaria Developers ERP
 
-The backend connects with **Mongoose** using the `MONGODB_URI` environment variable. Local Docker Mongo (`:9017`) is fine for development; production and shared staging should use **MongoDB Atlas**.
+The backend connects with **Mongoose** using the `MONGODB_URI` environment variable. **Development and production both use MongoDB Atlas** (no local Docker Mongo service).
 
 ## Required Atlas setup
 
@@ -89,13 +89,15 @@ After deploying domain modules, review Atlas Performance Advisor. At minimum, bu
 - `{ updatedBy: 1, updatedAt: -1 }`
 - `{ isDeleted: 1, deletedAt: -1 }`
 
-## Local vs Atlas quick switch
+## Env files
 
 ```bash
-# Local Docker
-MONGODB_URI=mongodb://127.0.0.1:9017/luxaria-erp
+# Docker stack
+# .env.docker
+MONGODB_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/luxaria-erp?retryWrites=true&w=majority
 
-# Atlas
+# Host pnpm (gitignored)
+# apps/backend/.env.development.local
 MONGODB_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/luxaria-erp?retryWrites=true&w=majority
 ```
 

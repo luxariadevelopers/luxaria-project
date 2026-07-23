@@ -72,23 +72,25 @@ export class S3StorageService {
     contentLength: number;
   }): Promise<PresignedPutResult> {
     const expiresIn = this.presignExpiresSeconds;
+    // Omit ContentLength from the signed command: browsers refuse that
+    // header on XHR, so signing it breaks browser PUT. Size is enforced
+    // at confirm via HeadObject (input.contentLength is used by callers).
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: input.s3Key,
       ContentType: input.mimeType,
-      ContentLength: input.contentLength,
       // Explicitly private — bucket should also block public ACLs
       ACL: undefined,
       ServerSideEncryption: 'AES256',
     });
 
-    const url = await getSignedUrl(this.s3, command, { expiresIn });
+    const url = await this.signUrl(command, expiresIn);
     return {
       url,
       expiresIn,
       headers: {
         'Content-Type': input.mimeType,
-        'Content-Length': String(input.contentLength),
+        'x-amz-server-side-encryption': 'AES256',
       },
     };
   }
@@ -105,8 +107,31 @@ export class S3StorageService {
         ? `attachment; filename="${input.fileName.replace(/"/g, '')}"`
         : undefined,
     });
-    const url = await getSignedUrl(this.s3, command, { expiresIn });
+    const url = await this.signUrl(command, expiresIn);
     return { url, expiresIn };
+  }
+
+  private async signUrl(
+    command: PutObjectCommand | GetObjectCommand,
+    expiresIn: number,
+  ): Promise<string> {
+    try {
+      return await getSignedUrl(this.s3, command, { expiresIn });
+    } catch (err) {
+      const name = err instanceof Error ? err.name : '';
+      const message = err instanceof Error ? err.message : String(err);
+      if (
+        name.includes('Credentials') ||
+        /session has expired|Could not load credentials|reauthenticate|ExpiredToken/i.test(
+          message,
+        )
+      ) {
+        throw new ServiceUnavailableException(
+          'AWS S3 credentials expired or unavailable. Re-authenticate (`aws login --profile luxaria` or `aws sso login --profile luxaria`), then restart the backend.',
+        );
+      }
+      throw err;
+    }
   }
 
   /**

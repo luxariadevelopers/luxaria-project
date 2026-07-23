@@ -363,26 +363,20 @@ export class DirectorCommandCentreService {
   // ─── bank / cash ───────────────────────────────────────────────────────
 
   private async buildBankBalances(scope: ResolvedScope) {
-    const filter: FilterQuery<CompanyBankAccount> = {
-      status: BankAccountStatus.Active,
-    };
-    if (scope.projectIds.length) {
-      filter.$or = [
-        { projectId: { $in: scope.projectIds } },
-        { projectId: null },
-      ];
-    } else if (scope.filters.projectId || scope.filters.directorId) {
-      // Scoped empty — no balances
-      return {
-        total: this.moneyTile(0, 0, [
-          this.link('Company bank accounts', `${API}/company-bank-accounts`),
-        ]),
-        byProject: [] as ProjectMoneyRow[],
-      };
+    if (!scope.projectIds.length) {
+      if (scope.filters.projectId || scope.filters.directorId) {
+        return {
+          total: this.moneyTile(0, 0, [
+            this.link('Company bank accounts', `${API}/company-bank-accounts`),
+          ]),
+          byProject: [] as ProjectMoneyRow[],
+        };
+      }
     }
 
+    // All active banks (company + project-owned) for company total.
     const accounts = await this.bankModel
-      .find(filter)
+      .find({ status: BankAccountStatus.Active })
       .select('_id accountCode projectId ledgerAccountId openingBalance')
       .lean()
       .exec();
@@ -398,14 +392,53 @@ export class DirectorCommandCentreService {
     );
 
     let totalAmount = 0;
-    const byProjectMap = new Map<string, number>();
     for (const a of accounts) {
-      const bal = balances.get(String(a._id)) ?? a.openingBalance ?? 0;
-      totalAmount += bal;
-      if (a.projectId) {
-        const key = String(a.projectId);
-        byProjectMap.set(key, (byProjectMap.get(key) ?? 0) + bal);
+      totalAmount += balances.get(String(a._id)) ?? a.openingBalance ?? 0;
+    }
+
+    // Bank-by-project: project-owned accounts + company-bank movements tagged
+    // to the project (journal line/header projectId) + unscoped share capital
+    // on the first project (same model as finance dashboard fund position).
+    const companyBanks = accounts.filter(
+      (a) => !a.projectId && a.ledgerAccountId,
+    );
+    const companyBankLedgers = companyBanks.map(
+      (a) => a.ledgerAccountId as Types.ObjectId,
+    );
+    const unscopedCompanyBank = await this.sumUnscopedLedgerMovements(
+      companyBankLedgers,
+      scope.dayEnd,
+    );
+    const primaryProjectId = [...scope.projectIds]
+      .map((id) => ({
+        id,
+        code: scope.projectMeta.get(String(id))?.projectCode ?? String(id),
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code))[0]?.id;
+
+    const byProjectMap = new Map<string, number>();
+    for (const oid of scope.projectIds) {
+      const projectId = String(oid);
+      const owned = accounts.filter(
+        (a) => a.projectId && String(a.projectId) === projectId,
+      );
+      let ownedBalance = 0;
+      for (const a of owned) {
+        ownedBalance += balances.get(String(a._id)) ?? a.openingBalance ?? 0;
       }
+      const scopedCompany = await this.sumProjectScopedLedgerMovements(
+        oid,
+        companyBankLedgers,
+        scope.dayEnd,
+      );
+      const capitalShare =
+        primaryProjectId && oid.equals(primaryProjectId)
+          ? unscopedCompanyBank
+          : 0;
+      byProjectMap.set(
+        projectId,
+        this.round2(ownedBalance + scopedCompany + capitalShare),
+      );
     }
 
     const byProject = this.toProjectMoneyRows(
@@ -540,6 +573,103 @@ export class DirectorCommandCentreService {
       );
     }
     return result;
+  }
+
+  /** Company-bank net for journals scoped to a project (line or header projectId). */
+  private async sumProjectScopedLedgerMovements(
+    projectId: Types.ObjectId,
+    ledgerIds: Types.ObjectId[],
+    asOf: Date,
+  ): Promise<number> {
+    if (!ledgerIds.length) return 0;
+
+    const pipeline: PipelineStage[] = [
+      {
+        $match: {
+          status: JournalStatus.Posted,
+          journalDate: { $lte: asOf },
+          'lines.accountId': { $in: ledgerIds },
+          $or: [{ projectId }, { 'lines.projectId': projectId }],
+        },
+      },
+      { $unwind: '$lines' },
+      {
+        $match: {
+          'lines.accountId': { $in: ledgerIds },
+          $or: [
+            { 'lines.projectId': projectId },
+            {
+              $and: [
+                {
+                  $or: [
+                    { 'lines.projectId': null },
+                    { 'lines.projectId': { $exists: false } },
+                  ],
+                },
+                { projectId },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalDebit: { $sum: '$lines.debit' },
+          totalCredit: { $sum: '$lines.credit' },
+        },
+      },
+    ];
+
+    const rows = await this.journalModel.aggregate(pipeline).exec();
+    const row = rows[0];
+    if (!row) return 0;
+    return this.round2((row.totalDebit ?? 0) - (row.totalCredit ?? 0));
+  }
+
+  /** Company bank movements with no project (e.g. share capital). */
+  private async sumUnscopedLedgerMovements(
+    ledgerIds: Types.ObjectId[],
+    asOf: Date,
+  ): Promise<number> {
+    if (!ledgerIds.length) return 0;
+
+    const pipeline: PipelineStage[] = [
+      {
+        $match: {
+          status: JournalStatus.Posted,
+          journalDate: { $lte: asOf },
+          'lines.accountId': { $in: ledgerIds },
+          $or: [
+            { projectId: null },
+            { projectId: { $exists: false } },
+            { sourceModule: 'share_capital' },
+          ],
+        },
+      },
+      { $unwind: '$lines' },
+      {
+        $match: {
+          'lines.accountId': { $in: ledgerIds },
+          $or: [
+            { 'lines.projectId': null },
+            { 'lines.projectId': { $exists: false } },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalDebit: { $sum: '$lines.debit' },
+          totalCredit: { $sum: '$lines.credit' },
+        },
+      },
+    ];
+
+    const rows = await this.journalModel.aggregate(pipeline).exec();
+    const row = rows[0];
+    if (!row) return 0;
+    return this.round2((row.totalDebit ?? 0) - (row.totalCredit ?? 0));
   }
 
   // ─── contributions ─────────────────────────────────────────────────────
@@ -1021,12 +1151,22 @@ export class DirectorCommandCentreService {
       costByProject.set(key, (costByProject.get(key) ?? 0) + (r.total ?? 0));
     }
 
-    const projectKeys = new Set([
-      ...budgetByProject.keys(),
-      ...costByProject.keys(),
-    ]);
+    // Project bank/cash expenses posted via Expense & income (journals).
+    const journalExpenseByProject = await this.sumProjectFinanceExpenses(
+      scope.projectIds,
+      scope.dayEnd,
+    );
+    for (const [projectId, amount] of journalExpenseByProject) {
+      costByProject.set(
+        projectId,
+        this.round2((costByProject.get(projectId) ?? 0) + amount),
+      );
+    }
 
-    return [...projectKeys].map((projectId) => {
+    // Always list accessible projects so the summary is not blank when BOQ
+    // / invoices are not yet set up.
+    return scope.projectIds.map((oid) => {
+      const projectId = String(oid);
       const meta = scope.projectMeta.get(projectId);
       const budgetAmount = this.round2(budgetByProject.get(projectId) ?? 0);
       const actualCost = this.round2(costByProject.get(projectId) ?? 0);
@@ -1059,6 +1199,63 @@ export class DirectorCommandCentreService {
         ],
       };
     });
+  }
+
+  /** Posted project_expense journals — amount credited from bank/cash. */
+  private async sumProjectFinanceExpenses(
+    projectIds: Types.ObjectId[],
+    asOf: Date,
+  ): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
+    if (!projectIds.length) return map;
+
+    const rows = await this.journalModel
+      .aggregate<{ _id: Types.ObjectId; total: number }>([
+        {
+          $match: {
+            status: JournalStatus.Posted,
+            journalDate: { $lte: asOf },
+            sourceEntityType: 'project_expense',
+            $or: [
+              { projectId: { $in: projectIds } },
+              { 'lines.projectId': { $in: projectIds } },
+            ],
+          },
+        },
+        { $unwind: '$lines' },
+        {
+          $match: {
+            'lines.credit': { $gt: 0 },
+            $or: [
+              { 'lines.projectId': { $in: projectIds } },
+              {
+                $and: [
+                  {
+                    $or: [
+                      { 'lines.projectId': null },
+                      { 'lines.projectId': { $exists: false } },
+                    ],
+                  },
+                  { projectId: { $in: projectIds } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: { $ifNull: ['$lines.projectId', '$projectId'] },
+            total: { $sum: '$lines.credit' },
+          },
+        },
+      ])
+      .exec();
+
+    for (const row of rows) {
+      if (!row._id) continue;
+      map.set(String(row._id), this.round2(row.total ?? 0));
+    }
+    return map;
   }
 
   private async buildPhysicalProgress(

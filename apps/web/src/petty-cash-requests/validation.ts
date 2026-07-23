@@ -191,6 +191,21 @@ export const pettyCashRequestFormSchema = z
         path: ['requirementItems'],
       });
     }
+    const seen = new Map<string, number>();
+    values.requirementItems.forEach((item, index) => {
+      const cat = item.expenseCategory;
+      const firstIndex = seen.get(cat);
+      if (firstIndex != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'Each category can only be used once — pick a different category for this item.',
+          path: ['requirementItems', index, 'expenseCategory'],
+        });
+      } else {
+        seen.set(cat, index);
+      }
+    });
   });
 
 export type PettyCashRequestFormValues = z.infer<

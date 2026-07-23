@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getErrorMessage, useAuth } from '@/auth/AuthContext';
 import { colors } from '@/theme/colors';
+
+const logo = require('../../assets/luxaria-logo-sm.png');
 
 export function LoginScreen() {
   const { login } = useAuth();
@@ -45,7 +48,12 @@ export function LoginScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.eyebrow}>LUXARIA DEVELOPERS</Text>
+        <Image
+          source={logo}
+          style={styles.logo}
+          accessibilityLabel="Luxaria Developers"
+          resizeMode="contain"
+        />
         <Text style={styles.title}>Site login</Text>
         <Text style={styles.lede}>
           Sign in with your email or mobile number to continue.
@@ -107,11 +115,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
-  eyebrow: {
-    color: colors.secondary,
-    letterSpacing: 2,
-    fontSize: 12,
-    marginBottom: 12,
+  logo: {
+    width: 96,
+    height: 96,
+    marginBottom: 16,
+    borderRadius: 8,
   },
   title: {
     color: '#F4F0E6',

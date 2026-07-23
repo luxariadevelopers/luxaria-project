@@ -1,14 +1,20 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayUnique,
+  IsArray,
   IsDateString,
   IsEmail,
   IsEnum,
   IsMongoId,
   IsOptional,
   IsString,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
-import { UserStatus } from '../schemas/user.schema';
+import {
+  ReportingApprovalMode,
+  UserStatus,
+} from '../schemas/user.schema';
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
@@ -56,6 +62,28 @@ export class UpdateUserDto {
   @IsOptional()
   @IsMongoId()
   reportingManager?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsMongoId({ each: true })
+  reportingOfficers?: string[];
+
+  @ApiPropertyOptional({ enum: ReportingApprovalMode })
+  @IsOptional()
+  @IsEnum(ReportingApprovalMode)
+  reportingApprovalMode?: ReportingApprovalMode;
+
+  @ApiPropertyOptional({
+    description:
+      'Set a temporary password (forces change on next login). Requires user.reset_password.',
+    minLength: 8,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  temporaryPassword?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

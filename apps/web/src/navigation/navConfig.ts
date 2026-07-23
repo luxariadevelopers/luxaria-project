@@ -7,8 +7,10 @@ export {
   APP_ROUTE_REGISTRY,
   NAV_GROUPS,
   NAV_GROUP_META,
+  NAV_PILLARS_BUILT,
   ROUTE_LABELS,
   buildNavGroupsFromRegistry,
+  buildNavPillarsFromRegistry,
   findRouteByPathname,
   getPageTitle,
   getRouteById,
@@ -24,6 +26,8 @@ export type {
   NavGroupId,
   NavIconId,
   NavItemConfig,
+  NavPillarConfig,
+  NavSectionConfig,
   ProjectScopeMode,
 } from './routeRegistry';
 

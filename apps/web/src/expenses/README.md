@@ -46,11 +46,12 @@ Evidence count = `attachments.length` (`EvidenceCount`).
 | Piece | File |
 |-------|------|
 | List page | `apps/web/src/pages/ExpensesPage.tsx` |
+| Create drawer | `CreateExpenseDrawer.tsx` (`expense.create`) |
 | Table | `ExpenseTable.tsx` |
 | Filters | `ExpenseFilters.tsx` |
 | Badges | `DuplicateWarningBadge`, `GpsWarningBadge`, `EvidenceCount` |
 
-Detail / edit UI is Phase 053.
+Create is project-scoped (header project) and credits the selected petty cash account on post.
 
 ---
 

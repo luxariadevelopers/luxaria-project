@@ -344,7 +344,7 @@ export class ChartOfAccountsService {
     by = 1,
     session?: ClientSession | null,
   ): Promise<void> {
-    if (by < 1) return;
+    if (by === 0) return;
     await this.accountModel
       .updateOne(
         { _id: new Types.ObjectId(accountId) },
@@ -352,6 +352,18 @@ export class ChartOfAccountsService {
         session ? { session } : undefined,
       )
       .exec();
+    if (by < 0) {
+      await this.accountModel
+        .updateOne(
+          {
+            _id: new Types.ObjectId(accountId),
+            postingCount: { $lt: 0 },
+          },
+          { $set: { postingCount: 0 } },
+          session ? { session } : undefined,
+        )
+        .exec();
+    }
   }
 
   // ─── internals ─────────────────────────────────────────────────────────

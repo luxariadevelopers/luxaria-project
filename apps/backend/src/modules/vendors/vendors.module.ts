@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AccountingReportsModule } from '../accounting-reports/accounting-reports.module';
 import { CompanyModule } from '../company/company.module';
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { RbacModule } from '../rbac/rbac.module';
@@ -26,6 +27,7 @@ import { VendorsService } from './vendors.service';
       },
       { name: Project.name, schema: ProjectSchema },
     ]),
+    AccountingReportsModule,
     CompanyModule,
     RbacModule,
   ],

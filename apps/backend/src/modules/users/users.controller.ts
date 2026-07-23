@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,10 +8,27 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  assertMagicBytes,
+  createSecureMulterOptions,
+} from '../../common/security/file-upload.util';
+import { SAFE_IMAGE_MIME_TYPES } from '../../common/security/security.constants';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
@@ -21,7 +39,13 @@ import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { RemoveProjectsDto } from './dto/remove-projects.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
-import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
+
+const PROFILE_PHOTO_DIR = join(process.cwd(), 'uploads', 'users');
+
+type UploadedPhoto = {
+  buffer: Buffer;
+  mimetype: string;
+};
 
 @GlobalScope()
 @ApiTags('Users')
@@ -99,6 +123,56 @@ export class UsersController {
     return this.usersService.adminResetPassword(
       id,
       dto,
+      actor.companyId,
+    );
+  }
+
+  @Post(':id/profile-photo')
+  @RequirePermissions('user.update')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload user profile photo' })
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      createSecureMulterOptions({
+        maxBytes: 2 * 1024 * 1024,
+        allowedMimeTypes: SAFE_IMAGE_MIME_TYPES,
+        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+      }),
+    ),
+  )
+  async uploadProfilePhoto(
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedPhoto | undefined,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    if (!file?.buffer) {
+      throw new BadRequestException('Profile photo file is required');
+    }
+    assertMagicBytes(file.buffer, file.mimetype);
+    mkdirSync(PROFILE_PHOTO_DIR, { recursive: true });
+    const mimeExt =
+      file.mimetype === 'image/png'
+        ? '.png'
+        : file.mimetype === 'image/webp'
+          ? '.webp'
+          : file.mimetype === 'image/gif'
+            ? '.gif'
+            : '.jpg';
+    const filename = `user-${id}-${Date.now()}${mimeExt}`;
+    writeFileSync(join(PROFILE_PHOTO_DIR, filename), file.buffer);
+    return this.usersService.setProfilePhoto(
+      id,
+      `uploads/users/${filename}`,
       actor.companyId,
     );
   }

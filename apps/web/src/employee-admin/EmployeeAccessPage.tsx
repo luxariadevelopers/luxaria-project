@@ -5,11 +5,6 @@ import {
   CircularProgress,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
@@ -22,7 +17,16 @@ import {
 } from '@/components/entity-detail';
 import { PermissionDenied } from '@/components/errors';
 import { useProjectsList } from '@/projects/useProjects';
-import { canOpenEmployees } from './roleAccess';
+import { EmployeeModuleAccessPanel } from './EmployeeModuleAccessPanel';
+import {
+  EMPLOYEE_ADMIN_PERMISSIONS,
+  canOpenEmployees,
+  hasEmployeeAdminPermission,
+} from './roleAccess';
+import {
+  SITE_ENGINEER_ACCESS_MODULES,
+  enabledModulesFromDenyPermissions,
+} from './siteEngineerAccessModules';
 import type { EmployeeAccessSummary } from './types';
 import { useEmployeeAccess, useSitesList } from './useEmployees';
 
@@ -39,6 +43,14 @@ export function EmployeeAccessSummaryPanel({
   siteNames,
   compact = false,
 }: AccessSummaryProps) {
+  const denyPermissions = summary.overrides
+    .filter((row) => row.effect === 'deny' && !row.projectId && !row.siteId)
+    .map((row) => row.permission);
+  const enabledModules = enabledModulesFromDenyPermissions(denyPermissions);
+  const hiddenModuleCount = SITE_ENGINEER_ACCESS_MODULES.filter(
+    (module) => enabledModules[module.id] === false,
+  ).length;
+
   return (
     <Stack spacing={2} data-testid="employee-access-summary">
       <SummaryCards
@@ -59,9 +71,9 @@ export function EmployeeAccessSummaryPanel({
             value: summary.sites.length,
           },
           {
-            id: 'overrides',
-            label: 'Overrides',
-            value: summary.overrides.length,
+            id: 'hidden-modules',
+            label: 'Hidden modules',
+            value: hiddenModuleCount,
           },
         ]}
       />
@@ -134,58 +146,10 @@ export function EmployeeAccessSummaryPanel({
         </Stack>
       </Paper>
 
-      {!compact ? (
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Stack spacing={1.5}>
-            <Typography variant="subtitle1">Permission overrides</Typography>
-            {summary.overrides.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No active overrides
-              </Typography>
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Permission</TableCell>
-                    <TableCell>Effect</TableCell>
-                    <TableCell>Project</TableCell>
-                    <TableCell>Site</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {summary.overrides.map((row, index) => (
-                    <TableRow key={`${row.permission}-${index}`}>
-                      <TableCell>{row.permission}</TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          label={row.effect}
-                          color={row.effect === 'deny' ? 'error' : 'success'}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {row.projectId
-                          ? (projectNames.get(row.projectId) ?? row.projectId)
-                          : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {row.siteId
-                          ? (siteNames.get(row.siteId) ?? row.siteId)
-                          : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Stack>
-        </Paper>
-      ) : summary.overrides.length > 0 ? (
+      {compact && hiddenModuleCount > 0 ? (
         <Alert severity="info">
-          {summary.overrides.length} active permission override
-          {summary.overrides.length === 1 ? '' : 's'}. Open Access for the full
-          matrix.
+          {hiddenModuleCount} module{hiddenModuleCount === 1 ? '' : 's'}{' '}
+          hidden. Open Access to change what they see on web and mobile.
         </Alert>
       ) : null}
     </Stack>
@@ -205,6 +169,9 @@ export function EmployeeAccessPage({
   const employeeId = employeeIdProp ?? params.employeeId;
   const { access, hasPermission } = useAuth();
   const canView = canOpenEmployees(access);
+  const canEditModules =
+    hasEmployeeAdminPermission(access, EMPLOYEE_ADMIN_PERMISSIONS.update) ||
+    hasPermission('permission.override.manage');
   const accessQuery = useEmployeeAccess(employeeId, canView);
   const projectsQuery = useProjectsList(
     { page: 1, limit: 100, sortBy: 'projectName', sortOrder: 'asc' },
@@ -290,7 +257,7 @@ export function EmployeeAccessPage({
           <DetailHeader
             title={summary.employee.displayName}
             code={summary.employee.employeeCode}
-            subtitle="Access matrix"
+            subtitle="What they can see"
             backTo={`/administration/employees/${summary.employee.id}`}
             backLabel="Employee"
           />
@@ -299,6 +266,11 @@ export function EmployeeAccessPage({
     >
       {summary ? (
         <Stack spacing={2} data-testid="employee-access-page">
+          <EmployeeModuleAccessPanel
+            employeeId={summary.employee.id}
+            summary={summary}
+            canEdit={canEditModules}
+          />
           <EmployeeAccessSummaryPanel
             summary={summary}
             projectNames={projectNames}

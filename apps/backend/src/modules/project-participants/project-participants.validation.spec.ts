@@ -7,6 +7,7 @@ import {
 import {
   InstrumentType,
   ParticipantType,
+  RepaymentMode,
 } from './schemas/project-participant.schema';
 
 describe('project-participants.validation', () => {
@@ -28,6 +29,20 @@ describe('project-participants.validation', () => {
     expect(() =>
       assertInterestRateForInstrument(InstrumentType.EquityContribution, null),
     ).not.toThrow();
+    expect(() =>
+      assertInterestRateForInstrument(
+        InstrumentType.UnsecuredLoan,
+        null,
+        RepaymentMode.Lumpsum,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertInterestRateForInstrument(
+        InstrumentType.UnsecuredLoan,
+        null,
+        RepaymentMode.WithInterest,
+      ),
+    ).toThrow(BadRequestException);
   });
 
   it('builds stable participant keys', () => {

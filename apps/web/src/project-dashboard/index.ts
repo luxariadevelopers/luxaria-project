@@ -1,3 +1,4 @@
+export { CapitalPlanSection } from './CapitalPlanSection';
 export { CriticalAlertsList } from './CriticalAlertsList';
 export { ProjectDashboardView } from './ProjectDashboardView';
 export {

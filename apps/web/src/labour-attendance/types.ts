@@ -159,3 +159,39 @@ export type AttendanceDuplicateFlag = {
   label: string;
   key: string;
 };
+
+export type CreateLabourAttendanceWorkerInput = {
+  workerName: string;
+  workerCode?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  overtimeHours?: number;
+  remarks?: string | null;
+};
+
+export type CreateLabourAttendanceLineInput = {
+  labourCategoryId: string;
+  entryMode: LabourAttendanceEntryMode;
+  workerCount?: number;
+  overtimeHours?: number;
+  workers?: CreateLabourAttendanceWorkerInput[];
+  remarks?: string | null;
+};
+
+export type CreateLabourAttendanceInput = {
+  projectId: string;
+  siteId?: string | null;
+  contractorId: string;
+  dprId?: string | null;
+  attendanceDate: string;
+  shift?: LabourAttendanceShift;
+  workLocation?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  lines: CreateLabourAttendanceLineInput[];
+  groupPhotoDocumentIds?: string[];
+  remarks?: string | null;
+  submit?: boolean;
+  clientDeviceId?: string | null;
+  offlineCapturedAt?: string | null;
+};

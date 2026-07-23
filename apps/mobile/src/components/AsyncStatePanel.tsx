@@ -40,7 +40,7 @@ export function AsyncStatePanel({
       <View style={styles.panel}>
         <Text style={styles.title}>Access denied</Text>
         <Text style={styles.text}>
-          {error || 'You do not have permission for this screen.'}
+          {error || 'Access denied. Contact MD'}
         </Text>
         {onRetry ? (
           <Pressable style={styles.retry} onPress={onRetry}>

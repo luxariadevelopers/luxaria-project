@@ -68,11 +68,25 @@ import {
   ContributionType,
 } from '../project-commitments/schemas/contribution-commitment.schema';
 import {
+  ContributionReceipt,
+  ContributionReceiptSchema,
+} from '../contribution-receipts/schemas/contribution-receipt.schema';
+import {
+  Director,
+  DirectorSchema,
+  DirectorStatus,
+} from '../directors/schemas/director.schema';
+import {
+  CompanyShareholding,
+  CompanyShareholdingSchema,
+} from '../directors/schemas/company-shareholding.schema';
+import {
   InstrumentType,
   ParticipantApprovalStatus,
   ParticipantType,
   ProjectParticipant,
   ProjectParticipantSchema,
+  RepaymentMode,
 } from '../project-participants/schemas/project-participant.schema';
 import {
   ProjectDocumentCategory,
@@ -161,9 +175,18 @@ describe('ProjectDashboardService', () => {
         ContributionCommitmentSchema,
       ) as Model<ContributionCommitment>,
       connection.model(
+        ContributionReceipt.name,
+        ContributionReceiptSchema,
+      ) as Model<ContributionReceipt>,
+      connection.model(
         ProjectParticipant.name,
         ProjectParticipantSchema,
       ) as Model<ProjectParticipant>,
+      connection.model(Director.name, DirectorSchema) as Model<Director>,
+      connection.model(
+        CompanyShareholding.name,
+        CompanyShareholdingSchema,
+      ) as Model<CompanyShareholding>,
       connection.model(
         CompanyBankAccount.name,
         CompanyBankAccountSchema,
@@ -580,6 +603,12 @@ describe('ProjectDashboardService', () => {
     expect(data.investorFunding.committedAmount).toBe(3_000_000);
     expect(data.investorFunding.receivedAmount).toBe(1_500_000);
 
+    expect(data.capitalPlan.approvedBudget).toBe(12_000_000);
+    expect(data.capitalPlan.directors.length).toBeGreaterThanOrEqual(0);
+    expect(data.capitalPlan.pendingToInvest).toBe(
+      Math.max(0, 12_000_000 - data.capitalPlan.totalInvested),
+    );
+
     expect(data.bankBalance.amount).toBe(2_500_000);
     expect(data.cashBalance.amount).toBe(45_000);
     expect(data.materialStock.materialCount).toBe(1);
@@ -606,6 +635,236 @@ describe('ProjectDashboardService', () => {
 
     expect(data.actualCost.drillDown[0].href).toMatch(/^\/api\/v1\//);
     expect(data.filters.from).toContain('2026-04-01');
+  });
+
+  it('builds capitalPlan from director participants and journals', async () => {
+    const directorA = new Types.ObjectId();
+    const directorB = new Types.ObjectId();
+    await connection.model(ProjectParticipant.name).deleteMany({});
+    await connection.model(Project.name).updateOne(
+      { _id: projectOid },
+      { $set: { equalDirectorInvestment: true } },
+    );
+    await connection.model(ProjectParticipant.name).create([
+      {
+        projectId: projectOid,
+        participantType: ParticipantType.Director,
+        participantId: directorA,
+        participantKey: `director:${String(directorA)}`,
+        participantLabel: 'Director A',
+        commitmentAmount: 4_000_000,
+        actualContributionAmount: 0,
+        approvedProfitSharePercentage: 50,
+        lossSharePercentage: 50,
+        interestRate: null,
+        budgetInvestmentPercentage: null,
+        repaymentMode: null,
+        instrumentType: InstrumentType.EquityContribution,
+        effectiveFrom: new Date('2026-04-01'),
+        effectiveTo: null,
+        status: ParticipantApprovalStatus.Approved,
+        version: 1,
+      },
+      {
+        projectId: projectOid,
+        participantType: ParticipantType.Director,
+        participantId: directorB,
+        participantKey: `director:${String(directorB)}`,
+        participantLabel: 'Director B',
+        commitmentAmount: 4_000_000,
+        actualContributionAmount: 0,
+        approvedProfitSharePercentage: 50,
+        lossSharePercentage: 50,
+        interestRate: null,
+        budgetInvestmentPercentage: null,
+        repaymentMode: null,
+        instrumentType: InstrumentType.EquityContribution,
+        effectiveFrom: new Date('2026-04-01'),
+        effectiveTo: null,
+        status: ParticipantApprovalStatus.Approved,
+        version: 1,
+      },
+    ]);
+
+    await connection.model(JournalEntry.name).create({
+      journalNumber: 'JV-PD-CAP-001',
+      journalDate: new Date('2026-07-10'),
+      financialYearId: new Types.ObjectId(),
+      projectId: projectOid,
+      status: 'posted',
+      narration: 'Director A loan income',
+      totalDebit: 1_000_000,
+      totalCredit: 1_000_000,
+      lines: [
+        {
+          accountId: new Types.ObjectId(),
+          debit: 1_000_000,
+          credit: 0,
+          projectId: projectOid,
+          partyType: null,
+          partyId: null,
+        },
+        {
+          accountId: new Types.ObjectId(),
+          debit: 0,
+          credit: 1_000_000,
+          projectId: projectOid,
+          partyType: 'director',
+          partyId: directorA,
+        },
+      ],
+    });
+
+    const res = await service.getDashboard(projectId, {
+      date: '2026-07-20',
+    });
+    const plan = res.data!.capitalPlan;
+    expect(plan.equalDirectorInvestment).toBe(true);
+    expect(plan.directors).toHaveLength(2);
+    expect(plan.directorsEqual).toBe(true);
+    expect(plan.investors).toHaveLength(0);
+    // Equal plan splits approvedBudget (12M) across 2 directors → 6M each.
+    const dirA = plan.directors.find((d) => d.name === 'Director A');
+    expect(dirA?.expectedAmount).toBe(6_000_000);
+    expect(dirA?.investedAmount).toBe(1_000_000);
+    expect(dirA?.pendingAmount).toBe(5_000_000);
+    expect(plan.totalInvested).toBeGreaterThanOrEqual(1_000_000);
+  });
+
+  it('falls back to company directors and splits approved budget when no participants', async () => {
+    const companyId = new Types.ObjectId();
+    const directorA = new Types.ObjectId();
+    const directorB = new Types.ObjectId();
+    await connection.model(Project.name).updateOne(
+      { _id: projectOid },
+      {
+        $set: {
+          companyId,
+          approvedBudget: 80_000_000,
+          equalDirectorInvestment: true,
+        },
+      },
+    );
+    await connection.model(ProjectParticipant.name).deleteMany({});
+    await connection.model(Director.name).create([
+      {
+        _id: directorA,
+        companyId,
+        directorCode: 'DIR-A',
+        fullName: 'Director Alpha',
+        status: DirectorStatus.Active,
+        isPlaceholder: false,
+        userId: new Types.ObjectId(),
+      },
+      {
+        _id: directorB,
+        companyId,
+        directorCode: 'DIR-B',
+        fullName: 'Director Beta',
+        status: DirectorStatus.Active,
+        isPlaceholder: false,
+        userId: new Types.ObjectId(),
+      },
+    ]);
+    await connection.model(JournalEntry.name).create({
+      journalNumber: 'JV-PD-CAP-FALLBACK',
+      journalDate: new Date('2026-07-10'),
+      financialYearId: new Types.ObjectId(),
+      projectId: projectOid,
+      status: 'posted',
+      narration: 'Director Alpha income',
+      totalDebit: 2_150_000,
+      totalCredit: 2_150_000,
+      lines: [
+        {
+          accountId: new Types.ObjectId(),
+          debit: 2_150_000,
+          credit: 0,
+          projectId: projectOid,
+          partyType: null,
+          partyId: null,
+        },
+        {
+          accountId: new Types.ObjectId(),
+          debit: 0,
+          credit: 2_150_000,
+          projectId: projectOid,
+          partyType: 'director',
+          partyId: directorA,
+        },
+      ],
+    });
+
+    const res = await service.getDashboard(projectId, {
+      date: '2026-07-20',
+    });
+    const plan = res.data!.capitalPlan;
+    expect(plan.directors).toHaveLength(2);
+    expect(plan.directorsEqual).toBe(true);
+    expect(plan.directors.every((d) => d.expectedAmount === 40_000_000)).toBe(
+      true,
+    );
+    const alpha = plan.directors.find((d) => d.name.includes('Director Alpha'));
+    expect(alpha?.investedAmount).toBe(2_150_000);
+    expect(alpha?.pendingAmount).toBe(37_850_000);
+    expect(plan.investors).toHaveLength(0);
+  });
+
+  it('includes investors in capitalPlan only when outside_investor participants exist', async () => {
+    const directorId = new Types.ObjectId();
+    const investorId = new Types.ObjectId();
+    await connection.model(ProjectParticipant.name).deleteMany({});
+    await connection.model(ProjectParticipant.name).create([
+      {
+        projectId: projectOid,
+        participantType: ParticipantType.Director,
+        participantId: directorId,
+        participantKey: `director:${String(directorId)}`,
+        participantLabel: 'Solo Director',
+        commitmentAmount: 8_000_000,
+        actualContributionAmount: 0,
+        approvedProfitSharePercentage: 100,
+        lossSharePercentage: 100,
+        interestRate: null,
+        budgetInvestmentPercentage: null,
+        repaymentMode: null,
+        instrumentType: InstrumentType.EquityContribution,
+        effectiveFrom: new Date('2026-04-01'),
+        effectiveTo: null,
+        status: ParticipantApprovalStatus.Approved,
+        version: 1,
+      },
+      {
+        projectId: projectOid,
+        participantType: ParticipantType.OutsideInvestor,
+        participantId: investorId,
+        participantKey: `outside_investor:${String(investorId)}`,
+        participantLabel: 'Outside Investor',
+        commitmentAmount: 2_000_000,
+        actualContributionAmount: 0,
+        approvedProfitSharePercentage: 0,
+        lossSharePercentage: 0,
+        interestRate: 12,
+        budgetInvestmentPercentage: 20,
+        repaymentMode: RepaymentMode.WithInterest,
+        instrumentType: InstrumentType.UnsecuredLoan,
+        effectiveFrom: new Date('2026-04-01'),
+        effectiveTo: null,
+        status: ParticipantApprovalStatus.Approved,
+        version: 1,
+      },
+    ]);
+
+    const res = await service.getDashboard(projectId, {
+      date: '2026-07-20',
+    });
+    const plan = res.data!.capitalPlan;
+    expect(plan.investors).toHaveLength(1);
+    expect(plan.investors[0].name).toBe('Outside Investor');
+    expect(plan.investors[0].budgetPercent).toBe(20);
+    expect(plan.investors[0].repayHint).toMatch(/interest at 12%/i);
+    expect(plan.directors).toHaveLength(1);
+    expect(plan.directors[0].name).toBe('Solo Director');
   });
 
   it('rejects invalid project id', async () => {

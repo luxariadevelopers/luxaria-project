@@ -8,21 +8,27 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resolveApprovalCapabilities } from '@/approvals';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
+import { resolveContributionReceiptCapabilities } from '@/contribution-receipts';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import { useSite } from '@/context/SiteContext';
+import { resolveDirectorCapabilities } from '@/directors';
 import { resolveAttendanceCapabilities } from '@/labour-attendance';
 import { LABOUR_VOUCHER_PERMISSIONS } from '@/labour-vouchers';
 import type { AppStackParamList, MainTabParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
 import { resolvePettyCashCapabilities } from '@/petty-cash';
 import { resolvePurchaseRequestCapabilities } from '@/purchase-requests';
+import { resolveShareholdingCapabilities } from '@/shareholding';
+import { resolveJournalCapabilities } from '@/journals';
+import { resolveProjectFinanceCapabilities } from '@/project-finance';
 import { resolveExpenseCapabilities } from '@/site-expenses';
 import {
   canCreateSubmitStockCounts,
   canViewStockCounts,
 } from '@/stock-count';
 import { colors } from '@/theme/colors';
+import { resolveUserAdminCapabilities } from '@/user-admin';
 import { resolveWorkMeasurementCapabilities } from '@/work-measurement/permissions';
 
 type HomeNavigation = CompositeNavigationProp<
@@ -43,6 +49,8 @@ export function HomeScreen() {
   const canViewWorkOrders = hasPermission('work_order.view');
   const attendanceCaps = resolveAttendanceCapabilities(hasPermission);
   const expenseCaps = resolveExpenseCapabilities(hasPermission);
+  const projectFinanceCaps = resolveProjectFinanceCapabilities(hasPermission);
+  const journalCaps = resolveJournalCapabilities(hasPermission);
   const approvalCaps = resolveApprovalCapabilities(hasPermission);
   const pettyCashCaps = resolvePettyCashCapabilities(hasPermission);
   const purchaseCaps = resolvePurchaseRequestCapabilities(hasPermission);
@@ -63,6 +71,32 @@ export function HomeScreen() {
   const canViewExecutive =
     hasPermission('analytics.dashboard.view') ||
     hasPermission('dashboard.view');
+  const canViewFinance = hasPermission('dashboard.view');
+  const canViewDirectorCommandCentre =
+    hasPermission('dashboard.view') ||
+    hasPermission('analytics.dashboard.view');
+  const userAdminCaps = resolveUserAdminCapabilities(hasPermission);
+  const directorCaps = resolveDirectorCapabilities(hasPermission);
+  const shareholdingCaps = resolveShareholdingCapabilities(hasPermission);
+  const contributionCaps =
+    resolveContributionReceiptCapabilities(hasPermission);
+  const canEditCapital =
+    hasPermission('project.update') ||
+    hasPermission('project_participant.create') ||
+    hasPermission('project_participant.update');
+  const showCapitalSection =
+    canEditCapital ||
+    directorCaps.canView ||
+    shareholdingCaps.canView ||
+    contributionCaps.canView ||
+    contributionCaps.canCreate;
+  const showFinanceSection =
+    projectFinanceCaps.canView ||
+    journalCaps.canView ||
+    canViewFinance ||
+    canViewDirectorCommandCentre;
+  const showAdminSection =
+    userAdminCaps.canView || userAdminCaps.canCreate;
 
   return (
     <Screen
@@ -208,12 +242,18 @@ export function HomeScreen() {
           </Pressable>
         ) : null}
 
-        {pettyCashCaps.canView || pettyCashCaps.canRequest ? (
+        {pettyCashCaps.canView ||
+        pettyCashCaps.canRequest ||
+        pettyCashCaps.canViewCash ? (
           <Pressable
             style={styles.secondaryButton}
             onPress={() => {
-              if (pettyCashCaps.canView) {
-                navigation.navigate('PettyCashList');
+              if (
+                pettyCashCaps.canView ||
+                pettyCashCaps.canViewCash ||
+                pettyCashCaps.canFund
+              ) {
+                navigation.navigate('PettyCashHome');
               } else {
                 navigation.navigate('PettyCashForm');
               }
@@ -325,6 +365,116 @@ export function HomeScreen() {
           </Pressable>
         ) : null}
 
+        {showCapitalSection ? (
+          <>
+            <Text style={styles.sectionLabel}>Capital</Text>
+            {canEditCapital ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('ProjectCapitalPlan')}
+              >
+                <Text style={styles.secondaryButtonText}>Capital plan</Text>
+              </Pressable>
+            ) : null}
+            {directorCaps.canView ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('DirectorsList')}
+              >
+                <Text style={styles.secondaryButtonText}>Directors</Text>
+              </Pressable>
+            ) : null}
+            {shareholdingCaps.canView ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('Shareholding')}
+              >
+                <Text style={styles.secondaryButtonText}>Shareholding</Text>
+              </Pressable>
+            ) : null}
+            {contributionCaps.canView || contributionCaps.canCreate ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => {
+                  if (contributionCaps.canView) {
+                    navigation.navigate('ContributionReceiptList');
+                  } else {
+                    navigation.navigate('ContributionReceiptForm');
+                  }
+                }}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Contribution receipts
+                </Text>
+              </Pressable>
+            ) : null}
+          </>
+        ) : null}
+
+        {showFinanceSection ? (
+          <>
+            <Text style={styles.sectionLabel}>Finance</Text>
+            {projectFinanceCaps.canView ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('ProjectFinanceList')}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Project expense & income
+                </Text>
+              </Pressable>
+            ) : null}
+            {journalCaps.canView ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('JournalList')}
+              >
+                <Text style={styles.secondaryButtonText}>Journals</Text>
+              </Pressable>
+            ) : null}
+            {canViewFinance ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('FinanceDashboard')}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Finance dashboard
+                </Text>
+              </Pressable>
+            ) : null}
+            {canViewDirectorCommandCentre ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('DirectorCommandCentre')}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Director command centre
+                </Text>
+              </Pressable>
+            ) : null}
+          </>
+        ) : null}
+
+        {showAdminSection ? (
+          <>
+            <Text style={styles.sectionLabel}>Admin</Text>
+            {userAdminCaps.canView || userAdminCaps.canCreate ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => {
+                  if (userAdminCaps.canView) {
+                    navigation.navigate('UsersList');
+                  } else {
+                    navigation.navigate('UserForm', {});
+                  }
+                }}
+              >
+                <Text style={styles.secondaryButtonText}>Users</Text>
+              </Pressable>
+            ) : null}
+          </>
+        ) : null}
+
         <Text style={styles.note}>
           Site capture flows keep the selected project context and queue
           supported records for offline sync where available.
@@ -396,4 +546,12 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: colors.text, fontWeight: '700' },
   primaryButtonText: { color: '#F4F0E6', fontWeight: '700', fontSize: 15 },
+  sectionLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 20,
+    marginBottom: 4,
+  },
 });

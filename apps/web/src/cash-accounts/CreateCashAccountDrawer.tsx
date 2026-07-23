@@ -26,6 +26,9 @@ type Props = {
   users: readonly Option[];
   canViewUsers: boolean;
   canViewAccounts: boolean;
+  /** When set, kind is fixed (e.g. Petty cash from request create). */
+  lockKind?: (typeof CashAccountKind)[keyof typeof CashAccountKind];
+  onCreated?: () => void;
 };
 
 export function CreateCashAccountDrawer({
@@ -35,16 +38,19 @@ export function CreateCashAccountDrawer({
   users,
   canViewUsers,
   canViewAccounts,
+  lockKind,
+  onCreated,
 }: Props) {
   const create = useCreateCashAccount();
   const { success, error: notifyError } = useNotify();
+  const initialKind = lockKind ?? CashAccountKind.PettyCash;
 
   const { control, handleSubmit, reset } =
     useForm<CashAccountCreateFormValues>({
       resolver: zodResolver(cashAccountCreateSchema),
       defaultValues: {
         accountName: '',
-        kind: CashAccountKind.PettyCash,
+        kind: initialKind,
         projectId,
         custodianUserId: '',
         ledgerAccountId: '',
@@ -88,7 +94,7 @@ export function CreateCashAccountDrawer({
     if (!open) {
       reset({
         accountName: '',
-        kind: CashAccountKind.PettyCash,
+        kind: initialKind,
         projectId,
         custodianUserId: '',
         ledgerAccountId: '',
@@ -97,9 +103,9 @@ export function CreateCashAccountDrawer({
         openingBalance: 0,
       });
     } else {
-      reset((prev) => ({ ...prev, projectId }));
+      reset((prev) => ({ ...prev, projectId, kind: initialKind }));
     }
-  }, [open, projectId, reset]);
+  }, [open, projectId, initialKind, reset]);
 
   const userOptions = useMemo(
     () => users.map((u) => ({ value: u.id, label: u.label })),
@@ -119,7 +125,7 @@ export function CreateCashAccountDrawer({
     try {
       await create.mutateAsync({
         accountName: values.accountName,
-        kind: values.kind,
+        kind: lockKind ?? values.kind,
         projectId: values.projectId,
         custodianUserId: values.custodianUserId,
         ledgerAccountId: values.ledgerAccountId,
@@ -128,6 +134,7 @@ export function CreateCashAccountDrawer({
         openingBalance: values.openingBalance,
       });
       success('Cash account created');
+      onCreated?.();
       onClose();
     } catch (err) {
       notifyError(getErrorMessage(err));
@@ -162,13 +169,15 @@ export function CreateCashAccountDrawer({
             label="Account name"
             required
           />
-          <FormSelect
-            name="kind"
-            control={control}
-            label="Kind"
-            options={[...CASH_ACCOUNT_KIND_OPTIONS]}
-            required
-          />
+          {lockKind ? null : (
+            <FormSelect
+              name="kind"
+              control={control}
+              label="Kind"
+              options={[...CASH_ACCOUNT_KIND_OPTIONS]}
+              required
+            />
+          )}
           {canViewUsers && userOptions.length > 0 ? (
             <FormSelect
               name="custodianUserId"

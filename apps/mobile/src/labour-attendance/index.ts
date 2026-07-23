@@ -6,7 +6,10 @@ export {
   createLabourAttendance,
   listLabourAttendance,
 } from './api';
+export { buildAttendanceCreatePayload } from './buildAttendanceCreatePayload';
 export { buildAttendanceOfflineEnqueue } from './buildAttendanceOfflineEnqueue';
+export { IndividualAttendanceSection } from './IndividualAttendanceSection';
+export { WorkerChecklist } from './WorkerChecklist';
 export {
   ATTENDANCE_PERMISSIONS,
   resolveAttendanceCapabilities,

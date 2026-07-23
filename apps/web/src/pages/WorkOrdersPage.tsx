@@ -1,143 +1,181 @@
-import { useQuery } from '@tanstack/react-query';
-import {
-  Alert,
-  Chip,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Button, Stack, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { getErrorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
-import { PermissionDenied, RetryPanel } from '@/components/errors';
+import { EmptyState, PermissionDenied } from '@/components/errors';
+import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
-import { fetchWorkOrders, type WorkOrderStatus } from '@/work-orders/api';
-
-function statusColor(
-  status: WorkOrderStatus,
-): 'default' | 'info' | 'success' | 'warning' | 'error' {
-  switch (status) {
-    case 'draft':
-      return 'default';
-    case 'pending_approval':
-      return 'warning';
-    case 'approved':
-    case 'issued':
-      return 'info';
-    case 'accepted':
-    case 'in_progress':
-    case 'partially_completed':
-      return 'info';
-    case 'completed':
-    case 'closed':
-      return 'success';
-    case 'cancelled':
-      return 'error';
-    default:
-      return 'default';
-  }
-}
+import { CancelWorkOrderDialog } from '@/work-orders/CancelWorkOrderDialog';
+import {
+  WorkOrderFilters,
+  type WorkOrderFilterState,
+} from '@/work-orders/WorkOrderFilters';
+import {
+  WorkOrderFormDrawer,
+  type WorkOrderEntryMode,
+} from '@/work-orders/WorkOrderFormDrawer';
+import { WorkOrderTable } from '@/work-orders/WorkOrderTable';
+import { resolveWorkOrderCapabilities } from '@/work-orders/roleAccess';
+import type { PublicWorkOrder, WorkOrderStatus } from '@/work-orders/types';
+import {
+  useApproveWorkOrder,
+  useContractorOptions,
+  useIssueWorkOrder,
+  useSubmitWorkOrder,
+  useWorkOrdersList,
+} from '@/work-orders/useWorkOrders';
 
 /**
- * Work orders list stub — wire route under Contractor / Project Control.
- * Permission: `work_order.view` (see CTR-INTEGRATION.md).
+ * Work orders list — `/work-orders`.
+ * Permissions: `work_order.view|create|approve|issue|close`.
  */
 export function WorkOrdersPage() {
-  const { hasPermission } = useAuth();
+  const navigate = useNavigate();
+  const { hasPermission, access } = useAuth();
+  const caps = resolveWorkOrderCapabilities(hasPermission);
   const { selectedProjectId } = useProject();
-  const canView = hasPermission('work_order.view');
+  const { success, error: notifyError } = useNotify();
 
-  const query = useQuery({
-    queryKey: ['work-orders', selectedProjectId],
-    queryFn: () => fetchWorkOrders({ projectId: selectedProjectId! }),
-    enabled: canView && Boolean(selectedProjectId),
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<WorkOrderFilterState>({
+    status: '',
+    contractorId: '',
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<WorkOrderEntryMode>('create');
+  const [activeRow, setActiveRow] = useState<PublicWorkOrder | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<PublicWorkOrder | null>(
+    null,
+  );
 
-  if (!canView) return <PermissionDenied />;
+  const listQuery = useMemo(
+    () => ({
+      page,
+      limit: pageSize,
+      projectId: selectedProjectId ?? undefined,
+      contractorId: filters.contractorId || undefined,
+      status: (filters.status || undefined) as WorkOrderStatus | undefined,
+    }),
+    [page, pageSize, selectedProjectId, filters.contractorId, filters.status],
+  );
+
+  const enabled = caps.canView && Boolean(selectedProjectId);
+  const list = useWorkOrdersList(listQuery, enabled);
+  const contractors = useContractorOptions('', enabled);
+  const submit = useSubmitWorkOrder();
+  const approve = useApproveWorkOrder();
+  const issue = useIssueWorkOrder();
+
+  const contractorLabel = (contractorId: string) => {
+    const match = contractors.data?.find((c) => c.id === contractorId);
+    return match?.label ?? contractorId.slice(-6);
+  };
+
+  const openDrawer = (
+    mode: WorkOrderEntryMode,
+    row: PublicWorkOrder | null = null,
+  ) => {
+    setDrawerMode(mode);
+    setActiveRow(row);
+    setDrawerOpen(true);
+  };
+
+  if (access && !caps.canView) {
+    return <PermissionDenied message="Missing permission work_order.view" />;
+  }
+
   if (!selectedProjectId) {
     return (
-      <Alert severity="info">Select a project to view work orders.</Alert>
+      <EmptyState
+        title="Select a project"
+        description="Work orders are project-scoped. Choose an active project to continue."
+      />
     );
   }
-  if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
-  }
-
-  const rows = query.data ?? [];
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Work Orders</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="h4">Work orders</Typography>
+      <Typography color="text.secondary">
         Contractor work orders with immutable commercial revisions. Amendments
         never overwrite an approved snapshot silently.
       </Typography>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Number</TableCell>
-              <TableCell>Revision</TableCell>
-              <TableCell>Contractor</TableCell>
-              <TableCell>Value</TableCell>
-              <TableCell>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Typography variant="body2" color="text.secondary">
-                    No work orders yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell>
-                    <Typography
-                      component={RouterLink}
-                      to={`./${row.id}`}
-                      variant="body2"
-                      color="primary"
-                      sx={{ textDecoration: 'none' }}
-                    >
-                      {row.workOrderNumber}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>r{row.activeRevision}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                      {row.contractorId.slice(-6)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{row.contractValue.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={row.status.replaceAll('_', ' ')}
-                      color={statusColor(row.status)}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+
+      <WorkOrderTable
+        rows={list.data?.items ?? []}
+        loading={list.isLoading}
+        error={list.error}
+        onRetry={() => void list.refetch()}
+        page={page}
+        pageSize={pageSize}
+        rowCount={list.data?.meta?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        search={search}
+        onSearchChange={setSearch}
+        filterSlot={
+          <WorkOrderFilters
+            value={filters}
+            onChange={setFilters}
+            contractorOptions={contractors.data ?? []}
+          />
+        }
+        toolbarActions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => openDrawer('create')}>
+              New work order
+            </Button>
+          ) : null
+        }
+        caps={caps}
+        contractorLabel={contractorLabel}
+        onOpenDetail={(row) => navigate(`/work-orders/${row.id}`)}
+        onEdit={(row) => openDrawer('edit', row)}
+        onSubmit={async (row) => {
+          try {
+            await submit.mutateAsync(row.id);
+            success('Work order submitted for approval');
+          } catch (err) {
+            notifyError(getErrorMessage(err));
+          }
+        }}
+        onApprove={async (row) => {
+          try {
+            await approve.mutateAsync(row.id);
+            success('Work order approved (r1 frozen)');
+          } catch (err) {
+            notifyError(getErrorMessage(err));
+          }
+        }}
+        onIssue={async (row) => {
+          try {
+            await issue.mutateAsync(row.id);
+            success('Work order issued');
+          } catch (err) {
+            notifyError(getErrorMessage(err));
+          }
+        }}
+        onCancel={(row) => setCancelTarget(row)}
+      />
+
+      <WorkOrderFormDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        mode={drawerMode}
+        projectId={selectedProjectId}
+        workOrder={activeRow}
+        canCreate={caps.canCreate}
+        onSaved={(row) => navigate(`/work-orders/${row.id}`)}
+      />
+
+      <CancelWorkOrderDialog
+        open={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        workOrder={cancelTarget}
+      />
     </Stack>
   );
 }

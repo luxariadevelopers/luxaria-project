@@ -14,6 +14,7 @@ import {
   replaceUserRoles,
   resetUserPassword,
   updateUser,
+  uploadUserProfilePhoto,
 } from './api';
 import { userAdminKeys } from './queryKeys';
 import type {
@@ -94,6 +95,14 @@ export function useResetUserPassword(userId: string) {
   return useMutation({
     mutationFn: (newPassword: string) =>
       resetUserPassword(userId, newPassword),
+  });
+}
+
+export function useUploadUserProfilePhoto(userId: string) {
+  const invalidate = useUserInvalidation(userId);
+  return useMutation({
+    mutationFn: (file: File) => uploadUserProfilePhoto(userId, file),
+    onSuccess: invalidate,
   });
 }
 

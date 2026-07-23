@@ -38,12 +38,24 @@ Swagger tag: **Documents (S3)**
 
 ```
 AWS_REGION=ap-south-1
-AWS_BUCKET_NAME=...
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
+AWS_PROFILE=luxaria
+AWS_BUCKET_NAME=luxaria-app-380267956124
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 AWS_S3_PREFIX=luxaria-developers/
 AWS_S3_MAX_UPLOAD_BYTES=26214400
 AWS_S3_PRESIGN_EXPIRES_SECONDS=900
+
+# Prefer `aws login --profile luxaria` (leave access keys empty).
+# Static keys are only for CI/prod when no IAM role / profile is available.
+
+## Browser uploads (CORS)
+
+Direct browser PUT to the bucket requires a bucket CORS rule allowing the web origin
+(e.g. `http://localhost:9001`) with methods `GET`, `PUT`, `HEAD` and headers `*`.
+
+Presigned upload responses return only browser-safe headers (`Content-Type`,
+`x-amz-server-side-encryption`) — never `Content-Length`.
 ```
 
 Put secrets in `.env.development.local` (gitignored). Rotate keys if they were ever pasted into chat.

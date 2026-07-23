@@ -282,7 +282,9 @@ export const NUMBER_FORMATS: Record<NumberEntityType, NumberFormatConfig> = {
     prefix: 'JV',
     padLength: 6,
     useFinancialYear: true,
-    allowProjectScope: true,
+    // JV codes are company-wide (JV-YYYY-######) — project scope would
+    // restart seq per project and collide on the unique journalNumber index.
+    allowProjectScope: false,
   },
   [NumberEntityType.CUSTOMER_RECEIPT]: {
     prefix: 'CR',

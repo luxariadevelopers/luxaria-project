@@ -66,6 +66,27 @@ describe('RolesService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('accepts nested catalog permissions like analytics.alert.manage', async () => {
+    const created = await service.create({
+      name: 'Analytics Ops',
+      code: 'ANALYTICS_OPS',
+      permissions: ['analytics.alert.manage', 'project.view'],
+    });
+    expect(created.data?.permissions).toEqual([
+      'analytics.alert.manage',
+      'project.view',
+    ]);
+
+    const roleId = created.data!.id;
+    const assigned = await service.assignPermissions(roleId, {
+      permissions: ['analytics.alert.manage', 'analytics.snapshot.manage'],
+    });
+    expect(assigned.data?.permissions).toEqual([
+      'analytics.alert.manage',
+      'analytics.snapshot.manage',
+    ]);
+  });
+
   it('allows only an existing bypass administrator to create a bypass role', async () => {
     await expect(
       service.create({

@@ -29,7 +29,7 @@ async function openCreateProjectForm(page: Page) {
 async function fillRequiredProjectFields(page: Page, projectName: string) {
   await page.getByLabel('Project name', { exact: true }).fill(projectName);
   await page.getByLabel('Project type', { exact: true }).click();
-  await page.getByRole('option', { name: 'Residential' }).click();
+  await page.getByRole('option', { name: 'Residential Flat' }).click();
   await page.getByLabel('Address line 1', { exact: true }).fill('42 E2E Test Avenue');
   await page.getByLabel('City', { exact: true }).fill('Chennai');
   await page.getByLabel('State', { exact: true }).fill('Tamil Nadu');

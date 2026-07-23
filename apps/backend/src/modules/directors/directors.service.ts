@@ -36,16 +36,17 @@ export class DirectorsService {
   ) {}
 
   async create(dto: CreateDirectorDto, actorId?: string) {
-    if (dto.userId) {
-      await this.assertUserExists(dto.userId);
+    if (!dto.userId?.trim()) {
+      throw new BadRequestException('Linked user is required for every director');
     }
+    await this.assertUserAvailable(dto.userId);
     const companyId = await this.resolveCompanyId(dto.companyId);
     const directorCode = await this.numberingService.nextCode(NumberEntityType.DIRECTOR);
 
     const director = await this.directorModel.create({
       companyId,
       directorCode,
-      userId: dto.userId ? new Types.ObjectId(dto.userId) : null,
+      userId: new Types.ObjectId(dto.userId),
       fullName: dto.fullName.trim(),
       din: normalizeOptionalCode(dto.din ?? null),
       pan: normalizeOptionalCode(dto.pan ?? null),
@@ -58,13 +59,19 @@ export class DirectorsService {
       createdBy: actorId ? new Types.ObjectId(actorId) : null,
     });
 
-    return createSuccessResponse(toPublicDirector(director), 'Director created successfully');
+    return createSuccessResponse(
+      await this.toEnrichedPublicDirector(director),
+      'Director created successfully',
+    );
   }
 
   async update(id: string, dto: UpdateDirectorDto, actorId?: string) {
     await this.requireDirector(id);
-    if (dto.userId) {
-      await this.assertUserExists(dto.userId);
+    if (dto.userId !== undefined) {
+      if (!dto.userId?.trim()) {
+        throw new BadRequestException('Linked user is required for every director');
+      }
+      await this.assertUserAvailable(dto.userId, id);
     }
 
     const update: Record<string, unknown> = {
@@ -72,7 +79,7 @@ export class DirectorsService {
     };
     if (dto.fullName !== undefined) update.fullName = dto.fullName.trim();
     if (dto.userId !== undefined) {
-      update.userId = dto.userId ? new Types.ObjectId(dto.userId) : null;
+      update.userId = new Types.ObjectId(dto.userId);
     }
     if (dto.din !== undefined) update.din = normalizeOptionalCode(dto.din);
     if (dto.pan !== undefined) update.pan = normalizeOptionalCode(dto.pan);
@@ -90,12 +97,18 @@ export class DirectorsService {
       .findByIdAndUpdate(id, update, { new: true })
       .exec();
 
-    return createSuccessResponse(toPublicDirector(updated!), 'Director updated successfully');
+    return createSuccessResponse(
+      await this.toEnrichedPublicDirector(updated!),
+      'Director updated successfully',
+    );
   }
 
   async getById(id: string) {
     const director = await this.requireDirector(id);
-    return createSuccessResponse(toPublicDirector(director), 'Director fetched successfully');
+    return createSuccessResponse(
+      await this.toEnrichedPublicDirector(director),
+      'Director fetched successfully',
+    );
   }
 
   async list(query: {
@@ -133,8 +146,9 @@ export class DirectorsService {
       this.directorModel.countDocuments(filter).exec(),
     ]);
 
+    const enriched = await this.enrichPublicDirectors(items);
     return createSuccessResponse(
-      items.map((item) => toPublicDirector(item)),
+      enriched,
       'Directors fetched successfully',
       buildPaginationMeta(page, limit, total),
     );
@@ -203,10 +217,92 @@ export class DirectorsService {
     return director;
   }
 
-  private async assertUserExists(userId: string) {
+  private async toEnrichedPublicDirector(director: {
+    _id: Types.ObjectId;
+    companyId?: Types.ObjectId | null;
+    directorCode: string;
+    userId?: Types.ObjectId | null;
+    fullName: string;
+    din?: string | null;
+    pan?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    appointmentDate?: Date | null;
+    status: DirectorStatus;
+    isPlaceholder?: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }) {
+    const [enriched] = await this.enrichPublicDirectors([director]);
+    return enriched!;
+  }
+
+  private async enrichPublicDirectors(
+    directors: Array<{
+      _id: Types.ObjectId;
+      companyId?: Types.ObjectId | null;
+      directorCode: string;
+      userId?: Types.ObjectId | null;
+      fullName: string;
+      din?: string | null;
+      pan?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      appointmentDate?: Date | null;
+      status: DirectorStatus;
+      isPlaceholder?: boolean;
+      createdAt?: Date;
+      updatedAt?: Date;
+    }>,
+  ) {
+    const userIds = directors
+      .map((d) => d.userId)
+      .filter((id): id is Types.ObjectId => Boolean(id));
+    const users = userIds.length
+      ? await this.userModel
+          .find({ _id: { $in: userIds } })
+          .select('_id userCode employeeId')
+          .lean()
+          .exec()
+      : [];
+    const byId = new Map(
+      users.map((u) => [
+        String(u._id),
+        {
+          userCode: u.userCode ?? null,
+          employeeId: u.employeeId ?? null,
+        },
+      ]),
+    );
+    return directors.map((director) =>
+      toPublicDirector(
+        director,
+        director.userId ? byId.get(String(director.userId)) : null,
+      ),
+    );
+  }
+
+  private async assertUserAvailable(
+    userId: string,
+    excludeDirectorId?: string,
+  ) {
     const user = await this.userModel.findById(userId).select('_id').lean().exec();
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+    const filter: FilterQuery<Director> = {
+      userId: new Types.ObjectId(userId),
+    };
+    if (excludeDirectorId) {
+      filter._id = { $ne: new Types.ObjectId(excludeDirectorId) };
+    }
+    const linked = await this.directorModel.findOne(filter).select('_id').lean().exec();
+    if (linked) {
+      throw new BadRequestException(
+        'This user is already linked to another director',
+      );
     }
   }
 

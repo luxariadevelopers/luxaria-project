@@ -2,19 +2,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveSiteExpenseVoucher,
   cancelSiteExpenseVoucher,
+  createSiteExpenseVoucher,
   fetchSiteExpenseVoucher,
   fetchSiteExpenseVouchers,
   postSiteExpenseVoucher,
   rejectSiteExpenseVoucher,
   returnSiteExpenseVoucher,
+  submitSiteExpenseVoucher,
+  updateSiteExpenseVoucher,
   verifySiteExpenseVoucher,
 } from './api';
 import { expensesKeys } from './queryKeys';
 import type {
   CancelSiteExpenseInput,
+  CreateSiteExpenseInput,
   ListSiteExpenseVouchersQuery,
   RejectSiteExpenseInput,
   ReturnSiteExpenseInput,
+  UpdateSiteExpenseInput,
 } from './types';
 
 export function useSiteExpenseVouchersList(
@@ -48,6 +53,40 @@ function useInvalidateExpenses() {
   return () => {
     void qc.invalidateQueries({ queryKey: expensesKeys.all });
   };
+}
+
+export function useCreateSiteExpenseVoucher() {
+  const invalidate = useInvalidateExpenses();
+  return useMutation({
+    mutationFn: async (args: {
+      input: CreateSiteExpenseInput;
+      submitImmediately?: boolean;
+    }) => {
+      const created = await createSiteExpenseVoucher(args.input);
+      if (args.submitImmediately) {
+        return submitSiteExpenseVoucher(created.id);
+      }
+      return created;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateSiteExpenseVoucher() {
+  const invalidate = useInvalidateExpenses();
+  return useMutation({
+    mutationFn: (args: { id: string; input: UpdateSiteExpenseInput }) =>
+      updateSiteExpenseVoucher(args.id, args.input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSubmitSiteExpenseVoucher() {
+  const invalidate = useInvalidateExpenses();
+  return useMutation({
+    mutationFn: (id: string) => submitSiteExpenseVoucher(id),
+    onSuccess: invalidate,
+  });
 }
 
 export function useVerifySiteExpenseVoucher() {

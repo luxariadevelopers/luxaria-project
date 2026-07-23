@@ -1,7 +1,6 @@
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -36,6 +35,7 @@ vi.mock('@/auth/AuthContext', () => ({
     isBootstrapping: false,
     login: vi.fn(),
     logout: vi.fn().mockResolvedValue(undefined),
+    refreshUser: vi.fn().mockResolvedValue(undefined),
     hasPermission: (p: string) =>
       authState.bypass || authState.permissions.includes(p),
     hasAnyPermission: (ps: string[]) =>
@@ -88,11 +88,15 @@ describe('responsive web shell', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).getByText('Overview')).toBeInTheDocument();
-    expect(within(nav).getByText('Projects & site')).toBeInTheDocument();
     expect(within(nav).getByText('Projects')).toBeInTheDocument();
-    expect(within(nav).getByText('Daily progress')).toBeInTheDocument();
+    expect(within(nav).getByText('Admin')).toBeInTheDocument();
     expect(within(nav).queryByText('Users')).not.toBeInTheDocument();
-    expect(within(nav).getByText('Settings')).toBeInTheDocument();
+    expect(within(nav).queryByText('Accounting')).not.toBeInTheDocument();
+
+    fireEvent.click(within(nav).getByText('Projects'));
+    expect(within(nav).getByText('Project control')).toBeInTheDocument();
+    fireEvent.click(within(nav).getByText('Project control'));
+    expect(within(nav).getByText('Daily progress')).toBeInTheDocument();
   });
 
   it('hides group labels when sidebar is collapsed', () => {
@@ -105,7 +109,7 @@ describe('responsive web shell', () => {
       />,
     );
 
-    expect(screen.queryByText('Projects & site')).not.toBeInTheDocument();
+    expect(screen.queryByText('Projects')).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Expand sidebar' }),
     ).toBeInTheDocument();
@@ -129,11 +133,10 @@ describe('responsive web shell', () => {
     );
   });
 
-  it('opens profile menu with user identity and settings link', async () => {
-    const user = userEvent.setup();
+  it('opens profile menu with user identity and settings link', () => {
     renderWithProviders(<ProfileMenu />);
 
-    await user.click(screen.getByRole('button', { name: 'Open profile menu' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open profile menu' }));
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getByText('ada@luxaria.dev')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute(

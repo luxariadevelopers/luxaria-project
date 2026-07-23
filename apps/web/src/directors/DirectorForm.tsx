@@ -1,9 +1,13 @@
-import { Button, Stack } from '@mui/material';
+import { useMemo } from 'react';
+import { Button, Stack, Typography } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { useAuth } from '@/auth/AuthContext';
 import { DateInput } from '@/components/forms/DateInput';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
+import { UserStatus } from '@/user-admin/types';
+import { useUsersList } from '@/user-admin/useUsers';
 import { DIRECTOR_STATUS_OPTIONS } from './directorStatus';
 import {
   directorFormSchema,
@@ -26,10 +30,50 @@ export function DirectorForm({
   submitLabel = 'Save',
   onSubmit,
 }: Props) {
+  const { hasPermission } = useAuth();
+  const canListUsers = hasPermission('user.view');
+  const usersQuery = useUsersList(
+    { page: 1, limit: 100, status: UserStatus.Active },
+    canListUsers,
+  );
+
+  const userOptions = useMemo(() => {
+    const items = usersQuery.data?.items ?? [];
+    const options = items.map((user) => ({
+      value: user.id,
+      label: [
+        user.userCode,
+        user.fullName,
+        user.employeeId ? `[${user.employeeId}]` : null,
+        user.email ? `(${user.email})` : null,
+      ]
+        .filter(Boolean)
+        .join(' — '),
+    }));
+    if (
+      initial?.userId &&
+      !options.some((opt) => opt.value === initial.userId)
+    ) {
+      options.unshift({
+        value: initial.userId,
+        label: initial.userCode
+          ? `${initial.userCode} — ${initial.fullName}`
+          : `${initial.fullName} (linked user)`,
+      });
+    }
+    return options;
+  }, [
+    usersQuery.data?.items,
+    initial?.userId,
+    initial?.userCode,
+    initial?.fullName,
+  ]);
+
   const { control, handleSubmit } = useForm<DirectorFormValues>({
     resolver: zodResolver(directorFormSchema),
     defaultValues: {
       fullName: initial?.fullName ?? '',
+      userId: initial?.userId ?? '',
       din: initial?.din ?? '',
       pan: initial?.pan ?? '',
       email: initial?.email ?? '',
@@ -58,6 +102,19 @@ export function DirectorForm({
         required
         disabled={readOnly}
       />
+      <FormSelect
+        name="userId"
+        control={control}
+        label="Linked user ID"
+        required
+        options={userOptions}
+        disabled={readOnly || !canListUsers}
+      />
+      <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
+        {canListUsers
+          ? 'Select by unique user code (USR-######). One login user per director.'
+          : 'You need user.view permission to choose a linked user.'}
+      </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <FormTextField
           name="din"

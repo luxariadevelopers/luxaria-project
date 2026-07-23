@@ -21,6 +21,7 @@ vi.mock('@/auth/AuthContext', () => ({
     isBootstrapping: false,
     login: vi.fn(),
     logout: vi.fn(),
+    refreshUser: vi.fn(),
     hasPermission: (p: string) => authState.hasPermission(p),
     hasAnyPermission: (ps: string[]) => authState.hasAnyPermission(ps),
     hasAllPermissions: (ps: string[]) => authState.hasAllPermissions(ps),

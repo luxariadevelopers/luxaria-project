@@ -142,13 +142,23 @@ export function PettyCashRequestDetailPage() {
         value: `${formatDate(row.weekStartDate)} – ${formatDate(row.weekEndDate)}`,
       },
       {
+        id: 'createdBy',
+        label: 'Created by',
+        value: row.requestedByName || '—',
+      },
+      {
         id: 'requested',
         label: 'Requested',
         value: formatInr(row.requestedAmount),
       },
       {
+        id: 'approvedBy',
+        label: 'Approved by',
+        value: row.approvedByName || '—',
+      },
+      {
         id: 'approved',
-        label: 'Approved',
+        label: 'Approved amount',
         value:
           row.approvedAmount != null ? formatInr(row.approvedAmount) : '—',
       },

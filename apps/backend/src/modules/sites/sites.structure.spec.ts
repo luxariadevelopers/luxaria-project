@@ -98,13 +98,51 @@ describe('SitesService structure hierarchy', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('requires root structure nodes to be type site', async () => {
+    await expect(
+      service.createStructureNode(
+        projectId,
+        {
+          parentSiteId: null,
+          type: SiteType.Floor,
+          siteCode: 'FL-1',
+          siteName: 'Floor 1',
+        },
+        companyId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.createStructureNode(
+        projectId,
+        {
+          parentSiteId: null,
+          type: SiteType.Phase,
+          siteCode: 'PH-1',
+          siteName: 'Phase 1',
+        },
+        companyId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('rejects incompatible hierarchy ranks', async () => {
-    const floor = await service.create(
+    const site = await service.create(
       {
         projectId,
+        siteCode: 'SITE-1',
+        siteName: 'Main Site',
+        type: SiteType.Site,
+      },
+      companyId,
+    );
+    const floor = await service.createStructureNode(
+      projectId,
+      {
+        parentSiteId: site.data!.id,
+        type: SiteType.Floor,
         siteCode: 'FL-1',
         siteName: 'Floor 1',
-        type: SiteType.Floor,
       },
       companyId,
     );

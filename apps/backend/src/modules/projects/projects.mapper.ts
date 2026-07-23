@@ -35,6 +35,7 @@ export type PublicProject = {
   assignedDirectors: string[];
   defaultBankAccount: string | null;
   approvedBudget: number | null;
+  equalDirectorInvestment: boolean;
   projectStage: ProjectStage;
   reraDetails: ReraDetailsEmbed;
   companyId: string | null;
@@ -71,6 +72,7 @@ type ProjectLike = {
   assignedDirectors?: Array<Types.ObjectId | string>;
   defaultBankAccount?: Types.ObjectId | string | null;
   approvedBudget?: number | null;
+  equalDirectorInvestment?: boolean;
   projectStage: ProjectStage;
   reraDetails?: ReraDetailsEmbed;
   companyId?: Types.ObjectId | string | null;
@@ -134,6 +136,7 @@ export function toPublicProject(project: ProjectLike): PublicProject {
       ? String(project.defaultBankAccount)
       : null,
     approvedBudget: project.approvedBudget ?? null,
+    equalDirectorInvestment: Boolean(project.equalDirectorInvestment),
     projectStage: project.projectStage,
     reraDetails: project.reraDetails ?? {
       reraNumber: null,

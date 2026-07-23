@@ -15,6 +15,12 @@ export type ExpenseCategorySeedDef = {
 export const STANDARD_EXPENSE_CATEGORIES: ExpenseCategorySeedDef[] = [
   { categoryCode: 'LABOUR', name: 'Labour', requiresBill: false, requiresSignature: true },
   { categoryCode: 'MATERIAL', name: 'Material', requiresBill: true },
+  {
+    categoryCode: 'LAND',
+    name: 'Land',
+    requiresBill: true,
+    requiresSignature: true,
+  },
   { categoryCode: 'TRANSPORT', name: 'Transport', requiresBill: true, requiresPhoto: true },
   { categoryCode: 'FOOD', name: 'Food', requiresBill: true },
   {

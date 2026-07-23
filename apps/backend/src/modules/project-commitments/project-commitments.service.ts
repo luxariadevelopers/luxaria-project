@@ -14,6 +14,7 @@ import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import {
   ParticipantApprovalStatus,
+  ParticipantType,
   ProjectParticipant,
 } from '../project-participants/schemas/project-participant.schema';
 import { Project } from '../projects/schemas/project.schema';
@@ -33,7 +34,13 @@ import {
 import {
   CommitmentStatus,
   ContributionCommitment,
+  ContributionType,
 } from './schemas/contribution-commitment.schema';
+
+const CAPITAL_CONTRIBUTION_TYPES: ContributionType[] = [
+  ContributionType.Capital,
+  ContributionType.Equity,
+];
 
 @Injectable()
 export class ProjectCommitmentsService {
@@ -48,7 +55,14 @@ export class ProjectCommitmentsService {
 
   async create(projectId: string, dto: CreateCommitmentDto, actorId: string) {
     await this.requireProject(projectId);
-    await this.requireApprovedParticipant(projectId, dto.participantId);
+    const participant = await this.requireApprovedParticipant(
+      projectId,
+      dto.participantId,
+    );
+    await this.assertDirectorFundingLifecycle(
+      participant,
+      dto.contributionType,
+    );
 
     assertPaymentSchedule(dto.paymentSchedule, dto.commitmentAmount);
     assertCommitmentNotBelowReceived(dto.commitmentAmount, 0);
@@ -487,6 +501,65 @@ export class ProjectCommitmentsService {
       );
     }
     return participant;
+  }
+
+  /**
+   * Director funding lifecycle:
+   * - First money in = capital/equity (company capital income)
+   * - After capital has been received anywhere, later project money = loan
+   */
+  private async assertDirectorFundingLifecycle(
+    participant: {
+      participantType: ParticipantType;
+      participantId: Types.ObjectId;
+    },
+    contributionType: ContributionType,
+  ) {
+    if (participant.participantType !== ParticipantType.Director) {
+      return;
+    }
+
+    const directorPartyIds = await this.participantModel
+      .find({
+        participantType: ParticipantType.Director,
+        participantId: participant.participantId,
+      })
+      .select('_id')
+      .lean()
+      .exec();
+    const participantRecordIds = directorPartyIds.map((row) => row._id);
+
+    const capitalReceived = await this.commitmentModel
+      .exists({
+        participantId: { $in: participantRecordIds },
+        contributionType: { $in: CAPITAL_CONTRIBUTION_TYPES },
+        receivedAmount: { $gt: 0 },
+        status: {
+          $in: [CommitmentStatus.Approved, CommitmentStatus.Superseded],
+        },
+      })
+      .exec();
+
+    const isCapitalType = CAPITAL_CONTRIBUTION_TYPES.includes(contributionType);
+    const isLoanType = contributionType === ContributionType.Loan;
+
+    if (!capitalReceived && !isCapitalType) {
+      throw new BadRequestException(
+        'First director investment must be recorded as capital (or equity). After that capital is received, further project funding must be a director loan.',
+      );
+    }
+
+    if (capitalReceived && isCapitalType) {
+      throw new BadRequestException(
+        'Director capital has already been received. Select a project and record further director money as a loan commitment for that project.',
+      );
+    }
+
+    if (capitalReceived && !isLoanType) {
+      throw new BadRequestException(
+        'After first-time director capital, further contributions must use contribution type "loan" (director loan to the project).',
+      );
+    }
   }
 
   private async requireCommitment(projectId: string, id: string) {

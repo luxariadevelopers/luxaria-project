@@ -4,6 +4,7 @@ import type {
   InstrumentType,
   ParticipantApprovalStatus,
   ParticipantType,
+  RepaymentMode,
 } from './schemas/project-participant.schema';
 
 export type PublicProjectParticipant = {
@@ -19,6 +20,8 @@ export type PublicProjectParticipant = {
   approvedProfitSharePercentage: number;
   lossSharePercentage: number;
   interestRate: number | null;
+  budgetInvestmentPercentage: number | null;
+  repaymentMode: RepaymentMode | null;
   instrumentType: InstrumentType;
   effectiveFrom: Date;
   effectiveTo: Date | null;
@@ -64,6 +67,8 @@ type ParticipantLike = {
   approvedProfitSharePercentage: number;
   lossSharePercentage: number;
   interestRate?: number | null;
+  budgetInvestmentPercentage?: number | null;
+  repaymentMode?: RepaymentMode | null;
   instrumentType: InstrumentType;
   effectiveFrom: Date;
   effectiveTo?: Date | null;
@@ -99,6 +104,8 @@ export function toPublicParticipant(
     approvedProfitSharePercentage: row.approvedProfitSharePercentage,
     lossSharePercentage: row.lossSharePercentage,
     interestRate: row.interestRate ?? null,
+    budgetInvestmentPercentage: row.budgetInvestmentPercentage ?? null,
+    repaymentMode: row.repaymentMode ?? null,
     instrumentType: row.instrumentType,
     effectiveFrom: row.effectiveFrom,
     effectiveTo: row.effectiveTo ?? null,

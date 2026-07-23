@@ -44,5 +44,15 @@ export const luxariaTheme = createTheme({
         },
       },
     },
+    MuiModal: {
+      defaultProps: {
+        disableRestoreFocus: true,
+      },
+    },
+    MuiDialog: {
+      defaultProps: {
+        disableRestoreFocus: true,
+      },
+    },
   },
 });

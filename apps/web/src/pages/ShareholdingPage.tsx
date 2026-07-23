@@ -17,6 +17,7 @@ import {
 import { ChangeRequestsPanel } from '@/shareholding/ChangeRequestsPanel';
 import { EffectiveDateTimeline } from '@/shareholding/EffectiveDateTimeline';
 import { findOverlappingEffectiveDates } from '@/shareholding/effectiveDateOverlap';
+import { PostShareCapitalToBankPanel } from '@/shareholding/PostShareCapitalToBankPanel';
 import { ShareholdingTable } from '@/shareholding/ShareholdingTable';
 import { TotalPercentageIndicator } from '@/shareholding/TotalPercentageIndicator';
 
@@ -153,6 +154,9 @@ export function ShareholdingPage() {
           />
         ) : (
           <Stack spacing={2}>
+            <PostShareCapitalToBankPanel
+              holdings={activeQuery.data?.holdings ?? []}
+            />
             <ShareholdingTable
               title="Active holdings"
               rows={activeQuery.data?.holdings ?? []}

@@ -22,7 +22,7 @@ export function PermissionDenied({
         <Typography color="text.secondary">
           {message ??
             (error ? getErrorMessage(error) : undefined) ??
-            'You do not have permission to view this content.'}
+            'Access denied. Contact MD'}
         </Typography>
         {showHomeLink ? (
           <Button

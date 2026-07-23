@@ -110,6 +110,8 @@ export type CashFlowForecastView = {
     fundingGap: number;
   }>;
   drillPath: DrillPathStep[];
+  /** Present when the actor has no projects in scope (empty but valid forecast). */
+  emptyReason?: string;
 };
 
 export type DomainAnalyticsView = {

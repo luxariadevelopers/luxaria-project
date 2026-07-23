@@ -1,5 +1,9 @@
+import { Box, CircularProgress } from '@mui/material';
 import { Navigate, Outlet } from 'react-router-dom';
-import { canEnterRoute } from '@/navigation/routeAccess';
+import {
+  canEnterRoute,
+  evaluateRouteAccess,
+} from '@/navigation/routeAccess';
 import type { PermissionCode } from '@/navigation/permissionCatalog';
 import {
   getRouteById,
@@ -34,13 +38,31 @@ export function PermissionGuard({
     allOf: registered?.allOf ?? allOf,
   };
 
-  const allowed = canEnterRoute(route, {
+  const ctx = {
     accessLoaded: Boolean(access),
     bypassPermissions: Boolean(access?.bypassPermissions),
     permissions: access?.permissions ?? [],
-  });
+  };
 
-  if (!allowed) {
+  const decision = evaluateRouteAccess(route, ctx);
+
+  if (decision === 'pending') {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: 240,
+        }}
+        data-testid="permission-guard-pending"
+      >
+        <CircularProgress size={32} />
+      </Box>
+    );
+  }
+
+  if (!canEnterRoute(route, ctx)) {
     return <Navigate to={redirectTo} replace />;
   }
 

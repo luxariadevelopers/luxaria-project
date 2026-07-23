@@ -16,6 +16,7 @@ import {
 import { AppLayout } from '@/layouts/AppLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { toRelativeAppPath } from '@/navigation/routeRegistry';
+import { ForceChangePasswordPage } from '@/pages/ForceChangePasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { APP_ROUTE_ELEMENTS } from './routeElements';
 
@@ -25,6 +26,12 @@ export function AppRouter() {
       <Routes>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/change-password"
+              element={<ForceChangePasswordPage />}
+            />
+          </Route>
         </Route>
 
         <Route path="/investor">
@@ -171,6 +178,20 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="site-execution-dashboard" />}>
+              <Route
+                path={toRelativeAppPath('/site-execution/dashboard')}
+                element={APP_ROUTE_ELEMENTS['site-execution-dashboard']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="site-execution-reports" />}>
+              <Route
+                path={toRelativeAppPath('/site-execution/reports')}
+                element={APP_ROUTE_ELEMENTS['site-execution-reports']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="purchase-dashboard" />}>
               <Route
                 path={toRelativeAppPath('/dashboard/purchase')}
@@ -279,6 +300,19 @@ export function AppRouter() {
                   '/projects/:projectId/financial-settings',
                 )}
                 element={APP_ROUTE_ELEMENTS['project-financial-settings']}
+              />
+            </Route>
+
+            <Route
+              element={
+                <RegistryRouteGuard routeId="project-expense-income" />
+              }
+            >
+              <Route
+                path={toRelativeAppPath(
+                  '/projects/:projectId/expense-income',
+                )}
+                element={APP_ROUTE_ELEMENTS['project-expense-income']}
               />
             </Route>
 
@@ -660,6 +694,27 @@ export function AppRouter() {
               />
             </Route>
 
+            <Route element={<RegistryRouteGuard routeId="stock-transfers" />}>
+              <Route
+                path={toRelativeAppPath('/inventory/stock-transfers')}
+                element={APP_ROUTE_ELEMENTS['stock-transfers']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="stock-reservations" />}>
+              <Route
+                path={toRelativeAppPath('/inventory/stock-reservations')}
+                element={APP_ROUTE_ELEMENTS['stock-reservations']}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="warehouse-locations" />}>
+              <Route
+                path={toRelativeAppPath('/inventory/warehouse-locations')}
+                element={APP_ROUTE_ELEMENTS['warehouse-locations']}
+              />
+            </Route>
+
             <Route element={<RegistryRouteGuard routeId="units" />}>
               <Route
                 path={toRelativeAppPath('/sales/units')}
@@ -944,6 +999,13 @@ export function AppRouter() {
               <Route
                 path={toRelativeAppPath('/inventory/grns')}
                 element={APP_ROUTE_ELEMENTS.grns}
+              />
+            </Route>
+
+            <Route element={<RegistryRouteGuard routeId="grn-create" />}>
+              <Route
+                path={toRelativeAppPath('/inventory/grns/new')}
+                element={APP_ROUTE_ELEMENTS['grn-create']}
               />
             </Route>
 

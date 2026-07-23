@@ -28,6 +28,7 @@ import { RequirePermissions } from '../rbac/decorators/require-permissions.decor
 import { DirectorsService } from './directors.service';
 import { ApproveShareholdingDto } from './dto/approve-shareholding.dto';
 import { CreateDirectorDto } from './dto/create-director.dto';
+import { PostShareCapitalReceiptDto } from './dto/post-share-capital-receipt.dto';
 import { ProposeShareholdingDto } from './dto/propose-shareholding.dto';
 import { RejectShareholdingDto } from './dto/reject-shareholding.dto';
 import { UpdateDirectorDto } from './dto/update-director.dto';
@@ -167,6 +168,19 @@ export class DirectorsController {
     query: PaginationQueryDto & { companyId?: string; directorId?: string },
   ) {
     return this.shareholdingService.listHistory(query);
+  }
+
+  @Post('company-shareholding/capital-receipts')
+  @RequirePermissions('company.update')
+  @ApiOperation({
+    summary:
+      'Post director share capital into company bank book (shares × face value per director; updates paid-up capital)',
+  })
+  postShareCapitalReceipt(
+    @Body() dto: PostShareCapitalReceiptDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.shareholdingService.postCapitalReceiptToBank(dto, actor.id);
   }
 
   @Post('company-shareholding/change-requests')

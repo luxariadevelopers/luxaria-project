@@ -59,6 +59,12 @@ function normaliseRequirement(
 ): PublicPettyCashRequirement {
   return {
     ...row,
+    requestedByName: row.requestedByName ?? null,
+    projectManagerReviewedByName: row.projectManagerReviewedByName ?? null,
+    financeReviewedByName: row.financeReviewedByName ?? null,
+    approvedByName: row.approvedByName ?? row.financeReviewedByName ?? null,
+    fundedByName: row.fundedByName ?? null,
+    closedByName: row.closedByName ?? null,
     weekStartDate: toDateOnly(row.weekStartDate) || row.weekStartDate,
     weekEndDate: toDateOnly(row.weekEndDate) || row.weekEndDate,
     projectManagerReviewedAt: toIso(row.projectManagerReviewedAt),

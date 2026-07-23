@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsMongoId,
@@ -164,6 +165,14 @@ export class CreateProjectDto {
   @IsNumber()
   @Min(0)
   approvedBudget?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, capital plan expects equal ₹ funding among director participants',
+  })
+  @IsOptional()
+  @IsBoolean()
+  equalDirectorInvestment?: boolean;
 
   @ApiPropertyOptional({ enum: ProjectStage })
   @IsOptional()

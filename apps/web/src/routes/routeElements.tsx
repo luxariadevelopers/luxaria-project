@@ -95,6 +95,7 @@ import { ForbiddenPage } from '@/pages/ForbiddenPage';
 import { FixedAssetsPage } from '@/pages/FixedAssetsPage';
 import { FormDemoPage } from '@/pages/FormDemoPage';
 import { FundingDashboardPage } from '@/pages/FundingDashboardPage';
+import { GrnCreatePage } from '@/pages/GrnCreatePage';
 import { GrnDetailPage } from '@/pages/GrnDetailPage';
 import { GrnsPage } from '@/pages/GrnsPage';
 import { GstPage } from '@/pages/GstPage';
@@ -143,6 +144,7 @@ import { ProjectDetailPage } from '@/pages/ProjectDetailPage';
 import { ProjectDocumentsPage } from '@/pages/ProjectDocumentsPage';
 import { ProjectEditPage } from '@/pages/ProjectEditPage';
 import { ProjectParticipantsEntryPage, ProjectParticipantsPage } from '@/pages/ProjectParticipantsPage';
+import { ProjectExpenseIncomePage } from '@/pages/ProjectExpenseIncomePage';
 import { ProjectFinancialSettingsPage } from '@/pages/ProjectFinancialSettingsPage';
 import { ProjectSettingsPage } from '@/pages/ProjectSettingsPage';
 import { ProjectStructurePage } from '@/pages/ProjectStructurePage';
@@ -184,6 +186,8 @@ import { StockTransfersPage } from '@/pages/StockTransfersPage';
 import { StockCountDetailPage } from '@/pages/StockCountDetailPage';
 import { StockCountsPage } from '@/pages/StockCountsPage';
 import { StockLedgerPage } from '@/pages/StockLedgerPage';
+import { StockReservationsPage } from '@/pages/StockReservationsPage';
+import { WarehouseLocationsPage } from '@/pages/WarehouseLocationsPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
 import { TdsPage } from '@/pages/TdsPage';
 import { UnitDetailPage } from '@/pages/UnitDetailPage';
@@ -211,6 +215,8 @@ import { WorkflowTimelineDemoPage } from '@/pages/WorkflowTimelineDemoPage';
 import { MaterialReconciliationPage } from '@/contractor-material-reconciliation';
 import { MeasurementBookPage } from '@/measurement-book';
 import { ContractorLedgerPage } from '@/pages/ContractorLedgerPage';
+import { ContractorRecoveriesPage } from '@/pages/ContractorRecoveriesPage';
+import { ContractorRecoveryDetailPage } from '@/pages/ContractorRecoveryDetailPage';
 import { RetentionRegisterPage } from '@/pages/RetentionRegisterPage';
 import { WorkOrderDetailPage } from '@/pages/WorkOrderDetailPage';
 import { WorkOrdersPage } from '@/pages/WorkOrdersPage';
@@ -256,6 +262,7 @@ export const APP_ROUTE_ELEMENTS: {
   'project-team': <ProjectTeamPage />,
   'project-warehouses': <ProjectWarehousesPage />,
   'project-financial-settings': <ProjectFinancialSettingsPage />,
+  'project-expense-income': <ProjectExpenseIncomePage />,
   'project-dashboard': <ProjectDashboardEntryPage />,
   'project-dashboard-detail': <ProjectDashboardPage />,
   'project-participants': <ProjectParticipantsEntryPage />,
@@ -270,6 +277,8 @@ export const APP_ROUTE_ELEMENTS: {
   'measurement-book': <MeasurementBookPage />,
   'material-reconciliation': <MaterialReconciliationPage />,
   'retention-register': <RetentionRegisterPage />,
+  'contractor-recoveries': <ContractorRecoveriesPage />,
+  'contractor-recovery-detail': <ContractorRecoveryDetailPage />,
   'contractor-ledger': <ContractorLedgerPage />,
   drawings: <DrawingsPage />,
   equipment: <EquipmentPage />,
@@ -340,6 +349,8 @@ export const APP_ROUTE_ELEMENTS: {
   'stock-counts': <StockCountsPage />,
   'stock-count-detail': <StockCountDetailPage />,
   'stock-transfers': <StockTransfersPage />,
+  'stock-reservations': <StockReservationsPage />,
+  'warehouse-locations': <WarehouseLocationsPage />,
   'inventory-reports': <InventoryReportsPage />,
   units: <UnitsPage />,
   'unit-detail': <UnitDetailPage />,
@@ -389,6 +400,7 @@ export const APP_ROUTE_ELEMENTS: {
   'petty-cash-request-detail': <PettyCashRequestDetailPage />,
   'petty-cash-fund-transfers': <PettyCashTransfersPage />,
   grns: <GrnsPage />,
+  'grn-create': <GrnCreatePage />,
   'grn-detail': <GrnDetailPage />,
   'quality-inspections': <QualityInspectionsPage />,
   'quality-inspection-detail': <QualityInspectionDetailPage />,

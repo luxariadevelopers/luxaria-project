@@ -93,7 +93,7 @@ export function ContractorLedgerPage() {
           size="small"
           type="date"
           label="From"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           value={from}
           onChange={(e) => setFrom(e.target.value)}
         />
@@ -101,7 +101,7 @@ export function ContractorLedgerPage() {
           size="small"
           type="date"
           label="To"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           value={to}
           onChange={(e) => setTo(e.target.value)}
         />

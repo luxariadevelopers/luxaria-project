@@ -112,9 +112,18 @@ export class AuthService {
         AuditAction.LOGIN,
         'auth_login_failed',
         String(user._id),
-        { reason: 'bad_password' },
+        {
+          reason: 'bad_password',
+          mustChangePassword: Boolean(user.mustChangePassword),
+        },
         request,
       );
+      // Only hint about a temp password when one is active for this account.
+      if (user.mustChangePassword) {
+        throw new UnauthorizedException(
+          'A temporary password was set for this account. Sign in with that password — not your old one.',
+        );
+      }
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -271,7 +280,14 @@ export class AuthService {
   }
 
   async me(user: AuthUser) {
-    return createSuccessResponse(user, 'Current user retrieved');
+    const fresh = await this.usersService.findById(user.id);
+    if (!fresh) {
+      return createSuccessResponse(user, 'Current user retrieved');
+    }
+    return createSuccessResponse(
+      this.toPublicUser(fresh),
+      'Current user retrieved',
+    );
   }
 
   private async issueTokenPair(
@@ -363,6 +379,7 @@ export class AuthService {
     mobile: string | null;
     status: string;
     companyId?: { toString(): string } | null;
+    mustChangePassword?: boolean;
   }): AuthUser {
     return {
       id: String(user._id),
@@ -372,7 +389,20 @@ export class AuthService {
       mobile: user.mobile,
       status: user.status,
       companyId: user.companyId ? String(user.companyId) : null,
+      mustChangePassword: Boolean(user.mustChangePassword),
     };
+  }
+
+  async changePassword(
+    userId: string,
+    newPassword: string,
+    currentPassword?: string,
+  ) {
+    return this.usersService.changeOwnPassword(
+      userId,
+      newPassword,
+      currentPassword,
+    );
   }
 
   private async detectReuseAndRevoke(refreshToken: string): Promise<boolean> {

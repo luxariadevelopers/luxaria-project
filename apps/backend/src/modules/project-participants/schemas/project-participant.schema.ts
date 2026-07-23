@@ -32,6 +32,12 @@ export enum ParticipantApprovalStatus {
   Rejected = 'rejected',
 }
 
+/** How a loan participant is expected to be repaid. */
+export enum RepaymentMode {
+  Lumpsum = 'lumpsum',
+  WithInterest = 'with_interest',
+}
+
 @Schema({
   collection: 'project_participants',
   timestamps: true,
@@ -76,9 +82,20 @@ export class ProjectParticipant {
   @Prop({ type: Number, required: true, min: 0, max: 100 })
   lossSharePercentage!: number;
 
-  /** Required for loan instruments */
+  /** Required for loan instruments when repaymentMode is with_interest (or unset). */
   @Prop({ type: Number, default: null, min: 0 })
   interestRate!: number | null;
+
+  /**
+   * % of project approvedBudget this party is expected to fund.
+   * Typical for outside investors; optional for directors.
+   */
+  @Prop({ type: Number, default: null, min: 0, max: 100 })
+  budgetInvestmentPercentage!: number | null;
+
+  /** Loan repayment style — null for non-loan / unset. */
+  @Prop({ type: String, enum: RepaymentMode, default: null })
+  repaymentMode!: RepaymentMode | null;
 
   @Prop({ type: String, enum: InstrumentType, required: true, index: true })
   instrumentType!: InstrumentType;

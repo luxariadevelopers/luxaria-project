@@ -40,6 +40,283 @@ export type NavGroupId =
   | 'administration'
   | 'system';
 
+export type NavPillarId =
+  | 'overview'
+  | 'analytics'
+  | 'projects'
+  | 'supply'
+  | 'sales'
+  | 'finance'
+  | 'admin';
+
+type NavPillarMeta = {
+  id: NavPillarId;
+  label: string;
+  groupIds: readonly NavGroupId[];
+};
+
+type NavSectionMeta = {
+  id: string;
+  label: string;
+};
+
+/** Top-level sidebar pillars (short category list). */
+const NAV_PILLARS: readonly NavPillarMeta[] = [
+  { id: 'overview', label: 'Overview', groupIds: ['overview', 'approvals'] },
+  { id: 'analytics', label: 'Analytics', groupIds: ['analytics'] },
+  {
+    id: 'projects',
+    label: 'Projects',
+    groupIds: ['projects-site', 'project-control'],
+  },
+  {
+    id: 'supply',
+    label: 'Supply chain',
+    groupIds: ['procurement', 'contractors', 'inventory'],
+  },
+  { id: 'sales', label: 'Sales', groupIds: ['sales'] },
+  {
+    id: 'finance',
+    label: 'Finance',
+    groupIds: ['capital-investment', 'accounting', 'petty-cash', 'reports'],
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    groupIds: ['organisation', 'administration', 'system'],
+  },
+];
+
+const NAV_SECTIONS_BY_GROUP: Record<NavGroupId, readonly NavSectionMeta[]> = {
+  overview: [
+    { id: 'dashboards', label: 'Dashboards' },
+    { id: 'site', label: 'Site' },
+    { id: 'alerts', label: 'Alerts' },
+  ],
+  analytics: [
+    { id: 'command', label: 'Command' },
+    { id: 'project', label: 'Project intelligence' },
+    { id: 'forecasts', label: 'Forecasts' },
+    { id: 'domains', label: 'Domain analytics' },
+    { id: 'insights', label: 'Insights & reports' },
+  ],
+  approvals: [{ id: 'inbox', label: 'Approvals' }],
+  'projects-site': [
+    { id: 'workspace', label: 'Workspace' },
+    { id: 'governance', label: 'Governance' },
+  ],
+  'project-control': [
+    { id: 'progress', label: 'Progress & BOQ' },
+    { id: 'site-ops', label: 'Site operations' },
+    { id: 'materials', label: 'Materials & cost' },
+  ],
+  procurement: [
+    { id: 'masters', label: 'Masters' },
+    { id: 'sourcing', label: 'Sourcing' },
+    { id: 'orders', label: 'Orders & payables' },
+  ],
+  contractors: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'contracting', label: 'Contracting' },
+    { id: 'billing', label: 'Billing & payments' },
+    { id: 'labour', label: 'Labour & manpower' },
+    { id: 'registers', label: 'Registers' },
+  ],
+  'capital-investment': [
+    { id: 'people', label: 'People & ownership' },
+    { id: 'funding', label: 'Funding' },
+  ],
+  accounting: [
+    { id: 'ledger', label: 'Ledger' },
+    { id: 'cash-bank', label: 'Cash & bank' },
+    { id: 'control', label: 'Period & control' },
+    { id: 'compliance', label: 'Compliance & assets' },
+  ],
+  reports: [
+    { id: 'books', label: 'Books' },
+    { id: 'statements', label: 'Statements' },
+  ],
+  'petty-cash': [
+    { id: 'setup', label: 'Setup' },
+    { id: 'operations', label: 'Operations' },
+  ],
+  inventory: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'stock', label: 'Stock' },
+    { id: 'inbound', label: 'Inbound & quality' },
+    { id: 'outbound', label: 'Outbound & alerts' },
+  ],
+  sales: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'pipeline', label: 'Pipeline' },
+    { id: 'units', label: 'Units & customers' },
+    { id: 'collections', label: 'Collections' },
+    { id: 'handover', label: 'Handover & service' },
+  ],
+  organisation: [{ id: 'people', label: 'People' }],
+  administration: [
+    { id: 'company', label: 'Company' },
+    { id: 'access', label: 'Access & security' },
+    { id: 'governance', label: 'Governance' },
+    { id: 'platform', label: 'Platform' },
+  ],
+  system: [{ id: 'prefs', label: 'Preferences' }],
+};
+
+const NAV_SECTION_BY_ROUTE_ID: Readonly<Record<string, string>> = {
+  dashboard: 'dashboards',
+  'director-command-centre': 'dashboards',
+  'finance-dashboard': 'dashboards',
+  'purchase-dashboard': 'dashboards',
+  'site-operations-dashboard': 'site',
+  'site-execution-dashboard': 'site',
+  'site-execution-reports': 'site',
+  notifications: 'alerts',
+  'director-dashboard': 'command',
+  'executive-summary': 'command',
+  'project-health': 'project',
+  'project-profitability': 'project',
+  'cash-flow-forecast': 'forecasts',
+  'analytics-cost-forecast': 'forecasts',
+  'sales-analytics': 'domains',
+  'construction-analytics': 'domains',
+  'procurement-analytics': 'domains',
+  'inventory-analytics': 'domains',
+  'contractor-analytics': 'domains',
+  'financial-analytics': 'domains',
+  'risk-alerts': 'insights',
+  'kpi-drilldown': 'insights',
+  'analytics-reports': 'insights',
+  approvals: 'inbox',
+  projects: 'workspace',
+  'project-dashboard': 'workspace',
+  'project-participants': 'governance',
+  'profit-share': 'governance',
+  'daily-progress': 'progress',
+  boq: 'progress',
+  'boq-versions': 'progress',
+  'work-measurements': 'progress',
+  drawings: 'progress',
+  equipment: 'site-ops',
+  'site-quality': 'site-ops',
+  'site-safety': 'site-ops',
+  'site-issues': 'site-ops',
+  'site-diary': 'site-ops',
+  'material-coefficients': 'materials',
+  'material-variance': 'materials',
+  'cost-forecast': 'materials',
+  vendors: 'masters',
+  'procurement-masters': 'masters',
+  'rfq-list': 'sourcing',
+  'purchase-requests': 'sourcing',
+  quotations: 'sourcing',
+  'purchase-orders': 'orders',
+  'vendor-invoices': 'orders',
+  'vendor-payments': 'orders',
+  contractors: 'overview',
+  'contractor-dashboard': 'overview',
+  'contractor-reports': 'overview',
+  'contractor-compliance': 'overview',
+  'contractor-tenders': 'contracting',
+  'rate-contracts': 'contracting',
+  'work-orders': 'contracting',
+  'contractor-agreements': 'contracting',
+  'running-bills': 'billing',
+  'contractor-payments': 'billing',
+  'signed-payment-vouchers': 'billing',
+  'labour-categories': 'labour',
+  'labour-attendance': 'labour',
+  'manpower-shortfall': 'labour',
+  'manpower-plans': 'labour',
+  'measurement-book': 'registers',
+  'material-reconciliation': 'registers',
+  'retention-register': 'registers',
+  'contractor-recoveries': 'registers',
+  'contractor-ledger': 'registers',
+  directors: 'people',
+  shareholding: 'people',
+  investors: 'people',
+  'funding-dashboard': 'funding',
+  commitments: 'funding',
+  'contribution-receipts': 'funding',
+  'chart-of-accounts': 'ledger',
+  journals: 'ledger',
+  'journal-create': 'ledger',
+  'cost-centres': 'ledger',
+  'opening-balances': 'ledger',
+  'cash-accounts': 'cash-bank',
+  'bank-accounts': 'cash-bank',
+  'bank-reconciliation': 'cash-bank',
+  'financial-years': 'control',
+  'period-close': 'control',
+  budgets: 'control',
+  gst: 'compliance',
+  tds: 'compliance',
+  'fixed-assets': 'compliance',
+  'customer-invoices': 'compliance',
+  'construction-reports': 'statements',
+  'accounting-reports': 'statements',
+  'cash-book': 'books',
+  'bank-book': 'books',
+  'expense-categories': 'setup',
+  'site-expenses': 'operations',
+  'petty-cash-requests': 'operations',
+  'petty-cash-fund-transfers': 'operations',
+  'inventory-dashboard': 'overview',
+  'inventory-reports': 'overview',
+  materials: 'stock',
+  'stock-balances': 'stock',
+  'stock-ledger': 'stock',
+  'stock-counts': 'stock',
+  'stock-transfers': 'stock',
+  'stock-reservations': 'stock',
+  'warehouse-locations': 'stock',
+  grns: 'inbound',
+  'quality-inspections': 'inbound',
+  'material-issues': 'outbound',
+  'reorder-alerts': 'outbound',
+  'sales-dashboard': 'overview',
+  leads: 'pipeline',
+  'unit-quotations': 'pipeline',
+  bookings: 'pipeline',
+  'sale-agreements': 'pipeline',
+  cancellations: 'pipeline',
+  customers: 'units',
+  units: 'units',
+  collections: 'collections',
+  'payment-schedules': 'collections',
+  'customer-loans': 'collections',
+  'unit-registrations': 'handover',
+  'unit-handovers': 'handover',
+  'customer-warranties': 'handover',
+  'customer-portal': 'handover',
+  users: 'people',
+  'company-overview': 'company',
+  employees: 'company',
+  departments: 'company',
+  designations: 'company',
+  'site-access-admin': 'access',
+  roles: 'access',
+  documents: 'governance',
+  'audit-logs': 'governance',
+  'director-digest': 'governance',
+  'approval-workflows': 'governance',
+  'system-health': 'platform',
+  settings: 'prefs',
+};
+
+function getNavSectionId(routeId: string): string | undefined {
+  return NAV_SECTION_BY_ROUTE_ID[routeId];
+}
+
+/** Re-exported for nav structure tests / tooling. */
+export {
+  NAV_PILLARS,
+  NAV_SECTIONS_BY_GROUP,
+  NAV_SECTION_BY_ROUTE_ID,
+  getNavSectionId,
+};
+
 /**
  * Central route metadata (Micro Phase 012).
  * Navigation visibility and route guards both read from this registry.
@@ -76,18 +353,18 @@ export type NavGroupMeta = {
 
 export const NAV_GROUP_META: readonly NavGroupMeta[] = [
   { id: 'overview', label: 'Overview' },
-  { id: 'analytics', label: 'Director Analytics' },
+  { id: 'analytics', label: 'Analytics' },
   { id: 'approvals', label: 'Approvals' },
-  { id: 'projects-site', label: 'Projects & site' },
-  { id: 'project-control', label: 'Project Control' },
+  { id: 'projects-site', label: 'Projects' },
+  { id: 'project-control', label: 'Project control' },
   { id: 'procurement', label: 'Procurement' },
   { id: 'contractors', label: 'Contractors' },
-  { id: 'capital-investment', label: 'Capital & Investment' },
-  { id: 'accounting', label: 'Accounting' },
-  { id: 'reports', label: 'Accounting reports' },
-  { id: 'petty-cash', label: 'Petty Cash' },
   { id: 'inventory', label: 'Inventory' },
   { id: 'sales', label: 'Sales' },
+  { id: 'capital-investment', label: 'Capital' },
+  { id: 'accounting', label: 'Accounting' },
+  { id: 'petty-cash', label: 'Petty cash' },
+  { id: 'reports', label: 'Reports' },
   { id: 'organisation', label: 'Organisation' },
   { id: 'administration', label: 'Administration' },
   { id: 'system', label: 'System' },
@@ -161,10 +438,11 @@ const APP_ROUTES = [
     path: '/director-dashboard',
     title: 'Director Dashboard',
     layout: 'app',
-    showInNav: true,
+    // Hidden: same UI as Director Command Centre — keep route for deep links.
+    showInNav: false,
     groupId: 'analytics',
     icon: 'dashboard',
-    anyOf: ['analytics.dashboard.view'],
+    anyOf: ['analytics.dashboard.view', 'dashboard.view'],
     projectScope: 'none',
     breadcrumbSegment: 'director-dashboard',
   },
@@ -540,6 +818,16 @@ const APP_ROUTES = [
     breadcrumbSegment: 'projects',
   },
   {
+    id: 'project-expense-income',
+    path: '/projects/:projectId/expense-income',
+    title: 'Expense & Income',
+    layout: 'app',
+    showInNav: false,
+    allOf: ['project.view', 'report.view'],
+    projectScope: 'none',
+    breadcrumbSegment: 'projects',
+  },
+  {
     id: 'project-dashboard',
     path: '/projects/dashboard',
     title: 'Project Dashboard',
@@ -696,6 +984,28 @@ const APP_ROUTES = [
     anyOf: ['contractor_retention.view'],
     projectScope: 'required',
     breadcrumbSegment: 'retention-register',
+  },
+  {
+    id: 'contractor-recoveries',
+    path: '/contractor-recoveries',
+    title: 'Contractor Recoveries',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'contractors',
+    icon: 'finance',
+    anyOf: ['contractor_recovery.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'contractor-recoveries',
+  },
+  {
+    id: 'contractor-recovery-detail',
+    path: '/contractor-recoveries/:id',
+    title: 'Contractor Recovery',
+    layout: 'app',
+    showInNav: false,
+    anyOf: ['contractor_recovery.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'contractor-recoveries',
   },
   {
     id: 'contractor-ledger',
@@ -1496,6 +1806,30 @@ const APP_ROUTES = [
     breadcrumbSegment: 'stock-transfers',
   },
   {
+    id: 'stock-reservations',
+    path: '/inventory/stock-reservations',
+    title: 'Stock Reservations',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'inventory',
+    icon: 'stock',
+    anyOf: ['stock.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'stock-reservations',
+  },
+  {
+    id: 'warehouse-locations',
+    path: '/inventory/warehouse-locations',
+    title: 'Warehouse Locations',
+    layout: 'app',
+    showInNav: true,
+    groupId: 'inventory',
+    icon: 'stock',
+    anyOf: ['site.view'],
+    projectScope: 'required',
+    breadcrumbSegment: 'warehouse-locations',
+  },
+  {
     id: 'inventory-reports',
     path: '/inventory/reports',
     title: 'Inventory Reports',
@@ -2001,7 +2335,8 @@ const APP_ROUTES = [
     showInNav: true,
     groupId: 'petty-cash',
     icon: 'finance',
-    anyOf: ['petty_cash.view'],
+    // Creators (site) + approvers (MD / Director / PM / Finance). Not create-gated alone.
+    anyOf: ['petty_cash.request', 'petty_cash.approve'],
     projectScope: 'required',
     breadcrumbSegment: 'requests',
   },
@@ -2021,7 +2356,7 @@ const APP_ROUTES = [
     title: 'Petty Cash Request',
     layout: 'app',
     showInNav: false,
-    anyOf: ['petty_cash.view'],
+    anyOf: ['petty_cash.request', 'petty_cash.approve', 'petty_cash.view'],
     projectScope: 'required',
     breadcrumbSegment: 'requests',
   },
@@ -2045,6 +2380,16 @@ const APP_ROUTES = [
     showInNav: true,
     groupId: 'inventory',
     icon: 'stock',
+    anyOf: ['grn.create'],
+    projectScope: 'required',
+    breadcrumbSegment: 'grns',
+  },
+  {
+    id: 'grn-create',
+    path: '/inventory/grns/new',
+    title: 'New Goods Receipt',
+    layout: 'app',
+    showInNav: false,
     anyOf: ['grn.create'],
     projectScope: 'required',
     breadcrumbSegment: 'grns',
@@ -2526,11 +2871,31 @@ export type NavItemConfig = {
   end?: boolean;
   icon: NavIconId;
   projectScope: ProjectScopeMode;
+  /** Subcategory id within the parent group (see `navStructure.ts`). */
+  sectionId?: string;
+};
+
+export type NavSectionConfig = {
+  id: string;
+  label: string;
+  items: readonly NavItemConfig[];
 };
 
 export type NavGroupConfig = {
   id: NavGroupId;
   label: string;
+  /** Flat list (permission filters / tests). */
+  items: readonly NavItemConfig[];
+  /** Module → subcategory nesting for the sidebar. */
+  sections: readonly NavSectionConfig[];
+};
+
+/** Top-level sidebar category (short list of pillars). */
+export type NavPillarConfig = {
+  id: NavPillarId;
+  label: string;
+  groups: readonly NavGroupConfig[];
+  /** Flat list of all items under this pillar. */
   items: readonly NavItemConfig[];
 };
 
@@ -2547,28 +2912,90 @@ function toNavItem(route: AppRouteDefinition): NavItemConfig {
     end: route.end,
     icon: route.icon,
     projectScope: route.projectScope,
+    sectionId: getNavSectionId(route.id),
   };
+}
+
+function buildSections(
+  groupId: NavGroupId,
+  items: readonly NavItemConfig[],
+): NavSectionConfig[] {
+  const sectionMeta = NAV_SECTIONS_BY_GROUP[groupId] ?? [];
+  const bySection = new Map<string, NavItemConfig[]>();
+  const unsectioned: NavItemConfig[] = [];
+
+  for (const item of items) {
+    if (item.sectionId) {
+      const bucket = bySection.get(item.sectionId) ?? [];
+      bucket.push(item);
+      bySection.set(item.sectionId, bucket);
+    } else {
+      unsectioned.push(item);
+    }
+  }
+
+  const sections: NavSectionConfig[] = sectionMeta
+    .map((meta) => ({
+      id: meta.id,
+      label: meta.label,
+      items: bySection.get(meta.id) ?? [],
+    }))
+    .filter((section) => section.items.length > 0);
+
+  if (unsectioned.length > 0) {
+    sections.push({
+      id: '_other',
+      label: 'Other',
+      items: unsectioned,
+    });
+  }
+
+  return sections;
 }
 
 /** Sidebar groups derived from the registry (permission filter applied later). */
 export function buildNavGroupsFromRegistry(
   routes: readonly AppRouteDefinition[] = APP_ROUTE_REGISTRY,
 ): NavGroupConfig[] {
-  return NAV_GROUP_META.map((group) => ({
-    id: group.id,
-    label: group.label,
-    items: routes
+  return NAV_GROUP_META.map((group) => {
+    const items = routes
       .filter(
         (route) =>
           route.layout === 'app' &&
           route.showInNav &&
           route.groupId === group.id,
       )
-      .map(toNavItem),
-  })).filter((group) => group.items.length > 0);
+      .map(toNavItem);
+    return {
+      id: group.id,
+      label: group.label,
+      items,
+      sections: buildSections(group.id, items),
+    };
+  }).filter((group) => group.items.length > 0);
 }
 
 export const NAV_GROUPS = buildNavGroupsFromRegistry();
+
+/** Sidebar pillars: few top-level categories wrapping module groups. */
+export function buildNavPillarsFromRegistry(
+  groups: readonly NavGroupConfig[] = buildNavGroupsFromRegistry(),
+): NavPillarConfig[] {
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  return NAV_PILLARS.map((pillar) => {
+    const pillarGroups = pillar.groupIds
+      .map((groupId) => byId.get(groupId))
+      .filter((group): group is NavGroupConfig => Boolean(group));
+    return {
+      id: pillar.id,
+      label: pillar.label,
+      groups: pillarGroups,
+      items: pillarGroups.flatMap((group) => group.items),
+    };
+  }).filter((pillar) => pillar.items.length > 0);
+}
+
+export const NAV_PILLARS_BUILT = buildNavPillarsFromRegistry();
 
 export function getRouteById(
   id: string,

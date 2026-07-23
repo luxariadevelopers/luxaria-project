@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
@@ -12,6 +13,7 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { ReportingApprovalMode } from '../../users/schemas/user.schema';
 import { EmployeeStatus } from '../schemas/employee.schema';
 
 export class CreateEmployeeDto {
@@ -230,10 +232,34 @@ export class ProvisionSiteEngineerDto {
   @IsMongoId()
   designationId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Primary reporting officer (must be one of reportingOfficerUserIds)',
+  })
   @IsOptional()
   @IsMongoId()
   reportingManagerUserId?: string | null;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Up to 2 reporting officers. With approval mode any, either can cover if one is unavailable.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(2)
+  @IsMongoId({ each: true })
+  reportingOfficerUserIds?: string[];
+
+  @ApiPropertyOptional({
+    enum: ReportingApprovalMode,
+    default: ReportingApprovalMode.Any,
+    description:
+      'any = one officer can approve; all = every listed officer must approve',
+  })
+  @IsOptional()
+  @IsEnum(ReportingApprovalMode)
+  reportingApprovalMode?: ReportingApprovalMode;
 
   @ApiProperty({ default: true })
   @IsBoolean()
@@ -284,4 +310,26 @@ export class ProvisionSiteEngineerDto {
   @IsOptional()
   @IsBoolean()
   sendInvitation?: boolean;
+}
+
+/** Sync web/mobile module visibility via global deny overrides. */
+export class SyncEmployeeModuleAccessDto {
+  @ApiProperty({
+    type: [String],
+    description:
+      'Permissions to deny for this employee (module checklist). Empty = enable all catalog modules.',
+  })
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  denyPermissions!: string[];
+
+  @ApiProperty({
+    type: [String],
+    description: 'Full permission catalog managed by the module checklist',
+  })
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  catalogPermissions!: string[];
 }

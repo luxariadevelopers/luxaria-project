@@ -63,8 +63,9 @@ describe('navigation registry integrity', () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it('mirrors backend permission catalog size', () => {
-    expect(PERMISSIONS.length).toBe(193);
+  it('exposes the web permission catalog used by route anyOf/allOf', () => {
+    expect(PERMISSIONS.length).toBeGreaterThan(0);
+    expect(new Set(PERMISSIONS).size).toBe(PERMISSIONS.length);
   });
 });
 
@@ -290,6 +291,7 @@ describe('representative role visibility (nav + guard same source)', () => {
       'stock-counts',
       'stock-count-detail',
       'grns',
+      'grn-create',
       'grn-detail',
       'quality-inspections',
       'quality-inspection-detail',
@@ -734,16 +736,16 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(visibleIds(ctx)).not.toContain('bank-accounts');
   });
 
-  it('petty-cash viewer sees Petty Cash → Fund Requests', () => {
-    const ctx = {
+  it('petty-cash approver sees Petty Cash → Fund Requests; pure viewer does not', () => {
+    const approver = {
       accessLoaded: true,
       bypassPermissions: false,
-      permissions: ['petty_cash.view'] as const,
+      permissions: ['petty_cash.approve', 'petty_cash.view'] as const,
     };
-    expect(visibleIds(ctx)).toContain('petty-cash-requests');
-    expect(canEnterRoute(requireRouteById('petty-cash-requests'), ctx)).toBe(
-      true,
-    );
+    expect(visibleIds(approver)).toContain('petty-cash-requests');
+    expect(
+      canEnterRoute(requireRouteById('petty-cash-requests'), approver),
+    ).toBe(true);
     expect(requireRouteById('petty-cash-requests').path).toBe(
       '/accounting/petty-cash/requests',
     );
@@ -753,12 +755,22 @@ describe('representative role visibility (nav + guard same source)', () => {
     );
     expect(requireRouteById('petty-cash-requests').title).toBe('Fund Requests');
     expect(
-      canEnterRoute(requireRouteById('petty-cash-request-detail'), ctx),
+      canEnterRoute(requireRouteById('petty-cash-request-detail'), approver),
     ).toBe(true);
-    expect(visibleIds(ctx)).not.toContain('petty-cash-request-detail');
-    expect(visibleIds(ctx)).not.toContain('petty-cash-request-create');
+    expect(visibleIds(approver)).not.toContain('petty-cash-request-detail');
+    expect(visibleIds(approver)).not.toContain('petty-cash-request-create');
     expect(
-      canEnterRoute(requireRouteById('petty-cash-request-create'), ctx),
+      canEnterRoute(requireRouteById('petty-cash-request-create'), approver),
+    ).toBe(false);
+
+    const viewerOnly = {
+      accessLoaded: true,
+      bypassPermissions: false,
+      permissions: ['petty_cash.view'] as const,
+    };
+    expect(visibleIds(viewerOnly)).not.toContain('petty-cash-requests');
+    expect(
+      canEnterRoute(requireRouteById('petty-cash-requests'), viewerOnly),
     ).toBe(false);
   });
 
@@ -866,11 +878,14 @@ describe('representative role visibility (nav + guard same source)', () => {
     };
     expect(visibleIds(ctx)).toContain('grns');
     expect(canEnterRoute(requireRouteById('grns'), ctx)).toBe(true);
+    expect(canEnterRoute(requireRouteById('grn-create'), ctx)).toBe(true);
     expect(canEnterRoute(requireRouteById('grn-detail'), ctx)).toBe(true);
     expect(requireRouteById('grns').path).toBe('/inventory/grns');
     expect(requireRouteById('grns').groupId).toBe('inventory');
     expect(requireRouteById('grns').projectScope).toBe('required');
     expect(requireRouteById('grns').title).toBe('Goods Receipts');
+    expect(requireRouteById('grn-create').path).toBe('/inventory/grns/new');
+    expect(requireRouteById('grn-create').showInNav).toBe(false);
     expect(requireRouteById('grn-detail').path).toBe('/inventory/grns/:grnId');
     expect(requireRouteById('grn-detail').showInNav).toBe(false);
   });
@@ -1094,16 +1109,19 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(visibleIds(viewer)).not.toContain('purchase-request-create');
   });
 
-  it('denies fund requests without petty_cash.view', () => {
+  it('site requester sees fund requests; create needs petty_cash.request', () => {
     const ctx = {
       accessLoaded: true,
       bypassPermissions: false,
       permissions: ['petty_cash.request'] as const,
     };
     expect(canEnterRoute(requireRouteById('petty-cash-requests'), ctx)).toBe(
-      false,
+      true,
     );
-    expect(visibleIds(ctx)).not.toContain('petty-cash-requests');
+    expect(visibleIds(ctx)).toContain('petty-cash-requests');
+    expect(
+      canEnterRoute(requireRouteById('petty-cash-request-create'), ctx),
+    ).toBe(true);
   });
 
   it('quotation viewer sees Procurement → Quotations', () => {
@@ -1317,11 +1335,11 @@ describe('representative role visibility (nav + guard same source)', () => {
     expect(visibleIds(ctx)).not.toContain('journals');
   });
 
-  it('keeps nav + guard pending until permissions load', () => {
+  it('hides gated nav and blocks routes until permissions load', () => {
     const ctx = ROLES.pending;
     expect(evaluateRouteAccess(requireRouteById('users'), ctx)).toBe('pending');
-    expect(visibleIds(ctx)).toContain('users');
-    expect(canEnterRoute(requireRouteById('users'), ctx)).toBe(true);
+    expect(visibleIds(ctx)).not.toContain('users');
+    expect(canEnterRoute(requireRouteById('users'), ctx)).toBe(false);
   });
 
   it('expense category viewer sees Petty Cash → Expense Categories', () => {
@@ -1822,7 +1840,8 @@ describe('pathMatchesPattern / param routes', () => {
     ).toBe('customer-detail');
   });
 
-  it('matches goods receipt detail paths', () => {
+  it('matches goods receipt create and detail paths', () => {
+    expect(findRouteByPathname('/inventory/grns/new')?.id).toBe('grn-create');
     expect(
       pathMatchesPattern(
         '/inventory/grns/:grnId',

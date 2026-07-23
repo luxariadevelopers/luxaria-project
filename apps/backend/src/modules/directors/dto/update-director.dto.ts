@@ -19,10 +19,12 @@ export class UpdateDirectorDto {
   @IsString()
   fullName?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiPropertyOptional({
+    description: 'Linked system user — cannot be cleared once set',
+  })
+  @ValidateIf((o: UpdateDirectorDto) => o.userId !== undefined)
   @IsMongoId()
-  userId?: string | null;
+  userId?: string;
 
   @ApiPropertyOptional()
   @ValidateIf((o: UpdateDirectorDto) => o.din !== null && o.din !== undefined && o.din !== '')

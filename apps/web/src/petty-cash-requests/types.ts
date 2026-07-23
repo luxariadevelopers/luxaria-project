@@ -48,6 +48,7 @@ export type PublicPettyCashRequirement = {
   projectId: string;
   pettyCashAccountId: string;
   requestedBy: string;
+  requestedByName: string | null;
   weekStartDate: string;
   weekEndDate: string;
   currentCashBalance: number;
@@ -61,12 +62,17 @@ export type PublicPettyCashRequirement = {
   status: PettyCashRequirementStatus;
   approvalRequestId: string | null;
   projectManagerReviewedBy: string | null;
+  projectManagerReviewedByName: string | null;
   projectManagerReviewedAt: string | null;
   financeReviewedBy: string | null;
+  financeReviewedByName: string | null;
   financeReviewedAt: string | null;
+  approvedByName: string | null;
   fundedBy: string | null;
+  fundedByName: string | null;
   fundedAt: string | null;
   closedBy: string | null;
+  closedByName: string | null;
   closedAt: string | null;
   rejectionReason: string | null;
   createdAt?: string;

@@ -76,6 +76,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       mobile: user.mobile,
       status: user.status,
       companyId,
+      mustChangePassword: Boolean(user.mustChangePassword),
     };
   }
 }

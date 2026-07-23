@@ -27,6 +27,8 @@ export type AuthUser = {
   status: string;
   /** Authoritative tenant resolved by the backend; never user-editable. */
   companyId: string | null;
+  /** True when admin set a temporary password; user must set a permanent one. */
+  mustChangePassword?: boolean;
 };
 
 export type LoginResponse = {

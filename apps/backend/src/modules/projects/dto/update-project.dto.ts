@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsMongoId,
@@ -150,6 +151,14 @@ export class UpdateProjectDto {
   @IsNumber()
   @Min(0)
   approvedBudget?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, capital plan expects equal ₹ funding among director participants',
+  })
+  @IsOptional()
+  @IsBoolean()
+  equalDirectorInvestment?: boolean;
 
   @ApiPropertyOptional({ enum: ProjectStage })
   @IsOptional()

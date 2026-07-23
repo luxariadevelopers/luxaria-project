@@ -8,6 +8,7 @@ import { isExpenseEditable } from './validation';
 export type ExpenseRowActionId = 'verify' | 'approve' | 'post';
 
 export type ExpenseDetailActionId =
+  | 'submit'
   | 'verify'
   | 'approve'
   | 'reject'
@@ -57,6 +58,14 @@ export function resolveExpenseDetailActions(
 ): ExpenseDetailActionId[] {
   const actions: ExpenseDetailActionId[] = [];
   const { status } = row;
+
+  if (
+    caps.canCreate &&
+    (status === SiteExpenseVoucherStatus.Draft ||
+      status === SiteExpenseVoucherStatus.Returned)
+  ) {
+    actions.push('submit');
+  }
 
   if (status === SiteExpenseVoucherStatus.Submitted && caps.canVerify) {
     actions.push('verify', 'reject', 'return');

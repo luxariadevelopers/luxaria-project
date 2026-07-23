@@ -12,7 +12,10 @@ import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 import { listPettyCashRequirements } from './api';
 import { resolvePettyCashCapabilities } from './permissions';
-import type { PublicPettyCashRequirement } from './types';
+import {
+  requestNumberOf,
+  type PublicPettyCashRequirement,
+} from './types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PettyCashList'>;
 
@@ -66,7 +69,7 @@ export function PettyCashListScreen({ navigation }: Props) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load('refresh')} tintColor={colors.primary} />}
           renderItem={({ item }) => (
             <Pressable style={styles.card} onPress={() => navigation.navigate('PettyCashDetail', { requestId: item.id })}>
-              <Text style={styles.code}>{item.requirementNumber}</Text>
+              <Text style={styles.code}>{requestNumberOf(item)}</Text>
               <Text style={styles.meta}>{item.status} · {String(item.weekStartDate).slice(0, 10)} → {String(item.weekEndDate).slice(0, 10)}</Text>
             </Pressable>
           )}

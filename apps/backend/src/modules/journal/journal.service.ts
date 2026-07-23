@@ -126,14 +126,9 @@ export class JournalService {
         }
       }
 
-      const journalNumber = await this.numberingService.nextCode(
-        NumberEntityType.JOURNAL_ENTRY,
-        {
-          asOf: journalDate,
-          projectId: dto.projectId ?? undefined,
-          projectScoped: Boolean(dto.projectId),
-        },
-        session ?? undefined,
+      const journalNumber = await this.allocateUniqueJournalNumber(
+        journalDate,
+        session,
       );
 
       const payload = {
@@ -228,6 +223,99 @@ export class JournalService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return createSuccessResponse(toPublicJournal(row), 'Journal entry updated');
+  }
+
+  /**
+   * Correct a posted journal in place (same voucher number).
+   * Used by project income/expense Edit — does not create a reversal or new JV.
+   */
+  async amendPosted(id: string, dto: UpdateJournalDto, actorId: string) {
+    const row = await this.requireJournal(id, null, actorId, 'update');
+    if (row.status !== JournalStatus.Posted) {
+      throw new BadRequestException(
+        'Only posted journals can be amended; use update for drafts',
+      );
+    }
+    if (row.reversedBy) {
+      throw new ConflictException(
+        'Journal has been reversed and cannot be amended',
+      );
+    }
+    if (row.reversalOf) {
+      throw new BadRequestException(
+        'Reversal journals cannot be amended; amend the original instead',
+      );
+    }
+
+    const before = toPublicJournal(row);
+    const oldAccountIds = [
+      ...new Set(row.lines.map((line) => String(line.accountId))),
+    ];
+
+    if (dto.narration !== undefined) {
+      row.narration = dto.narration.trim();
+    }
+    if (dto.projectId !== undefined) {
+      row.projectId = dto.projectId
+        ? new Types.ObjectId(dto.projectId)
+        : null;
+    }
+    if (dto.journalDate !== undefined) {
+      const journalDate = new Date(dto.journalDate);
+      await this.financialYearService.assertPostingAllowed(journalDate);
+      const fy = await this.resolveFinancialYearForDate(journalDate);
+      row.journalDate = journalDate;
+      row.financialYearId = new Types.ObjectId(fy.id);
+    } else {
+      await this.financialYearService.assertPostingAllowed(row.journalDate);
+    }
+
+    if (dto.lines) {
+      const { lines, totalDebit, totalCredit } = validateAndNormalizeLines(
+        dto.lines,
+      );
+      await this.assertLineAccountsAndDimensions(
+        lines,
+        row.projectId ? String(row.projectId) : null,
+      );
+      row.lines = this.toEmbeddedLines(lines) as JournalLine[];
+      row.totalDebit = totalDebit;
+      row.totalCredit = totalCredit;
+    }
+
+    row.set('updatedBy', new Types.ObjectId(actorId));
+    await row.save();
+
+    const newAccountIds = [
+      ...new Set(row.lines.map((line) => String(line.accountId))),
+    ];
+    for (const accountId of oldAccountIds) {
+      if (!newAccountIds.includes(accountId)) {
+        await this.chartOfAccountsService.incrementPostingCount(accountId, -1);
+      }
+    }
+    for (const accountId of newAccountIds) {
+      if (!oldAccountIds.includes(accountId)) {
+        await this.chartOfAccountsService.incrementPostingCount(accountId, 1);
+      }
+    }
+
+    const after = toPublicJournal(row);
+    await this.auditLogService.record({
+      userId: actorId,
+      action: AuditAction.UPDATE,
+      module: 'journal',
+      entityType: 'journal_entry',
+      entityId: String(row._id),
+      projectId: row.projectId ? String(row.projectId) : null,
+      beforeData: before,
+      afterData: after,
+    });
+
+    return createSuccessResponse(
+      after,
+      'Journal entry amended',
+    );
   }
 
   async submitForApproval(id: string, actorId: string) {
@@ -367,15 +455,8 @@ export class JournalService {
         original.projectId ? String(original.projectId) : null,
       );
 
-      const journalNumber = await this.numberingService.nextCode(
-        NumberEntityType.JOURNAL_ENTRY,
-        {
-          asOf: reversalDate,
-          projectId: original.projectId
-            ? String(original.projectId)
-            : undefined,
-          projectScoped: Boolean(original.projectId),
-        },
+      const journalNumber = await this.allocateUniqueJournalNumber(
+        reversalDate,
         session,
       );
 
@@ -530,6 +611,34 @@ export class JournalService {
   // ─── internals ─────────────────────────────────────────────────────────
 
   /** Assign FY for drafts without enforcing lock (lock enforced on post/reverse). */
+  /**
+   * Allocate a JV number that is not already used.
+   * Counters can lag behind reality after scope/config changes; skip collisions.
+   */
+  private async allocateUniqueJournalNumber(
+    asOf: Date,
+    session?: ClientSession | null,
+  ): Promise<string> {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const journalNumber = await this.numberingService.nextCode(
+        NumberEntityType.JOURNAL_ENTRY,
+        { asOf },
+        session ?? undefined,
+      );
+      const existsQuery = this.journalModel.exists({ journalNumber });
+      if (session) {
+        existsQuery.session(session);
+      }
+      const exists = await existsQuery.exec();
+      if (!exists) {
+        return journalNumber;
+      }
+    }
+    throw new ConflictException(
+      'Could not allocate a unique journal number; please retry',
+    );
+  }
+
   private async resolveFinancialYearForDate(journalDate: Date) {
     const result = await this.financialYearService.resolveTransactionDate(
       journalDate,

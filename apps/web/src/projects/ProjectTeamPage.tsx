@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import AddIcon from '@mui/icons-material/Add';
 import {
   Box,
   Button,
@@ -19,7 +20,9 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Typography,
 } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -28,10 +31,13 @@ import { DetailHeader } from '@/components/entity-detail';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { formatDate } from '@/format';
+import { canCreateUser } from '@/user-admin/roleAccess';
 import {
   PROJECT_TEAM_ROLE_OPTIONS,
   projectTeamRoleLabel,
 } from './constants';
+import { projectKeys } from './queryKeys';
+import { QuickCreateUserDialog } from './QuickCreateUserDialog';
 import {
   useAssignProjectTeam,
   useProjectDetail,
@@ -72,8 +78,10 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
   const projectId = projectIdProp ?? params.projectId;
   const { access, hasPermission } = useAuth();
   const notify = useNotify();
+  const queryClient = useQueryClient();
   const canView = Boolean(access) && hasPermission('project.view');
   const canAssign = hasPermission('project_access.assign');
+  const canAddUser = canCreateUser(access);
   const detailQuery = useProjectDetail(projectId, canView);
   const teamQuery = useProjectTeam(projectId, canView);
   const usersQuery = useProjectUserOptions(
@@ -87,6 +95,7 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
   const revokeMutation = useRevokeProjectTeam(projectId ?? '');
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
   const [teamRole, setTeamRole] = useState(ProjectTeamRole.SiteEngineer);
@@ -97,6 +106,7 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
   const [accessEndDate, setAccessEndDate] = useState('');
 
   const project = detailQuery.data;
+  const members = teamQuery.data ?? [];
   const userNameById = useMemo(
     () =>
       new Map((usersQuery.data ?? []).map((user) => [user.id, user.fullName])),
@@ -106,6 +116,15 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
     () => flattenSiteOptions(structureQuery.data ?? []),
     [structureQuery.data],
   );
+  /** Users already on this project (active) — hide from assign picker. */
+  const availableUsers = useMemo(() => {
+    const assignedIds = new Set(
+      members
+        .filter((member) => String(member.status).toLowerCase() === 'active')
+        .map((member) => member.userId),
+    );
+    return (usersQuery.data ?? []).filter((user) => !assignedIds.has(user.id));
+  }, [members, usersQuery.data]);
 
   if (!access || (canView && (detailQuery.isLoading || teamQuery.isLoading))) {
     return (
@@ -149,8 +168,6 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
     );
   }
 
-  const members = teamQuery.data ?? [];
-
   return (
     <Stack spacing={2.5} data-testid="project-team-page">
       <DetailHeader
@@ -160,7 +177,13 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
         backLabel="Project"
         meta={
           canAssign ? (
-            <Button variant="contained" onClick={() => setDialogOpen(true)}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setUserId('');
+                setDialogOpen(true);
+              }}
+            >
               Assign member
             </Button>
           ) : undefined
@@ -230,21 +253,74 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
         <DialogTitle>Assign team member</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl fullWidth required>
-              <InputLabel id="team-user">User</InputLabel>
-              <Select
-                labelId="team-user"
-                label="User"
-                value={userId}
-                onChange={(event) => setUserId(event.target.value)}
+            {availableUsers.length === 0 ? (
+              <EmptyState
+                title="No users left to assign"
+                description={
+                  canAddUser
+                    ? 'Everyone available is already on this project. Add a new user to assign them here.'
+                    : 'Everyone available is already an active team member. Revoke someone first, or ask an admin to create a user.'
+                }
+                actionLabel={canAddUser ? 'Add user' : undefined}
+                onAction={
+                  canAddUser
+                    ? () => {
+                        // Close assign dialog first so focus is not left under aria-hidden.
+                        setDialogOpen(false);
+                        window.setTimeout(() => setCreateUserOpen(true), 0);
+                      }
+                    : undefined
+                }
+              />
+            ) : null}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ alignItems: { sm: 'flex-start' } }}
+            >
+              <FormControl
+                fullWidth
+                required
+                disabled={availableUsers.length === 0}
               >
-                {(usersQuery.data ?? []).map((user) => (
-                  <MenuItem key={user.id} value={user.id}>
-                    {user.fullName} · {user.userCode}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                <InputLabel id="team-user">User</InputLabel>
+                <Select
+                  labelId="team-user"
+                  label="User"
+                  value={userId}
+                  onChange={(event) => setUserId(event.target.value)}
+                >
+                  {availableUsers.map((user) => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.fullName} · {user.userCode}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {canAddUser ? (
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                    setDialogOpen(false);
+                    window.setTimeout(() => setCreateUserOpen(true), 0);
+                  }}
+                  disabled={assignMutation.isPending}
+                  sx={{ flexShrink: 0, mt: { sm: 0.5 } }}
+                >
+                  Add user
+                </Button>
+              ) : null}
+            </Stack>
+            {canAddUser ? (
+              <Typography variant="caption" color="text.secondary">
+                Need someone new? Use Add user — they are created and assigned
+                to this project in one step.
+              </Typography>
+            ) : null}
             <FormControl fullWidth required>
               <InputLabel id="team-role">Team role</InputLabel>
               <Select
@@ -354,6 +430,59 @@ export function ProjectTeamPage({ projectId: projectIdProp }: Props = {}) {
           }
         }}
       />
+
+      {canAddUser ? (
+        <QuickCreateUserDialog
+          open={createUserOpen}
+          submitting={assignMutation.isPending}
+          onClose={() => {
+            setCreateUserOpen(false);
+            setDialogOpen(true);
+          }}
+          onCreated={async (user) => {
+            if (!accessStartDate) {
+              notify.error('Access start date is required');
+              setCreateUserOpen(false);
+              setDialogOpen(true);
+              setUserId(user.id);
+              return;
+            }
+            try {
+              await assignMutation.mutateAsync({
+                userId: user.id,
+                teamRole,
+                siteId: siteId || null,
+                accessStartDate,
+                accessEndDate: accessEndDate || null,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: projectKeys.users,
+              });
+              setCreateUserOpen(false);
+              setDialogOpen(false);
+              setUserId('');
+              setSiteId('');
+              setAccessEndDate('');
+              notify.success(
+                `${user.fullName} created and assigned to the project`,
+              );
+            } catch (error) {
+              notify.error(
+                getErrorMessage(
+                  error,
+                  'User was created but could not be assigned to the project',
+                ),
+              );
+              await queryClient.invalidateQueries({
+                queryKey: projectKeys.users,
+              });
+              setUserId(user.id);
+              setCreateUserOpen(false);
+              setDialogOpen(true);
+            }
+          }}
+        />
+      ) : null}
     </Stack>
   );
 }

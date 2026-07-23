@@ -22,3 +22,10 @@ export async function fetchCurrentUser() {
 export async function fetchMyPermissions() {
   return apiGet<UserAccess>('/rbac/me/permissions');
 }
+
+export async function changePasswordRequest(input: {
+  newPassword: string;
+  currentPassword?: string;
+}) {
+  return apiPost<null>('/auth/change-password', input);
+}

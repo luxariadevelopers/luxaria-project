@@ -30,6 +30,7 @@ import { AssignVendorProjectDto } from './dto/assign-vendor-project.dto';
 import { BlockVendorDto } from './dto/block-vendor.dto';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
+import { VendorLedgerQueryDto } from './dto/vendor-ledger-query.dto';
 import { VerifyVendorDto } from './dto/verify-vendor.dto';
 import { VendorDocumentCategory } from './schemas/vendor-document.schema';
 import {
@@ -157,9 +158,16 @@ export class VendorsController {
 
   @Get(':id/ledger')
   @RequirePermissions('vendor.view')
-  @ApiOperation({ summary: 'Vendor ledger placeholder' })
-  ledger(@Param('id') id: string) {
-    return this.vendorsService.getLedgerPlaceholder(id);
+  @ApiOperation({
+    summary:
+      'Vendor party ledger from posted journals (wraps accounting-reports vendor-ledger)',
+  })
+  ledger(
+    @Param('id') id: string,
+    @Query() query: VendorLedgerQueryDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.vendorsService.getLedger(id, query, actor.id);
   }
 
   @Post(':id/documents')

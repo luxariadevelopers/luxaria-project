@@ -17,6 +17,9 @@ import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
 import { normalizeOptionalCode } from '../company/company.validation';
 import { Company } from '../company/schemas/company.schema';
+import { AccountingReportType } from '../accounting-reports/accounting-reports.constants';
+import { AccountingReportsService } from '../accounting-reports/accounting-reports.service';
+import type { PartyLedgerRow } from '../accounting-reports/accounting-reports.types';
 import { NumberEntityType } from '../numbering/numbering.constants';
 import { NumberingService } from '../numbering/numbering.service';
 import { Project } from '../projects/schemas/project.schema';
@@ -24,6 +27,7 @@ import type { AssignVendorProjectDto } from './dto/assign-vendor-project.dto';
 import type { BlockVendorDto } from './dto/block-vendor.dto';
 import type { CreateVendorDto } from './dto/create-vendor.dto';
 import type { UpdateVendorDto } from './dto/update-vendor.dto';
+import type { VendorLedgerQueryDto } from './dto/vendor-ledger-query.dto';
 import type { VerifyVendorDto } from './dto/verify-vendor.dto';
 import {
   toPublicVendor,
@@ -66,6 +70,7 @@ export class VendorsService {
     @InjectModel(Project.name) private readonly projectModel: Model<Project>,
     private readonly numberingService: NumberingService,
     private readonly configService: ConfigService,
+    private readonly accountingReports: AccountingReportsService,
   ) {}
 
   async create(dto: CreateVendorDto, actorId: string) {
@@ -556,34 +561,56 @@ export class VendorsService {
   }
 
   /**
-   * Placeholder ledger until AP / journal vendor party postings are wired.
+   * Journal-backed vendor party ledger via accounting-reports `vendor-ledger`.
+   * Keeps a single immutable sub-ledger sourced from posted journal lines.
    */
-  async getLedgerPlaceholder(id: string) {
+  async getLedger(id: string, query: VendorLedgerQueryDto, actorId: string) {
     const vendor = await this.requireVendor(id);
+    const report = await this.accountingReports.getReport(
+      AccountingReportType.VendorLedger,
+      {
+        financialYearId: query.financialYearId,
+        projectId: query.projectId,
+        from: query.from,
+        to: query.to,
+        partyId: String(vendor._id),
+      },
+      actorId,
+    );
+
+    const payload = report.data;
+    if (!payload) {
+      throw new NotFoundException('Vendor ledger unavailable');
+    }
+
+    const totals = (payload.totals ?? {}) as Record<string, number>;
+    const openingBalance = Number(
+      payload.openingBalance ?? totals.openingBalance ?? 0,
+    );
+    const closingBalance = Number(
+      payload.closingBalance ?? totals.closingBalance ?? 0,
+    );
+    const totalDebit = Number(totals.debit ?? 0);
+    const totalCredit = Number(totals.credit ?? 0);
+    const rows = (payload.rows ?? []) as PartyLedgerRow[];
+
     return createSuccessResponse(
       {
         vendorId: String(vendor._id),
         vendorCode: vendor.vendorCode,
         legalName: vendor.legalName,
-        currency: 'INR',
-        openingBalance: 0,
-        totalDebit: 0,
-        totalCredit: 0,
-        closingBalance: 0,
-        entries: [] as Array<{
-          id: string;
-          entryDate: string;
-          description: string;
-          debit: number;
-          credit: number;
-          balance: number;
-          referenceType: string | null;
-          referenceId: string | null;
-        }>,
-        note: 'Vendor ledger is a placeholder. Payable postings will appear here in a later phase.',
-        asOf: new Date().toISOString(),
+        currency: 'INR' as const,
+        openingBalance,
+        totalDebit,
+        totalCredit,
+        closingBalance,
+        rows,
+        filters: payload.meta?.filters ?? null,
+        reconciled: payload.meta?.reconciled ?? true,
+        reconciliationNotes: payload.meta?.reconciliationNotes ?? [],
+        asOf: payload.meta?.generatedAt ?? new Date().toISOString(),
       },
-      'Vendor ledger placeholder',
+      'Vendor ledger',
     );
   }
 

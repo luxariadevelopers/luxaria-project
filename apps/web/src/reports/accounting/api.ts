@@ -40,6 +40,7 @@ function normaliseRow(row: LedgerLineRow): LedgerLineRow {
     projectId: row.projectId == null ? null : String(row.projectId),
     partyType: row.partyType ?? null,
     partyId: row.partyId == null ? null : String(row.partyId),
+    fundingSource: row.fundingSource ?? null,
     sourceModule: row.sourceModule ?? null,
     sourceEntityType: row.sourceEntityType ?? null,
     sourceEntityId: row.sourceEntityId == null ? null : String(row.sourceEntityId),

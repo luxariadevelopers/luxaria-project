@@ -3,9 +3,7 @@ import { BasePage } from './base.page';
 
 export class ForbiddenPage extends BasePage {
   readonly heading = this.page.getByRole('heading', { name: 'Access denied' });
-  readonly message = this.page.getByText(
-    /you do not have permission to view this page/i,
-  );
+  readonly message = this.page.getByText(/access denied\. contact md/i);
 
   constructor(page: Page) {
     super(page);

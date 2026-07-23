@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -8,6 +8,7 @@ import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { applyExpenseClientFilters } from '@/expenses/applyClientFilters';
+import { CreateExpenseDrawer } from '@/expenses/CreateExpenseDrawer';
 import {
   ExpenseFilters,
   type ExpenseFilterState,
@@ -28,11 +29,10 @@ import { validateExpenseListFilters } from '@/expenses/validation';
 import type { ExpenseRowActionId } from '@/expenses/workflowActions';
 
 /**
- * Site expense voucher review list — `/accounting/expenses` (Micro Phase 052).
+ * Site expense voucher list + create — `/accounting/expenses`.
  *
  * Nest: `/site-expense-vouchers`
- * Permissions: `expense.view` · `expense.approve` (verify/approve) · `expense.post`
- * Detail UI: Phase 053.
+ * Permissions: `expense.view` · `expense.create` · `expense.approve` · `expense.post`
  */
 export function ExpensesPage() {
   const { hasPermission, access } = useAuth();
@@ -48,6 +48,7 @@ export function ExpensesPage() {
     dateFrom: '',
     dateTo: '',
   });
+  const [createOpen, setCreateOpen] = useState(false);
   const [actionKind, setActionKind] = useState<ExpenseRowActionId | null>(null);
   const [actionRow, setActionRow] = useState<PublicSiteExpenseVoucher | null>(
     null,
@@ -176,11 +177,17 @@ export function ExpensesPage() {
   return (
     <Stack spacing={2} data-testid="expenses-page">
       <Typography color="text.secondary">
-        Finance and project review of site expenses
-        {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-        Duplicate bills, GPS out-of-radius, and missing evidence are highlighted.
-        Select a project in the header. Posted vouchers are immutable.
+        Enter and review site expenses for
+        {selectedProject ? ` ${selectedProject.projectName}` : ' the selected project'}
+        . Paid from project petty cash. Duplicate bills, GPS out-of-radius, and
+        missing evidence are highlighted. Posted vouchers are immutable.
       </Typography>
+
+      {!projectId ? (
+        <Typography color="warning.main" variant="body2">
+          Select a project in the header to enter or review site expenses.
+        </Typography>
+      ) : null}
 
       {!filterCheck.ok ? (
         <Typography color="error" variant="body2">
@@ -219,11 +226,31 @@ export function ExpensesPage() {
             }}
           />
         }
+        toolbarActions={
+          caps.canCreate ? (
+            <Button
+              variant="contained"
+              disabled={!projectId}
+              onClick={() => setCreateOpen(true)}
+            >
+              New expense
+            </Button>
+          ) : undefined
+        }
         caps={caps}
         onVerify={(row) => openAction('verify', row)}
         onApprove={(row) => openAction('approve', row)}
         onPost={(row) => openAction('post', row)}
       />
+
+      {projectId ? (
+        <CreateExpenseDrawer
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          projectId={projectId}
+          projectName={selectedProject?.projectName}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(actionKind && actionRow)}

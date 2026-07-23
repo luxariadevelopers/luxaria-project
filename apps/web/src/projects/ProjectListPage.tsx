@@ -23,7 +23,7 @@ import {
   PROJECT_LIST_SORT_KEYS,
   PROJECT_STAGE_OPTIONS,
   PROJECT_STATUS_OPTIONS,
-  PROJECT_TYPE_OPTIONS,
+  PROJECT_TYPE_FILTER_OPTIONS,
   projectStageLabel,
   projectTypeLabel,
 } from './constants';
@@ -257,7 +257,7 @@ export function ProjectListPage() {
           }
         >
           <MenuItem value="">All types</MenuItem>
-          {PROJECT_TYPE_OPTIONS.map((option) => (
+          {PROJECT_TYPE_FILTER_OPTIONS.map((option) => (
             <MenuItem key={String(option.value)} value={option.value}>
               {option.label}
             </MenuItem>

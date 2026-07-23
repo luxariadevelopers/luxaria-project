@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, CircularProgress, Stack, Typography } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
+import {
+  loadCapitalPlanDefaults,
+  syncCapitalPlanFromForm,
+  type CapitalDirectorRow,
+  type CapitalInvestorRow,
+} from './capitalPlan';
 import { ProjectForm } from './ProjectForm';
 import {
   useProjectBankOptions,
@@ -28,6 +34,11 @@ export function ProjectEditPage({ projectId: projectIdProp }: Props = {}) {
   const navigate = useNavigate();
   const notify = useNotify();
   const [serverError, setServerError] = useState<unknown>();
+  const [capitalPlanDefaults, setCapitalPlanDefaults] = useState<{
+    equalDirectorInvestment: boolean;
+    capitalDirectors: CapitalDirectorRow[];
+    capitalInvestors: CapitalInvestorRow[];
+  } | null>(null);
 
   const canEdit =
     Boolean(access) &&
@@ -43,6 +54,31 @@ export function ProjectEditPage({ projectId: projectIdProp }: Props = {}) {
     canEdit && hasPermission('bank.view'),
   );
   const updateMutation = useUpdateProject(projectId ?? '');
+
+  useEffect(() => {
+    if (!project?.id || !hasPermission('project_participant.view')) {
+      setCapitalPlanDefaults({
+        equalDirectorInvestment: Boolean(project?.equalDirectorInvestment),
+        capitalDirectors: [],
+        capitalInvestors: [],
+      });
+      return;
+    }
+    let cancelled = false;
+    void loadCapitalPlanDefaults(project.id).then((plan) => {
+      if (!cancelled) {
+        setCapitalPlanDefaults({
+          equalDirectorInvestment:
+            project.equalDirectorInvestment || plan.equalDirectorInvestment,
+          capitalDirectors: plan.capitalDirectors,
+          capitalInvestors: plan.capitalInvestors,
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project?.id, project?.equalDirectorInvestment, hasPermission]);
 
   if (!access || (canEdit && detailQuery.isLoading)) {
     return (
@@ -75,6 +111,14 @@ export function ProjectEditPage({ projectId: projectIdProp }: Props = {}) {
     );
   }
 
+  if (!capitalPlanDefaults) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+        <CircularProgress size={32} />
+      </Box>
+    );
+  }
+
   const company = companyQuery.data ?? {
     id: project.companyId ?? '',
     companyCode: project.companyId ?? '—',
@@ -87,7 +131,27 @@ export function ProjectEditPage({ projectId: projectIdProp }: Props = {}) {
     setServerError(undefined);
     try {
       await updateMutation.mutateAsync(toUpdateProjectInput(values));
-      notify.success('Project updated successfully');
+      try {
+        if (
+          hasPermission('project_participant.create') ||
+          hasPermission('project_participant.update')
+        ) {
+          const result = await syncCapitalPlanFromForm(project.id, values);
+          if (result.synced > 0) {
+            notify.success(
+              `Project updated · capital plan synced (${result.synced})`,
+            );
+          } else {
+            notify.success('Project updated successfully');
+          }
+        } else {
+          notify.success('Project updated successfully');
+        }
+      } catch {
+        notify.success(
+          'Project updated — capital plan could not sync (use Participants)',
+        );
+      }
       void navigate(`/projects/${project.id}`);
     } catch (error) {
       setServerError(error);
@@ -100,13 +164,13 @@ export function ProjectEditPage({ projectId: projectIdProp }: Props = {}) {
       <Stack spacing={0.5}>
         <Typography variant="h5">Edit {project.projectName}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {project.projectCode} · status, manager, and director changes are
-          handled in Settings.
+          {project.projectCode} · capital plan, budget, and master data.
         </Typography>
       </Stack>
       <ProjectForm
         mode="edit"
         initial={project}
+        capitalPlanDefaults={capitalPlanDefaults}
         company={company}
         bankOptions={banksQuery.isSuccess ? banksQuery.data : undefined}
         submitting={updateMutation.isPending}

@@ -87,7 +87,7 @@ function ProjectMoneyTable({
     return (
       <EmptyState
         title={`No ${title.toLowerCase()} rows`}
-        description="Balances will appear when accounts exist for accessible projects."
+        description="Balances appear when projects are in scope and bank/cash money is posted (including company bank receipts tagged to a project)."
       />
     );
   }

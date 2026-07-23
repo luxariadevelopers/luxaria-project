@@ -1,4 +1,5 @@
 import { AnalyticsView, type AnalyticsViewConfig } from '@/analytics/AnalyticsView';
+import { DirectorCommandCentrePage } from '@/pages/DirectorCommandCentrePage';
 
 function page(config: AnalyticsViewConfig) {
   return function AnalyticsRoutePage() {
@@ -6,19 +7,21 @@ function page(config: AnalyticsViewConfig) {
   };
 }
 
-export const DirectorDashboardAnalyticsPage = page({
-  title: 'Director Dashboard',
-  description:
-    'Trusted company and project KPIs consolidated from Phases 1–8 (live read-model).',
-  endpoint: '/analytics/director-dashboard',
-  permission: 'analytics.dashboard.view',
-});
+/**
+ * Director Dashboard = full operational command centre (balances, payables,
+ * progress, exceptions). Distinct from the compact Executive Summary brief.
+ */
+export function DirectorDashboardAnalyticsPage() {
+  return <DirectorCommandCentrePage />;
+}
 
 export const ExecutiveSummaryPage = page({
   title: 'Executive Summary',
-  description: 'Company-wide cash, collections, payables, alerts and project health.',
+  description:
+    'One-page company brief: cash, collections, payables, alerts and project health scores.',
   endpoint: '/analytics/executive-summary',
   permission: 'analytics.company.view',
+  variant: 'executive',
 });
 
 export const ProjectHealthPage = page({

@@ -36,7 +36,10 @@ export enum ProjectStatus {
 }
 
 export enum ProjectType {
+  /** @deprecated Prefer ResidentialFlat / ResidentialIndividual. Kept for existing records. */
   Residential = 'residential',
+  ResidentialFlat = 'residential_flat',
+  ResidentialIndividual = 'residential_individual',
   Commercial = 'commercial',
   MixedUse = 'mixed_use',
   Plotting = 'plotting',
@@ -164,6 +167,13 @@ export class Project {
 
   @Prop({ type: Number, default: null, min: 0 })
   approvedBudget!: number | null;
+
+  /**
+   * When true, capital plan expects directors to fund equal ₹ amounts
+   * (UI splits remaining budget equally into participant commitments).
+   */
+  @Prop({ type: Boolean, default: false })
+  equalDirectorInvestment!: boolean;
 
   @Prop({
     type: String,

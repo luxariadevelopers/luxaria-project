@@ -1,4 +1,5 @@
 export { applyExpenseClientFilters } from './applyClientFilters';
+export { CreateExpenseDrawer } from './CreateExpenseDrawer';
 export { DuplicateWarningBadge } from './DuplicateWarningBadge';
 export { EvidenceCount } from './EvidenceCount';
 export { ExpenseFilters } from './ExpenseFilters';
@@ -16,13 +17,20 @@ export { buildExpenseTimeline } from './buildExpenseTimeline';
 export {
   approveSiteExpenseVoucher,
   cancelSiteExpenseVoucher,
+  createSiteExpenseVoucher,
   fetchSiteExpenseVoucher,
   fetchSiteExpenseVouchers,
   postSiteExpenseVoucher,
   rejectSiteExpenseVoucher,
   returnSiteExpenseVoucher,
+  submitSiteExpenseVoucher,
+  updateSiteExpenseVoucher,
   verifySiteExpenseVoucher,
 } from './api';
+export {
+  assertSignatureReady,
+  hasSignatureAttachment,
+} from './signatureRequired';
 export {
   attachmentTypeLabel,
   expenseStatusLabel,
@@ -38,21 +46,27 @@ export {
   SiteExpensePaymentMode,
   SiteExpenseVoucherStatus,
   type CancelSiteExpenseInput,
+  type CreateSiteExpenseInput,
   type ListSiteExpenseVouchersQuery,
   type PaginatedSiteExpenseVouchers,
   type PublicSiteExpenseAttachment,
   type PublicSiteExpenseVoucher,
   type RejectSiteExpenseInput,
   type ReturnSiteExpenseInput,
+  type SiteExpenseAttachmentInput,
+  type UpdateSiteExpenseInput,
 } from './types';
 export {
   useApproveSiteExpenseVoucher,
   useCancelSiteExpenseVoucher,
+  useCreateSiteExpenseVoucher,
   usePostSiteExpenseVoucher,
   useRejectSiteExpenseVoucher,
   useReturnSiteExpenseVoucher,
   useSiteExpenseVoucherDetail,
   useSiteExpenseVouchersList,
+  useSubmitSiteExpenseVoucher,
+  useUpdateSiteExpenseVoucher,
   useVerifySiteExpenseVoucher,
 } from './useExpenses';
 export {
@@ -62,6 +76,7 @@ export {
   cancelExpenseSchema,
   rejectExpenseSchema,
   returnExpenseSchema,
+  siteExpenseCreateSchema,
 } from './validation';
 export {
   evidenceCount,

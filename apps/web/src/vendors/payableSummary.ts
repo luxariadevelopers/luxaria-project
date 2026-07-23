@@ -1,7 +1,7 @@
 import type {
   PublicVendorInvoiceRow,
   PublicVendorPaymentRow,
-  VendorLedgerPlaceholder,
+  VendorLedgerReport,
 } from './types';
 
 export type VendorPayableSummary = {
@@ -15,13 +15,13 @@ export type VendorPayableSummary = {
 };
 
 /**
- * Compose a payable snapshot from existing list + ledger placeholder APIs.
+ * Compose a payable snapshot from invoice/payment lists + journal vendor ledger.
  * Does not invent balances — sums Nest `remainingPayable` / payment amounts.
  */
 export function buildVendorPayableSummary(args: {
   invoices: readonly PublicVendorInvoiceRow[];
   payments: readonly PublicVendorPaymentRow[];
-  ledger: VendorLedgerPlaceholder | null | undefined;
+  ledger: VendorLedgerReport | null | undefined;
 }): VendorPayableSummary {
   const openPayable = args.invoices.reduce(
     (sum, row) => sum + (Number.isFinite(row.remainingPayable) ? row.remainingPayable : 0),

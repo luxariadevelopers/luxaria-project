@@ -24,8 +24,9 @@ type AuthContextValue = {
   access: UserAccess | null;
   isAuthenticated: boolean;
   isBootstrapping: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
   hasAllPermissions: (permissions: string[]) => boolean;
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tokenStorage.setUser(data.user);
       setUser(data.user);
       await queryClient.invalidateQueries({ queryKey: ['auth'] });
+      return data.user;
     },
     [queryClient],
   );
@@ -109,6 +111,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tokenStorage.clearAll();
       setUser(null);
       queryClient.clear();
+    }
+  }, [queryClient]);
+
+  const refreshUser = useCallback(async () => {
+    const result = await queryClient.fetchQuery({
+      queryKey: ['auth', 'me'],
+      queryFn: async () => {
+        const res = await fetchCurrentUser();
+        return res.data ?? null;
+      },
+    });
+    if (result) {
+      setUser(result);
+      tokenStorage.setUser(result);
     }
   }, [queryClient]);
 
@@ -149,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isBootstrapping: !bootstrapped || (hasToken && meQuery.isLoading),
       login,
       logout,
+      refreshUser,
       hasPermission,
       hasAnyPermission,
       hasAllPermissions,
@@ -161,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       meQuery.isLoading,
       login,
       logout,
+      refreshUser,
       hasPermission,
       hasAnyPermission,
       hasAllPermissions,

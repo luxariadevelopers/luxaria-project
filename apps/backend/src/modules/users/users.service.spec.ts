@@ -93,14 +93,15 @@ describe('UsersService', () => {
       email: 'finance@luxaria.dev',
       mobile: '9000000001',
       password: 'ChangeMe123!',
-      department: 'Finance',
-      designation: 'Manager',
+      department: 'Finance & Accounts',
+      designation: 'Finance Manager',
     });
 
     expect(response.success).toBe(true);
     expect(response.data?.userCode).toMatch(/^USR-/);
     expect(response.data?.email).toBe('finance@luxaria.dev');
-    expect(response.data?.department).toBe('Finance');
+    expect(response.data?.department).toBe('Finance & Accounts');
+    expect(response.data?.employeeId).toMatch(/^FIN-FM-\d{6}$/);
   });
 
   it('rejects duplicate email', async () => {
@@ -260,9 +261,18 @@ describe('UsersService', () => {
     await expect(service.getById(created.data!.id)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('uses numbering service entity type USER', async () => {
+  it('uses numbering service entity type USER and EMPLOYEE sequence', async () => {
     const numbering = {
       nextCode: jest.fn().mockResolvedValue('USR-000042'),
+      next: jest.fn().mockResolvedValue({
+        code: 'EMP-000007',
+        sequence: 7,
+        prefix: 'EMP',
+        financialYear: null,
+        projectId: null,
+        scopeKey: 'EMPLOYEE',
+        entityType: NumberEntityType.EMPLOYEE,
+      }),
     };
     const isolated = new UsersService(
       userModel,
@@ -282,9 +292,13 @@ describe('UsersService', () => {
       fullName: 'Numbered',
       email: 'numbered@luxaria.dev',
       password: 'ChangeMe123!',
+      department: 'Engineering & Construction',
+      designation: 'Site Engineer',
     });
 
     expect(numbering.nextCode).toHaveBeenCalledWith(NumberEntityType.USER);
+    expect(numbering.next).toHaveBeenCalledWith(NumberEntityType.EMPLOYEE);
     expect(response.data?.userCode).toBe('USR-000042');
+    expect(response.data?.employeeId).toBe('ENG-SE-000007');
   });
 });

@@ -57,6 +57,10 @@ async function bootstrap() {
     prefix: '/uploads/company',
     index: false,
   });
+  app.useStaticAssets(join(process.cwd(), 'uploads', 'users'), {
+    prefix: '/uploads/users',
+    index: false,
+  });
 
   app.enableCors({
     origin: (

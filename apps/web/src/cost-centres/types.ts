@@ -51,6 +51,16 @@ export type ListCostCentresQuery = {
   status?: CostCentreStatus;
 };
 
+export type CreateCostCentreInput = {
+  code: string;
+  name: string;
+  kind: CostCentreKind;
+  companyId?: string | null;
+  projectId?: string | null;
+  parentId?: string | null;
+  notes?: string | null;
+};
+
 export type PaginatedCostCentres = {
   items: CostCentreListRow[];
   meta: {

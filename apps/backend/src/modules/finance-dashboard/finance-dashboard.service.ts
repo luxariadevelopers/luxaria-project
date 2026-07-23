@@ -9,6 +9,12 @@ import type { FilterQuery, Model, PipelineStage } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import {
+  BankReconciliationSessionStatus,
+  BankStatementLineStatus,
+} from '../bank-reconciliation/bank-reconciliation.constants';
+import { BankReconciliationSession } from '../bank-reconciliation/schemas/bank-reconciliation-session.schema';
+import { BankStatementLine } from '../bank-reconciliation/schemas/bank-statement-line.schema';
+import {
   BankAccountStatus,
   CompanyBankAccount,
 } from '../company-bank-accounts/schemas/company-bank-account.schema';
@@ -64,6 +70,7 @@ import {
 import type { FinanceDashboardQueryDto } from './dto/finance-dashboard-query.dto';
 import type {
   AgeingBuckets,
+  BankReconciliationPending,
   CashFlowForecast,
   CashFlowPeriod,
   ContributionPending,
@@ -124,6 +131,10 @@ export class FinanceDashboardService {
     private readonly projectModel: Model<Project>,
     @InjectModel(FinancialYear.name)
     private readonly financialYearModel: Model<FinancialYear>,
+    @InjectModel(BankReconciliationSession.name)
+    private readonly bankReconSessionModel: Model<BankReconciliationSession>,
+    @InjectModel(BankStatementLine.name)
+    private readonly bankStatementLineModel: Model<BankStatementLine>,
     private readonly projectAccessService: ProjectAccessService,
   ) {}
 
@@ -145,6 +156,7 @@ export class FinanceDashboardService {
       overduePayments,
       unsettledPettyCash,
       journalErrors,
+      bankReconciliationPending,
       cashFlowForecast,
     ] = await Promise.all([
       this.companyBankBalances(scope),
@@ -160,6 +172,7 @@ export class FinanceDashboardService {
       this.overduePayments(scope, projectFilter),
       this.unsettledPettyCash(scope, projectFilter),
       this.journalErrors(scope),
+      this.bankReconciliationPending(scope),
       this.cashFlowForecast(scope, projectFilter),
     ]);
 
@@ -178,19 +191,7 @@ export class FinanceDashboardService {
       overduePayments,
       unsettledPettyCash,
       journalErrors,
-      bankReconciliationPending: {
-        available: false,
-        pendingCount: 0,
-        amount: 0,
-        message:
-          'Bank reconciliation module is not yet available; pending items will appear here once statements are matched.',
-        drillDown: [
-          this.link(
-            'Company bank accounts',
-            `${API}/company-bank-accounts`,
-          ),
-        ],
-      },
+      bankReconciliationPending,
       cashFlowForecast,
     };
 
@@ -529,48 +530,76 @@ export class FinanceDashboardService {
   private async projectFundPosition(scope: Scope): Promise<ProjectFundRow[]> {
     if (!scope.projectIds.length) return [];
 
+    // Include company-level accounts too: project income often posts into the
+    // company bank (projectId null on the account master) with line.projectId set.
     const banks = await this.bankModel
-      .find({
-        projectId: { $in: scope.projectIds },
-        status: BankAccountStatus.Active,
-      })
+      .find({ status: BankAccountStatus.Active })
       .select('_id projectId ledgerAccountId openingBalance')
       .lean()
       .exec();
 
     const cash = await this.cashModel
-      .find({
-        projectId: { $in: scope.projectIds },
-        status: { $ne: CashAccountStatus.Closed },
-      })
+      .find({ status: { $ne: CashAccountStatus.Closed } })
       .select('_id projectId ledgerAccountId openingBalance')
       .lean()
       .exec();
 
+    const companyBanks = banks.filter((a) => !a.projectId && a.ledgerAccountId);
+    const companyCash = cash.filter((a) => !a.projectId && a.ledgerAccountId);
+    const companyBankLedgers = companyBanks.map((a) => a.ledgerAccountId);
+    const companyCashLedgers = companyCash.map((a) => a.ledgerAccountId);
+
     const bankByProject = new Map<string, number>();
     const cashByProject = new Map<string, number>();
 
-    // Group ledger accounts per project then sum
-    const bankGroups = new Map<string, typeof banks>();
-    for (const a of banks) {
-      const key = String(a.projectId);
-      const list = bankGroups.get(key) ?? [];
-      list.push(a);
-      bankGroups.set(key, list);
-    }
-    for (const [key, list] of bankGroups) {
-      bankByProject.set(key, await this.sumBalances(list, scope.dayEnd));
-    }
+    // Company share capital (and other company bank receipts with no project)
+    // sits on the company bank with null projectId. Attribute that liquidity to
+    // the first project so fund position matches the bank account the user sees.
+    const unscopedCompanyBank = await this.sumUnscopedLedgerMovements(
+      companyBankLedgers,
+      scope.dayEnd,
+    );
+    const primaryProjectId = [...scope.projectIds]
+      .map((id) => ({
+        id,
+        code: scope.projectMeta.get(String(id))?.projectCode ?? String(id),
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code))[0]?.id;
 
-    const cashGroups = new Map<string, typeof cash>();
-    for (const a of cash) {
-      const key = String(a.projectId);
-      const list = cashGroups.get(key) ?? [];
-      list.push(a);
-      cashGroups.set(key, list);
-    }
-    for (const [key, list] of cashGroups) {
-      cashByProject.set(key, await this.sumBalances(list, scope.dayEnd));
+    for (const oid of scope.projectIds) {
+      const projectId = String(oid);
+      const ownedBanks = banks.filter(
+        (a) => a.projectId && String(a.projectId) === projectId,
+      );
+      const ownedCash = cash.filter(
+        (a) => a.projectId && String(a.projectId) === projectId,
+      );
+
+      const ownedBankBalance = await this.sumBalances(ownedBanks, scope.dayEnd);
+      const ownedCashBalance = await this.sumBalances(ownedCash, scope.dayEnd);
+      const scopedCompanyBank = await this.sumProjectScopedLedgerMovements(
+        oid,
+        companyBankLedgers,
+        scope.dayEnd,
+      );
+      const scopedCompanyCash = await this.sumProjectScopedLedgerMovements(
+        oid,
+        companyCashLedgers,
+        scope.dayEnd,
+      );
+      const capitalShare =
+        primaryProjectId && oid.equals(primaryProjectId)
+          ? unscopedCompanyBank
+          : 0;
+
+      bankByProject.set(
+        projectId,
+        this.round2(ownedBankBalance + scopedCompanyBank + capitalShare),
+      );
+      cashByProject.set(
+        projectId,
+        this.round2(ownedCashBalance + scopedCompanyCash),
+      );
     }
 
     const vendorPay = await this.vendorPayableByProject(scope.projectIds);
@@ -1157,6 +1186,111 @@ export class FinanceDashboardService {
     ]);
   }
 
+  private async bankReconciliationPending(
+    scope: Scope,
+  ): Promise<BankReconciliationPending> {
+    const bankFilter: FilterQuery<CompanyBankAccount> = {
+      status: BankAccountStatus.Active,
+    };
+    if (scope.filters.projectId) {
+      bankFilter.projectId = { $in: scope.projectIds };
+    } else if (scope.projectIds.length) {
+      bankFilter.$or = [
+        { projectId: { $in: scope.projectIds } },
+        { projectId: null },
+      ];
+    }
+
+    const banks = await this.bankModel
+      .find(bankFilter)
+      .select('_id')
+      .lean()
+      .exec();
+    const bankIds = banks.map((b) => b._id as Types.ObjectId);
+
+    const drillDown = [
+      this.link('Bank reconciliation sessions', `${API}/bank-reconciliation/sessions`),
+      this.link('Company bank accounts', `${API}/company-bank-accounts`),
+    ];
+
+    if (!bankIds.length) {
+      return {
+        available: true,
+        pendingCount: 0,
+        amount: 0,
+        message: 'No active bank accounts in scope',
+        drillDown,
+      };
+    }
+
+    const openStatuses = [
+      BankReconciliationSessionStatus.Draft,
+      BankReconciliationSessionStatus.InProgress,
+    ];
+
+    const sessions = await this.bankReconSessionModel
+      .find({
+        bankAccountId: { $in: bankIds },
+        status: { $in: openStatuses },
+      })
+      .select('_id status')
+      .lean()
+      .exec();
+
+    const pendingCount = sessions.length;
+    const sessionIds = sessions.map((s) => s._id as Types.ObjectId);
+
+    let amount = 0;
+    let unmatchedLineCount = 0;
+    if (sessionIds.length) {
+      const [agg] = await this.bankStatementLineModel
+        .aggregate<{ total: number; count: number }>([
+          {
+            $match: {
+              sessionId: { $in: sessionIds },
+              status: BankStatementLineStatus.Unmatched,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: {
+                $sum: { $add: ['$debit', '$credit'] },
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+        .exec();
+      amount = this.round2(agg?.total ?? 0);
+      unmatchedLineCount = agg?.count ?? 0;
+    }
+
+    const draftCount = sessions.filter(
+      (s) => s.status === BankReconciliationSessionStatus.Draft,
+    ).length;
+    const inProgressCount = sessions.filter(
+      (s) => s.status === BankReconciliationSessionStatus.InProgress,
+    ).length;
+
+    let message: string;
+    if (pendingCount === 0) {
+      message = 'No open reconciliation sessions';
+    } else if (unmatchedLineCount === 0) {
+      message = `${pendingCount} open session(s) (${draftCount} draft, ${inProgressCount} in progress); no unmatched lines`;
+    } else {
+      message = `${pendingCount} open session(s) (${draftCount} draft, ${inProgressCount} in progress); ${unmatchedLineCount} unmatched line(s)`;
+    }
+
+    return {
+      available: true,
+      pendingCount,
+      amount,
+      message,
+      drillDown,
+    };
+  }
+
   private async cashFlowForecast(
     scope: Scope,
     projectFilter: { $in: Types.ObjectId[] },
@@ -1404,6 +1538,109 @@ export class FinanceDashboardService {
       total += (a.openingBalance ?? 0) + mov.debit - mov.credit;
     }
     return this.round2(total);
+  }
+
+  /**
+   * Net debit−credit on company-level bank/cash ledgers for journals scoped to
+   * a project (line.projectId or header projectId). Opening balance is excluded
+   * — that remains company liquidity, not project fund.
+   */
+  private async sumProjectScopedLedgerMovements(
+    projectId: Types.ObjectId,
+    ledgerIds: Types.ObjectId[],
+    asOf: Date,
+  ): Promise<number> {
+    if (!ledgerIds.length) return 0;
+
+    const pipeline: PipelineStage[] = [
+      {
+        $match: {
+          status: JournalStatus.Posted,
+          journalDate: { $lte: asOf },
+          'lines.accountId': { $in: ledgerIds },
+          $or: [{ projectId }, { 'lines.projectId': projectId }],
+        },
+      },
+      { $unwind: '$lines' },
+      {
+        $match: {
+          'lines.accountId': { $in: ledgerIds },
+          $or: [
+            { 'lines.projectId': projectId },
+            {
+              $and: [
+                {
+                  $or: [
+                    { 'lines.projectId': null },
+                    { 'lines.projectId': { $exists: false } },
+                  ],
+                },
+                { projectId },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalDebit: { $sum: '$lines.debit' },
+          totalCredit: { $sum: '$lines.credit' },
+        },
+      },
+    ];
+
+    const rows = await this.journalModel.aggregate(pipeline).exec();
+    const row = rows[0];
+    if (!row) return 0;
+    return this.round2((row.totalDebit ?? 0) - (row.totalCredit ?? 0));
+  }
+
+  /**
+   * Company bank/cash movements with no project (e.g. share capital receipt).
+   */
+  private async sumUnscopedLedgerMovements(
+    ledgerIds: Types.ObjectId[],
+    asOf: Date,
+  ): Promise<number> {
+    if (!ledgerIds.length) return 0;
+
+    const pipeline: PipelineStage[] = [
+      {
+        $match: {
+          status: JournalStatus.Posted,
+          journalDate: { $lte: asOf },
+          'lines.accountId': { $in: ledgerIds },
+          $or: [
+            { projectId: null },
+            { projectId: { $exists: false } },
+            { sourceModule: 'share_capital' },
+          ],
+        },
+      },
+      { $unwind: '$lines' },
+      {
+        $match: {
+          'lines.accountId': { $in: ledgerIds },
+          $or: [
+            { 'lines.projectId': null },
+            { 'lines.projectId': { $exists: false } },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalDebit: { $sum: '$lines.debit' },
+          totalCredit: { $sum: '$lines.credit' },
+        },
+      },
+    ];
+
+    const rows = await this.journalModel.aggregate(pipeline).exec();
+    const row = rows[0];
+    if (!row) return 0;
+    return this.round2((row.totalDebit ?? 0) - (row.totalCredit ?? 0));
   }
 
   private emptyAgeing(drillDown: DrillDownLink[]): AgeingBuckets {

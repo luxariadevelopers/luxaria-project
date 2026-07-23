@@ -1,7 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { ROLE_SEEDS } from './role.seed';
+import {
+  PETTY_CASH_REQUEST_CREATOR_ROLE_CODES,
+  ROLE_SEEDS,
+} from './role.seed';
 import { Role } from './schemas/role.schema';
 
 @Injectable()
@@ -16,8 +19,12 @@ export class RbacSeedService implements OnModuleInit {
 
   /**
    * Upserts system roles by code. Custom roles are left untouched.
-   * Permissions on system roles are refreshed from seed on each boot
-   * so catalog updates propagate without wiping custom roles.
+   * On update: metadata is refreshed from seed, and permissions are the
+   * union of seed + existing so catalog additions apply without wiping
+   * permissions granted in the UI.
+   *
+   * After upsert, `petty_cash.request` is revoked from system roles that are
+   * not site request creators (union alone cannot remove stale grants).
    */
   async seedRoles(): Promise<{ created: number; updated: number }> {
     let created = 0;
@@ -43,6 +50,10 @@ export class RbacSeedService implements OnModuleInit {
         continue;
       }
 
+      const permissions = [
+        ...new Set([...(existing.permissions ?? []), ...seed.permissions]),
+      ].sort();
+
       await this.roleModel
         .updateOne(
           { _id: existing._id },
@@ -50,7 +61,7 @@ export class RbacSeedService implements OnModuleInit {
             $set: {
               name: seed.name,
               description: seed.description,
-              permissions: [...seed.permissions],
+              permissions,
               bypassPermissions: Boolean(seed.bypassPermissions),
               isSystem: true,
               status: seed.status,
@@ -65,10 +76,35 @@ export class RbacSeedService implements OnModuleInit {
       updated += 1;
     }
 
+    const revoked = await this.revokePettyCashRequestFromNonCreators();
     this.logger.log(
-      `RBAC seed complete: ${created} created, ${updated} updated (${ROLE_SEEDS.length} system roles)`,
+      `RBAC seed complete: ${created} created, ${updated} updated (${ROLE_SEEDS.length} system roles)` +
+        (revoked > 0
+          ? `; revoked petty_cash.request from ${revoked} system role(s)`
+          : ''),
     );
 
     return { created, updated };
+  }
+
+  /**
+   * Site supervisors / engineers create requests; MD / Director / finance approve.
+   * Custom (non-system) roles are left as configured in RBAC admin.
+   */
+  private async revokePettyCashRequestFromNonCreators(): Promise<number> {
+    const result = await this.roleModel
+      .updateMany(
+        {
+          isSystem: true,
+          bypassPermissions: { $ne: true },
+          code: { $nin: [...PETTY_CASH_REQUEST_CREATOR_ROLE_CODES] },
+          permissions: 'petty_cash.request',
+        },
+        { $pull: { permissions: 'petty_cash.request' } },
+      )
+      .setOptions({ withDeleted: true })
+      .exec();
+
+    return result.modifiedCount ?? 0;
   }
 }

@@ -7,11 +7,15 @@ import { useAuth } from '@/auth/AuthContext';
 import { AsyncStatePanel } from '@/components/AsyncStatePanel';
 import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
+import { formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 import { getPettyCashRequirement } from './api';
 import { resolvePettyCashCapabilities } from './permissions';
-import type { PublicPettyCashRequirement } from './types';
+import {
+  requestNumberOf,
+  type PublicPettyCashRequirement,
+} from './types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PettyCashDetail'>;
 
@@ -43,7 +47,10 @@ export function PettyCashDetailScreen({ route }: Props) {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   return (
-    <Screen title="Petty cash" subtitle={item?.requirementNumber ?? requestId}>
+    <Screen
+      title="Petty cash"
+      subtitle={item ? requestNumberOf(item) : requestId}
+    >
       {loading || error || forbidden || !item ? (
         <AsyncStatePanel loading={loading} error={error} forbidden={forbidden} empty={!loading && !item} emptyLabel="Not found" onRetry={() => void load()} />
       ) : (
@@ -51,6 +58,12 @@ export function PettyCashDetailScreen({ route }: Props) {
           <Text style={styles.row}>Status: {item.status}</Text>
           <Text style={styles.row}>Week: {String(item.weekStartDate).slice(0, 10)} → {String(item.weekEndDate).slice(0, 10)}</Text>
           <Text style={styles.row}>Justification: {item.justification}</Text>
+          {item.previousUnsettledAmount != null &&
+          item.previousUnsettledAmount > 0 ? (
+            <Text style={styles.row}>
+              Previous unsettled: {formatInr(item.previousUnsettledAmount)}
+            </Text>
+          ) : null}
         </View>
       )}
     </Screen>

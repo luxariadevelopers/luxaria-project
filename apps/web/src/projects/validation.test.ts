@@ -122,6 +122,83 @@ describe('project form validation', () => {
     const dto = toCreateProjectInput(projectFormSchema.parse(validValues()));
     expect(dto).not.toHaveProperty('companyId');
   });
+
+  it('omits empty RERA details on create', () => {
+    const dto = toCreateProjectInput(projectFormSchema.parse(validValues()));
+    expect(dto).not.toHaveProperty('reraDetails');
+  });
+
+  it('allows equal director investment with empty optional investors', () => {
+    const parsed = projectFormSchema.safeParse({
+      ...validValues(),
+      approvedBudget: '1000000',
+      equalDirectorInvestment: true,
+      capitalDirectors: [
+        {
+          directorId: '507f1f77bcf86cd7994390aa',
+          profitSharePercent: '50',
+          commitmentAmount: '500000',
+        },
+        {
+          directorId: '507f1f77bcf86cd7994390ab',
+          profitSharePercent: '50',
+          commitmentAmount: '500000',
+        },
+      ],
+      capitalInvestors: [],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects profit share over 100% and requires interest for with-interest loans', () => {
+    expect(
+      projectFormSchema.safeParse({
+        ...validValues(),
+        capitalDirectors: [
+          {
+            directorId: '507f1f77bcf86cd7994390aa',
+            profitSharePercent: '60',
+            commitmentAmount: '100',
+          },
+        ],
+        capitalInvestors: [
+          {
+            investorId: '507f1f77bcf86cd7994390ac',
+            budgetInvestmentPercentage: '10',
+            commitmentAmount: '100',
+            profitSharePercent: '50',
+            instrumentType: 'unsecured_loan',
+            repaymentMode: 'with_interest',
+            interestRate: '',
+          },
+        ],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      projectFormSchema.safeParse({
+        ...validValues(),
+        capitalDirectors: [
+          {
+            directorId: '507f1f77bcf86cd7994390aa',
+            profitSharePercent: '80',
+            commitmentAmount: '800000',
+          },
+        ],
+        capitalInvestors: [
+          {
+            investorId: '507f1f77bcf86cd7994390ac',
+            budgetInvestmentPercentage: '20',
+            commitmentAmount: '200000',
+            profitSharePercent: '0',
+            instrumentType: 'unsecured_loan',
+            repaymentMode: 'with_interest',
+            interestRate: '12',
+          },
+        ],
+      }).success,
+    ).toBe(true);
+  });
 });
 
 describe('project assignment validation', () => {

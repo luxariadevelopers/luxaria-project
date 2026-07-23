@@ -10,8 +10,24 @@ import type { FilterQuery, Model } from 'mongoose';
 import { Types } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
+import {
+  Account,
+  AccountCategory,
+  AccountStatus,
+} from '../chart-of-accounts/schemas/account.schema';
+import { CompanyService } from '../company/company.service';
+import { CompanyCapitalType } from '../company/schemas/company-capital-history.schema';
 import { Company } from '../company/schemas/company.schema';
+import { CompanyBankAccount } from '../company-bank-accounts/schemas/company-bank-account.schema';
+import { JournalService } from '../journal/journal.service';
+import {
+  JournalEntry,
+  JournalFundingSource,
+  JournalPartyType,
+  JournalStatus,
+} from '../journal/schemas/journal-entry.schema';
 import type { ApproveShareholdingDto } from './dto/approve-shareholding.dto';
+import type { PostShareCapitalReceiptDto } from './dto/post-share-capital-receipt.dto';
 import type { ProposeShareholdingDto } from './dto/propose-shareholding.dto';
 import type { RejectShareholdingDto } from './dto/reject-shareholding.dto';
 import type {
@@ -42,7 +58,14 @@ export class ShareholdingService {
     @InjectModel(Director.name) private readonly directorModel: Model<Director>,
     @InjectModel(DirectorFile.name) private readonly documentModel: Model<DirectorFile>,
     @InjectModel(Company.name) private readonly companyModel: Model<Company>,
+    @InjectModel(CompanyBankAccount.name)
+    private readonly bankAccountModel: Model<CompanyBankAccount>,
+    @InjectModel(Account.name) private readonly accountModel: Model<Account>,
+    @InjectModel(JournalEntry.name)
+    private readonly journalModel: Model<JournalEntry>,
     private readonly directorsService: DirectorsService,
+    private readonly companyService: CompanyService,
+    private readonly journalService: JournalService,
   ) {}
 
   async listActive(companyId?: string | null) {
@@ -342,6 +365,192 @@ export class ShareholdingService {
       throw new NotFoundException('Primary company not found');
     }
     return primary._id as Types.ObjectId;
+  }
+
+  /**
+   * Post director share capital into the company bank book.
+   * Amount per director = numberOfShares × faceValue (e.g. 250000 × 10 = ₹25,00,000).
+   * Journal: Dr Bank · Cr Director Account (one credit line per director).
+   * Also sets company paid-up capital to the posted total when it differs.
+   */
+  async postCapitalReceiptToBank(
+    dto: PostShareCapitalReceiptDto,
+    actorId: string,
+  ) {
+    const companyObjectId = await this.resolveCompanyId(null);
+    const companyId = String(companyObjectId);
+    const company = await this.companyModel.findById(companyObjectId).exec();
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    const holdings = await this.shareholdingModel
+      .find({
+        companyId: companyObjectId,
+        effectiveTo: null,
+      })
+      .sort({ percentage: -1 })
+      .exec();
+    if (holdings.length === 0) {
+      throw new BadRequestException(
+        'No active shareholding to post as share capital',
+      );
+    }
+
+    const directorLines = holdings
+      .map((row) => {
+        const amount = Number(row.numberOfShares) * Number(row.faceValue);
+        return {
+          directorId: String(row.directorId),
+          numberOfShares: row.numberOfShares,
+          faceValue: row.faceValue,
+          amount,
+        };
+      })
+      .filter((line) => line.amount > 0);
+
+    const totalAmount = directorLines.reduce((sum, line) => sum + line.amount, 0);
+    if (totalAmount <= 0) {
+      throw new BadRequestException(
+        'Share capital total must be greater than zero (shares × face value)',
+      );
+    }
+
+    const existingPosted = await this.journalModel
+      .findOne({
+        sourceModule: 'share_capital',
+        sourceEntityType: 'company_share_capital',
+        sourceEntityId: companyId,
+        status: JournalStatus.Posted,
+      })
+      .lean()
+      .exec();
+    if (existingPosted) {
+      throw new ConflictException(
+        `Share capital is already posted to the bank book as journal ${existingPosted.journalNumber}. Total ${totalAmount} will not be posted again.`,
+      );
+    }
+
+    if (!Types.ObjectId.isValid(dto.bankAccountId)) {
+      throw new BadRequestException('Invalid bankAccountId');
+    }
+    const bank = await this.bankAccountModel.findById(dto.bankAccountId).exec();
+    if (!bank?.ledgerAccountId) {
+      throw new BadRequestException(
+        'Bank account not found or has no ledger mapping for bank book posting',
+      );
+    }
+
+    const directorAccount = await this.accountModel
+      .findOne({
+        accountCategory: AccountCategory.DirectorAccount,
+        status: AccountStatus.Active,
+        allowManualPosting: true,
+        isControlAccount: false,
+      })
+      .exec();
+    if (!directorAccount) {
+      throw new BadRequestException(
+        'No active Director Account found in the chart of accounts for capital posting',
+      );
+    }
+
+    const receivedDate =
+      dto.receivedDate?.slice(0, 10) ??
+      new Date().toISOString().slice(0, 10);
+    const reference = dto.reference?.trim() || null;
+
+    // Resume a prior draft created when post:true failed mid-flight (e.g. local Mongo txn).
+    const existingDraft = await this.journalModel
+      .findOne({
+        sourceModule: 'share_capital',
+        sourceEntityType: 'company_share_capital',
+        sourceEntityId: companyId,
+        status: JournalStatus.Draft,
+      })
+      .exec();
+
+    let journalId: string | null;
+    let journalNumber: string | null;
+
+    if (existingDraft) {
+      const posted = await this.journalService.post(
+        String(existingDraft._id),
+        actorId,
+      );
+      journalId = posted.data?.id ?? String(existingDraft._id);
+      journalNumber =
+        posted.data?.journalNumber ?? existingDraft.journalNumber ?? null;
+    } else {
+      const journalResponse = await this.journalService.create(
+        {
+          journalDate: receivedDate,
+          narration:
+            `Director share capital received into bank — ${directorLines.length} directors, total capital`.slice(
+              0,
+              500,
+            ),
+          sourceModule: 'share_capital',
+          sourceEntityType: 'company_share_capital',
+          sourceEntityId: companyId,
+          postingPurpose: 'share_capital_receipt',
+          lines: [
+            {
+              accountId: String(bank.ledgerAccountId),
+              debit: totalAmount,
+              credit: 0,
+              description: reference
+                ? `Share capital received (${reference})`
+                : 'Share capital received from directors',
+              fundingSource: JournalFundingSource.Director,
+            },
+            ...directorLines.map((line) => ({
+              accountId: String(directorAccount._id),
+              debit: 0,
+              credit: line.amount,
+              partyType: JournalPartyType.Director,
+              partyId: line.directorId,
+              description: `Capital ${line.numberOfShares} shares × ₹${line.faceValue}`,
+              fundingSource: JournalFundingSource.Director,
+            })),
+          ],
+          post: true,
+        },
+        actorId,
+        `share-capital-bank:${companyId}`,
+      );
+      journalId = journalResponse.data?.id ?? null;
+      journalNumber = journalResponse.data?.journalNumber ?? null;
+    }
+
+    if (Number(company.paidUpShareCapital) !== totalAmount) {
+      await this.companyService.updateCapital(
+        companyId,
+        {
+          capitalType: CompanyCapitalType.PaidUp,
+          newAmount: totalAmount,
+          effectiveFrom: receivedDate,
+          changeReason:
+            'Share capital received into company bank book (shares × face value from active shareholding)',
+          reference: reference ?? journalNumber,
+        },
+        actorId,
+        companyId,
+      );
+    }
+
+    return createSuccessResponse(
+      {
+        journalId,
+        journalNumber,
+        bankAccountId: dto.bankAccountId,
+        receivedDate,
+        totalAmount,
+        directorLines,
+        paidUpShareCapital: totalAmount,
+      },
+      'Director share capital posted to bank book and paid-up capital updated',
+    );
   }
 
   private toPublicHolding(row: {

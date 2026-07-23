@@ -1,7 +1,9 @@
 import { ERROR_CODES, type ApiError } from '@luxaria/shared-types';
 import axios from 'axios';
 import { apiClient, getErrorMessage } from '@/api/client';
+import { MATERIAL_ISSUE_OFFLINE_TYPE } from '@/features/material-issue/buildMaterialIssueOfflineEnqueue';
 import {
+  materialIssueSignaturesFromPayload,
   prepareCreateBody,
   submitAfterCreatePath,
   wantsSubmitAfterCreate,
@@ -62,6 +64,11 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
         ? (JSON.parse(media.uploadMetaJson) as Record<string, unknown>)
         : {};
 
+      const checksum =
+        typeof meta.checksum === 'string'
+          ? meta.checksum.toLowerCase()
+          : undefined;
+
       const body = {
         module: String(meta.module ?? 'mobile_offline'),
         entityType: String(meta.entityType ?? 'offline_transaction'),
@@ -100,7 +107,7 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
 
       await apiClient.post<{ success: boolean; data?: ConfirmIgnored }>(
         `/documents/${doc.id}/confirm-upload`,
-        {},
+        checksum ? { checksum } : {},
       );
 
       return doc.id;
@@ -153,6 +160,20 @@ export function createHttpOfflineTransport(): OfflineSyncTransport {
           ? submitAfterCreatePath(txn.type, String(serverRecordId))
           : null;
         if (submitAfter && submitPath) {
+          if (txn.type === MATERIAL_ISSUE_OFFLINE_TYPE) {
+            const signatures = materialIssueSignaturesFromPayload(payload);
+            if (!signatures) {
+              throw new Error(
+                'Recipient signature document and checksum are required before submit',
+              );
+            }
+            await apiClient.post(
+              `/material-issues/${encodeURIComponent(String(serverRecordId))}/signatures`,
+              signatures,
+              { headers },
+            );
+          }
+
           const submitted = await apiClient.post<{
             success: boolean;
             message?: string;

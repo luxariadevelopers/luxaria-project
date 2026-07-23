@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   FormControl,
@@ -20,7 +21,12 @@ import { useNotify } from '@/components/NotificationProvider';
 import { formatDate } from '@/format';
 import { useProjectsList } from '@/projects/useProjects';
 import { useUsersList } from '@/user-admin/useUsers';
-import { canManageSiteAccess, canOpenSiteAccess } from './roleAccess';
+import { AssignSiteAccessDialog } from './AssignSiteAccessDialog';
+import {
+  canAssignSiteAccess,
+  canManageSiteAccess,
+  canOpenSiteAccess,
+} from './roleAccess';
 import {
   SiteAssignmentStatus,
   type PublicSiteAssignment,
@@ -38,12 +44,14 @@ export function SiteAccessAdminPage() {
   const { access, hasPermission } = useAuth();
   const notify = useNotify();
   const canView = canOpenSiteAccess(access);
+  const canAssign = canAssignSiteAccess(access) || canManageSiteAccess(access);
   const listState = useListQueryState({
     allowedSortKeys: SORT_KEYS,
     allowedFilterKeys: FILTER_KEYS,
     defaultSortBy: 'effectiveFrom',
     defaultSortOrder: 'desc',
   });
+  const [assignOpen, setAssignOpen] = useState(false);
   const [revokeId, setRevokeId] = useState<string | null>(null);
 
   const assignmentsQuery = useSiteAssignmentsList(
@@ -66,7 +74,7 @@ export function SiteAccessAdminPage() {
     canView && hasPermission('site.view'),
   );
   const usersQuery = useUsersList(
-    { page: 1, limit: 100, sortBy: 'fullName', sortOrder: 'asc' },
+    { page: 1, limit: 200, sortBy: 'fullName', sortOrder: 'asc' },
     canView && hasPermission('user.view'),
   );
   const revokeMutation = useRevokeSiteAssignment();
@@ -221,10 +229,10 @@ export function SiteAccessAdminPage() {
     if (!revokeId) return;
     try {
       await revokeMutation.mutateAsync(revokeId);
-      notify.success('Site assignment revoked');
+      notify.success('Person removed from site access');
       setRevokeId(null);
     } catch (error) {
-      notify.error(getErrorMessage(error, 'Revoke failed'));
+      notify.error(getErrorMessage(error, 'Remove failed'));
       setRevokeId(null);
     }
   };
@@ -273,11 +281,26 @@ export function SiteAccessAdminPage() {
   return (
     <>
       <Stack spacing={2} data-testid="site-access-admin-page">
-        <Stack spacing={0.5}>
-          <Typography variant="h5">Site access</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Review and revoke user-to-site assignments.
-          </Typography>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+        >
+          <Stack spacing={0.5}>
+            <Typography variant="h5">Site access</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Add people to a site or remove them from site access.
+            </Typography>
+          </Stack>
+          {canAssign ? (
+            <Button
+              variant="contained"
+              onClick={() => setAssignOpen(true)}
+              data-testid="add-site-access-button"
+            >
+              Add person
+            </Button>
+          ) : null}
         </Stack>
 
         <DataTable<PublicSiteAssignment>
@@ -288,7 +311,11 @@ export function SiteAccessAdminPage() {
           error={assignmentsQuery.error}
           onRetry={() => void assignmentsQuery.refetch()}
           emptyTitle="No site assignments"
-          emptyDescription="Assignments appear when users are provisioned or assigned to sites."
+          emptyDescription={
+            canAssign
+              ? 'Add a person to a site to grant site access.'
+              : 'Assignments appear when users are provisioned or assigned to sites.'
+          }
           paginationMode="server"
           sortingMode="client"
           page={listState.state.page}
@@ -315,13 +342,12 @@ export function SiteAccessAdminPage() {
           onResetPreferences={listState.reset}
           getRowId={(row) => row.id}
           rowActions={(row) =>
-            canManageSiteAccess(access) &&
-            row.status === SiteAssignmentStatus.Active
+            canAssign && row.status === SiteAssignmentStatus.Active
               ? [
                   {
                     id: 'revoke',
-                    label: 'Revoke',
-                    permission: 'site_access.manage',
+                    label: 'Remove from site',
+                    danger: true,
                     onClick: () => setRevokeId(row.id),
                   },
                 ]
@@ -332,11 +358,25 @@ export function SiteAccessAdminPage() {
         />
       </Stack>
 
+      <AssignSiteAccessDialog
+        open={assignOpen}
+        users={(usersQuery.data?.items ?? []).map((user) => ({
+          id: user.id,
+          fullName: user.fullName,
+        }))}
+        projects={(projectsQuery.data?.items ?? []).map((project) => ({
+          id: project.id,
+          projectName: project.projectName,
+        }))}
+        sites={sitesQuery.data?.items ?? []}
+        onClose={() => setAssignOpen(false)}
+      />
+
       <ConfirmDialog
         open={Boolean(revokeId)}
-        title="Revoke site assignment?"
-        description="The user will lose access to this site."
-        confirmLabel="Revoke"
+        title="Remove from site?"
+        description="This person will lose access to this site."
+        confirmLabel="Remove"
         loading={revokeMutation.isPending}
         onCancel={() => setRevokeId(null)}
         onConfirm={() => void confirmRevoke()}

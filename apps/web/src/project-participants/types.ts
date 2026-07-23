@@ -24,6 +24,14 @@ export const InstrumentType = {
 export type InstrumentType =
   (typeof InstrumentType)[keyof typeof InstrumentType];
 
+export const RepaymentMode = {
+  Lumpsum: 'lumpsum',
+  WithInterest: 'with_interest',
+} as const;
+
+export type RepaymentMode =
+  (typeof RepaymentMode)[keyof typeof RepaymentMode];
+
 export const ParticipantApprovalStatus = {
   Draft: 'draft',
   Submitted: 'submitted',
@@ -47,6 +55,8 @@ export type PublicProjectParticipant = {
   approvedProfitSharePercentage: number;
   lossSharePercentage: number;
   interestRate: number | null;
+  budgetInvestmentPercentage: number | null;
+  repaymentMode: RepaymentMode | null;
   instrumentType: InstrumentType;
   effectiveFrom: string;
   effectiveTo: string | null;
@@ -93,6 +103,8 @@ export type CreateParticipantInput = {
   approvedProfitSharePercentage: number;
   lossSharePercentage: number;
   interestRate?: number | null;
+  budgetInvestmentPercentage?: number | null;
+  repaymentMode?: RepaymentMode | null;
   instrumentType: InstrumentType;
   effectiveFrom?: string;
   agreementDocumentId?: string | null;
@@ -106,6 +118,8 @@ export type CreateParticipantVersionInput = {
   approvedProfitSharePercentage: number;
   lossSharePercentage: number;
   interestRate?: number | null;
+  budgetInvestmentPercentage?: number | null;
+  repaymentMode?: RepaymentMode | null;
   instrumentType?: InstrumentType;
   effectiveFrom?: string;
   agreementDocumentId?: string | null;

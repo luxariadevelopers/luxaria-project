@@ -22,7 +22,12 @@ import {
   listContractorsForAttendance,
   listLabourCategories,
 } from './api';
+import {
+  buildAttendanceCreatePayload,
+  type AttendanceWorkerDraft,
+} from './buildAttendanceCreatePayload';
 import { buildAttendanceOfflineEnqueue } from './buildAttendanceOfflineEnqueue';
+import { IndividualAttendanceSection } from './IndividualAttendanceSection';
 import { resolveAttendanceCapabilities } from './permissions';
 import {
   LabourAttendanceEntryMode,
@@ -46,8 +51,21 @@ export function LabourAttendanceFormScreen({ navigation }: Props) {
   const [attendanceDate, setAttendanceDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
+  const [entryMode, setEntryMode] = useState<LabourAttendanceEntryMode>(
+    LabourAttendanceEntryMode.Group,
+  );
   const [workLocation, setWorkLocation] = useState('');
   const [workerCount, setWorkerCount] = useState('10');
+  const [workers, setWorkers] = useState<AttendanceWorkerDraft[]>([
+    {
+      workerName: '',
+      workerCode: '',
+      checkIn: '',
+      checkOut: '',
+      overtimeHours: '0',
+      remarks: '',
+    },
+  ]);
   const [overtimeHours, setOvertimeHours] = useState('0');
   const [remarks, setRemarks] = useState('');
   const [saving, setSaving] = useState(false);
@@ -92,30 +110,28 @@ export function LabourAttendanceFormScreen({ navigation }: Props) {
       setError('Contractor and labour category are required');
       return;
     }
-    const count = Number(workerCount);
-    if (!Number.isFinite(count) || count <= 0) {
-      setError('Worker count must be greater than 0');
+
+    let payload;
+    try {
+      payload = buildAttendanceCreatePayload({
+        projectId: selectedProject.id,
+        contractorId,
+        attendanceDate,
+        labourCategoryId: categoryId,
+        entryMode,
+        workerCount,
+        workers,
+        overtimeHours,
+        workLocation: workLocation.trim() || null,
+        remarks: remarks.trim() || null,
+        submit: true,
+        clientDeviceId: user?.id ?? null,
+        offlineCapturedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid attendance');
       return;
     }
-
-    const payload = {
-      projectId: selectedProject.id,
-      contractorId,
-      attendanceDate,
-      workLocation: workLocation.trim() || null,
-      lines: [
-        {
-          labourCategoryId: categoryId,
-          entryMode: LabourAttendanceEntryMode.Group,
-          workerCount: count,
-          overtimeHours: Number(overtimeHours) || 0,
-        },
-      ],
-      remarks: remarks.trim() || null,
-      submit: true,
-      clientDeviceId: user?.id ?? null,
-      offlineCapturedAt: new Date().toISOString(),
-    };
 
     setSaving(true);
     setError(null);
@@ -160,6 +176,29 @@ export function LabourAttendanceFormScreen({ navigation }: Props) {
         autoCapitalize="none"
       />
 
+      <Text style={styles.label}>Entry mode</Text>
+      <View style={styles.chips}>
+        <Pressable
+          style={[
+            styles.chip,
+            entryMode === LabourAttendanceEntryMode.Group && styles.chipActive,
+          ]}
+          onPress={() => setEntryMode(LabourAttendanceEntryMode.Group)}
+        >
+          <Text style={styles.chipText}>Group</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.chip,
+            entryMode === LabourAttendanceEntryMode.Individual &&
+              styles.chipActive,
+          ]}
+          onPress={() => setEntryMode(LabourAttendanceEntryMode.Individual)}
+        >
+          <Text style={styles.chipText}>Individual</Text>
+        </Pressable>
+      </View>
+
       <Text style={styles.label}>Contractor id</Text>
       <TextInput
         style={styles.input}
@@ -201,21 +240,39 @@ export function LabourAttendanceFormScreen({ navigation }: Props) {
         ))}
       </View>
 
-      <Text style={styles.label}>Worker count</Text>
-      <TextInput
-        style={styles.input}
-        value={workerCount}
-        onChangeText={setWorkerCount}
-        keyboardType="numeric"
-      />
+      {entryMode === LabourAttendanceEntryMode.Group ? (
+        <>
+          <Text style={styles.label}>Worker count</Text>
+          <TextInput
+            style={styles.input}
+            value={workerCount}
+            onChangeText={setWorkerCount}
+            keyboardType="numeric"
+          />
 
-      <Text style={styles.label}>Overtime hours</Text>
-      <TextInput
-        style={styles.input}
-        value={overtimeHours}
-        onChangeText={setOvertimeHours}
-        keyboardType="numeric"
-      />
+          <Text style={styles.label}>Overtime hours</Text>
+          <TextInput
+            style={styles.input}
+            value={overtimeHours}
+            onChangeText={setOvertimeHours}
+            keyboardType="numeric"
+          />
+        </>
+      ) : (
+        <>
+          <IndividualAttendanceSection
+            workers={workers}
+            onChange={setWorkers}
+          />
+          <Text style={styles.label}>Line overtime hours (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={overtimeHours}
+            onChangeText={setOvertimeHours}
+            keyboardType="numeric"
+          />
+        </>
+      )}
 
       <Text style={styles.label}>Work location</Text>
       <TextInput

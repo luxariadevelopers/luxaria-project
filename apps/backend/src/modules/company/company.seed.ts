@@ -33,7 +33,8 @@ export const LUXARIA_COMPANY_SEED = {
   authorisedShareCapital: LUXARIA_AUTHORISED_SHARE_CAPITAL,
   paidUpShareCapital: 0,
   financialYearStartMonth: 4,
-  logo: null as string | null,
+  /** Served from backend `uploads/company` (copied from web public brand asset). */
+  logo: 'uploads/company/luxaria-logo.png' as string | null,
   status: CompanyStatus.Active,
   isPrimary: true,
 };

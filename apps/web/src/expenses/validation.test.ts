@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   isExpenseEditable,
   isExpensePosted,
+  siteExpenseCreateSchema,
   validateExpenseListFilters,
 } from './validation';
-import { SiteExpenseVoucherStatus } from './types';
+import {
+  SiteExpensePaymentMode,
+  SiteExpenseVoucherStatus,
+} from './types';
 
 describe('expense list filter validation', () => {
   it('accepts status + date range', () => {
@@ -27,6 +31,38 @@ describe('expense list filter validation', () => {
     if (!res.ok) {
       expect(res.message).toMatch(/on or after/i);
     }
+  });
+});
+
+describe('site expense create schema', () => {
+  it('accepts a valid create payload', () => {
+    const parsed = siteExpenseCreateSchema.safeParse({
+      expenseDate: '2026-07-21',
+      pettyCashAccountId: '507f1f77bcf86cd799439011',
+      expenseCategoryId: '507f1f77bcf86cd799439012',
+      amount: 1500,
+      paidTo: 'Ravi Kumar',
+      purpose: 'Site labour',
+      paymentMode: SiteExpensePaymentMode.Cash,
+      billNumber: '',
+      mobileNumber: '',
+      submitImmediately: true,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects missing paid to', () => {
+    const parsed = siteExpenseCreateSchema.safeParse({
+      expenseDate: '2026-07-21',
+      pettyCashAccountId: '507f1f77bcf86cd799439011',
+      expenseCategoryId: '507f1f77bcf86cd799439012',
+      amount: 1500,
+      paidTo: '',
+      purpose: 'Site labour',
+      paymentMode: SiteExpensePaymentMode.Upi,
+      submitImmediately: false,
+    });
+    expect(parsed.success).toBe(false);
   });
 });
 

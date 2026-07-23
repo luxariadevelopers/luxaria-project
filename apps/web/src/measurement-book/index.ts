@@ -19,3 +19,6 @@ export type {
   ListMeasurementBookQuery,
   ReviseMeasurementBookInput,
 } from './api';
+export { ReviseMbDialog } from './ReviseMbDialog';
+export { resolveMeasurementBookCapabilities } from './roleAccess';
+export { resolveMeasurementBookActions } from './workflowActions';

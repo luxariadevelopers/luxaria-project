@@ -94,11 +94,18 @@ export class DocumentsService {
       createdBy: new Types.ObjectId(actorId),
     });
 
-    const presigned = await this.s3Storage.createPresignedUpload({
-      s3Key,
-      mimeType,
-      contentLength: dto.size,
-    });
+    let presigned;
+    try {
+      presigned = await this.s3Storage.createPresignedUpload({
+        s3Key,
+        mimeType,
+        contentLength: dto.size,
+      });
+    } catch (err) {
+      // Avoid leaving orphan pending_upload rows when signing fails (e.g. expired AWS session).
+      await this.documentModel.deleteOne({ _id: doc._id }).exec();
+      throw err;
+    }
 
     return createSuccessResponse(
       {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Button,
   Dialog,
@@ -6,6 +7,7 @@ import {
   DialogContentText,
   DialogTitle,
 } from '@mui/material';
+import { blurActiveElement } from '@/utils/blurActiveElement';
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -30,8 +32,18 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  useEffect(() => {
+    if (open) blurActiveElement();
+  }, [open]);
+
   return (
-    <Dialog open={open} onClose={loading ? undefined : onCancel} maxWidth="xs" fullWidth>
+    <Dialog
+      open={open}
+      onClose={loading ? undefined : onCancel}
+      maxWidth="xs"
+      fullWidth
+      disableRestoreFocus
+    >
       <DialogTitle>{title}</DialogTitle>
       {description ? (
         <DialogContent>
@@ -39,7 +51,7 @@ export function ConfirmDialog({
         </DialogContent>
       ) : null}
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onCancel} disabled={loading}>
+        <Button onClick={onCancel} disabled={loading} autoFocus={!destructive}>
           {cancelLabel}
         </Button>
         <Button
@@ -47,6 +59,7 @@ export function ConfirmDialog({
           color={destructive ? 'error' : 'primary'}
           onClick={onConfirm}
           disabled={loading}
+          autoFocus={destructive}
         >
           {confirmLabel}
         </Button>

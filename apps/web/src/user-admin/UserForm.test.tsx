@@ -6,7 +6,11 @@ import {
 } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { UserForm } from './UserForm';
-import { UserStatus, type PublicUser } from './types';
+import {
+  ReportingApprovalMode,
+  UserStatus,
+  type PublicUser,
+} from './types';
 
 const user: PublicUser = {
   id: '507f1f77bcf86cd799439011',
@@ -22,6 +26,8 @@ const user: PublicUser = {
   assignedProjects: [],
   roleIds: [],
   reportingManager: null,
+  reportingOfficers: [],
+  reportingApprovalMode: ReportingApprovalMode.Any,
   joiningDate: null,
   lastLoginAt: null,
 };
@@ -34,8 +40,11 @@ describe('UserForm', () => {
     fireEvent.change(screen.getByLabelText(/full name/i), {
       target: { value: 'New User' },
     });
+    fireEvent.change(screen.getByLabelText(/email \(login\)/i), {
+      target: { value: 'new@example.com' },
+    });
     const password = screen.getByLabelText(
-      /initial password/i,
+      /initial temporary password/i,
     ) as HTMLInputElement;
     expect(password.type).toBe('password');
     fireEvent.change(password, {
@@ -48,17 +57,55 @@ describe('UserForm', () => {
     await waitFor(() => expect(password.value).toBe(''));
   });
 
-  it('never renders a stored or editable password in edit mode', () => {
+  it('allows an optional temporary password in edit mode', () => {
     render(
       <UserForm mode="edit" initial={user} onSubmit={vi.fn()} />,
     );
 
     expect(
-      screen.queryByLabelText(/initial password/i),
+      screen.queryByLabelText(/initial temporary password/i),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('textbox', { name: /password/i }),
-    ).not.toBeInTheDocument();
+      screen.getByLabelText(/set \/ reset temporary password/i),
+    ).toBeInTheDocument();
+  });
+
+  it('shows reporting officers controls', () => {
+    render(
+      <UserForm
+        mode="edit"
+        initial={user}
+        managerOptions={[
+          {
+            ...user,
+            id: '507f1f77bcf86cd799439012',
+            fullName: 'Director One',
+            userCode: 'USR-000002',
+          },
+        ]}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('reporting-officers-section')).toBeInTheDocument();
+    expect(screen.getByLabelText(/reporting officers/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/primary reporting officer/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/approval rule/i)).toBeInTheDocument();
+  });
+
+  it('allows empty reporting when no other users exist yet', () => {
+    render(
+      <UserForm mode="edit" initial={user} managerOptions={[]} onSubmit={vi.fn()} />,
+    );
+
+    expect(
+      screen.getByText(/no other active users to assign yet/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/not required for top-level roles/i),
+    ).toBeInTheDocument();
   });
 
   it('shows validation errors before submitting invalid create data', async () => {

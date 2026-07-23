@@ -23,8 +23,8 @@ export class Director {
   @Prop({ required: true, unique: true, trim: true, uppercase: true })
   directorCode!: string;
 
-  /** Optional linked system user */
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
+  /** Linked system user — required for operational directors */
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   userId!: Types.ObjectId | null;
 
   @Prop({ required: true, trim: true })
@@ -68,6 +68,16 @@ DirectorSchema.plugin(softDeletePlugin);
 
 DirectorSchema.index({ companyId: 1, status: 1 });
 DirectorSchema.index({ fullName: 'text', directorCode: 'text', din: 'text' });
+DirectorSchema.index(
+  { userId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      userId: { $type: 'objectId' },
+      isDeleted: false,
+    },
+  },
+);
 DirectorSchema.index(
   { din: 1 },
   {

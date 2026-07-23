@@ -294,3 +294,40 @@ export async function rejectShareholdingChange(
   }
   return normaliseChangeRequest(res.data);
 }
+
+export type ShareCapitalDirectorLine = {
+  directorId: string;
+  numberOfShares: number;
+  faceValue: number;
+  amount: number;
+};
+
+export type ShareCapitalReceiptResult = {
+  journalId: string | null;
+  journalNumber: string | null;
+  bankAccountId: string;
+  receivedDate: string;
+  totalAmount: number;
+  directorLines: ShareCapitalDirectorLine[];
+  paidUpShareCapital: number;
+};
+
+/**
+ * `POST /company-shareholding/capital-receipts` — `company.update`.
+ * Posts shares × face value per director into the company bank book and
+ * updates paid-up share capital.
+ */
+export async function postShareCapitalReceipt(input: {
+  bankAccountId: string;
+  receivedDate?: string;
+  reference?: string | null;
+}): Promise<ShareCapitalReceiptResult> {
+  const res = await apiPost<ShareCapitalReceiptResult>(
+    '/company-shareholding/capital-receipts',
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Could not post share capital to bank book');
+  }
+  return res.data;
+}

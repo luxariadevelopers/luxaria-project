@@ -690,15 +690,34 @@ describe('ProjectsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('rejects assignees with null companyId instead of primary-company fallback', async () => {
+  it('allows null companyId assignees when the project company is primary', async () => {
     await userModel.findByIdAndUpdate(managerId, { companyId: null });
+
+    const created = await service.create(
+      { ...baseCreate(), projectManager: managerId },
+      actorId,
+    );
+    expect(created.data?.projectManager).toBe(managerId);
+  });
+
+  it('rejects null companyId assignees for a non-primary company project', async () => {
+    await userModel.findByIdAndUpdate(managerId, { companyId: null });
+    await userModel.findByIdAndUpdate(actorId, {
+      companyId: foreignCompanyId,
+    });
 
     await expect(
       service.create(
-        { ...baseCreate(), projectManager: managerId },
+        {
+          ...baseCreate(),
+          projectManager: managerId,
+          companyId: foreignCompanyId,
+        },
         actorId,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
+
+    await userModel.findByIdAndUpdate(actorId, { companyId });
   });
 
   it('revokes access when manager and director assignments are replaced', async () => {

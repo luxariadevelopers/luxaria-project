@@ -41,7 +41,11 @@ async function refreshAccessToken(): Promise<string | null> {
     const { data } = await axios.post<ApiResponse<RefreshResponse>>(
       `${baseURL}/auth/refresh`,
       { refreshToken },
-      { headers: { 'Content-Type': 'application/json' } },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        // Keep httpOnly refresh cookie in sync with localStorage rotation.
+        withCredentials: true,
+      },
     );
     const tokens = data.data;
     if (!tokens?.accessToken || !tokens.refreshToken) {
@@ -55,17 +59,38 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+function setAuthorizationHeader(
+  config: InternalAxiosRequestConfig,
+  accessToken: string,
+) {
+  const value = `Bearer ${accessToken}`;
+  const headers = config.headers;
+  if (headers && typeof headers.set === 'function') {
+    headers.set('Authorization', value);
+    return;
+  }
+  config.headers = { ...headers, Authorization: value } as typeof config.headers;
+}
+
 apiClient.interceptors.request.use((config) => {
   const token = tokenStorage.getAccessToken();
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    setAuthorizationHeader(config, token);
   }
   const url = config.url ?? '';
   // Investor portal is path-scoped; do not send staff active-project header.
   if (!url.includes('/investor-portal')) {
     const projectId = tokenStorage.getSelectedProjectId();
     if (projectId) {
-      config.headers['X-Project-Id'] = projectId;
+      const headers = config.headers;
+      if (headers && typeof headers.set === 'function') {
+        headers.set('X-Project-Id', projectId);
+      } else {
+        config.headers = {
+          ...headers,
+          'X-Project-Id': projectId,
+        } as typeof config.headers;
+      }
     }
   }
   return config;
@@ -76,13 +101,14 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const original = error.config as RetryConfig | undefined;
     const status = error.response?.status;
+    const requestUrl = original?.url ?? '';
 
     if (
       status === 401 &&
       original &&
       !original._retry &&
-      !original.url?.includes('/auth/login') &&
-      !original.url?.includes('/auth/refresh')
+      !requestUrl.includes('/auth/login') &&
+      !requestUrl.includes('/auth/refresh')
     ) {
       original._retry = true;
       refreshPromise ??= refreshAccessToken().finally(() => {
@@ -90,7 +116,7 @@ apiClient.interceptors.response.use(
       });
       const newToken = await refreshPromise;
       if (newToken) {
-        original.headers.Authorization = `Bearer ${newToken}`;
+        setAuthorizationHeader(original, newToken);
         return apiClient(original);
       }
       if (typeof window !== 'undefined') {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, Stack, Typography } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { getErrorMessage, isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
@@ -12,6 +13,10 @@ import {
 import { PermissionDenied } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
+import {
+  ExpenseCategoryStatus,
+  fetchExpenseCategories,
+} from '@/expense-categories';
 import { BillPreview } from '@/expenses/BillPreview';
 import { buildExpenseTimeline } from '@/expenses/buildExpenseTimeline';
 import {
@@ -22,7 +27,14 @@ import { ExpenseStatusChip } from '@/expenses/ExpenseStatusChip';
 import { JournalLink } from '@/expenses/JournalLink';
 import { MapLocation } from '@/expenses/MapLocation';
 import { resolveExpenseCapabilities } from '@/expenses/roleAccess';
+import {
+  assertSignatureReady,
+  hasSignatureAttachment,
+} from '@/expenses/signatureRequired';
 import { SignaturesPanel } from '@/expenses/SignaturesPanel';
+import {
+  SiteExpenseAttachmentType,
+} from '@/expenses/types';
 import {
   useApproveSiteExpenseVoucher,
   useCancelSiteExpenseVoucher,
@@ -30,10 +42,14 @@ import {
   useRejectSiteExpenseVoucher,
   useReturnSiteExpenseVoucher,
   useSiteExpenseVoucherDetail,
+  useSubmitSiteExpenseVoucher,
+  useUpdateSiteExpenseVoucher,
   useVerifySiteExpenseVoucher,
 } from '@/expenses/useExpenses';
 import { VoucherSummary } from '@/expenses/VoucherSummary';
 import {
+  isExpenseEditable,
+  isExpenseEvidenceReadOnly,
   isExpensePosted,
   resolveExpenseDetailActions,
 } from '@/expenses/workflowActions';
@@ -41,11 +57,8 @@ import { WorkflowTimeline } from '@/workflow-timeline';
 
 /**
  * Site expense voucher detail — `/accounting/expenses/:expenseId`
- * (Micro Phase 053).
  *
- * Nest: GET detail · POST verify/approve/reject/return/post/cancel
- * Permissions: expense.view / approve (verify+reject+return) / post / create (cancel)
- * Prompt aliases expense.verify / expense.reverse are not in the Nest catalog.
+ * Nest: GET detail · PATCH (signatures) · POST submit/verify/approve/…
  * Posted vouchers are immutable — evidence is display-only.
  */
 export function ExpenseDetailPage() {
@@ -60,12 +73,32 @@ export function ExpenseDetailPage() {
   const detailQuery = useSiteExpenseVoucherDetail(expenseId || null, canView);
   const voucher = detailQuery.data;
 
+  const categoriesQuery = useQuery({
+    queryKey: ['expense-categories', 'detail-rules', voucher?.expenseCategoryId],
+    queryFn: () =>
+      fetchExpenseCategories({
+        page: 1,
+        limit: 200,
+        status: ExpenseCategoryStatus.Active,
+      }),
+    enabled: Boolean(voucher?.expenseCategoryId),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const requiresSignature = Boolean(
+    categoriesQuery.data?.find((c) => c.id === voucher?.expenseCategoryId)
+      ?.requiresSignature,
+  );
+
   const verify = useVerifySiteExpenseVoucher();
   const approve = useApproveSiteExpenseVoucher();
   const post = usePostSiteExpenseVoucher();
   const reject = useRejectSiteExpenseVoucher();
   const returnVoucher = useReturnSiteExpenseVoucher();
   const cancel = useCancelSiteExpenseVoucher();
+  const update = useUpdateSiteExpenseVoucher();
+  const submit = useSubmitSiteExpenseVoucher();
 
   const allowed = voucher
     ? resolveExpenseDetailActions(voucher, caps)
@@ -86,10 +119,42 @@ export function ExpenseDetailPage() {
     post.isPending ||
     reject.isPending ||
     returnVoucher.isPending ||
-    cancel.isPending;
+    cancel.isPending ||
+    update.isPending ||
+    submit.isPending;
+
+  const editable = voucher ? isExpenseEditable(voucher) : false;
 
   const actions: EntityDetailAction[] = voucher
     ? [
+        {
+          id: 'submit',
+          label: 'Submit',
+          permission: 'expense.create',
+          allowedStatuses: ['draft', 'returned'],
+          color: 'primary',
+          variant: 'contained',
+          onClick: () => {
+            void (async () => {
+              const sigCheck = assertSignatureReady({
+                requiresSignature,
+                hasSignature: hasSignatureAttachment(voucher.attachments),
+              });
+              if (!sigCheck.ok) {
+                notifyError(sigCheck.error);
+                return;
+              }
+              try {
+                await submit.mutateAsync(voucher.id);
+                success('Expense voucher submitted for review');
+              } catch (err) {
+                notifyError(getErrorMessage(err));
+              }
+            })();
+          },
+          loading: submit.isPending,
+          disabled: !allowed.includes('submit'),
+        },
         {
           id: 'verify',
           label: 'Verify',
@@ -244,7 +309,7 @@ export function ExpenseDetailPage() {
               actions={actions}
               status={voucher.status}
               hasPermission={hasPermission}
-              emptyHint="No verify / approve / post / reject actions for this status and your permissions. Posted vouchers are immutable."
+              emptyHint="No submit / verify / approve / post / reject actions for this status and your permissions. Posted vouchers are immutable."
             />
           ) : undefined
         }
@@ -272,7 +337,42 @@ export function ExpenseDetailPage() {
               </Alert>
             ) : null}
             <BillPreview voucher={voucher} />
-            <SignaturesPanel voucher={voucher} />
+            <SignaturesPanel
+              voucher={voucher}
+              editable={editable && !isExpenseEvidenceReadOnly(voucher.status)}
+              requiresSignature={requiresSignature}
+              saving={update.isPending}
+              onAttachSignature={async (doc) => {
+                try {
+                  const prior = voucher.attachments.filter(
+                    (a) => a.type !== SiteExpenseAttachmentType.Signature,
+                  );
+                  await update.mutateAsync({
+                    id: voucher.id,
+                    input: {
+                      attachments: [
+                        ...prior.map((a) => ({
+                          type: a.type,
+                          documentId: a.documentId,
+                          fileName: a.fileName,
+                          filePath: a.filePath,
+                          mimeType: a.mimeType,
+                        })),
+                        {
+                          type: SiteExpenseAttachmentType.Signature,
+                          documentId: doc.id,
+                          fileName: doc.originalFileName || doc.fileName,
+                          mimeType: doc.mimeType,
+                        },
+                      ],
+                    },
+                  });
+                  success('Signature attached to expense voucher');
+                } catch (err) {
+                  notifyError(getErrorMessage(err));
+                }
+              }}
+            />
             <MapLocation voucher={voucher} />
             <JournalLink voucher={voucher} />
             <Typography variant="caption" color="text.secondary">

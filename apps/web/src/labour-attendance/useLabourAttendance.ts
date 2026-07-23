@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import {
   confirmLabourAttendance,
+  createLabourAttendance,
   fetchDailyAttendanceReport,
   fetchDailyLabourDeployment,
   fetchLabourAttendance,
@@ -12,6 +13,7 @@ import {
 } from './api';
 import { labourAttendanceKeys } from './queryKeys';
 import type {
+  CreateLabourAttendanceInput,
   DailyAttendanceReportQuery,
   ListLabourAttendanceQuery,
 } from './types';
@@ -77,6 +79,19 @@ export function useDailyLabourDeployment(
       Boolean(query?.projectId && query.attendanceDate) && enabled,
     staleTime: 15_000,
     retry: false,
+  });
+}
+
+export function useCreateLabourAttendance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      input: CreateLabourAttendanceInput;
+      idempotencyKey?: string;
+    }) => createLabourAttendance(args.input, args.idempotencyKey),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: labourAttendanceKeys.all });
+    },
   });
 }
 

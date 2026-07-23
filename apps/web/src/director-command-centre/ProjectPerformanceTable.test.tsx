@@ -64,6 +64,16 @@ function sampleSummary(
       projectStage: 'construction',
       status: 'Active',
     },
+    capitalPlan: {
+      approvedBudget: 1_000_000,
+      totalInvested: 0,
+      pendingToInvest: 1_000_000,
+      equalDirectorInvestment: false,
+      directorsEqual: false,
+      directors: [],
+      investors: [],
+      drillDown: [],
+    },
     projectStage: {
       stage: 'construction',
       status: 'Active',

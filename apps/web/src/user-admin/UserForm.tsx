@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Button,
   FormControl,
   FormHelperText,
@@ -8,6 +9,8 @@ import {
   MenuItem,
   Select,
   Stack,
+  TextField,
+  Typography,
 } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -19,6 +22,13 @@ import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
 import type { PublicProject } from '@/projects/types';
 import type { PublicRole } from '@/rbac-admin/types';
+import { resolveUserProfilePhotoUrl } from './api';
+import {
+  departmentSelectOptions,
+  designationSelectOptions,
+  previewEmployeeId,
+  USER_DESIGNATIONS_BY_DEPARTMENT,
+} from './employmentOptions';
 import {
   buildUserFormDefaults,
   createUserFormSchema,
@@ -26,7 +36,18 @@ import {
   resolveUserFormField,
   type UserFormValues,
 } from './validation';
-import { UserStatus, type PublicUser } from './types';
+import {
+  ReportingApprovalMode,
+  UserStatus,
+  type PublicUser,
+} from './types';
+
+const PROFILE_PHOTO_ACCEPT = 'image/png,image/jpeg,image/jpg,image/webp,image/gif';
+const PROFILE_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+
+export type UserFormSubmitExtras = {
+  profilePhotoFile: File | null;
+};
 
 type Props = {
   mode: 'create' | 'edit';
@@ -38,14 +59,27 @@ type Props = {
   allowProjectAssignment?: boolean;
   submitting?: boolean;
   serverError?: unknown;
-  onSubmit: (values: UserFormValues) => void | Promise<void>;
+  onSubmit: (
+    values: UserFormValues,
+    extras: UserFormSubmitExtras,
+  ) => void | Promise<void>;
   onCancel?: () => void;
 };
+
+function validateProfilePhoto(file: File): string | null {
+  if (!PROFILE_PHOTO_ACCEPT.split(',').includes(file.type)) {
+    return 'Use PNG, JPG, JPEG, WebP, or GIF';
+  }
+  if (file.size > PROFILE_PHOTO_MAX_BYTES) {
+    return 'Profile photo must be 2 MB or smaller';
+  }
+  return null;
+}
 
 export function UserForm({
   mode,
   initial,
-  managerOptions,
+  managerOptions = [],
   roleOptions,
   projectOptions,
   allowRoleAssignment = false,
@@ -62,6 +96,8 @@ export function UserForm({
     reset,
     resetField,
     setError,
+    setValue,
+    watch,
   } = useForm<UserFormValues>({
     resolver: zodResolver(
       mode === 'create' ? createUserFormSchema : editUserFormSchema,
@@ -69,9 +105,62 @@ export function UserForm({
     defaultValues: defaults,
   });
 
+  const previousDepartment = useRef(defaults.department);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(
+    null,
+  );
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(
+    null,
+  );
+
   useEffect(() => {
     reset(defaults);
+    previousDepartment.current = defaults.department;
+    setProfilePhotoFile(null);
+    setProfilePhotoError(null);
   }, [defaults, reset]);
+
+  useEffect(() => {
+    if (!profilePhotoFile) {
+      setProfilePhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(profilePhotoFile);
+    setProfilePhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [profilePhotoFile]);
+
+  const department = watch('department');
+  const designation = watch('designation');
+  const reportingOfficers = watch('reportingOfficers');
+  const reportingManager = watch('reportingManager');
+
+  useEffect(() => {
+    if (previousDepartment.current === department) return;
+    previousDepartment.current = department;
+    if (!department?.trim() || !designation?.trim()) return;
+    const names = USER_DESIGNATIONS_BY_DEPARTMENT[department] ?? [];
+    if (!names.includes(designation)) {
+      setValue('designation', '', { shouldDirty: true });
+    }
+  }, [department, designation, setValue]);
+
+  useEffect(() => {
+    if (!reportingManager) return;
+    if (!reportingOfficers.includes(reportingManager)) {
+      setValue('reportingManager', reportingOfficers[0] ?? '', {
+        shouldDirty: true,
+      });
+    }
+  }, [reportingManager, reportingOfficers, setValue]);
+
+  const employeeIdDisplay = useMemo(() => {
+    if (mode === 'edit' && initial?.employeeId) {
+      return initial.employeeId;
+    }
+    return previewEmployeeId(department, designation);
+  }, [mode, initial?.employeeId, department, designation]);
 
   const appError = useMemo(
     () =>
@@ -91,28 +180,41 @@ export function UserForm({
     }
   }, [appError, setError]);
 
-  const managerSelectOptions = useMemo(
-    () => [
-      { value: '', label: 'No reporting manager' },
-      ...(initial?.reportingManager &&
-      !(managerOptions ?? []).some(
-        (user) => user.id === initial.reportingManager,
-      )
-        ? [
-            {
-              value: initial.reportingManager,
-              label: `Current manager · ${initial.reportingManager}`,
-            },
-          ]
-        : []),
-      ...(managerOptions ?? [])
+  const officerOptions = useMemo(
+    () =>
+      managerOptions
         .filter((user) => user.id !== initial?.id)
         .map((user) => ({
           value: user.id,
-          label: `${user.fullName} · ${user.userCode}`,
+          label: `${user.fullName} · ${user.userCode}${
+            user.designation ? ` · ${user.designation}` : ''
+          }`,
         })),
-    ],
-    [initial?.id, initial?.reportingManager, managerOptions],
+    [initial?.id, managerOptions],
+  );
+
+  const primaryOptions = useMemo(() => {
+    const selected = new Set(reportingOfficers);
+    const fromSelection = officerOptions.filter((option) =>
+      selected.has(option.value),
+    );
+    if (
+      reportingManager &&
+      !fromSelection.some((option) => option.value === reportingManager)
+    ) {
+      return [
+        {
+          value: reportingManager,
+          label: `Current primary · ${reportingManager}`,
+        },
+        ...fromSelection,
+      ];
+    }
+    return fromSelection;
+  }, [officerOptions, reportingManager, reportingOfficers]);
+
+  const currentPhotoUrl = resolveUserProfilePhotoUrl(
+    profilePhotoPreview ?? initial?.profilePhoto ?? watch('profilePhoto'),
   );
 
   return (
@@ -123,12 +225,13 @@ export function UserForm({
       onSubmit={(event) => {
         void handleSubmit(async (values) => {
           try {
-            await onSubmit(values);
+            await onSubmit(values, { profilePhotoFile });
           } finally {
-            // Passwords are request-only; never retain them after submission.
             if (mode === 'create') {
               resetField('password', { defaultValue: '' });
             }
+            resetField('temporaryPassword', { defaultValue: '' });
+            setProfilePhotoFile(null);
           }
         })(event);
       }}
@@ -142,7 +245,7 @@ export function UserForm({
 
       <FormSection
         title="User identity"
-        description="The server generates the immutable user code."
+        description="Email or mobile is the login ID. The server generates the immutable user code."
       >
         <FormTextField
           name="fullName"
@@ -155,26 +258,28 @@ export function UserForm({
           <FormTextField
             name="email"
             control={control}
-            label="Email"
+            label="Email (login)"
             type="email"
             autoComplete="off"
+            helperText="Used to sign in"
           />
           <FormTextField
             name="mobile"
             control={control}
-            label="Mobile"
+            label="Mobile (login)"
             autoComplete="off"
+            helperText="Used to sign in if email is empty"
           />
         </Stack>
         {mode === 'create' ? (
           <FormTextField
             name="password"
             control={control}
-            label="Initial password"
+            label="Initial temporary password"
             type="password"
             autoComplete="new-password"
             required
-            helperText="Sent once to the server and cleared from this form after submission."
+            helperText="Share securely. On first login they must set a permanent password."
             slotProps={{
               htmlInput: {
                 minLength: 8,
@@ -182,7 +287,22 @@ export function UserForm({
               },
             }}
           />
-        ) : null}
+        ) : (
+          <FormTextField
+            name="temporaryPassword"
+            control={control}
+            label="Set / reset temporary password"
+            type="password"
+            autoComplete="new-password"
+            helperText="Optional. Leave blank to keep the current password. If set, they must choose a new permanent password on next login."
+            slotProps={{
+              htmlInput: {
+                minLength: 8,
+                'data-testid': 'edit-user-temporary-password',
+              },
+            }}
+          />
+        )}
         {mode === 'create' ? (
           <FormSelect
             name="status"
@@ -196,22 +316,44 @@ export function UserForm({
         ) : null}
       </FormSection>
 
-      <FormSection title="Employment">
+      <FormSection
+        title="Employment"
+        description="Employee ID is generated from department + designation (for example ENG-SE-000042)."
+      >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <FormTextField
-            name="employeeId"
-            control={control}
+          <TextField
             label="Employee ID"
+            value={employeeIdDisplay}
+            placeholder="Select department & designation"
+            fullWidth
+            disabled
+            helperText={
+              mode === 'edit' && initial?.employeeId
+                ? 'Assigned and locked'
+                : employeeIdDisplay
+                  ? 'Final number is assigned when you save'
+                  : 'Choose department and designation to preview'
+            }
+            slotProps={{
+              htmlInput: { 'data-testid': 'employee-id-preview' },
+            }}
           />
-          <FormTextField
-            name="designation"
-            control={control}
-            label="Designation"
-          />
-          <FormTextField
+          <FormSelect
             name="department"
             control={control}
             label="Department"
+            options={departmentSelectOptions(initial?.department)}
+          />
+          <FormSelect
+            name="designation"
+            control={control}
+            label={
+              department?.trim()
+                ? 'Designation'
+                : 'Designation (select department first)'
+            }
+            options={designationSelectOptions(department, designation)}
+            disabled={!department?.trim()}
           />
         </Stack>
         <DateInput
@@ -219,20 +361,177 @@ export function UserForm({
           control={control}
           label="Joining date"
         />
-        {managerOptions !== undefined ? (
+
+        <Stack spacing={1.5} data-testid="reporting-officers-section">
+          <Typography variant="subtitle2">Reporting & approvals</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Optional. Leave empty if this person is top-level (no one above
+            them), or set reporting officers later when more staff exist. When
+            set, mark one as primary and choose whether any one or all must
+            approve.
+          </Typography>
+          {officerOptions.length === 0 ? (
+            <Alert severity="info">
+              No other active users to assign yet. Leave reporting empty and
+              save — you can update it later when directors or managers are
+              added.
+            </Alert>
+          ) : null}
+          <Controller
+            name="reportingOfficers"
+            control={control}
+            render={({ field, fieldState }) => (
+              <FormControl
+                fullWidth
+                error={Boolean(fieldState.error)}
+                disabled={officerOptions.length === 0}
+              >
+                <InputLabel id="user-reporting-officers-label">
+                  Reporting officers
+                </InputLabel>
+                <Select
+                  {...field}
+                  multiple
+                  labelId="user-reporting-officers-label"
+                  label="Reporting officers"
+                  value={field.value ?? []}
+                  onChange={(event) => {
+                    const next = event.target.value as string[];
+                    field.onChange(next);
+                    const primary = watch('reportingManager');
+                    if (!next.length) {
+                      setValue('reportingManager', '', { shouldDirty: true });
+                    } else if (!next.includes(primary)) {
+                      setValue('reportingManager', next[0] ?? '', {
+                        shouldDirty: true,
+                      });
+                    }
+                  }}
+                  renderValue={(selected) => {
+                    const ids = selected as string[];
+                    if (!ids.length) {
+                      return officerOptions.length === 0
+                        ? 'None — set later'
+                        : 'None';
+                    }
+                    return ids
+                      .map(
+                        (id) =>
+                          officerOptions.find((option) => option.value === id)
+                            ?.label ?? id,
+                      )
+                      .join(', ');
+                  }}
+                >
+                  {officerOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {fieldState.error?.message ? (
+                  <FormHelperText>{fieldState.error.message}</FormHelperText>
+                ) : (
+                  <FormHelperText>
+                    Not required for top-level roles. Can be filled in later.
+                  </FormHelperText>
+                )}
+              </FormControl>
+            )}
+          />
           <FormSelect
             name="reportingManager"
             control={control}
-            label="Reporting manager"
-            options={managerSelectOptions}
+            label="Primary reporting officer"
+            options={[
+              { value: '', label: 'None' },
+              ...primaryOptions,
+            ]}
+            disabled={
+              officerOptions.length === 0 || reportingOfficers.length === 0
+            }
           />
-        ) : null}
-        <FormTextField
-          name="profilePhoto"
-          control={control}
-          label="Profile photo reference"
-          helperText="Optional URL or storage reference accepted by the current API."
-        />
+          <FormSelect
+            name="reportingApprovalMode"
+            control={control}
+            label="Approval rule"
+            options={[
+              {
+                value: ReportingApprovalMode.Any,
+                label: 'Any one reporting officer can approve',
+              },
+              {
+                value: ReportingApprovalMode.All,
+                label: 'All reporting officers must approve',
+              },
+            ]}
+            disabled={
+              officerOptions.length === 0 || reportingOfficers.length === 0
+            }
+          />
+        </Stack>
+
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          sx={{ alignItems: { sm: 'center' } }}
+          data-testid="profile-photo-section"
+        >
+          <Avatar
+            src={currentPhotoUrl ?? undefined}
+            alt="Profile photo preview"
+            sx={{ width: 88, height: 88, fontSize: 28 }}
+          >
+            {(initial?.fullName ?? watch('fullName') ?? '?')
+              .slice(0, 2)
+              .toUpperCase()}
+          </Avatar>
+          <Stack spacing={1} sx={{ alignItems: 'flex-start', flex: 1 }}>
+            <Button component="label" variant="outlined" disabled={submitting}>
+              Choose profile photo
+              <input
+                hidden
+                type="file"
+                accept={PROFILE_PHOTO_ACCEPT}
+                aria-label="Profile photo file"
+                onChange={(event) => {
+                  const next = event.target.files?.[0] ?? null;
+                  if (!next) {
+                    setProfilePhotoFile(null);
+                    setProfilePhotoError(null);
+                    return;
+                  }
+                  const error = validateProfilePhoto(next);
+                  setProfilePhotoError(error);
+                  setProfilePhotoFile(error ? null : next);
+                  event.target.value = '';
+                }}
+              />
+            </Button>
+            <Typography variant="body2" color="text.secondary">
+              {profilePhotoFile
+                ? `${profilePhotoFile.name} · ${Math.ceil(profilePhotoFile.size / 1024)} KB — uploaded when you save`
+                : initial?.profilePhoto
+                  ? 'Current photo on file'
+                  : 'PNG, JPG, WebP, or GIF · max 2 MB'}
+            </Typography>
+            {profilePhotoError ? (
+              <Alert severity="error">{profilePhotoError}</Alert>
+            ) : null}
+            {profilePhotoFile ? (
+              <Button
+                type="button"
+                disabled={submitting}
+                onClick={() => {
+                  setProfilePhotoFile(null);
+                  setProfilePhotoError(null);
+                }}
+              >
+                Clear selection
+              </Button>
+            ) : null}
+          </Stack>
+        </Stack>
       </FormSection>
 
       {mode === 'create' &&
@@ -308,7 +607,11 @@ export function UserForm({
       ) : null}
 
       <Stack direction="row" spacing={1.5}>
-        <Button type="submit" variant="contained" disabled={submitting}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={submitting || Boolean(profilePhotoError)}
+        >
           {submitting
             ? 'Saving…'
             : mode === 'create'

@@ -124,6 +124,21 @@ export async function postJournal(id: string): Promise<PublicJournalEntry> {
 }
 
 /**
+ * `POST /journals/:id/amend` — `journal.reverse`
+ * Corrects a posted journal in place (same voucher number).
+ */
+export async function amendJournal(
+  id: string,
+  input: UpdateJournalInput,
+): Promise<PublicJournalEntry> {
+  const res = await apiPost<PublicJournalEntry>(`/journals/${id}/amend`, input);
+  if (!res.data) {
+    throw new Error(res.message || 'Amend journal failed');
+  }
+  return normaliseJournal(res.data);
+}
+
+/**
  * `POST /journals/:id/reverse` — `journal.reverse`
  * Returns original + new reversing entry.
  */

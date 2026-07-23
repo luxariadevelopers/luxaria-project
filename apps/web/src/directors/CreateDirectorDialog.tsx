@@ -24,6 +24,7 @@ export function CreateDirectorDialog({ open, onClose, onCreated }: Props) {
     try {
       const created = await create.mutateAsync({
         fullName: values.fullName,
+        userId: values.userId,
         din: values.din ?? null,
         pan: values.pan ?? null,
         email: values.email ?? null,

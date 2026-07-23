@@ -73,7 +73,7 @@ export function PasswordResetDialog({
           <DialogContentText>
             This replaces the password and revokes every active session for
             this user. Share the temporary value through an approved secure
-            channel.
+            channel. On next login they must set a new permanent password.
           </DialogContentText>
           {serverError ? (
             <Alert severity="error">

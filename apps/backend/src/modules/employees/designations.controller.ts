@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -77,5 +78,17 @@ export class DesignationsController {
       throw new ForbiddenException('Authenticated company context required');
     }
     return this.designationsService.deactivate(id, actor.companyId, actor.id);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('designation.manage')
+  @ApiOperation({
+    summary: 'Soft-delete designation (blocked if employees still assigned)',
+  })
+  remove(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+    if (!actor.companyId) {
+      throw new ForbiddenException('Authenticated company context required');
+    }
+    return this.designationsService.remove(id, actor.companyId, actor.id);
   }
 }

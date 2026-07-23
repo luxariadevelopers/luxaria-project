@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 
 export type PushRegistrationResult = {
   status: 'granted' | 'denied' | 'unavailable' | 'registered' | 'error';
@@ -11,11 +11,53 @@ export type PushRegistrationResult = {
 
 export type PushPlatform = 'ios' | 'android';
 
+const noopSubscription = { remove: () => undefined };
+
+type NotificationsModule = typeof import('expo-notifications');
+type NotificationLike = {
+  request: {
+    content: {
+      title?: string | null;
+      data?: unknown;
+    };
+  };
+};
+type NotificationResponseLike = {
+  notification: NotificationLike;
+};
+
+/**
+ * Expo Go on Android throws if remote push APIs are used (SDK 53+).
+ * Keep the module unloaded there so the app can still run.
+ */
+export function isNativePushAvailable() {
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+    return false;
+  }
+  if (isRunningInExpoGo() && Platform.OS === 'android') {
+    return false;
+  }
+  return true;
+}
+
+function getNotifications(): NotificationsModule | null {
+  if (!isNativePushAvailable()) {
+    return null;
+  }
+  // Lazy require — avoids Expo Go Android crash on import.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('expo-notifications') as NotificationsModule;
+}
+
 export function resolvePushPlatform(): PushPlatform {
   return Platform.OS === 'ios' ? 'ios' : 'android';
 }
 
 export function configureForegroundNotificationHandler() {
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return;
+  }
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowBanner: true,
@@ -30,6 +72,17 @@ export function configureForegroundNotificationHandler() {
  * Request permission and fetch the Expo push token for this device.
  */
 export async function registerForPushNotificationsAsync(): Promise<PushRegistrationResult> {
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return {
+      status: 'unavailable',
+      expoPushToken: null,
+      message: isRunningInExpoGo()
+        ? 'Push notifications require a development build on Android (not Expo Go)'
+        : 'Push notifications are not available on this platform',
+    };
+  }
+
   if (!Device.isDevice) {
     return {
       status: 'unavailable',
@@ -85,7 +138,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
 }
 
 export function extractNotificationData(
-  notification: Notifications.Notification,
+  notification: NotificationLike,
 ): Record<string, unknown> {
   const content = notification.request.content;
   const payload = content.data;
@@ -96,22 +149,46 @@ export function extractNotificationData(
 }
 
 export function getLastNotificationResponse() {
-  return Notifications.getLastNotificationResponseAsync();
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return Promise.resolve(null);
+  }
+  return Notifications.getLastNotificationResponseAsync().catch(() => null);
 }
 
 export function addNotificationReceivedListener(
-  listener: (notification: Notifications.Notification) => void,
+  listener: (notification: NotificationLike) => void,
 ) {
-  return Notifications.addNotificationReceivedListener(listener);
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return noopSubscription;
+  }
+  return Notifications.addNotificationReceivedListener(
+    listener as Parameters<
+      NotificationsModule['addNotificationReceivedListener']
+    >[0],
+  );
 }
 
 export function addNotificationResponseListener(
-  listener: (response: Notifications.NotificationResponse) => void,
+  listener: (response: NotificationResponseLike) => void,
 ) {
-  return Notifications.addNotificationResponseReceivedListener(listener);
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return noopSubscription;
+  }
+  return Notifications.addNotificationResponseReceivedListener(
+    listener as Parameters<
+      NotificationsModule['addNotificationResponseReceivedListener']
+    >[0],
+  );
 }
 
 export async function getDevicePushTokenString(): Promise<string | null> {
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return null;
+  }
   try {
     const token = await Notifications.getDevicePushTokenAsync();
     return typeof token.data === 'string' ? token.data : null;

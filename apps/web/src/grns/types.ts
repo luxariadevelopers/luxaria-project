@@ -70,6 +70,28 @@ export type QualityAcceptInput = {
   items: QualityAcceptItemInput[];
 };
 
+export type CreateGoodsReceiptItemInput = {
+  materialId: string;
+  purchaseOrderLineId?: string | null;
+  orderedQuantity: number;
+  receivedQuantity: number;
+  unit: MaterialUnit;
+};
+
+export type CreateGoodsReceiptInput = {
+  projectId: string;
+  purchaseOrderId: string;
+  vendorId?: string;
+  deliveryChallanNumber?: string | null;
+  vehicleNumber?: string | null;
+  receivedDate: string;
+  items: CreateGoodsReceiptItemInput[];
+  photos?: string[];
+  latitude: number;
+  longitude: number;
+  submit?: boolean;
+};
+
 export type PaginatedGoodsReceipts = {
   items: PublicGoodsReceipt[];
   meta: {

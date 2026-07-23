@@ -12,7 +12,7 @@ import type { FilterQuery, Model, SortOrder, Types } from 'mongoose';
 import { Types as MongooseTypes } from 'mongoose';
 import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { buildPaginationMeta } from '../../common/dto/pagination-query.dto';
-import { hashPassword } from '../../common/utils/crypto.util';
+import { hashPassword, verifyPassword } from '../../common/utils/crypto.util';
 import { softDeleteById } from '../../database/utils/soft-delete.helper';
 import { Company } from '../company/schemas/company.schema';
 import { NumberEntityType } from '../numbering/numbering.constants';
@@ -27,7 +27,12 @@ import type { CreateUserDto } from './dto/create-user.dto';
 import type { ListUsersQueryDto } from './dto/list-users-query.dto';
 import type { RemoveProjectsDto } from './dto/remove-projects.dto';
 import type { UpdateUserDto } from './dto/update-user.dto';
-import { User, UserStatus } from './schemas/user.schema';
+import { formatEmployeeId } from './employee-id';
+import {
+  ReportingApprovalMode,
+  User,
+  UserStatus,
+} from './schemas/user.schema';
 import { toPublicUser } from './users.mapper';
 
 const ALLOWED_SORT_FIELDS = new Set([
@@ -112,6 +117,9 @@ export class UsersService {
     companyId?: Types.ObjectId | null;
     roleIds?: Types.ObjectId[];
     reportingManager?: Types.ObjectId | null;
+    reportingOfficers?: Types.ObjectId[];
+    reportingApprovalMode?: ReportingApprovalMode;
+    mustChangePassword?: boolean;
     joiningDate?: Date | null;
   }) {
     const [user] = await this.userModel.create([
@@ -130,6 +138,10 @@ export class UsersService {
         companyId: input.companyId ?? null,
         roleIds: input.roleIds ?? [],
         reportingManager: input.reportingManager ?? null,
+        reportingOfficers: input.reportingOfficers ?? [],
+        reportingApprovalMode:
+          input.reportingApprovalMode ?? ReportingApprovalMode.Any,
+        mustChangePassword: input.mustChangePassword ?? true,
         joiningDate: input.joiningDate ?? null,
         failedLoginAttempts: 0,
         lockUntil: null,
@@ -145,14 +157,21 @@ export class UsersService {
     actorCanBypass = false,
     authenticatedCompanyId?: string | null,
   ) {
-    await this.assertUniqueEmailMobile(dto.email, dto.mobile);
-
-    if (dto.reportingManager) {
-      await this.assertUserExists(
-        dto.reportingManager,
-        authenticatedCompanyId,
+    if (!dto.email?.trim() && !dto.mobile?.trim()) {
+      throw new BadRequestException(
+        'Email or mobile is required — they are used as login credentials',
       );
     }
+    await this.assertUniqueEmailMobile(dto.email, dto.mobile);
+
+    const reporting = await this.resolveReportingAssignment(
+      {
+        reportingManager: dto.reportingManager,
+        reportingOfficers: dto.reportingOfficers,
+        reportingApprovalMode: dto.reportingApprovalMode,
+      },
+      authenticatedCompanyId,
+    );
 
     await this.rolesService.assertRoleAssignmentAllowed(
       dto.roleIds ?? [],
@@ -160,6 +179,11 @@ export class UsersService {
     );
 
     const userCode = await this.numberingService.nextCode(NumberEntityType.USER);
+    const employeeId = await this.resolveEmployeeId(
+      dto.employeeId,
+      dto.department,
+      dto.designation,
+    );
     const passwordHash = await hashPassword(dto.password);
 
     const user = await this.createUser({
@@ -169,7 +193,7 @@ export class UsersService {
       mobile: dto.mobile ?? null,
       passwordHash,
       status: dto.status ?? UserStatus.Active,
-      employeeId: dto.employeeId ?? null,
+      employeeId,
       designation: dto.designation ?? null,
       department: dto.department ?? null,
       profilePhoto: dto.profilePhoto ?? null,
@@ -178,9 +202,10 @@ export class UsersService {
         ? new MongooseTypes.ObjectId(authenticatedCompanyId)
         : null,
       roleIds: (dto.roleIds ?? []).map((id) => new MongooseTypes.ObjectId(id)),
-      reportingManager: dto.reportingManager
-        ? new MongooseTypes.ObjectId(dto.reportingManager)
-        : null,
+      reportingManager: reporting.primary,
+      reportingOfficers: reporting.officers,
+      reportingApprovalMode: reporting.mode,
+      mustChangePassword: true,
       joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : null,
     });
 
@@ -210,21 +235,14 @@ export class UsersService {
     const user = await this.requireUser(id, authenticatedCompanyId);
 
     if (dto.email !== undefined || dto.mobile !== undefined) {
-      await this.assertUniqueEmailMobile(
-        dto.email === undefined ? user.email : dto.email,
-        dto.mobile === undefined ? user.mobile : dto.mobile,
-        id,
-      );
-    }
-
-    if (dto.reportingManager) {
-      if (dto.reportingManager === id) {
-        throw new BadRequestException('User cannot be their own reporting manager');
+      const nextEmail = dto.email === undefined ? user.email : dto.email;
+      const nextMobile = dto.mobile === undefined ? user.mobile : dto.mobile;
+      if (!nextEmail?.toString().trim() && !nextMobile?.toString().trim()) {
+        throw new BadRequestException(
+          'Email or mobile is required — they are used as login credentials',
+        );
       }
-      await this.assertUserExists(
-        dto.reportingManager,
-        authenticatedCompanyId,
-      );
+      await this.assertUniqueEmailMobile(nextEmail, nextMobile, id);
     }
 
     const update: Record<string, unknown> = {};
@@ -235,29 +253,85 @@ export class UsersService {
     if (dto.mobile !== undefined) {
       update.mobile = dto.mobile ? dto.mobile.trim() : null;
     }
-    if (dto.employeeId !== undefined) update.employeeId = dto.employeeId;
     if (dto.designation !== undefined) update.designation = dto.designation;
     if (dto.department !== undefined) update.department = dto.department;
     if (dto.profilePhoto !== undefined) update.profilePhoto = dto.profilePhoto;
     if (dto.status !== undefined) update.status = dto.status;
-    if (dto.reportingManager !== undefined) {
-      update.reportingManager = dto.reportingManager
-        ? new MongooseTypes.ObjectId(dto.reportingManager)
-        : null;
-    }
     if (dto.joiningDate !== undefined) {
       update.joiningDate = dto.joiningDate ? new Date(dto.joiningDate) : null;
+    }
+
+    if (
+      dto.reportingManager !== undefined ||
+      dto.reportingOfficers !== undefined ||
+      dto.reportingApprovalMode !== undefined
+    ) {
+      const reporting = await this.resolveReportingAssignment(
+        {
+          reportingManager:
+            dto.reportingManager !== undefined
+              ? dto.reportingManager
+              : user.reportingManager
+                ? String(user.reportingManager)
+                : null,
+          reportingOfficers:
+            dto.reportingOfficers !== undefined
+              ? dto.reportingOfficers
+              : (user.reportingOfficers ?? []).map(String),
+          reportingApprovalMode:
+            dto.reportingApprovalMode ??
+            user.reportingApprovalMode ??
+            ReportingApprovalMode.Any,
+        },
+        authenticatedCompanyId,
+        id,
+      );
+      update.reportingManager = reporting.primary;
+      update.reportingOfficers = reporting.officers;
+      update.reportingApprovalMode = reporting.mode;
+    }
+
+    // Employee ID is server-assigned from department + designation; keep once set.
+    if (!user.employeeId) {
+      update.employeeId = await this.resolveEmployeeId(
+        null,
+        dto.department !== undefined ? dto.department : user.department,
+        dto.designation !== undefined ? dto.designation : user.designation,
+      );
+    }
+
+    if (dto.temporaryPassword?.trim()) {
+      update.passwordHash = await hashPassword(dto.temporaryPassword.trim());
+      update.mustChangePassword = true;
+      update.failedLoginAttempts = 0;
+      update.lockUntil = null;
+      update.status = UserStatus.Active;
     }
 
     const updated = await this.userModel
       .findByIdAndUpdate(id, update, { new: true })
       .exec();
 
-    if (dto.status === UserStatus.Inactive) {
+    if (dto.status === UserStatus.Inactive || dto.temporaryPassword?.trim()) {
       await this.sessionService.revokeAllForUser(id);
     }
 
     return createSuccessResponse(toPublicUser(updated!), 'User updated successfully');
+  }
+
+  async setProfilePhoto(
+    id: string,
+    photoPath: string,
+    authenticatedCompanyId?: string | null,
+  ) {
+    await this.requireUser(id, authenticatedCompanyId);
+    const updated = await this.userModel
+      .findByIdAndUpdate(id, { profilePhoto: photoPath }, { new: true })
+      .exec();
+    return createSuccessResponse(
+      toPublicUser(updated!),
+      'Profile photo updated successfully',
+    );
   }
 
   async activate(id: string, authenticatedCompanyId?: string | null) {
@@ -310,9 +384,86 @@ export class UsersService {
   ) {
     await this.requireUser(id, authenticatedCompanyId);
     const passwordHash = await hashPassword(dto.newPassword);
-    await this.updatePassword(id, passwordHash);
+    await this.userModel
+      .findByIdAndUpdate(id, {
+        passwordHash,
+        mustChangePassword: true,
+        failedLoginAttempts: 0,
+        lockUntil: null,
+        status: UserStatus.Active,
+      })
+      .exec();
     await this.sessionService.revokeAllForUser(id);
-    return createSuccessResponse(null, 'Password reset successfully');
+    return createSuccessResponse(
+      null,
+      'Temporary password set — user must change it on next login',
+    );
+  }
+
+  async changeOwnPassword(
+    userId: string,
+    newPassword: string,
+    currentPassword?: string,
+  ) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('+passwordHash')
+      .exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const forced = Boolean(user.mustChangePassword);
+    if (!forced) {
+      if (!currentPassword?.trim()) {
+        throw new BadRequestException('Current password is required');
+      }
+      const ok = await verifyPassword(
+        user.passwordHash,
+        currentPassword.trim(),
+      );
+      if (!ok) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+    }
+
+    if (
+      currentPassword?.trim() &&
+      currentPassword.trim() === newPassword.trim()
+    ) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
+
+    // When forcing a first-time change, reject reuse of the temporary password.
+    if (forced) {
+      const reusesTemp = await verifyPassword(
+        user.passwordHash,
+        newPassword.trim(),
+      );
+      if (reusesTemp) {
+        throw new BadRequestException(
+          'New password must be different from the temporary password',
+        );
+      }
+    }
+
+    const passwordHash = await hashPassword(newPassword.trim());
+    await this.userModel
+      .findByIdAndUpdate(userId, {
+        passwordHash,
+        mustChangePassword: false,
+        failedLoginAttempts: 0,
+        lockUntil: null,
+        status: UserStatus.Active,
+      })
+      .exec();
+    await this.sessionService.revokeAllForUser(userId);
+    return createSuccessResponse(
+      null,
+      'Password updated successfully — please sign in again',
+    );
   }
 
   async assignRoles(
@@ -479,6 +630,83 @@ export class UsersService {
     }
 
     return filter;
+  }
+
+  private async resolveReportingAssignment(
+    input: {
+      reportingManager?: string | null;
+      reportingOfficers?: string[] | null;
+      reportingApprovalMode?: ReportingApprovalMode | string | null;
+    },
+    authenticatedCompanyId?: string | null,
+    selfUserId?: string,
+  ): Promise<{
+    primary: Types.ObjectId | null;
+    officers: Types.ObjectId[];
+    mode: ReportingApprovalMode;
+  }> {
+    const mode =
+      input.reportingApprovalMode === ReportingApprovalMode.All
+        ? ReportingApprovalMode.All
+        : ReportingApprovalMode.Any;
+
+    const officerIds = [
+      ...new Set(
+        [
+          ...(input.reportingOfficers ?? []),
+          ...(input.reportingManager ? [input.reportingManager] : []),
+        ]
+          .map((id) => id?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    if (selfUserId && officerIds.includes(selfUserId)) {
+      throw new BadRequestException(
+        'User cannot be their own reporting officer',
+      );
+    }
+
+    for (const officerId of officerIds) {
+      await this.assertUserExists(officerId, authenticatedCompanyId);
+    }
+
+    let primaryId = input.reportingManager?.trim() || null;
+    if (primaryId && !officerIds.includes(primaryId)) {
+      officerIds.unshift(primaryId);
+    }
+    if (!primaryId && officerIds.length > 0) {
+      primaryId = officerIds[0]!;
+    }
+    if (primaryId && !officerIds.includes(primaryId)) {
+      throw new BadRequestException(
+        'Primary reporting officer must be one of the selected officers',
+      );
+    }
+
+    return {
+      primary: primaryId ? new MongooseTypes.ObjectId(primaryId) : null,
+      officers: officerIds.map((id) => new MongooseTypes.ObjectId(id)),
+      mode,
+    };
+  }
+
+  /**
+   * Prefer an explicit employeeId; otherwise allocate
+   * `{DEPT}-{DESIG}-{######}` from the EMPLOYEE counter.
+   */
+  private async resolveEmployeeId(
+    explicit: string | null | undefined,
+    department: string | null | undefined,
+    designation: string | null | undefined,
+  ): Promise<string> {
+    const trimmed = explicit?.trim();
+    if (trimmed) return trimmed;
+
+    const allocated = await this.numberingService.next(
+      NumberEntityType.EMPLOYEE,
+    );
+    return formatEmployeeId(department, designation, allocated.sequence);
   }
 
   private async buildCompanyFilter(

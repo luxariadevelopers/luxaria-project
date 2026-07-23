@@ -316,6 +316,56 @@ export class EmployeesService {
     );
   }
 
+  async syncModuleAccess(
+    id: string,
+    dto: {
+      denyPermissions: string[];
+      catalogPermissions: string[];
+    },
+    companyId: string,
+    actorId: string,
+  ) {
+    const employee = await this.requireEmployee(id, companyId);
+    if (!employee.userId) {
+      throw new BadRequestException(
+        'Employee has no login user — create a login before setting module access',
+      );
+    }
+
+    const result =
+      await this.permissionOverridesService.syncGlobalDenyOverrides({
+        userId: String(employee.userId),
+        companyId,
+        denyPermissions: dto.denyPermissions ?? [],
+        catalogPermissions: dto.catalogPermissions ?? [],
+        reason: 'Employee module access',
+        actorId,
+      });
+
+    await this.safeAudit({
+      userId: actorId,
+      action: AuditAction.UPDATE,
+      module: 'employees',
+      entityType: 'Employee',
+      entityId: id,
+      afterData: {
+        step: 'module_access_synced',
+        created: result.created,
+        inactivated: result.inactivated,
+        activeDenies: result.activeDenies,
+      },
+    });
+
+    const summary = await this.getAccessSummary(id, companyId);
+    return createSuccessResponse(
+      {
+        ...summary.data,
+        sync: result,
+      },
+      'Employee module access updated',
+    );
+  }
+
   findByUserId(userId: string) {
     if (!Types.ObjectId.isValid(userId)) {
       return Promise.resolve(null);
@@ -360,12 +410,29 @@ export class EmployeesService {
       dto.designationCode,
     );
 
-    if (dto.reportingManagerUserId) {
-      await this.assertNoCircularReporting(
-        null,
-        dto.reportingManagerUserId,
-        companyId,
+    const reportingOfficers = [
+      ...new Set(
+        [
+          ...(dto.reportingOfficerUserIds ?? []),
+          ...(dto.reportingManagerUserId ? [dto.reportingManagerUserId] : []),
+        ]
+          .map((id) => id?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (reportingOfficers.length > 2) {
+      throw new BadRequestException(
+        'Select at most 2 reporting officers for Site Engineer provision',
       );
+    }
+    const primaryReportingManager =
+      dto.reportingManagerUserId &&
+      reportingOfficers.includes(dto.reportingManagerUserId)
+        ? dto.reportingManagerUserId
+        : (reportingOfficers[0] ?? null);
+
+    for (const officerId of reportingOfficers) {
+      await this.assertNoCircularReporting(null, officerId, companyId);
     }
 
     const employeeCode = dto.employeeCode
@@ -388,8 +455,8 @@ export class EmployeesService {
           mobile: dto.mobile?.trim() ?? null,
           departmentId: department._id,
           designationId: designation._id,
-          reportingManagerUserId: dto.reportingManagerUserId
-            ? new Types.ObjectId(dto.reportingManagerUserId)
+          reportingManagerUserId: primaryReportingManager
+            ? new Types.ObjectId(primaryReportingManager)
             : null,
           employmentType: 'full_time',
           joiningDate: new Date(),
@@ -432,7 +499,9 @@ export class EmployeesService {
         designation: designation.name,
         department: department.name,
         roleIds: [String(role._id)],
-        reportingManager: dto.reportingManagerUserId ?? null,
+        reportingManager: primaryReportingManager,
+        reportingOfficers,
+        reportingApprovalMode: dto.reportingApprovalMode,
         joiningDate: new Date().toISOString(),
       },
       actorId,

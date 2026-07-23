@@ -1,6 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
+  BankReconciliationSession,
+  BankReconciliationSessionSchema,
+} from '../bank-reconciliation/schemas/bank-reconciliation-session.schema';
+import {
+  BankStatementLine,
+  BankStatementLineSchema,
+} from '../bank-reconciliation/schemas/bank-statement-line.schema';
+import {
   CashAccount,
   CashAccountSchema,
 } from '../cash-accounts/schemas/cash-account.schema';
@@ -75,6 +83,11 @@ import { FinanceDashboardService } from './finance-dashboard.service';
       { name: PettyCashRequirement.name, schema: PettyCashRequirementSchema },
       { name: Project.name, schema: ProjectSchema },
       { name: FinancialYear.name, schema: FinancialYearSchema },
+      {
+        name: BankReconciliationSession.name,
+        schema: BankReconciliationSessionSchema,
+      },
+      { name: BankStatementLine.name, schema: BankStatementLineSchema },
     ]),
     ProjectAccessModule,
   ],

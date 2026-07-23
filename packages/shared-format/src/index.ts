@@ -7,6 +7,9 @@ export type { IndianNumberOptions } from './number';
 export { formatInr } from './money';
 export type { InrFormatOptions } from './money';
 
+export { formatInrInWords } from './inr-words';
+export type { InrWordsOptions } from './inr-words';
+
 export { formatPercentage } from './percentage';
 export type { PercentageFormatOptions } from './percentage';
 

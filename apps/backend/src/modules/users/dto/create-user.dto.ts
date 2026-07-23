@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayUnique,
   IsArray,
   IsDateString,
   IsEmail,
@@ -11,7 +12,10 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
-import { UserStatus } from '../schemas/user.schema';
+import {
+  ReportingApprovalMode,
+  UserStatus,
+} from '../schemas/user.schema';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'Site Engineer One' })
@@ -72,10 +76,32 @@ export class CreateUserDto {
   @IsMongoId({ each: true })
   roleIds?: string[];
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Primary reporting officer (also kept in reportingOfficers)',
+  })
   @IsOptional()
   @IsMongoId()
   reportingManager?: string | null;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'All reporting officers who can approve for this user',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsMongoId({ each: true })
+  reportingOfficers?: string[];
+
+  @ApiPropertyOptional({
+    enum: ReportingApprovalMode,
+    default: ReportingApprovalMode.Any,
+    description:
+      'any = one officer can approve; all = every listed officer must approve',
+  })
+  @IsOptional()
+  @IsEnum(ReportingApprovalMode)
+  reportingApprovalMode?: ReportingApprovalMode;
 
   @ApiPropertyOptional({ example: '2026-01-15' })
   @IsOptional()

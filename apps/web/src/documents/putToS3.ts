@@ -1,5 +1,30 @@
 import type { LocalUploadFile } from '@luxaria/shared-types';
 
+/** Headers browsers forbid on XHR (auto-managed from the body). */
+const UNSAFE_REQUEST_HEADERS = new Set([
+  'accept-charset',
+  'accept-encoding',
+  'access-control-request-headers',
+  'access-control-request-method',
+  'connection',
+  'content-length',
+  'cookie',
+  'cookie2',
+  'date',
+  'dnt',
+  'expect',
+  'host',
+  'keep-alive',
+  'origin',
+  'referer',
+  'set-cookie',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'via',
+]);
+
 /**
  * PUT file bytes to a private S3 presigned URL (no public ACL).
  * Uses XHR for upload progress events.
@@ -20,6 +45,7 @@ export function putFileToPresignedUrl(input: {
     const xhr = new XMLHttpRequest();
     xhr.open(input.method || 'PUT', input.url);
     for (const [key, value] of Object.entries(input.headers)) {
+      if (UNSAFE_REQUEST_HEADERS.has(key.toLowerCase())) continue;
       xhr.setRequestHeader(key, value);
     }
     xhr.upload.onprogress = (event) => {

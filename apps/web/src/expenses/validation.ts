@@ -1,11 +1,43 @@
 import { z } from 'zod';
 import { isoDateOnlySchema } from '@/validation';
-import { SiteExpenseVoucherStatus } from './types';
+import {
+  SiteExpensePaymentMode,
+  SiteExpenseVoucherStatus,
+} from './types';
+
+const OBJECT_ID_RE = /^[a-fA-F0-9]{24}$/;
+const objectId = z
+  .string()
+  .min(1, 'Required')
+  .regex(OBJECT_ID_RE, 'Must be a valid selection');
 
 const STATUS_VALUES = Object.values(SiteExpenseVoucherStatus) as [
   string,
   ...string[],
 ];
+
+const PAYMENT_MODE_VALUES = Object.values(SiteExpensePaymentMode) as [
+  SiteExpensePaymentMode,
+  ...SiteExpensePaymentMode[],
+];
+
+/** Nest `CreateSiteExpenseVoucherDto` — web create form. */
+export const siteExpenseCreateSchema = z.object({
+  expenseDate: isoDateOnlySchema,
+  pettyCashAccountId: objectId,
+  expenseCategoryId: objectId,
+  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
+  paidTo: z.string().trim().min(1, 'Paid to is required').max(200),
+  purpose: z.string().trim().min(1, 'Purpose is required').max(1000),
+  paymentMode: z.enum(PAYMENT_MODE_VALUES),
+  billNumber: z.string().trim().max(64).optional().or(z.literal('')),
+  mobileNumber: z.string().trim().max(20).optional().or(z.literal('')),
+  submitImmediately: z.boolean(),
+});
+
+export type SiteExpenseCreateFormValues = z.infer<
+  typeof siteExpenseCreateSchema
+>;
 
 /**
  * List filters: project comes from header context; status is sent to Nest;

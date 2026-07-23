@@ -16,6 +16,7 @@ import {
   getLastNotificationResponse,
   addNotificationReceivedListener,
   addNotificationResponseListener,
+  isNativePushAvailable,
 } from './pushNotifications';
 import {
   navigateFromNotificationData,
@@ -42,6 +43,9 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
   const registeredRef = useRef(false);
 
   useEffect(() => {
+    if (!isNativePushAvailable()) {
+      return;
+    }
     configureForegroundNotificationHandler();
   }, []);
 
@@ -50,6 +54,9 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
   }, []);
 
   useEffect(() => {
+    if (!isNativePushAvailable()) {
+      return;
+    }
     if (!isAuthenticated) {
       registeredRef.current = false;
       return;
@@ -69,6 +76,10 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isNativePushAvailable()) {
+      return;
+    }
+
     const receivedSub = addNotificationReceivedListener((notification) => {
       setLastForegroundTitle(notification.request.content.title ?? null);
     });

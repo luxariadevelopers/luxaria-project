@@ -20,6 +20,7 @@ import {
   createProjectAssignment,
   createProjectStructureNode,
   createProjectWarehouse,
+  updateProjectStructureNode,
   deactivateProjectAssignment,
   fetchProjectCompany,
   fetchProject,
@@ -53,6 +54,7 @@ import type {
   CreateWarehouseInput,
   ListProjectAssignmentsQuery,
   ListProjectsQuery,
+  UpdateStructureNodeInput,
   UpdateProjectAssignmentInput,
   UpdateProjectFinancialConfigInput,
   UpdateProjectInput,
@@ -338,6 +340,29 @@ export function useCreateProjectStructureNode(projectId: string) {
   return useMutation({
     mutationFn: (input: CreateStructureNodeInput) =>
       createProjectStructureNode(projectId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.structure(projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.warehouses(projectId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useUpdateProjectStructureNode(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      siteId,
+      input,
+    }: {
+      siteId: string;
+      input: UpdateStructureNodeInput;
+    }) => updateProjectStructureNode(siteId, input),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({

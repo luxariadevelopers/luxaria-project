@@ -12,7 +12,7 @@ type ProtectedRouteProps = {
 };
 
 export function ProtectedRoute({ loginPath = '/login' }: ProtectedRouteProps) {
-  const { isAuthenticated, isBootstrapping, access } = useAuth();
+  const { isAuthenticated, isBootstrapping, access, user } = useAuth();
   const location = useLocation();
 
   if (isBootstrapping) {
@@ -43,6 +43,14 @@ export function ProtectedRoute({ loginPath = '/login' }: ProtectedRouteProps) {
     !location.pathname.startsWith('/investor')
   ) {
     return <Navigate to={investorHomePath()} replace />;
+  }
+
+  if (
+    loginPath === '/login' &&
+    user?.mustChangePassword &&
+    location.pathname !== '/change-password'
+  ) {
+    return <Navigate to="/change-password" replace />;
   }
 
   return <Outlet />;

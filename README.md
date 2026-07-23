@@ -26,15 +26,14 @@ The previous Express monorepo lives under [`_reference/`](_reference/) for domai
 | Web (Vite) | `9001` |
 | Mobile (Expo Metro) | `9002` |
 | Backend (test) | `9003` |
-| MongoDB | `9017` |
 | Redis | `9018` |
-| Mongo Express (optional) | `9019` |
 
 ## Prerequisites
 
 - **Node.js** 20+ (24 LTS preferred when available)
 - **pnpm** 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`)
-- **Docker** (MongoDB `9017`, Redis `9018`; full stack optional — see [docs/DOCKER.md](docs/DOCKER.md))
+- **MongoDB Atlas** URI in `.env.docker` / `apps/backend/.env.development.local`
+- **Docker** (Redis + optional full stack — see [docs/DOCKER.md](docs/DOCKER.md))
 - Optional for mobile: Android Studio / Expo Go
 
 ## Installation
@@ -58,14 +57,12 @@ cp .env.docker.example .env.docker   # for docker compose app services
 ## Development commands
 
 ```bash
-# Start everything (Mongo 9017 + API 9000 + Web 9001 + Mobile 9002)
+# Start everything (Atlas Mongo + API 9000 + Web 9001 + Mobile 9002)
 pnpm dev:all
 
 # Or individually:
-pnpm docker:infra   # MongoDB :9017 + Redis :9018
-pnpm docker:up      # Full Docker stack (API + web + hot reload)
-pnpm docker:tools   # Optional Mongo Express :9019
-pnpm dev:mongo      # MongoDB only
+pnpm docker:infra   # Redis :9018 (Mongo is Atlas)
+pnpm docker:up      # Full Docker stack (API + web + hot reload → Atlas)
 pnpm dev:backend    # API :9000  → http://localhost:9000/api/v1
 pnpm dev:web        # Web :9001  → http://localhost:9001
 pnpm dev:mobile     # Expo :9002 → http://localhost:9002

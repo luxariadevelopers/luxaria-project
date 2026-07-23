@@ -27,12 +27,14 @@ import {
   PettyCashRequirementSchema,
   PettyCashRequirementStatus,
 } from './schemas/petty-cash-requirement.schema';
+import { User, UserSchema } from '../users/schemas/user.schema';
 
 describe('PettyCashRequirementsService', () => {
   let mongoServer: MongoMemoryServer;
   let connection: Connection;
   let requirementModel: Model<PettyCashRequirement>;
   let expenseDraftModel: Model<PettyCashExpenseDraft>;
+  let userModel: Model<User>;
   let service: PettyCashRequirementsService;
   let cashAccountsService: {
     getById: jest.Mock;
@@ -65,6 +67,7 @@ describe('PettyCashRequirementsService', () => {
       PettyCashExpenseDraft.name,
       PettyCashExpenseDraftSchema,
     ) as Model<PettyCashExpenseDraft>;
+    userModel = connection.model(User.name, UserSchema) as Model<User>;
     const counterModel = connection.model(
       Counter.name,
       CounterSchema,
@@ -73,6 +76,7 @@ describe('PettyCashRequirementsService', () => {
     await Promise.all([
       requirementModel.syncIndexes(),
       expenseDraftModel.syncIndexes(),
+      userModel.syncIndexes(),
       counterModel.syncIndexes(),
     ]);
 
@@ -90,6 +94,7 @@ describe('PettyCashRequirementsService', () => {
     service = new PettyCashRequirementsService(
       requirementModel,
       expenseDraftModel,
+      userModel,
       cashAccountsService as unknown as CashAccountsService,
       approvalsService as unknown as ApprovalsService,
       new NumberingService(counterModel),

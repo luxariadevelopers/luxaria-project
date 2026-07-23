@@ -63,6 +63,12 @@ export function RequirementItemsGrid({
   const items = useWatch({ control, name: 'requirementItems' }) ?? [];
   const total = sumRequirementItemAmounts(items);
   const locked = disabled || readOnly;
+  const usedCategories = new Set(
+    items.map((item) => item?.expenseCategory).filter(Boolean),
+  );
+  const nextUnusedCategory = EXPENSE_CATEGORY_OPTIONS.find(
+    (opt) => !usedCategories.has(opt.value),
+  );
 
   return (
     <Box data-testid="requirement-items-grid">
@@ -75,13 +81,27 @@ export function RequirementItemsGrid({
         {!readOnly ? (
           <Button
             size="small"
-            disabled={locked}
-            onClick={() => append(emptyRequirementItem())}
+            variant="outlined"
+            disabled={locked || !nextUnusedCategory}
+            onClick={() =>
+              append({
+                ...emptyRequirementItem(),
+                expenseCategory:
+                  nextUnusedCategory?.value ??
+                  emptyRequirementItem().expenseCategory,
+              })
+            }
+            data-testid="add-requirement-item"
           >
-            Add item
+            + Add another item
           </Button>
         ) : null}
       </Stack>
+      {!readOnly ? (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          Each category (e.g. Labour) can only appear on one line.
+        </Typography>
+      ) : null}
 
       <Table size="small">
         <TableHead>
@@ -116,12 +136,27 @@ export function RequirementItemsGrid({
                         labelId={`pcr-cat-${index}`}
                         label="Category"
                       >
-                        {EXPENSE_CATEGORY_OPTIONS.map((opt) => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
+                        {EXPENSE_CATEGORY_OPTIONS.map((opt) => {
+                          const takenByOther =
+                            usedCategories.has(opt.value) &&
+                            items[index]?.expenseCategory !== opt.value;
+                          return (
+                            <MenuItem
+                              key={opt.value}
+                              value={opt.value}
+                              disabled={takenByOther}
+                            >
+                              {opt.label}
+                              {takenByOther ? ' (already used)' : ''}
+                            </MenuItem>
+                          );
+                        })}
                       </Select>
+                      {fieldState.error?.message ? (
+                        <Typography variant="caption" color="error">
+                          {fieldState.error.message}
+                        </Typography>
+                      ) : null}
                     </FormControl>
                   )}
                 />

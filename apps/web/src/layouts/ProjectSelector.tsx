@@ -41,12 +41,26 @@ export function ProjectSelector() {
 
   return (
     <FormControl size="small" sx={{ minWidth: 220 }}>
-      <InputLabel id="project-selector-label">Project</InputLabel>
+      <InputLabel id="project-selector-label" shrink>
+        Project
+      </InputLabel>
       <Select
         labelId="project-selector-label"
         label="Project"
         value={selectedProjectId ?? ''}
         displayEmpty
+        notched
+        renderValue={(value) => {
+          if (!value) {
+            return (
+              <em>{globalAccess ? 'All projects' : 'Select project'}</em>
+            );
+          }
+          const project = projects.find((row) => row.id === value);
+          return project
+            ? `${project.projectCode} — ${project.projectName}`
+            : String(value);
+        }}
         onChange={(e) =>
           setSelectedProjectId(e.target.value ? String(e.target.value) : null)
         }

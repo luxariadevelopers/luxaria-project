@@ -26,6 +26,7 @@ export type AuthUser = {
   mobile: string | null;
   status: string;
   companyId?: string | null;
+  mustChangePassword?: boolean;
 };
 
 export type SiteOption = {

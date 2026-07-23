@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from '@/api/client';
 import type {
+  AttachMaterialIssueSignaturesInput,
   CreateMaterialIssueInput,
   CreateMaterialReturnInput,
   ListMaterialIssuesQuery,
@@ -107,6 +108,47 @@ export async function getMaterialIssue(
   );
   if (!res.data) {
     throw new Error(res.message || 'Material issue unavailable');
+  }
+  return normaliseIssue(res.data);
+}
+
+/** `POST /material-issues/:id/signatures` — `stock.issue` */
+export async function attachMaterialIssueSignatures(
+  id: string,
+  input: AttachMaterialIssueSignaturesInput,
+): Promise<PublicMaterialIssue> {
+  const res = await apiPost<PublicMaterialIssue>(
+    `${BASE}/${encodeURIComponent(id)}/signatures`,
+    input,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Attach signatures failed');
+  }
+  return normaliseIssue(res.data);
+}
+
+/** `POST /material-issues/:id/submit` — `stock.issue` */
+export async function submitMaterialIssue(
+  id: string,
+): Promise<PublicMaterialIssue> {
+  const res = await apiPost<PublicMaterialIssue>(
+    `${BASE}/${encodeURIComponent(id)}/submit`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Submit material issue failed');
+  }
+  return normaliseIssue(res.data);
+}
+
+/** `POST /material-issues/:id/confirm` — `stock.adjust` */
+export async function confirmMaterialIssue(
+  id: string,
+): Promise<PublicMaterialIssue> {
+  const res = await apiPost<PublicMaterialIssue>(
+    `${BASE}/${encodeURIComponent(id)}/confirm`,
+  );
+  if (!res.data) {
+    throw new Error(res.message || 'Confirm material issue failed');
   }
   return normaliseIssue(res.data);
 }

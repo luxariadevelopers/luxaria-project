@@ -44,6 +44,18 @@ import {
   ContributionCommitmentSchema,
 } from '../project-commitments/schemas/contribution-commitment.schema';
 import {
+  ContributionReceipt,
+  ContributionReceiptSchema,
+} from '../contribution-receipts/schemas/contribution-receipt.schema';
+import {
+  Director,
+  DirectorSchema,
+} from '../directors/schemas/director.schema';
+import {
+  CompanyShareholding,
+  CompanyShareholdingSchema,
+} from '../directors/schemas/company-shareholding.schema';
+import {
   ProjectParticipant,
   ProjectParticipantSchema,
 } from '../project-participants/schemas/project-participant.schema';
@@ -91,7 +103,10 @@ import { ProjectDashboardService } from './project-dashboard.service';
       { name: PurchaseOrder.name, schema: PurchaseOrderSchema },
       { name: CustomerReceipt.name, schema: CustomerReceiptSchema },
       { name: ContributionCommitment.name, schema: ContributionCommitmentSchema },
+      { name: ContributionReceipt.name, schema: ContributionReceiptSchema },
       { name: ProjectParticipant.name, schema: ProjectParticipantSchema },
+      { name: Director.name, schema: DirectorSchema },
+      { name: CompanyShareholding.name, schema: CompanyShareholdingSchema },
       { name: CompanyBankAccount.name, schema: CompanyBankAccountSchema },
       { name: CashAccount.name, schema: CashAccountSchema },
       { name: JournalEntry.name, schema: JournalEntrySchema },

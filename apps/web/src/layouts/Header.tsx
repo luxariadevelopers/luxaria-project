@@ -1,10 +1,12 @@
 import MenuIcon from '@mui/icons-material/Menu';
 import {
   AppBar,
+  Box,
   IconButton,
   Toolbar,
   Typography,
 } from '@mui/material';
+import { blurActiveElement } from '@/utils/blurActiveElement';
 import { DRAWER_WIDTH, DRAWER_WIDTH_COLLAPSED } from './Sidebar';
 import { ProjectSelector } from './ProjectSelector';
 
@@ -31,15 +33,35 @@ export function Header({ onMenuClick, sidebarCollapsed }: Props) {
       <Toolbar sx={{ gap: 2 }}>
         <IconButton
           edge="start"
-          onClick={onMenuClick}
+          onClick={() => {
+            blurActiveElement();
+            onMenuClick();
+          }}
           sx={{ display: { md: 'none' } }}
           aria-label="Open navigation"
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
-          Luxaria Developers
-        </Typography>
+        <Box
+          sx={{
+            display: { xs: 'flex', md: 'none' },
+            alignItems: 'center',
+            gap: 1,
+            flexGrow: 1,
+            minWidth: 0,
+          }}
+        >
+          <Box
+            component="img"
+            src="/luxaria-logo-xs.png"
+            alt="Luxaria Developers"
+            sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 0.5 }}
+          />
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
+            Luxaria
+          </Typography>
+        </Box>
+        <Box sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }} />
         <ProjectSelector />
       </Toolbar>
     </AppBar>

@@ -27,7 +27,7 @@ import {
   resolveVendorCapabilities,
   type VendorDetailTabId,
 } from '@/vendors/roleAccess';
-import { VendorStatus } from '@/vendors/types';
+import { VendorStatus, type VendorLedgerQuery } from '@/vendors/types';
 import {
   useVendorDetail,
   useVendorDocuments,
@@ -50,6 +50,7 @@ export function VendorDetailPage() {
   const { hasPermission, access } = useAuth();
   const caps = resolveVendorCapabilities(hasPermission);
   const [tab, setTab] = useState<string>('overview');
+  const [ledgerFilters, setLedgerFilters] = useState<VendorLedgerQuery>({});
 
   const canView = Boolean(access) && caps.canView;
   const detailQuery = useVendorDetail(vendorId, canView);
@@ -60,7 +61,7 @@ export function VendorDetailPage() {
   );
   const projectsQuery = useVendorProjects(
     vendorId,
-    canView && tab === 'projects',
+    canView && (tab === 'projects' || tab === 'ledger'),
   );
   const qualityQuery = useVendorQualityScore(
     vendorId,
@@ -81,6 +82,7 @@ export function VendorDetailPage() {
   );
   const ledgerQuery = useVendorLedger(
     vendorId,
+    ledgerFilters,
     canView &&
       caps.canViewLedger &&
       (tab === 'ledger' || tab === 'payable'),
@@ -335,6 +337,9 @@ export function VendorDetailPage() {
                   content = (
                     <VendorLedgerPanel
                       ledger={ledgerQuery.data}
+                      filters={ledgerFilters}
+                      onFiltersChange={setLedgerFilters}
+                      projects={projectsQuery.data ?? []}
                       loading={
                         ledgerQuery.isLoading || ledgerQuery.isFetching
                       }

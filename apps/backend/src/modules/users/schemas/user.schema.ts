@@ -12,6 +12,12 @@ export enum UserStatus {
   Locked = 'locked',
 }
 
+/** How multiple reporting officers approve subordinate actions. */
+export enum ReportingApprovalMode {
+  Any = 'any',
+  All = 'all',
+}
+
 @Schema({
   collection: 'users',
   timestamps: true,
@@ -63,11 +69,30 @@ export class User {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Role' }], default: [] })
   roleIds!: Types.ObjectId[];
 
+  /**
+   * Primary reporting officer (backward-compatible single field).
+   * When `reportingOfficers` is set, this must be one of them.
+   */
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   reportingManager!: Types.ObjectId | null;
 
+  /** Officers who can approve for this user (includes primary). */
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  reportingOfficers!: Types.ObjectId[];
+
+  @Prop({
+    type: String,
+    enum: ReportingApprovalMode,
+    default: ReportingApprovalMode.Any,
+  })
+  reportingApprovalMode!: ReportingApprovalMode;
+
   @Prop({ type: Date, default: null })
   joiningDate!: Date | null;
+
+  /** When true, user must set a new password after login before using the app. */
+  @Prop({ type: Boolean, default: false })
+  mustChangePassword!: boolean;
 
   @Prop({ type: Number, default: 0 })
   failedLoginAttempts!: number;

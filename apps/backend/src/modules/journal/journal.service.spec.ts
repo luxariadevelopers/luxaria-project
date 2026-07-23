@@ -310,7 +310,7 @@ describe('JournalService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('keeps posted journals immutable and reverses via new entry', async () => {
+  it('keeps draft update blocked on posted journals; amend and reverse work', async () => {
     const created = await service.create(
       { ...balancedBankCash(), post: true },
       actorId,
@@ -325,6 +325,15 @@ describe('JournalService', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
 
+    const amended = await service.amendPosted(
+      created.data!.id,
+      { narration: 'Corrected in place', lines: balancedBankCash().lines },
+      actorId,
+    );
+    expect(amended.data?.journalNumber).toBe(created.data!.journalNumber);
+    expect(amended.data?.status).toBe(JournalStatus.Posted);
+    expect(amended.data?.narration).toBe('Corrected in place');
+
     const reversed = await service.reverse(created.data!.id, actorId);
     expect(reversed.data?.original.status).toBe(JournalStatus.Reversed);
     expect(reversed.data?.reversal.status).toBe(JournalStatus.Posted);
@@ -335,6 +344,14 @@ describe('JournalService', () => {
 
     await expect(
       service.reverse(created.data!.id, actorId),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    await expect(
+      service.amendPosted(
+        created.data!.id,
+        { narration: 'too late' },
+        actorId,
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 

@@ -215,6 +215,10 @@ export type ProvisionSiteEngineerInput = {
   designationCode?: string;
   designationId?: string;
   reportingManagerUserId?: string | null;
+  /** Up to 2 officers; primary is reportingManagerUserId (or first). */
+  reportingOfficerUserIds?: string[];
+  /** any = either officer can approve; all = both must approve. */
+  reportingApprovalMode?: 'any' | 'all';
   createLogin: boolean;
   password?: string;
   roleCode?: string;
@@ -234,13 +238,19 @@ export type ProvisionSiteEngineerResult = {
   siteAssignment: unknown;
 };
 
-/** Optional Site Engineer permissions that may be denied at provision time. */
+/** @deprecated Use SITE_ENGINEER_ACCESS_MODULES — kept for older imports. */
 export const SITE_ENGINEER_OPTIONAL_DENY_PERMISSIONS = [
   { code: 'running_bill.verify', label: 'Verify running bills' },
   { code: 'manpower_plan.manage', label: 'Manage manpower plans' },
   { code: 'stock.issue', label: 'Issue stock' },
   { code: 'purchase.request', label: 'Create purchase requests' },
 ] as const;
+
+export {
+  SITE_ENGINEER_ACCESS_MODULES,
+  buildPermissionDeniesFromModules,
+  defaultEnabledModules,
+} from './siteEngineerAccessModules';
 
 export const DEFAULT_DEPARTMENT_CODE = 'ENGINEERING';
 export const DEFAULT_DESIGNATION_CODE = 'SITE_ENGINEER';

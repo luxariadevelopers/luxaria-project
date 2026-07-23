@@ -27,7 +27,11 @@ import type {
   ReviewActionDto,
   UpdatePettyCashRequirementDto,
 } from './dto/petty-cash-requirement.dto';
-import { toPublicRequirement } from './petty-cash-requirements.mapper';
+import {
+  toPublicRequirement,
+  type ActorNameMap,
+  type PublicPettyCashRequirement,
+} from './petty-cash-requirements.mapper';
 import {
   PettyCashExpenseDraft,
   PettyCashExpenseDraftStatus,
@@ -36,6 +40,7 @@ import {
   PettyCashRequirement,
   PettyCashRequirementStatus,
 } from './schemas/petty-cash-requirement.schema';
+import { User } from '../users/schemas/user.schema';
 
 export const PETTY_CASH_APPROVAL_MODULE = 'petty_cash';
 export const PETTY_CASH_APPROVAL_ENTITY = 'weekly_requirement';
@@ -47,6 +52,8 @@ export class PettyCashRequirementsService {
     private readonly requirementModel: Model<PettyCashRequirement>,
     @InjectModel(PettyCashExpenseDraft.name)
     private readonly expenseDraftModel: Model<PettyCashExpenseDraft>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<User>,
     private readonly cashAccountsService: CashAccountsService,
     private readonly approvalsService: ApprovalsService,
     private readonly numberingService: NumberingService,
@@ -102,7 +109,7 @@ export class PettyCashRequirementsService {
     });
 
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Petty-cash weekly requirement created as draft',
     );
   }
@@ -161,7 +168,7 @@ export class PettyCashRequirementsService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Petty-cash requirement updated',
     );
   }
@@ -220,7 +227,7 @@ export class PettyCashRequirementsService {
     await row.save();
 
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       ctx.warnings.length
         ? 'Submitted for approval (see warnings)'
         : 'Submitted for project manager review',
@@ -266,7 +273,7 @@ export class PettyCashRequirementsService {
     await row.save();
 
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Project manager review completed',
     );
   }
@@ -329,7 +336,7 @@ export class PettyCashRequirementsService {
     await row.save();
 
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       row.status === PettyCashRequirementStatus.Approved
         ? 'Finance approved weekly petty-cash requirement'
         : 'Finance review recorded',
@@ -362,7 +369,7 @@ export class PettyCashRequirementsService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Petty-cash requirement rejected',
     );
   }
@@ -398,7 +405,7 @@ export class PettyCashRequirementsService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Returned for correction',
     );
   }
@@ -432,7 +439,7 @@ export class PettyCashRequirementsService {
     await row.save();
 
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Petty-cash requirement funded',
     );
   }
@@ -448,7 +455,7 @@ export class PettyCashRequirementsService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Petty-cash requirement closed',
     );
   }
@@ -472,14 +479,14 @@ export class PettyCashRequirementsService {
     row.set('updatedBy', new Types.ObjectId(actorId));
     await row.save();
     return createSuccessResponse(
-      toPublicRequirement(row),
+      await this.present(row),
       'Petty-cash requirement cancelled',
     );
   }
 
   async getById(id: string) {
     const row = await this.requireRequirement(id);
-    return createSuccessResponse(toPublicRequirement(row));
+    return createSuccessResponse(await this.present(row));
   }
 
   /**
@@ -550,13 +557,63 @@ export class PettyCashRequirementsService {
     ]);
 
     return createSuccessResponse(
-      rows.map((r) => toPublicRequirement(r)),
+      await this.presentMany(rows),
       'Petty-cash requirements',
       buildPaginationMeta(page, limit, total),
     );
   }
 
   // ─── internals ─────────────────────────────────────────────────────────
+
+  private async present(
+    row: Parameters<typeof toPublicRequirement>[0],
+  ): Promise<PublicPettyCashRequirement> {
+    const names = await this.loadActorNames([row]);
+    return toPublicRequirement(row, names);
+  }
+
+  private async presentMany(
+    rows: Array<Parameters<typeof toPublicRequirement>[0]>,
+  ): Promise<PublicPettyCashRequirement[]> {
+    const names = await this.loadActorNames(rows);
+    return rows.map((row) => toPublicRequirement(row, names));
+  }
+
+  private async loadActorNames(
+    rows: Array<{
+      requestedBy?: Types.ObjectId | string;
+      projectManagerReviewedBy?: Types.ObjectId | string | null;
+      financeReviewedBy?: Types.ObjectId | string | null;
+      fundedBy?: Types.ObjectId | string | null;
+      closedBy?: Types.ObjectId | string | null;
+    }>,
+  ): Promise<ActorNameMap> {
+    const ids = new Set<string>();
+    for (const row of rows) {
+      for (const id of [
+        row.requestedBy,
+        row.projectManagerReviewedBy,
+        row.financeReviewedBy,
+        row.fundedBy,
+        row.closedBy,
+      ]) {
+        if (id) ids.add(String(id));
+      }
+    }
+    if (ids.size === 0) return new Map();
+    const users = await this.userModel
+      .find({ _id: { $in: [...ids].map((id) => new Types.ObjectId(id)) } })
+      .select({ fullName: 1, email: 1 })
+      .lean()
+      .exec();
+    return new Map(
+      users.map((user) => [
+        String(user._id),
+        (user.fullName || user.email || String(user._id)).trim(),
+      ]),
+    );
+  }
+
 
   private async buildUnsettledContext(
     pettyCashAccountId: string,

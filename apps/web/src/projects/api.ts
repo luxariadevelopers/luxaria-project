@@ -12,6 +12,7 @@ import type {
   CreateProjectAssignmentInput,
   CreateProjectInput,
   CreateStructureNodeInput,
+  UpdateStructureNodeInput,
   CreateWarehouseInput,
   ListProjectAssignmentsQuery,
   ListProjectsQuery,
@@ -108,6 +109,7 @@ function normaliseProject(row: PublicProject): PublicProject {
     assignedDirectors: row.assignedDirectors ?? [],
     defaultBankAccount: row.defaultBankAccount ?? null,
     approvedBudget: row.approvedBudget ?? null,
+    equalDirectorInvestment: Boolean(row.equalDirectorInvestment),
     companyId: row.companyId ?? null,
     reraDetails: {
       reraNumber: row.reraDetails?.reraNumber ?? null,
@@ -370,6 +372,18 @@ export async function createProjectStructureNode(
   );
   if (!res.data) {
     throw new Error(res.message || 'Structure node creation failed');
+  }
+  return normaliseSite(res.data);
+}
+
+/** `PATCH /sites/:id` — update name/type/parent (`site.manage`). */
+export async function updateProjectStructureNode(
+  siteId: string,
+  input: UpdateStructureNodeInput,
+): Promise<PublicProjectSite> {
+  const res = await apiPatch<PublicProjectSite>(`/sites/${siteId}`, input);
+  if (!res.data) {
+    throw new Error(res.message || 'Structure node update failed');
   }
   return normaliseSite(res.data);
 }

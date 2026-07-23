@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1B3A4B"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
@@ -27,7 +27,7 @@
       "package": "in.luxaria.site",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "backgroundColor": "#1B3A4B",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

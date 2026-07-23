@@ -20,10 +20,13 @@ export class CreateDirectorDto {
   @IsNotEmpty()
   fullName!: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({
+    description: 'Linked system user — required for every director',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsMongoId()
-  userId?: string | null;
+  @IsNotEmpty()
+  userId!: string;
 
   @ApiPropertyOptional({ example: '12345678' })
   @ValidateIf((o: CreateDirectorDto) => !!o.din)

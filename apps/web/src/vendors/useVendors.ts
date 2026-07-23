@@ -24,6 +24,7 @@ import type {
   CreateVendorInput,
   ListVendorsQuery,
   UpdateVendorInput,
+  VendorLedgerQuery,
   VerifyVendorInput,
 } from './types';
 
@@ -138,10 +139,14 @@ export function useVendorProjects(
   });
 }
 
-export function useVendorLedger(vendorId: string | undefined, enabled = true) {
+export function useVendorLedger(
+  vendorId: string | undefined,
+  query: VendorLedgerQuery = {},
+  enabled = true,
+) {
   return useQuery({
-    queryKey: vendorsKeys.ledger(vendorId ?? ''),
-    queryFn: () => fetchVendorLedger(vendorId!),
+    queryKey: vendorsKeys.ledger(vendorId ?? '', query),
+    queryFn: () => fetchVendorLedger(vendorId!, query),
     enabled: Boolean(vendorId) && enabled,
     staleTime: 15_000,
     retry: false,

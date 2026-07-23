@@ -12,7 +12,9 @@ import type {
   PublicVendorProjectAssignment,
   PublicVendorQualityScore,
   UpdateVendorInput,
-  VendorLedgerPlaceholder,
+  VendorLedgerLine,
+  VendorLedgerQuery,
+  VendorLedgerReport,
   VerifyVendorInput,
 } from './types';
 
@@ -177,17 +179,66 @@ export async function fetchVendorProjects(
   }));
 }
 
-/** `GET /vendors/:id/ledger` — `vendor.view` (payable placeholder). */
+/** `GET /vendors/:id/ledger` — `vendor.view` (journal-backed party ledger). */
 export async function fetchVendorLedger(
   vendorId: string,
-): Promise<VendorLedgerPlaceholder> {
-  const res = await apiGet<VendorLedgerPlaceholder>(
-    `/vendors/${vendorId}/ledger`,
-  );
+  query: VendorLedgerQuery = {},
+): Promise<VendorLedgerReport> {
+  const res = await apiGet<{
+    vendorId: string;
+    vendorCode: string;
+    legalName: string;
+    currency?: string;
+    openingBalance?: number;
+    totalDebit?: number;
+    totalCredit?: number;
+    closingBalance?: number;
+    rows?: VendorLedgerLine[];
+    filters?: VendorLedgerReport['filters'];
+    reconciled?: boolean;
+    reconciliationNotes?: string[];
+    asOf?: string;
+  }>(`/vendors/${vendorId}/ledger`, {
+    financialYearId: query.financialYearId || undefined,
+    projectId: query.projectId || undefined,
+    from: query.from || undefined,
+    to: query.to || undefined,
+  });
   if (!res.data) {
     throw new Error(res.message || 'Vendor ledger unavailable');
   }
-  return res.data;
+  const rows = (res.data.rows ?? []).map((row) => ({
+    journalId: row.journalId,
+    journalNumber: row.journalNumber,
+    journalDate: row.journalDate,
+    accountCode: row.accountCode,
+    accountName: row.accountName,
+    narration: row.narration,
+    description: row.description ?? null,
+    debit: Number(row.debit ?? 0),
+    credit: Number(row.credit ?? 0),
+    runningBalance: Number(row.runningBalance ?? 0),
+    projectId: row.projectId ?? null,
+    partyName: row.partyName ?? null,
+    sourceModule: row.sourceModule ?? null,
+    sourceEntityType: row.sourceEntityType ?? null,
+    sourceEntityId: row.sourceEntityId ?? null,
+  }));
+  return {
+    vendorId: res.data.vendorId,
+    vendorCode: res.data.vendorCode,
+    legalName: res.data.legalName,
+    currency: res.data.currency ?? 'INR',
+    openingBalance: Number(res.data.openingBalance ?? 0),
+    totalDebit: Number(res.data.totalDebit ?? 0),
+    totalCredit: Number(res.data.totalCredit ?? 0),
+    closingBalance: Number(res.data.closingBalance ?? 0),
+    rows,
+    filters: res.data.filters ?? null,
+    reconciled: res.data.reconciled ?? true,
+    reconciliationNotes: res.data.reconciliationNotes ?? [],
+    asOf: res.data.asOf ?? new Date().toISOString(),
+  };
 }
 
 /** `GET /vendor-invoices?vendorId=` — `vendor_invoice.view` */

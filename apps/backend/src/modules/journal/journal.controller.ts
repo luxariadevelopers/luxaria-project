@@ -82,6 +82,20 @@ export class JournalController {
     return this.journalService.update(id, dto, actor.id);
   }
 
+  @Post(':id/amend')
+  @RequirePermissions('journal.reverse')
+  @ApiOperation({
+    summary:
+      'Amend a posted journal in place (same voucher number; no reversal)',
+  })
+  amend(
+    @Param('id') id: string,
+    @Body() dto: UpdateJournalDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.journalService.amendPosted(id, dto, actor.id);
+  }
+
   @Post(':id/submit')
   @RequirePermissions('journal.create')
   @ApiOperation({ summary: 'Submit journal for approval' })
@@ -91,7 +105,7 @@ export class JournalController {
 
   @Post(':id/post')
   @RequirePermissions('journal.post')
-  @ApiOperation({ summary: 'Post journal (immutable thereafter)' })
+  @ApiOperation({ summary: 'Post journal (opens books; amend/reverse to correct)' })
   post(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
     return this.journalService.post(id, actor.id);
   }

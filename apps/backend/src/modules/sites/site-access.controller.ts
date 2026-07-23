@@ -80,8 +80,8 @@ export class SiteAccessController {
   }
 
   @Post(':id/revoke')
-  @RequirePermissions('site_access.manage')
-  @ApiOperation({ summary: 'Revoke site assignment' })
+  @RequirePermissions('site_access.assign')
+  @ApiOperation({ summary: 'Revoke site assignment (remove person from site)' })
   revoke(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
     if (!actor.companyId) {
       throw new ForbiddenException('Authenticated company context required');

@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
+  Box,
+  Button,
   Paper,
   Stack,
   Table,
@@ -13,12 +16,23 @@ import {
 import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
-import { fetchSiteDiaryEntries } from '@/site-diary/api';
+import {
+  fetchSiteDiaryEntries,
+  type PublicSiteDiaryEntry,
+} from '@/site-diary/api';
+import { SiteDiaryFormDrawer } from '@/site-diary/SiteDiaryFormDrawer';
 
 export function SiteDiaryPage() {
   const { hasPermission } = useAuth();
   const { selectedProjectId } = useProject();
   const canView = hasPermission('site_diary.view');
+  const canManage = hasPermission('site_diary.manage');
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<'create' | 'edit'>('create');
+  const [editTarget, setEditTarget] = useState<PublicSiteDiaryEntry | null>(
+    null,
+  );
 
   const query = useQuery({
     queryKey: ['site-diary', selectedProjectId],
@@ -27,6 +41,18 @@ export function SiteDiaryPage() {
     enabled: canView && Boolean(selectedProjectId),
   });
 
+  const openCreate = () => {
+    setDrawerMode('create');
+    setEditTarget(null);
+    setDrawerOpen(true);
+  };
+
+  const openEdit = (row: PublicSiteDiaryEntry) => {
+    setDrawerMode('edit');
+    setEditTarget(row);
+    setDrawerOpen(true);
+  };
+
   if (!canView) return <PermissionDenied />;
   if (!selectedProjectId) {
     return (
@@ -34,18 +60,41 @@ export function SiteDiaryPage() {
     );
   }
   if (query.isError) {
-    return <RetryPanel onRetry={() => void query.refetch()} />;
+    return (
+      <RetryPanel
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        forceRetry
+      />
+    );
   }
 
   const rows = query.data ?? [];
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Site Diary</Typography>
-      <Typography variant="body2" color="text.secondary">
-        Meetings, delays, visitors, instructions, and risks linked to project /
-        DPR.
-      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { sm: 'center' },
+          gap: 1.5,
+        }}
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="h5">Site Diary</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Meetings, delays, visitors, instructions, and risks linked to
+            project / DPR.
+          </Typography>
+        </Stack>
+        {canManage ? (
+          <Button variant="contained" onClick={openCreate}>
+            New entry
+          </Button>
+        ) : null}
+      </Box>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Table size="small">
           <TableHead>
@@ -55,12 +104,13 @@ export function SiteDiaryPage() {
               <TableCell>Title</TableCell>
               <TableCell>Visitors</TableCell>
               <TableCell align="right">Photos</TableCell>
+              {canManage ? <TableCell align="right">Actions</TableCell> : null}
             </TableRow>
           </TableHead>
           <TableBody>
             {query.isLoading ? (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={canManage ? 6 : 5}>
                   <Typography variant="body2" color="text.secondary">
                     Loading…
                   </Typography>
@@ -68,7 +118,7 @@ export function SiteDiaryPage() {
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={canManage ? 6 : 5}>
                   <Typography variant="body2" color="text.secondary">
                     No diary entries for this project.
                   </Typography>
@@ -76,10 +126,8 @@ export function SiteDiaryPage() {
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    {row.entryDate.slice(0, 10)}
-                  </TableCell>
+                <TableRow key={row.id} hover>
+                  <TableCell>{row.entryDate.slice(0, 10)}</TableCell>
                   <TableCell>{row.entryType}</TableCell>
                   <TableCell>{row.title}</TableCell>
                   <TableCell>
@@ -90,12 +138,29 @@ export function SiteDiaryPage() {
                   <TableCell align="right">
                     {row.photoDocumentIds.length}
                   </TableCell>
+                  {canManage ? (
+                    <TableCell align="right">
+                      <Button size="small" onClick={() => openEdit(row)}>
+                        Edit
+                      </Button>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </Paper>
+
+      {canManage ? (
+        <SiteDiaryFormDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          mode={drawerMode}
+          projectId={selectedProjectId}
+          entry={editTarget}
+        />
+      ) : null}
     </Stack>
   );
 }

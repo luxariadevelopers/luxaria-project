@@ -56,6 +56,16 @@ export function DirectorDetailPage() {
       (h) => h.directorId === director.id,
     );
     return [
+      {
+        id: 'userCode',
+        label: 'User ID',
+        value: director.userCode ?? '—',
+      },
+      {
+        id: 'employeeId',
+        label: 'Employee ID',
+        value: director.employeeId ?? '—',
+      },
       { id: 'din', label: 'DIN', value: director.din ?? '—' },
       { id: 'pan', label: 'PAN', value: director.pan ?? '—' },
       { id: 'email', label: 'Email', value: director.email ?? '—' },
@@ -72,6 +82,7 @@ export function DirectorDetailPage() {
     try {
       await update.mutateAsync({
         fullName: values.fullName,
+        userId: values.userId,
         din: values.din ?? null,
         pan: values.pan ?? null,
         email: values.email ?? null,

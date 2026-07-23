@@ -28,8 +28,8 @@ Event fallbacks: `missing_work_measurement` → `WorkMeasurementForm` (`measurem
 
 ## Offline gaps (intentional)
 
-- **Material issue submit / signatures** — draft create queues offline (`material_issue.create`); signatures and submit remain web-only.
+- **Material issue confirm** — online `stock.adjust` confirm remains a separate step after mobile/web submit (not auto-confirmed on create).
 - **Approvals** — online-only (no offline approval pattern).
 - **Quality inspection complete** — online-only (inspect action on list; no JSON-only create queue).
 
-Site expense, purchase request, and material issue **draft create** queue offline (`site_expense.create`, `purchase_request.create`, `material_issue.create`) when lookups were loaded online first (or ids are entered manually).
+Site expense, purchase request, and material issue create queue offline (`site_expense.create`, `purchase_request.create`, `material_issue.create`) when lookups were loaded online first (or ids are entered manually). Material issue offline sync uploads signature media, attaches signatures, then submits.

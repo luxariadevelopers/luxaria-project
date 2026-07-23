@@ -182,8 +182,9 @@ export function ContributionReceiptsPage() {
       <Typography color="text.secondary">
         Project funding receipts
         {selectedProject ? ` — ${selectedProject.projectName}` : ''}.
-        Verify, post and download PDFs. Duplicate bank transaction references
-        are rejected by Nest (409). Select a project in the header.
+        Director first investment posts as capital; later director money for a
+        project posts as a director loan. Select the project in the header,
+        then create a receipt against the matching commitment.
       </Typography>
 
       <BalancesSummary

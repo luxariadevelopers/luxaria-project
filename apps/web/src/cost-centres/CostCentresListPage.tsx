@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { Button, Stack, Typography } from '@mui/material';
 import { isForbiddenError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { DEFAULT_LIST_PAGE_SIZE } from '@/components/data-table';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
+import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { CostCentreFilters, type CostCentreFilterState } from './CostCentreFilters';
 import { CostCentreTable } from './CostCentreTable';
+import { QuickCreateCostCentreDialog } from './QuickCreateCostCentreDialog';
 import { resolveCostCentreCapabilities } from './roleAccess';
+import { CostCentreKind, type CostCentreKind as CostCentreKindValue } from './types';
 import { useCostCentresList } from './useCostCentres';
 
 /**
@@ -16,8 +20,9 @@ import { useCostCentresList } from './useCostCentres';
  */
 export function CostCentresListPage() {
   const { hasPermission, access } = useAuth();
+  const notify = useNotify();
   const caps = resolveCostCentreCapabilities(hasPermission);
-  const { projects } = useProject();
+  const { projects, selectedProjectId } = useProject();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_LIST_PAGE_SIZE);
@@ -27,8 +32,10 @@ export function CostCentresListPage() {
     kind: '',
     status: '',
   });
+  const [createKind, setCreateKind] = useState<CostCentreKindValue | null>(null);
 
   const canView = Boolean(access) && caps.canView;
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
   const listQuery = useMemo(
     () => ({
@@ -78,9 +85,36 @@ export function CostCentresListPage() {
 
   return (
     <Stack spacing={2} data-testid="cost-centres-page">
-      <Typography color="text.secondary">
-        Company and project cost / profit centres for budget and ledger tagging.
-      </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1}
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'center' },
+        }}
+      >
+        <Typography color="text.secondary">
+          Company and project cost / profit centres for budget and ledger tagging.
+        </Typography>
+        {caps.canManage ? (
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => setCreateKind(CostCentreKind.CostCentre)}
+            >
+              Cost centre
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCreateKind(CostCentreKind.ProfitCentre)}
+            >
+              Profit centre
+            </Button>
+          </Stack>
+        ) : null}
+      </Stack>
 
       {list.error ? (
         <>
@@ -112,6 +146,25 @@ export function CostCentresListPage() {
           projectLabel={(id) => (id ? (projectLabelById.get(id) ?? id.slice(-6)) : 'Company')}
         />
       )}
+
+      {createKind ? (
+        <QuickCreateCostCentreDialog
+          open
+          kind={createKind}
+          projectId={selectedProject?.id ?? (filters.projectId || null)}
+          projectCode={selectedProject?.projectCode ?? null}
+          projectName={selectedProject?.projectName ?? null}
+          onClose={() => setCreateKind(null)}
+          onCreated={async () => {
+            notify.success(
+              createKind === CostCentreKind.ProfitCentre
+                ? 'Profit centre created'
+                : 'Cost centre created',
+            );
+            await list.refetch();
+          }}
+        />
+      ) : null}
     </Stack>
   );
 }

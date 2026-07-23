@@ -1,0 +1,129 @@
+export const UserStatus = {
+  Active: 'active',
+  Inactive: 'inactive',
+  Locked: 'locked',
+} as const;
+
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+
+export const ReportingApprovalMode = {
+  Any: 'any',
+  All: 'all',
+} as const;
+
+export type ReportingApprovalMode =
+  (typeof ReportingApprovalMode)[keyof typeof ReportingApprovalMode];
+
+export type PublicUser = {
+  id: string;
+  userCode: string;
+  fullName: string;
+  email: string | null;
+  mobile: string | null;
+  employeeId: string | null;
+  designation: string | null;
+  department: string | null;
+  profilePhoto: string | null;
+  status: UserStatus | string;
+  assignedProjects: string[];
+  roleIds: string[];
+  reportingManager: string | null;
+  reportingOfficers: string[];
+  reportingApprovalMode: ReportingApprovalMode | string;
+  mustChangePassword?: boolean;
+  joiningDate: string | null;
+  lastLoginAt: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminPaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+} | null;
+
+export type PaginatedUsers = {
+  items: PublicUser[];
+  meta: AdminPaginationMeta;
+};
+
+export type ListUsersQuery = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  status?: UserStatus;
+  department?: string;
+  projectId?: string;
+  roleId?: string;
+};
+
+export type CreateUserInput = {
+  fullName: string;
+  email?: string | null;
+  mobile?: string | null;
+  password: string;
+  employeeId?: string | null;
+  designation?: string | null;
+  department?: string | null;
+  profilePhoto?: string | null;
+  status?: UserStatus;
+  assignedProjects?: string[];
+  roleIds?: string[];
+  reportingManager?: string | null;
+  reportingOfficers?: string[];
+  reportingApprovalMode?: ReportingApprovalMode;
+  joiningDate?: string | null;
+};
+
+export type UpdateUserInput = {
+  fullName?: string;
+  email?: string | null;
+  mobile?: string | null;
+  employeeId?: string | null;
+  designation?: string | null;
+  department?: string | null;
+  profilePhoto?: string | null;
+  reportingManager?: string | null;
+  reportingOfficers?: string[];
+  reportingApprovalMode?: ReportingApprovalMode;
+  temporaryPassword?: string;
+  joiningDate?: string | null;
+};
+
+export const RoleStatus = {
+  Active: 'active',
+  Inactive: 'inactive',
+} as const;
+
+export type RoleStatus = (typeof RoleStatus)[keyof typeof RoleStatus];
+
+export type PublicRole = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+  bypassPermissions: boolean;
+  isSystem: boolean;
+  status: RoleStatus | string;
+};
+
+export type RoleOption = {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  bypassPermissions: boolean;
+};
+
+export type ProjectOption = {
+  id: string;
+  projectCode: string;
+  projectName: string;
+};

@@ -1,5 +1,6 @@
 export {
   acceptGoodsReceipt,
+  createGoodsReceipt,
   fetchGoodsReceipt,
   fetchGoodsReceipts,
   fetchPurchaseOrderForCompare,
@@ -21,6 +22,7 @@ export {
 } from './roleAccess';
 export {
   GoodsReceiptStatus,
+  type CreateGoodsReceiptInput,
   type ListGoodsReceiptsQuery,
   type PublicGoodsReceipt,
   type PublicGoodsReceiptItem,

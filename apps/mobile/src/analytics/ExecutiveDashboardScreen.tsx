@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { apiGet, getErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
+import { formatInr } from '@/format';
 import type { AppStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 
@@ -29,8 +30,7 @@ type MobileExecutive = {
 };
 
 function money(n?: number): string {
-  if (n === undefined || n === null || Number.isNaN(n)) return '—';
-  return n.toLocaleString('en-IN');
+  return formatInr(n);
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

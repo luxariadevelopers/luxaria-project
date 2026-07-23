@@ -1,6 +1,10 @@
+import { Box, CircularProgress } from '@mui/material';
 import { Navigate, Outlet } from 'react-router-dom';
 import { ProjectRequiredRoute } from '@/auth/ProjectRequiredRoute';
-import { canEnterRoute } from '@/navigation/routeAccess';
+import {
+  canEnterRoute,
+  evaluateRouteAccess,
+} from '@/navigation/routeAccess';
 import {
   requireRouteById,
   type AppRouteId,
@@ -24,13 +28,31 @@ export function RegistryRouteGuard({
   const { access } = useAuth();
   const route = requireRouteById(routeId);
 
-  const allowed = canEnterRoute(route, {
+  const ctx = {
     accessLoaded: Boolean(access),
     bypassPermissions: Boolean(access?.bypassPermissions),
     permissions: access?.permissions ?? [],
-  });
+  };
 
-  if (!allowed) {
+  const decision = evaluateRouteAccess(route, ctx);
+
+  if (decision === 'pending') {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: 240,
+        }}
+        data-testid="route-access-pending"
+      >
+        <CircularProgress size={32} />
+      </Box>
+    );
+  }
+
+  if (!canEnterRoute(route, ctx)) {
     return <Navigate to={redirectTo} replace />;
   }
 

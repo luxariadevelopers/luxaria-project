@@ -105,7 +105,9 @@ export type E2eMasterData = {
   customerId: string;
   unitId: string;
   materialId: string;
+  materialName: string;
   vendorId: string;
+  vendorName: string;
   companyBankAccountId: string;
   expenseCategoryId: string;
   bankLedgerAccountId: string;

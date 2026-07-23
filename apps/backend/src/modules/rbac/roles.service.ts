@@ -189,18 +189,29 @@ export class RolesService {
   async assignPermissions(id: string, dto: AssignPermissionsDto, actorId?: string) {
     await this.requireRole(id);
     const permissions = this.normalizePermissions(dto.permissions);
+    const updatedBy =
+      actorId && MongooseTypes.ObjectId.isValid(actorId)
+        ? new MongooseTypes.ObjectId(actorId)
+        : null;
     const updated = await this.roleModel
       .findByIdAndUpdate(
         id,
         {
           permissions,
-          updatedBy: actorId ? new MongooseTypes.ObjectId(actorId) : null,
+          updatedBy,
         },
         { new: true },
       )
       .exec();
 
-    return createSuccessResponse(toPublicRole(updated!), 'Permissions assigned successfully');
+    if (!updated) {
+      throw new NotFoundException('Role not found');
+    }
+
+    return createSuccessResponse(
+      toPublicRole(updated),
+      'Permissions assigned successfully',
+    );
   }
 
   async clone(id: string, dto: CloneRoleDto, actorId?: string) {
@@ -345,9 +356,10 @@ export class RolesService {
     ];
 
     for (const permission of normalized) {
-      if (!/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(permission)) {
+      // Catalog allows nested actions (e.g. analytics.alert.manage).
+      if (!/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/.test(permission)) {
         throw new BadRequestException(
-          `Invalid permission format: ${permission}. Expected module.action`,
+          `Invalid permission format: ${permission}. Expected module.action (or module.sub.action)`,
         );
       }
       if (!isKnownPermission(permission)) {

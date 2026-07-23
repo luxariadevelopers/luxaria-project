@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -17,12 +18,15 @@ import {
   Designation,
   DesignationStatus,
 } from './schemas/designation.schema';
+import { Employee } from './schemas/employee.schema';
 
 @Injectable()
 export class DesignationsService {
   constructor(
     @InjectModel(Designation.name)
     private readonly designationModel: Model<Designation>,
+    @InjectModel(Employee.name)
+    private readonly employeeModel: Model<Employee>,
   ) {}
 
   async create(dto: CreateDesignationDto, companyId: string, actorId?: string) {
@@ -107,6 +111,27 @@ export class DesignationsService {
     return createSuccessResponse(
       toPublicDesignation(row),
       'Designation deactivated',
+    );
+  }
+
+  async remove(id: string, companyId: string, actorId?: string) {
+    const row = await this.requireDesignation(id, companyId);
+    const employeeCount = await this.employeeModel
+      .countDocuments({ designationId: row._id })
+      .exec();
+    if (employeeCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete "${row.name}": ${employeeCount} employee(s) are still assigned to this designation. Reassign or remove those employees first, then delete the designation.`,
+      );
+    }
+    await row.softDelete(
+      actorId && Types.ObjectId.isValid(actorId)
+        ? new Types.ObjectId(actorId)
+        : null,
+    );
+    return createSuccessResponse(
+      toPublicDesignation(row),
+      'Designation deleted',
     );
   }
 

@@ -5,6 +5,7 @@ import {
 } from '@/api/notifications';
 import { getErrorMessage } from '@/api/client';
 import {
+  isNativePushAvailable,
   registerForPushNotificationsAsync,
   resolvePushPlatform,
 } from './pushNotifications';
@@ -19,6 +20,13 @@ export async function syncPushRegistrationWithBackend(): Promise<{
   registered: boolean;
   message: string;
 }> {
+  if (!isNativePushAvailable()) {
+    return {
+      registered: false,
+      message: 'Push registration skipped on web',
+    };
+  }
+
   if (!Device.isDevice) {
     return {
       registered: false,

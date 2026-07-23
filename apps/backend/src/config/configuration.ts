@@ -19,6 +19,8 @@ export type AppConfig = {
   authCookieDomain: string | null;
   fieldEncryptionKey: string;
   awsRegion: string;
+  /** Optional shared profile (e.g. `luxaria` from `aws login --profile luxaria`). */
+  awsProfile: string;
   awsAccessKeyId: string;
   awsSecretAccessKey: string;
   awsBucketName: string;
@@ -143,7 +145,9 @@ export default (): AppConfig => {
     port: Number(process.env.PORT ?? 9000),
     appName: process.env.APP_NAME ?? 'Luxaria Developers ERP API',
     appVersion: process.env.APP_VERSION ?? '0.1.0',
-    mongodbUri: process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:9017/luxaria-erp',
+    mongodbUri:
+      process.env.MONGODB_URI ??
+      'mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/luxaria-erp?retryWrites=true&w=majority',
     corsOrigins:
       corsOrigins.length > 0
         ? corsOrigins
@@ -165,9 +169,10 @@ export default (): AppConfig => {
       process.env.FIELD_ENCRYPTION_KEY ??
       'luxaria-dev-field-encryption-key-change-me-32b',
     awsRegion: process.env.AWS_REGION ?? 'ap-south-1',
+    awsProfile: process.env.AWS_PROFILE ?? '',
     awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
     awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
-    awsBucketName: process.env.AWS_BUCKET_NAME ?? '',
+    awsBucketName: process.env.AWS_BUCKET_NAME ?? 'luxaria-app-380267956124',
     awsS3Prefix: process.env.AWS_S3_PREFIX ?? 'luxaria-developers/',
     awsS3MaxUploadBytes: Number(
       process.env.AWS_S3_MAX_UPLOAD_BYTES ?? 25 * 1024 * 1024,

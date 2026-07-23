@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { CashAccountsModule } from '../cash-accounts/cash-accounts.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { User, UserSchema } from '../users/schemas/user.schema';
 import { PettyCashRequirementsController } from './petty-cash-requirements.controller';
 import { PettyCashRequirementsSeedService } from './petty-cash-requirements.seed.service';
 import { PettyCashRequirementsService } from './petty-cash-requirements.service';
@@ -20,6 +21,7 @@ import {
     MongooseModule.forFeature([
       { name: PettyCashRequirement.name, schema: PettyCashRequirementSchema },
       { name: PettyCashExpenseDraft.name, schema: PettyCashExpenseDraftSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     CashAccountsModule,
     ApprovalsModule,

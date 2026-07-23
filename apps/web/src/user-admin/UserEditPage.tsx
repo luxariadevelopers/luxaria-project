@@ -12,9 +12,10 @@ import { useAuth } from '@/auth/AuthContext';
 import { PermissionDenied, RetryPanel } from '@/components/errors';
 import { useNotify } from '@/components/NotificationProvider';
 import { canEditUser } from './roleAccess';
-import { UserForm } from './UserForm';
+import { UserForm, type UserFormSubmitExtras } from './UserForm';
 import {
   useUpdateUser,
+  useUploadUserProfilePhoto,
   useUserDetail,
   useUsersList,
 } from './useUsers';
@@ -48,6 +49,7 @@ export function UserEditPage({ userId: userIdProp }: Props = {}) {
     allowed,
   );
   const updateMutation = useUpdateUser(userId ?? '');
+  const photoMutation = useUploadUserProfilePhoto(userId ?? '');
 
   if (!access || (allowed && userQuery.isLoading)) {
     return (
@@ -81,10 +83,16 @@ export function UserEditPage({ userId: userIdProp }: Props = {}) {
   }
 
   const user = userQuery.data;
-  const submit = async (values: UserFormValues) => {
+  const submit = async (
+    values: UserFormValues,
+    extras: UserFormSubmitExtras,
+  ) => {
     setServerError(undefined);
     try {
       await updateMutation.mutateAsync(toUpdateUserInput(values));
+      if (extras.profilePhotoFile) {
+        await photoMutation.mutateAsync(extras.profilePhotoFile);
+      }
       notify.success('User updated successfully');
       void navigate(`/users/${user.id}`);
     } catch (error) {
@@ -98,23 +106,22 @@ export function UserEditPage({ userId: userIdProp }: Props = {}) {
       <Stack spacing={0.5}>
         <Typography variant="h5">Edit {user.fullName}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {user.userCode} · status, password, roles, and projects are managed
-          from the user detail page.
+          {user.userCode} · set login, temporary password, reporting officers,
+          and profile photo here. Roles and projects stay on the user detail
+          page.
         </Typography>
       </Stack>
       {managersQuery.error ? (
-        <Alert severity="info">
-          Reporting-manager choices are unavailable. The current value will
-          be preserved.
+        <Alert severity="warning">
+          Could not load the full staff list for reporting officers. Retry or
+          save without changing reporting.
         </Alert>
       ) : null}
       <UserForm
         mode="edit"
         initial={user}
-        managerOptions={
-          managersQuery.isSuccess ? managersQuery.data.items : undefined
-        }
-        submitting={updateMutation.isPending}
+        managerOptions={managersQuery.data?.items ?? []}
+        submitting={updateMutation.isPending || photoMutation.isPending}
         serverError={serverError}
         onSubmit={submit}
         onCancel={() => void navigate(`/users/${user.id}`)}

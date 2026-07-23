@@ -11,6 +11,7 @@ function event(partial: {
   actionLabel: string;
   at: string | null;
   actorId?: string | null;
+  actorName?: string | null;
   comment?: string | null;
   from?: string | null;
   to?: string | null;
@@ -24,7 +25,11 @@ function event(partial: {
     at: partial.at,
     actor: {
       id: partial.actorId ?? null,
-      displayName: partial.actorId ? 'User' : 'System',
+      displayName: partial.actorName
+        ? partial.actorName
+        : partial.actorId
+          ? 'User'
+          : 'System',
     },
     comment: partial.comment ?? null,
     documents: [],
@@ -53,6 +58,7 @@ export function buildPettyCashRequestTimeline(
       actionLabel: 'Request created',
       at: row.createdAt ?? row.weekStartDate,
       actorId: row.requestedBy,
+      actorName: row.requestedByName,
       to: pettyCashRequestStatusLabel(PettyCashRequirementStatus.Draft),
       comment: row.justification,
     }),
@@ -69,6 +75,7 @@ export function buildPettyCashRequestTimeline(
         actionLabel: 'Submitted for approval',
         at: row.updatedAt ?? row.createdAt ?? null,
         actorId: row.requestedBy,
+        actorName: row.requestedByName,
         from: pettyCashRequestStatusLabel(PettyCashRequirementStatus.Draft),
         to: pettyCashRequestStatusLabel(PettyCashRequirementStatus.Submitted),
       }),
@@ -83,6 +90,7 @@ export function buildPettyCashRequestTimeline(
         actionLabel: 'Project manager approved',
         at: row.projectManagerReviewedAt,
         actorId: row.projectManagerReviewedBy,
+        actorName: row.projectManagerReviewedByName,
         to: pettyCashRequestStatusLabel(
           PettyCashRequirementStatus.FinanceReview,
         ),
@@ -98,6 +106,7 @@ export function buildPettyCashRequestTimeline(
         actionLabel: 'Finance approved',
         at: row.financeReviewedAt,
         actorId: row.financeReviewedBy,
+        actorName: row.financeReviewedByName ?? row.approvedByName,
         to: pettyCashRequestStatusLabel(PettyCashRequirementStatus.Approved),
         comment:
           row.approvedAmount != null
@@ -115,6 +124,7 @@ export function buildPettyCashRequestTimeline(
         actionLabel: 'Funded',
         at: row.fundedAt,
         actorId: row.fundedBy,
+        actorName: row.fundedByName,
         to: pettyCashRequestStatusLabel(PettyCashRequirementStatus.Funded),
         comment:
           row.fundedAmount != null ? `Funded amount: ${row.fundedAmount}` : null,
@@ -130,6 +140,7 @@ export function buildPettyCashRequestTimeline(
         actionLabel: 'Closed',
         at: row.closedAt,
         actorId: row.closedBy,
+        actorName: row.closedByName,
         to: pettyCashRequestStatusLabel(PettyCashRequirementStatus.Closed),
       }),
     );

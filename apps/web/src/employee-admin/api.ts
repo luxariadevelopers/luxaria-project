@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from '@/api/client';
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from '@/api/client';
 import type {
   AdminPaginationMeta,
   CreateSiteInput,
@@ -184,6 +184,24 @@ export async function fetchEmployeeAccess(
   return normaliseAccessSummary(response.data);
 }
 
+/** `PUT /employees/:id/module-access` — guarded by `employee.update`. */
+export async function syncEmployeeModuleAccess(
+  employeeId: string,
+  input: {
+    denyPermissions: string[];
+    catalogPermissions: string[];
+  },
+): Promise<EmployeeAccessSummary> {
+  const response = await apiPut<EmployeeAccessSummary>(
+    `/employees/${employeeId}/module-access`,
+    input,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Module access update failed');
+  }
+  return normaliseAccessSummary(response.data);
+}
+
 export async function updateEmployee(
   employeeId: string,
   input: UpdateEmployeeInput,
@@ -227,26 +245,192 @@ export async function provisionSiteEngineer(
   };
 }
 
-/** `GET /departments` — guarded by `department.view`. */
-export async function fetchDepartments(): Promise<PublicDepartment[]> {
-  const response = await apiGet<PublicDepartment[]>('/departments');
-  return (response.data ?? []).map((row) => ({
+function normaliseDepartment(row: PublicDepartment): PublicDepartment {
+  return {
     ...row,
     headUserId: row.headUserId ?? null,
     description: row.description ?? null,
-  }));
+  };
 }
 
-/** `GET /designations` — guarded by `designation.view`. */
-export async function fetchDesignations(): Promise<PublicDesignation[]> {
-  const response = await apiGet<PublicDesignation[]>('/designations');
-  return (response.data ?? []).map((row) => ({
+/** `GET /departments` — guarded by `department.view`. */
+export async function fetchDepartments(): Promise<PublicDepartment[]> {
+  const response = await apiGet<PublicDepartment[]>('/departments');
+  return (response.data ?? []).map(normaliseDepartment);
+}
+
+export type CreateDepartmentInput = {
+  code: string;
+  name: string;
+  description?: string | null;
+};
+
+export type UpdateDepartmentInput = {
+  name?: string;
+  description?: string | null;
+};
+
+/** `POST /departments` — guarded by `department.manage`. */
+export async function createDepartment(
+  input: CreateDepartmentInput,
+): Promise<PublicDepartment> {
+  const response = await apiPost<PublicDepartment>('/departments', input);
+  if (!response.data) {
+    throw new Error(response.message || 'Department create failed');
+  }
+  return normaliseDepartment(response.data);
+}
+
+/** `PATCH /departments/:id` — guarded by `department.manage`. */
+export async function updateDepartment(
+  departmentId: string,
+  input: UpdateDepartmentInput,
+): Promise<PublicDepartment> {
+  const response = await apiPatch<PublicDepartment>(
+    `/departments/${departmentId}`,
+    input,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Department update failed');
+  }
+  return normaliseDepartment(response.data);
+}
+
+/** `POST /departments/:id/activate` — guarded by `department.manage`. */
+export async function activateDepartment(
+  departmentId: string,
+): Promise<PublicDepartment> {
+  const response = await apiPost<PublicDepartment>(
+    `/departments/${departmentId}/activate`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Department activate failed');
+  }
+  return normaliseDepartment(response.data);
+}
+
+/** `POST /departments/:id/deactivate` — guarded by `department.manage`. */
+export async function deactivateDepartment(
+  departmentId: string,
+): Promise<PublicDepartment> {
+  const response = await apiPost<PublicDepartment>(
+    `/departments/${departmentId}/deactivate`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Department deactivate failed');
+  }
+  return normaliseDepartment(response.data);
+}
+
+/** `DELETE /departments/:id` — guarded by `department.manage`. */
+export async function deleteDepartment(
+  departmentId: string,
+): Promise<PublicDepartment> {
+  const response = await apiDelete<PublicDepartment>(
+    `/departments/${departmentId}`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Department delete failed');
+  }
+  return normaliseDepartment(response.data);
+}
+
+function normaliseDesignation(row: PublicDesignation): PublicDesignation {
+  return {
     ...row,
     departmentId: row.departmentId ?? null,
     defaultRoleCode: row.defaultRoleCode ?? null,
     reportingLevel: row.reportingLevel ?? null,
     mobileEligible: Boolean(row.mobileEligible),
-  }));
+  };
+}
+
+/** `GET /designations` — guarded by `designation.view`. */
+export async function fetchDesignations(): Promise<PublicDesignation[]> {
+  const response = await apiGet<PublicDesignation[]>('/designations');
+  return (response.data ?? []).map(normaliseDesignation);
+}
+
+export type CreateDesignationInput = {
+  code: string;
+  name: string;
+  departmentId?: string | null;
+  defaultRoleCode?: string | null;
+  reportingLevel?: number | null;
+  mobileEligible?: boolean;
+};
+
+export type UpdateDesignationInput = {
+  name?: string;
+  departmentId?: string | null;
+  defaultRoleCode?: string | null;
+  reportingLevel?: number | null;
+  mobileEligible?: boolean;
+};
+
+/** `POST /designations` — guarded by `designation.manage`. */
+export async function createDesignation(
+  input: CreateDesignationInput,
+): Promise<PublicDesignation> {
+  const response = await apiPost<PublicDesignation>('/designations', input);
+  if (!response.data) {
+    throw new Error(response.message || 'Designation create failed');
+  }
+  return normaliseDesignation(response.data);
+}
+
+/** `PATCH /designations/:id` — guarded by `designation.manage`. */
+export async function updateDesignation(
+  designationId: string,
+  input: UpdateDesignationInput,
+): Promise<PublicDesignation> {
+  const response = await apiPatch<PublicDesignation>(
+    `/designations/${designationId}`,
+    input,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Designation update failed');
+  }
+  return normaliseDesignation(response.data);
+}
+
+/** `POST /designations/:id/activate` — guarded by `designation.manage`. */
+export async function activateDesignation(
+  designationId: string,
+): Promise<PublicDesignation> {
+  const response = await apiPost<PublicDesignation>(
+    `/designations/${designationId}/activate`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Designation activate failed');
+  }
+  return normaliseDesignation(response.data);
+}
+
+/** `POST /designations/:id/deactivate` — guarded by `designation.manage`. */
+export async function deactivateDesignation(
+  designationId: string,
+): Promise<PublicDesignation> {
+  const response = await apiPost<PublicDesignation>(
+    `/designations/${designationId}/deactivate`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Designation deactivate failed');
+  }
+  return normaliseDesignation(response.data);
+}
+
+/** `DELETE /designations/:id` — guarded by `designation.manage`. */
+export async function deleteDesignation(
+  designationId: string,
+): Promise<PublicDesignation> {
+  const response = await apiDelete<PublicDesignation>(
+    `/designations/${designationId}`,
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Designation delete failed');
+  }
+  return normaliseDesignation(response.data);
 }
 
 /** `GET /sites` — guarded by `site.view`. */
@@ -300,7 +484,29 @@ export async function fetchSiteAssignments(
   };
 }
 
-/** `POST /site-access/:id/revoke` — guarded by `site_access.manage`. */
+export type CreateSiteAssignmentInput = {
+  userId: string;
+  projectId: string;
+  siteId: string;
+  roleInSite?: string | null;
+  effectiveFrom?: string;
+  effectiveTo?: string | null;
+  isDefault?: boolean;
+  notes?: string | null;
+};
+
+/** `POST /site-access` — guarded by `site_access.assign`. */
+export async function createSiteAssignment(
+  input: CreateSiteAssignmentInput,
+): Promise<PublicSiteAssignment> {
+  const response = await apiPost<PublicSiteAssignment>('/site-access', input);
+  if (!response.data) {
+    throw new Error(response.message || 'Site assignment create failed');
+  }
+  return normaliseSiteAssignment(response.data);
+}
+
+/** `POST /site-access/:id/revoke` — guarded by `site_access.assign`. */
 export async function revokeSiteAssignment(
   assignmentId: string,
 ): Promise<PublicSiteAssignment> {

@@ -7,6 +7,7 @@ import { CompanyCapitalPanel } from './CompanyCapitalPanel';
 import { CompanyHistoryPanel } from './CompanyHistoryPanel';
 import { CompanyLogoPanel } from './CompanyLogoPanel';
 import { CompanyProfileForm } from './CompanyProfileForm';
+import { CompanyStatutoryDocumentsPanel } from './CompanyStatutoryDocumentsPanel';
 import { CompanyStatutoryForm } from './CompanyStatutoryForm';
 
 type ConfigurationTab = 'profile' | 'statutory' | 'capital' | 'logo' | 'history';
@@ -113,7 +114,10 @@ function CompanyConfiguration({
         <CompanyProfileForm company={company} canUpdate={canUpdate} />
       </TabPanel>
       <TabPanel active={tab === 'statutory'} id="statutory">
-        <CompanyStatutoryForm company={company} canUpdate={canUpdate} />
+        <Stack spacing={2.5}>
+          <CompanyStatutoryForm company={company} canUpdate={canUpdate} />
+          <CompanyStatutoryDocumentsPanel company={company} />
+        </Stack>
       </TabPanel>
       <TabPanel active={tab === 'capital'} id="capital">
         <CompanyCapitalPanel company={company} canUpdate={canUpdate} />

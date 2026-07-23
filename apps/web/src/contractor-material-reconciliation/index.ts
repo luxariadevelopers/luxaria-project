@@ -1,4 +1,5 @@
 export { MaterialReconciliationPage } from './MaterialReconciliationPage';
+export { PostToBillDialog } from './PostToBillDialog';
 export {
   listMaterialReconciliations,
   getMaterialReconciliation,
@@ -12,3 +13,5 @@ export type {
   MaterialReconciliationStatus,
   CreateMaterialReconciliationInput,
 } from './api';
+export { resolveMaterialReconciliationCapabilities } from './roleAccess';
+export { resolveMaterialReconciliationActions } from './workflowActions';

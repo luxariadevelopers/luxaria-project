@@ -292,7 +292,7 @@ export function EmployeeListPage() {
         emptyTitle="No employees"
         emptyDescription={
           canCreate
-            ? 'Provision the first Site Engineer or adjust the filters.'
+            ? 'Create the first employee or adjust the filters.'
             : 'No employees match the current filters.'
         }
         paginationMode="server"

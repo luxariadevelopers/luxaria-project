@@ -117,65 +117,66 @@ Every backend module must appear below with route/method/permission/response-sha
 
 ## Frontend capability map (current)
 
+> **Refresh note (2026-07-22):** The Phase 001 snapshot below the backend tables is still useful for HTTP contracts. The **web/mobile capability tables here supersede** the old “domain modules Missing / site workflows Missing” claims — those are no longer true.
+>
+> This is **not** a claim that every ERP plan line-item or every UI polish task is finished. See [`COMPLETION_REMAINING_GAPS.md`](../COMPLETION_REMAINING_GAPS.md).
+
 ### Web portal (`apps/web`)
+
+HQ-first portal: permission-guarded `APP_ROUTE_REGISTRY` (~200+ routes), sidebar pillars (Overview, Analytics, Projects, Supply, Sales, Finance, Admin), and domain `api.ts` clients under `apps/web/src/**` (100+ modules).
 
 | Area | Status | Notes |
 |---|---|---|
-| Shell / auth / layout | Present | Login, JWT refresh, permission guard, project selector |
-| Routes | Partial | `/login`, `/`, `/users`, `/projects`, `/daily-progress-reports`, `/settings`, `/forbidden`, `/investor/dashboard`, `/investor/projects/:projectId` |
-| Users page | Placeholder | Guarded by `user.view`; **does not call** `/users` API yet |
-| Projects page | Shell | Lists via project context `/projects` |
-| DPR page | Partial | `GET /daily-progress-reports` |
-| Dashboard / Settings | Shell | Minimal UI |
-| Domain modules (finance, procurement, sales, …) | Missing | No pages/clients yet |
-| Investor portal UI | **Phase 133** | `/investor/dashboard`, `/investor/projects/:id`; `investor_portal.view`; uses `GET /investor-portal/me`, `/projects`, `/projects/:projectId` only (never staff `/investors`) |
+| Shell / auth / layout | **Present** | Login, JWT refresh, permission guards, project selector, forbidden / no-project screens |
+| Users / RBAC / company admin | **Present** | `user-admin` list/detail/create/edit + roles/projects APIs; RBAC admin; company / employee admin |
+| Projects & capital | **Present** | Projects CRUD/detail/structure/team/docs; participants; commitments; contribution receipts; directors; shareholding; funding dashboard |
+| Project control / site execution | **Present** | DPR, BOQ, work measurements, manpower, labour attendance, site expenses, quality, safety, diary, issues, equipment, drawings, site ops / execution dashboards |
+| Procurement | **Present** | PRs, POs, quotations / comparisons, RFQ, GRNs, vendor invoices/payments, vendors, purchase dashboard, procurement masters |
+| Contractors | **Present** | Contractors, agreements, running bills, payments, retention, recoveries, tenders/bids, contractor dashboard/reports |
+| Inventory | **Present** | Materials, stock ledger/balances/counts/transfers, reservations, warehouse locations, material issues, reorder alerts, inventory dashboard/reports |
+| Sales / CRM | **Present** | Leads, customers, units, bookings, cancellations, collections, payment schedules, sale agreements, handovers, warranties, sales dashboard |
+| Accounting / finance | **Present** | COA, journals, cash/bank, bank reconciliation, FY / period close, opening balances, TDS/GST, fixed assets, budgets, cost centres, finance dashboard, accounting reports |
+| Petty cash | **Present** | Requests + fund transfers |
+| Approvals / notifications / audit | **Present** | Approvals inbox + workflows; notifications; audit logs; system health (`audit.view`) |
+| Analytics / director BI | **Present** | Executive / director / domain analytics pages; director command centre; director digest |
+| Investor portal UI | **Present** (132–134) | Isolated investor routes; staff investor manage; never uses staff `/investors` for portal users |
+| Thin / stub UIs | **Mostly closed** | Work-orders list+detail+workflow shipped. Leftover secondary actions (MB revise UI, tender record-bid UI, material-recon post-to-bill UI) — see [`COMPLETION_REMAINING_GAPS.md`](../COMPLETION_REMAINING_GAPS.md). Not “module missing”. |
+| Demo / design-system pages | Present (dev) | Data table / form / export / print demos — not production workflows |
 
-**Web API calls found:**
-
-| Method | Path | File |
-|---|---|---|
-| POST | `/auth/login` | `apps/web/src/api/auth.ts` |
-| POST | `/auth/logout` | `apps/web/src/api/auth.ts` |
-| GET | `/auth/me` | `apps/web/src/api/auth.ts` |
-| GET | `/daily-progress-reports` | `apps/web/src/pages/DprPage.tsx` |
-| GET | `/investor-portal/me` | `apps/web/src/investor-portal/api.ts` |
-| GET | `/investor-portal/projects` | `apps/web/src/investor-portal/api.ts` |
-| GET | `/investor-portal/projects/:projectId` | `apps/web/src/investor-portal/api.ts` |
-| GET | `/projects` | `apps/web/src/context/ProjectContext.tsx` |
-| GET | `/rbac/me/permissions` | `apps/web/src/api/auth.ts` |
+**Web API surface (how to inventory):** prefer domain clients under `apps/web/src/<domain>/api.ts` and routes in `apps/web/src/navigation/routeRegistry.ts` + `apps/web/src/routes/routeElements.tsx`. Do **not** treat the old Phase 001 nine-call table as the current web client list.
 
 ### Mobile site app (`apps/mobile`)
 
+Site-first Expo app with offline sync. Core site ops for phases **117–131** (plus push **136**) are **done** after gap closure — see [`COMPLETION_SITE_MOBILE_GAPS.md`](../COMPLETION_SITE_MOBILE_GAPS.md). Recent HQ extras on mobile are **optional** (not required for site completeness; not full web parity).
+
 | Area | Status | Notes |
 |---|---|---|
-| Auth / project select / offline shell | Present | JWT, project context, sync queue |
-| Screens | Partial | Login, Home, Projects, Profile, PendingSync, GRN, DPR |
-| GRN offline enqueue | Partial | Posts to `/goods-receipts` via sync transport |
-| DPR offline enqueue | Partial | Posts to `/daily-progress-reports` |
-| Purchase orders | Partial | `GET /purchase-orders` helpers |
-| Broader site workflows | Missing | Stock issue, attendance, petty cash UI, etc. |
+| Auth / project+site select / offline shell | **Present** | JWT, project/site context, sync queue, conflict detail, force/change password |
+| DPR | **Done** | List/detail + create; offline enqueue |
+| Goods receipt (GRN) | **Done** | Offline enqueue + PO helpers |
+| Labour attendance | **Done** | Group + **individual** worker mode (phase 124) |
+| Site expenses | **Done** | List/detail/form; **local drafts** (118); beneficiary/engineer **signatures** (120) |
+| Petty cash | **Done** | Home + balance card (121); requests; **fund transfer acknowledge** (122) |
+| Material issue / return | **Done** | Issue form with **sign + submit** (125); return screen |
+| Stock count / stock ledger | **Done** | Count list/entry; ledger view |
+| Purchase requests | **Done** | List/form/detail |
+| Work measurement / work orders | **Done** | Measurement list/form; work-order list |
+| Quality inspections | **Done** | List |
+| Labour vouchers | **Done** | New / history / detail |
+| Approvals | **Done** | List + detail |
+| Lead capture | **Present** | Sales lead capture (permission-gated) |
+| Notifications | **Present** | Inbox + preferences (push channel per phase 136) |
+| HQ / finance extras (optional) | **Present (optional)** | Executive dashboard, finance dashboard, director command centre, journals (+ reverse), project expense/income, directors, shareholding / capital plan, contribution receipts, user admin — useful on device; **not** a substitute for the full web HQ surface |
+| Broader site workflows | **Done** | The old “Missing (stock issue, attendance, petty cash…)” claim is obsolete |
 
-**Mobile API / offline endpoints found:**
-
-| Method | Path | File |
-|---|---|---|
-| POST | `/auth/login` | `apps/mobile/src/api/auth.ts` |
-| POST | `/auth/logout` | `apps/mobile/src/api/auth.ts` |
-| GET | `/auth/me` | `apps/mobile/src/api/auth.ts` |
-| POST? | `/daily-progress-reports` | `apps/mobile/src/features/dpr/buildDprOfflineEnqueue.ts` |
-| POST? | `/goods-receipts` | `apps/mobile/src/features/grn/buildGrnOfflineEnqueue.ts` |
-| POST? | `/health` | `apps/mobile/src/offline/OfflineSyncContext.tsx` |
-| GET | `/projects` | `apps/mobile/src/context/ProjectContext.tsx` |
-| GET | `/purchase-orders` | `apps/mobile/src/api/purchaseOrders.ts` |
-| GET | `/purchase-orders/${id}` | `apps/mobile/src/api/purchaseOrders.ts` |
-| GET | `/rbac/me/permissions` | `apps/mobile/src/api/auth.ts` |
+**Mobile navigation source of truth:** `apps/mobile/src/navigation/types.ts` + `HomeScreen` capability gates + `RootNavigator`.
 
 ### Shared packages
 
-| Package | Status | Gap |
+| Package | Status | Notes |
 |---|---|---|
-| `@luxaria/shared-types` | **Phase 002** — common API envelopes | `ApiResponse`, `ApiError`, `PaginatedResponse`, `PaginationMeta` / `PaginationQuery`, `SelectOption`, `AuditMeta`, `ERROR_CODES`. Domain DTOs still local to apps. |
-| `@luxaria/shared-validation` | Placeholder | Only `healthStatusSchema` |
+| `@luxaria/shared-types` | **Present** | Common API envelopes (`ApiResponse`, `ApiError`, pagination, audit meta, error codes). Many domain DTOs remain local to apps (drift risk remains). |
+| `@luxaria/shared-validation` | **Present** | Health/ops schemas, money/quantity/dates, identity/contact/banking, status catalogs, project selection, workflow timeline helpers — no longer a single-schema placeholder. |
 
 #### Shared response envelope (source of truth)
 
@@ -238,12 +239,13 @@ _None detected._
 - `stock.count.director_approve`
 - `approval.cancel`
 
-### Client / contract mismatches
+### Client / contract mismatches (current)
 
-- Web `UsersPage` is a placeholder and does not call `GET /users` despite route guard `user.view`.
-- Common response envelopes are shared (`@luxaria/shared-types`); domain DTOs are still local to web/mobile (risk of drift until later phases).
-- Most backend modules have **no** web/mobile query/mutation client yet (expected before UI phases).
-- OpenAPI examples: Swagger is generated from Nest decorators; many DTOs lack explicit `@ApiProperty` examples (flag for later docs polish — not blocking route inventory).
+- Common response envelopes are shared (`@luxaria/shared-types`); many domain DTOs remain local to web/mobile (drift risk).
+- Web inventory reservations + warehouse-locations UIs shipped (`apps/web/src/stock-reservations/`, `warehouse-locations/`).
+- Playwright: procurement + petty-cash UI golden paths are no longer hard-skipped; remaining `test.skip(true, …)` is intentional (e.g. project-creation AC-6 duplicate-code). Other skips are live-API / seed guards.
+- OpenAPI examples: Swagger is generated from Nest decorators; many DTOs lack explicit `@ApiProperty` examples (docs polish — not blocking route inventory).
+- Advanced controls (OCR / WhatsApp provider / BIM / AI product features): **Phase 141 discovery only** — see [`docs/advanced-controls-roadmap.md`](./advanced-controls-roadmap.md). Existing stubs (e.g. WhatsApp channel placeholder) are not shipped product integrations.
 
 ## Security notes for UI phases
 
@@ -259,6 +261,10 @@ node scripts/audit-api-contracts.mjs
 pnpm --filter @luxaria/backend test -- ui-api-matrix.coverage.spec
 ```
 
+After regenerating the **backend** tables from the audit script, re-apply or merge the **Frontend capability map** section above if the script overwrites it — the script’s Phase 001 web/mobile snapshot is stale relative to current apps.
+
 ## Confirmation
 
-This document is the Phase 001 deliverable only. No later micro-phase UI was implemented while producing it.
+- Backend route/permission inventory originated as Micro Phase 001 (`scripts/audit-api-contracts.mjs`).
+- Frontend/mobile capability sections were manually refreshed **2026-07-22** against `apps/web` and `apps/mobile` after site-mobile gap closure.
+- Remaining intentional gaps: [`COMPLETION_REMAINING_GAPS.md`](../COMPLETION_REMAINING_GAPS.md).

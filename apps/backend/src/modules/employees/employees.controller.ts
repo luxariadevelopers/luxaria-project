@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -18,6 +19,7 @@ import {
   CreateEmployeeDto,
   ListEmployeesQueryDto,
   ProvisionSiteEngineerDto,
+  SyncEmployeeModuleAccessDto,
   UpdateEmployeeDto,
 } from './dto/employee.dto';
 import { EmployeesService } from './employees.service';
@@ -102,6 +104,28 @@ export class EmployeesController {
       throw new ForbiddenException('Authenticated company context required');
     }
     return this.employeesService.getAccessSummary(id, actor.companyId);
+  }
+
+  @Put(':id/module-access')
+  @RequirePermissions('employee.update')
+  @ApiOperation({
+    summary:
+      'Sync web/mobile module visibility for an employee (global deny overrides)',
+  })
+  syncModuleAccess(
+    @Param('id') id: string,
+    @Body() dto: SyncEmployeeModuleAccessDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    if (!actor.companyId) {
+      throw new ForbiddenException('Authenticated company context required');
+    }
+    return this.employeesService.syncModuleAccess(
+      id,
+      dto,
+      actor.companyId,
+      actor.id,
+    );
   }
 
   @Patch(':id')

@@ -73,6 +73,35 @@ export function PermissionChecklist({
     onChange([...next].sort());
   };
 
+  const visiblePermissions = useMemo(
+    () => grouped.flatMap(([, permissions]) => permissions),
+    [grouped],
+  );
+  const visibleCodes = useMemo(
+    () => visiblePermissions.map((permission) => permission.code),
+    [visiblePermissions],
+  );
+  const allVisibleSelected =
+    visibleCodes.length > 0 &&
+    visibleCodes.every((code) => selected.has(code));
+  const anyVisibleSelected = visibleCodes.some((code) => selected.has(code));
+  const filterActive = search.trim().length > 0;
+
+  const selectAllVisible = () => {
+    const next = new Set(selected);
+    for (const code of visibleCodes) next.add(code);
+    onChange([...next].sort());
+  };
+
+  const clearAllVisible = () => {
+    if (!filterActive) {
+      onChange([]);
+      return;
+    }
+    const visible = new Set(visibleCodes);
+    onChange(value.filter((code) => !visible.has(code)).sort());
+  };
+
   return (
     <Stack spacing={1.5} data-testid="permission-checklist">
       <Stack
@@ -88,9 +117,29 @@ export function PermissionChecklist({
           disabled={disabled}
           sx={{ flex: 1 }}
         />
-        <Typography variant="body2" color="text.secondary">
-          {value.length} selected
-        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            {value.length} selected
+          </Typography>
+          <Button
+            size="small"
+            disabled={disabled || visibleCodes.length === 0 || allVisibleSelected}
+            onClick={selectAllVisible}
+          >
+            {filterActive ? 'Select all matching' : 'Select all'}
+          </Button>
+          <Button
+            size="small"
+            disabled={
+              disabled ||
+              visibleCodes.length === 0 ||
+              (!filterActive ? value.length === 0 : !anyVisibleSelected)
+            }
+            onClick={clearAllVisible}
+          >
+            {filterActive ? 'Clear matching' : 'Clear all'}
+          </Button>
+        </Stack>
       </Stack>
       {grouped.length === 0 ? (
         <Typography color="text.secondary">

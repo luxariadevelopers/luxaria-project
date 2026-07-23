@@ -28,6 +28,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from '../users/dto/change-password.dto';
 import { GlobalScope } from '../project-access/decorators/route-scope.decorator';
 import type { AuthUser } from './types/auth-user.type';
 
@@ -146,6 +147,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current authenticated user' })
   me(@CurrentUser() user: AuthUser) {
     return this.authService.me(user);
+  }
+
+  @ApiBearerAuth()
+  @Post('change-password')
+  @ApiOperation({
+    summary:
+      'Change password (required when mustChangePassword is true after admin set a temporary password)',
+  })
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(
+      user.id,
+      dto.newPassword,
+      dto.currentPassword,
+    );
   }
 
   private cookieConfig(): AuthCookieConfig {

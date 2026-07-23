@@ -85,6 +85,7 @@ type FlatLine = {
   projectId: string | null;
   partyType: string | null;
   partyId: string | null;
+  fundingSource: string | null;
   description: string | null;
   sourceModule: string | null;
   sourceEntityType: string | null;
@@ -399,6 +400,7 @@ export class AccountingReportsService {
         projectId: '$lines.projectId',
         partyType: '$lines.partyType',
         partyId: '$lines.partyId',
+        fundingSource: '$lines.fundingSource',
         description: '$lines.description',
       },
     });
@@ -416,6 +418,7 @@ export class AccountingReportsService {
       projectId: r.projectId ? String(r.projectId) : null,
       partyType: r.partyType ?? null,
       partyId: r.partyId ? String(r.partyId) : null,
+      fundingSource: r.fundingSource ?? null,
       description: r.description ?? null,
       sourceModule: r.sourceModule ?? null,
       sourceEntityType: r.sourceEntityType ?? null,
@@ -649,6 +652,7 @@ export class AccountingReportsService {
         projectId: l.projectId,
         partyType: l.partyType,
         partyId: l.partyId,
+        fundingSource: l.fundingSource,
         sourceModule: l.sourceModule,
         sourceEntityType: l.sourceEntityType,
         sourceEntityId: l.sourceEntityId,

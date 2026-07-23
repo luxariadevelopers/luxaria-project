@@ -20,6 +20,7 @@ import {
   useProjectCompany,
   useProjectUserOptions,
 } from './useProjects';
+import { syncCapitalPlanFromForm } from './capitalPlan';
 import {
   toCreateProjectInput,
   type ProjectFormValues,
@@ -83,9 +84,32 @@ export function ProjectCreatePage() {
       const created = await createMutation.mutateAsync(
         toCreateProjectInput(values, resolvedCompanyId),
       );
-      notify.success(
-        `Project ${created.projectCode} created successfully`,
-      );
+      try {
+        if (
+          hasPermission('project_participant.create') &&
+          (values.capitalDirectors.length > 0 ||
+            values.capitalInvestors.length > 0)
+        ) {
+          const result = await syncCapitalPlanFromForm(created.id, values);
+          if (result.synced > 0) {
+            notify.success(
+              `Project ${created.projectCode} created · capital plan synced (${result.synced})`,
+            );
+          } else {
+            notify.success(
+              `Project ${created.projectCode} created successfully`,
+            );
+          }
+        } else {
+          notify.success(
+            `Project ${created.projectCode} created successfully`,
+          );
+        }
+      } catch {
+        notify.success(
+          `Project ${created.projectCode} created — capital plan could not sync (use Participants)`,
+        );
+      }
       await queryClient.invalidateQueries({
         queryKey: projectKeys.lists(),
       });

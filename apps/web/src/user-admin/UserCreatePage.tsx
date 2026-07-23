@@ -13,8 +13,9 @@ import { useNotify } from '@/components/NotificationProvider';
 import { useProjectsList } from '@/projects/useProjects';
 import { RoleStatus } from '@/rbac-admin/types';
 import { useRolesList } from '@/rbac-admin/useRbac';
+import { uploadUserProfilePhoto } from './api';
 import { canCreateUser } from './roleAccess';
-import { UserForm } from './UserForm';
+import { UserForm, type UserFormSubmitExtras } from './UserForm';
 import { useCreateUser, useUsersList } from './useUsers';
 import {
   toCreateUserInput,
@@ -26,6 +27,7 @@ export function UserCreatePage() {
   const navigate = useNavigate();
   const notify = useNotify();
   const [serverError, setServerError] = useState<unknown>();
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const allowed = canCreateUser(access);
   const allowInitialRoles =
     hasPermission('user.assign_role') && hasPermission('role.view');
@@ -75,7 +77,10 @@ export function UserCreatePage() {
     );
   }
 
-  const submit = async (values: UserFormValues) => {
+  const submit = async (
+    values: UserFormValues,
+    extras: UserFormSubmitExtras,
+  ) => {
     setServerError(undefined);
     try {
       const user = await createMutation.mutateAsync(
@@ -84,6 +89,18 @@ export function UserCreatePage() {
           includeAssignedProjects: allowInitialProjects,
         }),
       );
+      if (extras.profilePhotoFile && hasPermission('user.update')) {
+        setUploadingPhoto(true);
+        try {
+          await uploadUserProfilePhoto(user.id, extras.profilePhotoFile);
+        } catch {
+          notify.error(
+            'User created, but profile photo could not be uploaded',
+          );
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
       notify.success(`User ${user.userCode} created successfully`);
       void navigate(
         hasPermission('user.view') ? `/users/${user.id}` : '/',
@@ -100,8 +117,8 @@ export function UserCreatePage() {
       <Stack spacing={0.5}>
         <Typography variant="h5">Create user</Typography>
         <Typography variant="body2" color="text.secondary">
-          Create a staff account with a one-time entered initial password. No
-          invitation endpoint exists in the current API.
+          Email or mobile is the login ID. Set a temporary password — they must
+          choose a permanent one on first login.
         </Typography>
       </Stack>
 
@@ -132,16 +149,15 @@ export function UserCreatePage() {
         </Alert>
       ) : null}
       {managersQuery.error ? (
-        <Alert severity="info">
-          Reporting-manager selection is unavailable. It can be set later.
+        <Alert severity="warning">
+          Reporting-officer list could not be loaded. You can set it after
+          create.
         </Alert>
       ) : null}
 
       <UserForm
         mode="create"
-        managerOptions={
-          managersQuery.isSuccess ? managersQuery.data.items : undefined
-        }
+        managerOptions={managersQuery.data?.items ?? []}
         roleOptions={
           rolesQuery.isSuccess ? rolesQuery.data.items : undefined
         }
@@ -150,7 +166,7 @@ export function UserCreatePage() {
         }
         allowRoleAssignment={allowInitialRoles}
         allowProjectAssignment={allowInitialProjects}
-        submitting={createMutation.isPending}
+        submitting={createMutation.isPending || uploadingPhoto}
         serverError={serverError}
         onSubmit={submit}
         onCancel={() =>

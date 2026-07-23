@@ -3,6 +3,10 @@
  * Catalog uses `petty_cash.*` (not `petty_cash_request.*`).
  */
 export type PettyCashRequestCapabilities = {
+  /**
+   * List / detail access — creators, approvers, or explicit viewers.
+   * Create stays on `canRequest`; approve actions stay on `canApprove`.
+   */
   canView: boolean;
   /** Create, update draft/returned, submit, cancel. */
   canRequest: boolean;
@@ -17,10 +21,13 @@ export type PettyCashRequestCapabilities = {
 export function resolvePettyCashRequestCapabilities(
   hasPermission: (code: string) => boolean,
 ): PettyCashRequestCapabilities {
+  const canRequest = hasPermission('petty_cash.request');
+  const canApprove = hasPermission('petty_cash.approve');
   return {
-    canView: hasPermission('petty_cash.view'),
-    canRequest: hasPermission('petty_cash.request'),
-    canApprove: hasPermission('petty_cash.approve'),
+    canView:
+      hasPermission('petty_cash.view') || canRequest || canApprove,
+    canRequest,
+    canApprove,
     canFund: hasPermission('petty_cash.fund'),
     canViewCash: hasPermission('cash.view'),
   };

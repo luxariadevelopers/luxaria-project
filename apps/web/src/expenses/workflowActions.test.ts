@@ -88,13 +88,19 @@ describe('resolveExpenseDetailActions — status gates', () => {
     ).toEqual([]);
   });
 
-  it('allows cancel with expense.create on draft/returned', () => {
+  it('allows submit+cancel with expense.create on draft/returned', () => {
     expect(
       resolveExpenseDetailActions(
         { status: SiteExpenseVoucherStatus.Draft },
         fullCaps,
       ),
-    ).toEqual(['cancel']);
+    ).toEqual(['submit', 'cancel']);
+    expect(
+      resolveExpenseDetailActions(
+        { status: SiteExpenseVoucherStatus.Returned },
+        fullCaps,
+      ),
+    ).toEqual(['submit', 'cancel']);
     expect(
       resolveExpenseDetailActions(
         { status: SiteExpenseVoucherStatus.Returned },

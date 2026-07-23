@@ -27,7 +27,11 @@ export type PublicDirector = {
   id: string;
   companyId: string | null;
   directorCode: string;
+  /** Internal link id — display `userCode` instead */
   userId: string | null;
+  /** Unique business user id (USR-######) */
+  userCode: string | null;
+  employeeId: string | null;
   fullName: string;
   din: string | null;
   pan: string | null;
@@ -151,7 +155,7 @@ export type ListDirectorsQuery = {
 
 export type CreateDirectorInput = {
   fullName: string;
-  userId?: string | null;
+  userId: string;
   din?: string | null;
   pan?: string | null;
   email?: string | null;
@@ -164,7 +168,7 @@ export type CreateDirectorInput = {
 
 export type UpdateDirectorInput = {
   fullName?: string;
-  userId?: string | null;
+  userId?: string;
   din?: string | null;
   pan?: string | null;
   email?: string | null;

@@ -68,7 +68,7 @@ test.describe('IAM Site Engineer provision smoke', () => {
     await page.getByRole('button', { name: /^next$/i }).click();
     await expect(page.getByTestId('employee-create-submit')).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /provision site engineer/i }),
+      page.getByRole('button', { name: /create employee/i }),
     ).toBeVisible();
   });
 });

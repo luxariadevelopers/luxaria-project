@@ -1,5 +1,6 @@
-import { apiGet, apiPost } from '@/api/client';
+import { apiClient, apiGet, apiPost } from '@/api/client';
 import type {
+  CreateLabourAttendanceInput,
   DailyAttendanceReportQuery,
   ListLabourAttendanceQuery,
   ListPaginationMeta,
@@ -202,6 +203,26 @@ export async function fetchDailyLabourDeployment(
     throw new Error(res.message || 'Daily labour deployment unavailable');
   }
   return normaliseDailyReport(res.data);
+}
+
+/** `POST /labour-attendance` — `attendance.create` */
+export async function createLabourAttendance(
+  input: CreateLabourAttendanceInput,
+  idempotencyKey?: string,
+): Promise<PublicLabourAttendance> {
+  const { data } = await apiClient.post<{
+    success: boolean;
+    message?: string;
+    data?: PublicLabourAttendance;
+  }>('/labour-attendance', input, {
+    headers: idempotencyKey
+      ? { 'Idempotency-Key': idempotencyKey }
+      : undefined,
+  });
+  if (!data.data) {
+    throw new Error(data.message || 'Could not create labour attendance');
+  }
+  return normaliseAttendance(data.data);
 }
 
 /** `POST /labour-attendance/:id/confirm` — `attendance.confirm` */

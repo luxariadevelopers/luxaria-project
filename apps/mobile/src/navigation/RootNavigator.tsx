@@ -7,6 +7,7 @@ import {
   ApprovalsListScreen,
 } from '@/approvals';
 import { useAuth } from '@/auth/AuthContext';
+import { shouldForceChangePassword } from '@/auth/shouldForceChangePassword';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useProject } from '@/context/ProjectContext';
 import { DprDetailScreen, DprListScreen } from '@/dpr';
@@ -23,8 +24,13 @@ import {
 import {
   PettyCashDetailScreen,
   PettyCashFormScreen,
+  PettyCashHomeScreen,
   PettyCashListScreen,
 } from '@/petty-cash';
+import {
+  PettyCashTransferDetailScreen,
+  PettyCashTransfersListScreen,
+} from '@/petty-cash-transfers';
 import {
   PurchaseRequestDetailScreen,
   PurchaseRequestFormScreen,
@@ -35,6 +41,8 @@ import { ConflictDetailScreen } from '@/screens/ConflictDetailScreen';
 import { DailyProgressReportScreen } from '@/screens/DailyProgressReportScreen';
 import { GoodsReceiptScreen } from '@/screens/GoodsReceiptScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
+import { ChangePasswordScreen } from '@/screens/ChangePasswordScreen';
+import { ForceChangePasswordScreen } from '@/screens/ForceChangePasswordScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { MaterialIssueFormScreen } from '@/screens/MaterialIssueFormScreen';
 import { MaterialIssueScreen } from '@/screens/MaterialIssueScreen';
@@ -44,6 +52,35 @@ import { NotificationPreferencesScreen } from '@/screens/NotificationPreferences
 import { PendingSyncScreen } from '@/screens/PendingSyncScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { ExecutiveDashboardScreen } from '@/analytics/ExecutiveDashboardScreen';
+import { DirectorCommandCentreScreen } from '@/director-command-centre';
+import {
+  DirectorDetailScreen,
+  DirectorFormScreen,
+  DirectorListScreen,
+} from '@/directors';
+import { FinanceDashboardScreen } from '@/finance-dashboard';
+import {
+  ChangeRequestsScreen,
+  PostShareCapitalFormScreen,
+  ShareholdingScreen,
+} from '@/shareholding';
+import {
+  ContributionReceiptDetailScreen,
+  ContributionReceiptFormScreen,
+  ContributionReceiptListScreen,
+} from '@/contribution-receipts';
+import {
+  JournalDetailScreen,
+  JournalListScreen,
+  ReverseJournalScreen,
+} from '@/journals';
+import {
+  ProjectFinanceEntryScreen,
+  ProjectFinanceListScreen,
+  QuickCreateCostCentreScreen,
+  QuickCreateExpenseAccountScreen,
+} from '@/project-finance';
+import { ProjectCapitalPlanScreen } from '@/projects';
 import { ProjectDashboardScreen } from '@/screens/ProjectDashboardScreen';
 import { ProjectSelectScreen } from '@/screens/ProjectSelectScreen';
 import { ProjectsScreen } from '@/screens/ProjectsScreen';
@@ -59,6 +96,11 @@ import {
   SiteExpenseListScreen,
 } from '@/site-expenses';
 import { StockLedgerScreen } from '@/stock-ledger';
+import {
+  UserDetailScreen,
+  UserFormScreen,
+  UsersListScreen,
+} from '@/user-admin';
 import { appNavigationRef } from '@/navigation/navigationRef';
 import { colors } from '@/theme/colors';
 import type {
@@ -143,6 +185,17 @@ function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+function ForceChangePasswordNavigator() {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen
+        name="ForceChangePassword"
+        component={ForceChangePasswordScreen}
+      />
     </AuthStack.Navigator>
   );
 }
@@ -360,20 +413,161 @@ function AppNavigator() {
         component={ConflictDetailScreen}
         options={{ title: 'Sync conflict' }}
       />
+      <AppStack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change password' }}
+      />
+      <AppStack.Screen
+        name="FinanceDashboard"
+        component={FinanceDashboardScreen}
+        options={{ title: 'Finance' }}
+      />
+      <AppStack.Screen
+        name="DirectorCommandCentre"
+        component={DirectorCommandCentreScreen}
+        options={{ title: 'Command centre' }}
+      />
+      <AppStack.Screen
+        name="UsersList"
+        component={UsersListScreen}
+        options={{ title: 'Users' }}
+      />
+      <AppStack.Screen
+        name="UserDetail"
+        component={UserDetailScreen}
+        options={{ title: 'User' }}
+      />
+      <AppStack.Screen
+        name="UserForm"
+        component={UserFormScreen}
+        options={{ title: 'User form' }}
+      />
+      <AppStack.Screen
+        name="DirectorsList"
+        component={DirectorListScreen}
+        options={{ title: 'Directors' }}
+      />
+      <AppStack.Screen
+        name="DirectorDetail"
+        component={DirectorDetailScreen}
+        options={{ title: 'Director' }}
+      />
+      <AppStack.Screen
+        name="DirectorForm"
+        component={DirectorFormScreen}
+        options={{ title: 'Director form' }}
+      />
+      <AppStack.Screen
+        name="Shareholding"
+        component={ShareholdingScreen}
+        options={{ title: 'Shareholding' }}
+      />
+      <AppStack.Screen
+        name="PostShareCapital"
+        component={PostShareCapitalFormScreen}
+        options={{ title: 'Post share capital' }}
+      />
+      <AppStack.Screen
+        name="ShareholdingChangeRequests"
+        component={ChangeRequestsScreen}
+        options={{ title: 'Change requests' }}
+      />
+      <AppStack.Screen
+        name="ContributionReceiptList"
+        component={ContributionReceiptListScreen}
+        options={{ title: 'Contribution receipts' }}
+      />
+      <AppStack.Screen
+        name="ContributionReceiptDetail"
+        component={ContributionReceiptDetailScreen}
+        options={{ title: 'Contribution receipt' }}
+      />
+      <AppStack.Screen
+        name="ContributionReceiptForm"
+        component={ContributionReceiptFormScreen}
+        options={{ title: 'New contribution receipt' }}
+      />
+      <AppStack.Screen
+        name="ProjectCapitalPlan"
+        component={ProjectCapitalPlanScreen}
+        options={{ title: 'Capital plan' }}
+      />
+      <AppStack.Screen
+        name="JournalList"
+        component={JournalListScreen}
+        options={{ title: 'Journals' }}
+      />
+      <AppStack.Screen
+        name="JournalDetail"
+        component={JournalDetailScreen}
+        options={{ title: 'Journal' }}
+      />
+      <AppStack.Screen
+        name="ReverseJournal"
+        component={ReverseJournalScreen}
+        options={{ title: 'Reverse journal' }}
+      />
+      <AppStack.Screen
+        name="ProjectFinanceList"
+        component={ProjectFinanceListScreen}
+        options={{ title: 'Expense & income' }}
+      />
+      <AppStack.Screen
+        name="ProjectFinanceEntry"
+        component={ProjectFinanceEntryScreen}
+        options={{ title: 'Project finance entry' }}
+      />
+      <AppStack.Screen
+        name="QuickCreateExpenseAccount"
+        component={QuickCreateExpenseAccountScreen}
+        options={{ title: 'New expense account' }}
+      />
+      <AppStack.Screen
+        name="QuickCreateCostCentre"
+        component={QuickCreateCostCentreScreen}
+        options={{ title: 'New cost centre' }}
+      />
+      <AppStack.Screen
+        name="PettyCashHome"
+        component={PettyCashHomeScreen}
+        options={{ title: 'Petty cash' }}
+      />
+      <AppStack.Screen
+        name="PettyCashTransfersList"
+        component={PettyCashTransfersListScreen}
+        options={{ title: 'Fund transfers' }}
+      />
+      <AppStack.Screen
+        name="PettyCashTransferDetail"
+        component={PettyCashTransferDetailScreen}
+        options={{ title: 'Fund transfer' }}
+      />
     </AppStack.Navigator>
   );
 }
 
 export function RootNavigator() {
-  const { isAuthenticated, isBootstrapping } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
 
   if (isBootstrapping) {
     return <LoadingScreen label="Starting Luxaria Site…" />;
   }
 
+  const mustChangePassword = shouldForceChangePassword(
+    isAuthenticated,
+    user,
+  );
+
   return (
     <NavigationContainer ref={appNavigationRef}>
-      {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
+      {!isAuthenticated ? (
+        <AuthNavigator />
+      ) : mustChangePassword ? (
+        <ForceChangePasswordNavigator />
+      ) : (
+        <AppNavigator />
+      )}
     </NavigationContainer>
   );
 }

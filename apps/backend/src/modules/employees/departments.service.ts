@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -17,12 +18,18 @@ import {
   Department,
   DepartmentStatus,
 } from './schemas/department.schema';
+import { Designation } from './schemas/designation.schema';
+import { Employee } from './schemas/employee.schema';
 
 @Injectable()
 export class DepartmentsService {
   constructor(
     @InjectModel(Department.name)
     private readonly departmentModel: Model<Department>,
+    @InjectModel(Designation.name)
+    private readonly designationModel: Model<Designation>,
+    @InjectModel(Employee.name)
+    private readonly employeeModel: Model<Employee>,
   ) {}
 
   async create(dto: CreateDepartmentDto, companyId: string, actorId?: string) {
@@ -90,6 +97,30 @@ export class DepartmentsService {
       toPublicDepartment(row),
       'Department deactivated',
     );
+  }
+
+  async remove(id: string, companyId: string, actorId?: string) {
+    const row = await this.requireDepartment(id, companyId);
+    const [employeeCount, designationCount] = await Promise.all([
+      this.employeeModel.countDocuments({ departmentId: row._id }).exec(),
+      this.designationModel.countDocuments({ departmentId: row._id }).exec(),
+    ]);
+    if (employeeCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete "${row.name}": ${employeeCount} employee(s) are still assigned to this department. Reassign or remove those employees first, then delete the department.`,
+      );
+    }
+    if (designationCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete "${row.name}": ${designationCount} designation(s) are still linked to this department. Move or delete those designations first, then delete the department.`,
+      );
+    }
+    await row.softDelete(
+      actorId && Types.ObjectId.isValid(actorId)
+        ? new Types.ObjectId(actorId)
+        : null,
+    );
+    return createSuccessResponse(toPublicDepartment(row), 'Department deleted');
   }
 
   async list(companyId: string) {

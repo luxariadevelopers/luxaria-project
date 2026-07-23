@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  activateDepartment,
+  activateDesignation,
+  createDepartment,
+  createDesignation,
   createSite,
+  createSiteAssignment,
+  deactivateDepartment,
+  deactivateDesignation,
   deactivateEmployee,
+  deleteDepartment,
+  deleteDesignation,
   fetchDepartments,
   fetchDesignations,
   fetchEmployee,
@@ -11,7 +20,15 @@ import {
   fetchSites,
   provisionSiteEngineer,
   revokeSiteAssignment,
+  syncEmployeeModuleAccess,
+  updateDepartment,
+  updateDesignation,
   updateEmployee,
+  type CreateDepartmentInput,
+  type CreateDesignationInput,
+  type CreateSiteAssignmentInput,
+  type UpdateDepartmentInput,
+  type UpdateDesignationInput,
   type UpdateEmployeeInput,
 } from './api';
 import { employeeAdminKeys } from './queryKeys';
@@ -69,6 +86,67 @@ export function useDepartmentsList(enabled = true) {
   });
 }
 
+export function useCreateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateDepartmentInput) => createDepartment(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.departments(),
+      }),
+  });
+}
+
+export function useUpdateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      departmentId,
+      input,
+    }: {
+      departmentId: string;
+      input: UpdateDepartmentInput;
+    }) => updateDepartment(departmentId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.departments(),
+      }),
+  });
+}
+
+export function useActivateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (departmentId: string) => activateDepartment(departmentId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.departments(),
+      }),
+  });
+}
+
+export function useDeactivateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (departmentId: string) => deactivateDepartment(departmentId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.departments(),
+      }),
+  });
+}
+
+export function useDeleteDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (departmentId: string) => deleteDepartment(departmentId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.departments(),
+      }),
+  });
+}
+
 export function useDesignationsList(enabled = true) {
   return useQuery({
     queryKey: employeeAdminKeys.designations(),
@@ -76,6 +154,67 @@ export function useDesignationsList(enabled = true) {
     enabled,
     staleTime: 60_000,
     retry: false,
+  });
+}
+
+export function useCreateDesignation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateDesignationInput) => createDesignation(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.designations(),
+      }),
+  });
+}
+
+export function useUpdateDesignation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      designationId,
+      input,
+    }: {
+      designationId: string;
+      input: UpdateDesignationInput;
+    }) => updateDesignation(designationId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.designations(),
+      }),
+  });
+}
+
+export function useActivateDesignation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (designationId: string) => activateDesignation(designationId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.designations(),
+      }),
+  });
+}
+
+export function useDeactivateDesignation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (designationId: string) => deactivateDesignation(designationId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.designations(),
+      }),
+  });
+}
+
+export function useDeleteDesignation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (designationId: string) => deleteDesignation(designationId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.designations(),
+      }),
   });
 }
 
@@ -131,6 +270,21 @@ export function useUpdateEmployee(employeeId: string) {
   });
 }
 
+export function useSyncEmployeeModuleAccess(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      denyPermissions: string[];
+      catalogPermissions: string[];
+    }) => syncEmployeeModuleAccess(employeeId, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: employeeAdminKeys.access(employeeId),
+      });
+    },
+  });
+}
+
 export function useDeactivateEmployee(employeeId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -153,6 +307,18 @@ export function useCreateSite() {
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: [...employeeAdminKeys.all, 'sites'],
+      }),
+  });
+}
+
+export function useCreateSiteAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateSiteAssignmentInput) =>
+      createSiteAssignment(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: [...employeeAdminKeys.all, 'site-access'],
       }),
   });
 }

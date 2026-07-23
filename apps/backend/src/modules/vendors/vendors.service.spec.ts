@@ -32,6 +32,8 @@ import {
   VendorStatus,
   VendorVerificationStatus,
 } from './schemas/vendor.schema';
+import { AccountingReportsService } from '../accounting-reports/accounting-reports.service';
+import { createSuccessResponse } from '../../common/dto/api-response.dto';
 import { VendorsService } from './vendors.service';
 
 describe('VendorsService', () => {
@@ -39,6 +41,7 @@ describe('VendorsService', () => {
   let connection: Connection;
   let vendorModel: Model<Vendor>;
   let service: VendorsService;
+  let accountingReports: { getReport: jest.Mock };
   let companyId: string;
   let projectId: string;
   const actorId = new Types.ObjectId().toHexString();
@@ -87,6 +90,43 @@ describe('VendorsService', () => {
           : undefined,
     } as unknown as ConfigService;
 
+    accountingReports = {
+      getReport: jest.fn().mockResolvedValue(
+        createSuccessResponse(
+          {
+            openingBalance: 0,
+            closingBalance: 0,
+            rows: [],
+            totals: {
+              debit: 0,
+              credit: 0,
+              openingBalance: 0,
+              closingBalance: 0,
+            },
+            meta: {
+              reportType: 'vendor-ledger',
+              title: 'Vendor Ledger',
+              filters: {
+                financialYearId: null,
+                financialYearName: null,
+                projectId: null,
+                projectCode: null,
+                projectName: null,
+                from: null,
+                to: null,
+                accountId: null,
+                partyId: null,
+              },
+              generatedAt: new Date().toISOString(),
+              reconciled: true,
+              reconciliationNotes: [],
+            },
+          },
+          'Vendor Ledger',
+        ),
+      ),
+    };
+
     service = new VendorsService(
       vendorModel,
       documentModel,
@@ -95,6 +135,7 @@ describe('VendorsService', () => {
       projectModel,
       numbering,
       configService,
+      accountingReports as unknown as AccountingReportsService,
     );
   }, 60_000);
 
@@ -104,6 +145,7 @@ describe('VendorsService', () => {
   });
 
   beforeEach(async () => {
+    accountingReports.getReport.mockClear();
     await vendorModel.deleteMany({}).setOptions({ withDeleted: true });
     await connection
       .model(VendorFile.name)
@@ -328,7 +370,7 @@ describe('VendorsService', () => {
     expect(byCategory.data?.[0]?.legalName).toBe('Cement House');
   });
 
-  it('assigns vendor to project and returns ledger placeholder', async () => {
+  it('assigns vendor to project and returns journal-backed ledger', async () => {
     const created = await service.create(
       { legalName: 'Project Vendor', pan: 'DDDDD4444D' },
       actorId,
@@ -352,9 +394,83 @@ describe('VendorsService', () => {
     const after = await service.listProjects(vendorId, {});
     expect(after.data).toHaveLength(0);
 
-    const ledger = await service.getLedgerPlaceholder(vendorId);
-    expect(ledger.data?.entries).toEqual([]);
-    expect(ledger.data?.note).toMatch(/placeholder/i);
+    accountingReports.getReport.mockResolvedValueOnce(
+      createSuccessResponse(
+        {
+          openingBalance: 100,
+          closingBalance: 250,
+          rows: [
+            {
+              journalId: new Types.ObjectId().toHexString(),
+              journalNumber: 'JE-1',
+              journalDate: '2026-05-01T00:00:00.000Z',
+              accountId: new Types.ObjectId().toHexString(),
+              accountCode: '2100',
+              accountName: 'Accounts Payable',
+              narration: 'Vendor invoice',
+              description: null,
+              debit: 0,
+              credit: 150,
+              runningBalance: 250,
+              projectId: null,
+              partyType: 'vendor',
+              partyId: vendorId,
+              fundingSource: null,
+              sourceModule: 'vendor-invoices',
+              sourceEntityType: 'vendor_invoice',
+              sourceEntityId: new Types.ObjectId().toHexString(),
+              drillDown: [],
+              partyName: 'Project Vendor',
+            },
+          ],
+          totals: {
+            debit: 0,
+            credit: 150,
+            openingBalance: 100,
+            closingBalance: 250,
+          },
+          meta: {
+            reportType: 'vendor-ledger',
+            title: 'Vendor Ledger',
+            filters: {
+              financialYearId: null,
+              financialYearName: null,
+              projectId: null,
+              projectCode: null,
+              projectName: null,
+              from: null,
+              to: null,
+              accountId: null,
+              partyId: vendorId,
+            },
+            generatedAt: '2026-07-22T00:00:00.000Z',
+            reconciled: true,
+            reconciliationNotes: [],
+          },
+        },
+        'Vendor Ledger',
+      ),
+    );
+
+    const ledger = await service.getLedger(
+      vendorId,
+      { from: '2026-04-01', to: '2026-07-22' },
+      actorId,
+    );
+    expect(accountingReports.getReport).toHaveBeenCalledWith(
+      'vendor-ledger',
+      expect.objectContaining({
+        partyId: vendorId,
+        from: '2026-04-01',
+        to: '2026-07-22',
+      }),
+      actorId,
+    );
+    expect(ledger.data?.rows).toHaveLength(1);
+    expect(ledger.data?.closingBalance).toBe(250);
+    expect(ledger.data?.totalCredit).toBe(150);
+    expect(ledger.data?.vendorId).toBe(vendorId);
+    expect(ledger.message).toBe('Vendor ledger');
   });
 
   it('uploads and lists agreement documents', async () => {

@@ -126,7 +126,7 @@ export function CreateLeadDrawer({ open, onClose, projectId }: Props) {
             setForm((prev) => ({ ...prev, notes: e.target.value || null }))
           }
         />
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
+        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
           <Button onClick={handleClose}>Cancel</Button>
           <Button
             variant="contained"

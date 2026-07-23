@@ -119,6 +119,35 @@ export type CancelSiteExpenseInput = {
   cancellationReason: string;
 };
 
+export type SiteExpenseAttachmentInput = {
+  type: SiteExpenseAttachmentType;
+  documentId?: string | null;
+  fileName?: string | null;
+  filePath?: string | null;
+  mimeType?: string | null;
+};
+
+/** Nest `CreateSiteExpenseVoucherDto` (web create subset). */
+export type CreateSiteExpenseInput = {
+  projectId: string;
+  pettyCashAccountId: string;
+  expenseDate: string;
+  expenseCategoryId: string;
+  amount: number;
+  paidTo: string;
+  purpose: string;
+  paymentMode: SiteExpensePaymentMode;
+  mobileNumber?: string | null;
+  billNumber?: string | null;
+  billDate?: string | null;
+  attachments?: SiteExpenseAttachmentInput[];
+};
+
+/** Nest `UpdateSiteExpenseVoucherDto` — draft/returned patches (incl. signatures). */
+export type UpdateSiteExpenseInput = Partial<
+  Omit<CreateSiteExpenseInput, 'projectId'>
+>;
+
 // Aliases for list-module imports (Phase 052)
 export type RejectSiteExpenseVoucherInput = RejectSiteExpenseInput;
 export type ReturnSiteExpenseVoucherInput = ReturnSiteExpenseInput;

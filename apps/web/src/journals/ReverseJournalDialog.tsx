@@ -26,10 +26,16 @@ import {
   type ReverseJournalFormValues,
 } from './actionValidation';
 
+/** Minimal journal fields needed to reverse (full detail optional). */
+export type ReverseableJournal = Pick<
+  PublicJournalEntry,
+  'id' | 'journalNumber' | 'journalDate' | 'narration'
+>;
+
 type Props = {
   open: boolean;
   onClose: () => void;
-  journal: PublicJournalEntry | null;
+  journal: ReverseableJournal | null;
   onReversed: (reversalId: string) => void;
 };
 

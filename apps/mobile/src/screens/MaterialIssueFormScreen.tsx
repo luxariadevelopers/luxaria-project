@@ -15,11 +15,13 @@ import { Screen } from '@/components/Screen';
 import { useNetwork } from '@/context/NetworkContext';
 import { useProject } from '@/context/ProjectContext';
 import {
+  attachMaterialIssueSignatures,
   createMaterialIssue,
   listBoqItemsForIssue,
   listContractorsForIssue,
   listMaterialsForIssue,
   listUsersForReturn,
+  submitMaterialIssue,
 } from '@/features/material-issue/api';
 import { buildMaterialIssueOfflineEnqueue } from '@/features/material-issue/buildMaterialIssueOfflineEnqueue';
 import {
@@ -28,14 +30,21 @@ import {
   type MaterialIssueContractorOption,
   type MaterialIssueMaterialOption,
   type MaterialIssueUserOption,
+  type PublicMaterialIssue,
 } from '@/features/material-issue/types';
+import {
+  computeLocalFileSha256,
+  uploadMaterialIssueSignature,
+} from '@/features/material-issue/uploadMaterialIssueSignature';
 import {
   validateIssueForm,
   type IssueLineDraft,
 } from '@/features/material-issue/validation';
+import { SignatureCaptureField } from '@/labour-vouchers/components/SignatureCaptureField';
 import type { AppStackParamList } from '@/navigation/types';
 import { useOfflineSync } from '@/offline';
 import { colors } from '@/theme/colors';
+import type { LocalFile } from '@/utils/fileUpload';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MaterialIssueForm'>;
 
@@ -57,6 +66,7 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
   const { enqueue } = useOfflineSync();
 
   const canCreate = hasPermission('stock.issue');
+  const canUpload = hasPermission('document.upload');
   const canViewMaterials = hasPermission('material.view');
   const canViewBoq = hasPermission('boq.view');
   const canViewContractors = hasPermission('contractor.view');
@@ -83,6 +93,9 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
   const [storeLocation, setStoreLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<IssueLineDraft[]>([emptyLine()]);
+  const [recipientSig, setRecipientSig] = useState<LocalFile | null>(null);
+  const [issuerSig, setIssuerSig] = useState<LocalFile | null>(null);
+  const [draft, setDraft] = useState<PublicMaterialIssue | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -185,9 +198,20 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
       Alert.alert('Permission denied', 'stock.issue is required to create issues');
       return;
     }
+    if (!canUpload) {
+      Alert.alert(
+        'Permission denied',
+        'document.upload is required to attach signatures',
+      );
+      return;
+    }
     const projectId = selectedProject?.id;
     if (!projectId) {
       Alert.alert('Project', 'Select a project first');
+      return;
+    }
+    if (!recipientSig) {
+      Alert.alert('Signatures', 'Recipient signature is required before submit');
       return;
     }
     const validated = validateIssueForm({
@@ -219,34 +243,82 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
     }));
     try {
       if (isOnline) {
-        const created = await createMaterialIssue({
-          ...validated.payload,
-          items: issueItems,
+        let issue = draft;
+        if (!issue) {
+          issue = await createMaterialIssue({
+            ...validated.payload,
+            items: issueItems,
+          });
+          setDraft(issue);
+        }
+
+        const recipientUpload = await uploadMaterialIssueSignature({
+          projectId,
+          issueId: issue.id,
+          file: recipientSig,
+          documentType: 'signature',
         });
+
+        const attachInput: {
+          recipientSignatureDocumentId: string;
+          recipientSignatureChecksum: string;
+          issuerSignatureDocumentId?: string;
+          issuerSignatureChecksum?: string;
+        } = {
+          recipientSignatureDocumentId: recipientUpload.documentId,
+          recipientSignatureChecksum: recipientUpload.checksum,
+        };
+
+        if (issuerSig) {
+          const issuerUpload = await uploadMaterialIssueSignature({
+            projectId,
+            issueId: issue.id,
+            file: issuerSig,
+            documentType: 'issuer_signature',
+          });
+          attachInput.issuerSignatureDocumentId = issuerUpload.documentId;
+          attachInput.issuerSignatureChecksum = issuerUpload.checksum;
+        }
+
+        await attachMaterialIssueSignatures(issue.id, attachInput);
+        const submitted = await submitMaterialIssue(issue.id);
+
         Alert.alert(
-          'Draft created',
-          `${created.issueNumber} saved as draft. Add signatures and submit from the web app.`,
+          'Submitted',
+          `${submitted.issueNumber} submitted with signatures.`,
           [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
       } else {
+        const recipientSignatureChecksum =
+          await computeLocalFileSha256(recipientSig);
+        const issuerSignatureChecksum = issuerSig
+          ? await computeLocalFileSha256(issuerSig)
+          : null;
+
         await enqueue(
           buildMaterialIssueOfflineEnqueue({
             ...validated.payload,
             items: issueItems,
             offlineCapturedAt: new Date().toISOString(),
+            recipientSignature: recipientSig,
+            issuerSignature: issuerSig,
+            recipientSignatureChecksum,
+            issuerSignatureChecksum,
           }),
         );
         Alert.alert(
           'Queued',
-          'Material issue draft saved offline. It will sync when you are back online.',
+          'Material issue with signatures queued offline. It will create, attach signatures, and submit when you are back online.',
           [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
       }
     } catch (err) {
       if (isForbiddenError(err)) {
-        setError('Permission denied — stock.issue is required.');
+        setError(
+          'Permission denied — stock.issue and document.upload are required.',
+        );
       } else {
-        setError(getErrorMessage(err, 'Could not create material issue'));
+        setError(getErrorMessage(err, 'Could not submit material issue'));
       }
     } finally {
       setSaving(false);
@@ -255,15 +327,19 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
     blockId,
     boqItemId,
     canCreate,
+    canUpload,
     contractorId,
+    draft,
     enqueue,
     floorId,
     isOnline,
     issueDate,
+    issuerSig,
     lines,
     navigation,
     notes,
     receivedBy,
+    recipientSig,
     selectedProject?.id,
     storeLocation,
     workLocation,
@@ -274,6 +350,16 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
       <Screen title="New material issue" subtitle="Permission required">
         <Text style={styles.error}>
           Permission denied — stock.issue is required to create material issues.
+        </Text>
+      </Screen>
+    );
+  }
+
+  if (!canUpload) {
+    return (
+      <Screen title="New material issue" subtitle="Permission required">
+        <Text style={styles.error}>
+          Permission denied — document.upload is required to capture signatures.
         </Text>
       </Screen>
     );
@@ -569,6 +655,25 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
         placeholderTextColor={colors.textMuted}
       />
 
+      <Text style={styles.sectionTitle}>Signatures</Text>
+      <Text style={styles.hint}>
+        Recipient signature is required before submit. Issuer / engineer
+        signature is optional.
+      </Text>
+      <SignatureCaptureField
+        label="Recipient signature"
+        required
+        file={recipientSig}
+        disabled={saving}
+        onCaptured={setRecipientSig}
+      />
+      <SignatureCaptureField
+        label="Issuer / engineer signature"
+        file={issuerSig}
+        disabled={saving}
+        onCaptured={setIssuerSig}
+      />
+
       <Pressable
         style={[styles.primaryBtn, saving && styles.primaryBtnDisabled]}
         disabled={saving || !selectedProject?.id}
@@ -577,7 +682,9 @@ export function MaterialIssueFormScreen({ navigation }: Props) {
         {saving ? (
           <ActivityIndicator color="#F4F0E6" />
         ) : (
-          <Text style={styles.primaryBtnText}>Create draft issue</Text>
+          <Text style={styles.primaryBtnText}>
+            {isOnline ? 'Submit material issue' : 'Queue issue offline'}
+          </Text>
         )}
       </Pressable>
     </Screen>
@@ -604,7 +711,13 @@ const styles = StyleSheet.create({
   },
   notes: { minHeight: 72, textAlignVertical: 'top' },
   meta: { color: colors.textMuted, marginTop: 6, fontSize: 13 },
-  hint: { color: colors.textMuted, lineHeight: 20 },
+  sectionTitle: {
+    marginTop: 20,
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  hint: { color: colors.textMuted, lineHeight: 20, marginTop: 6 },
   error: { color: colors.danger, marginBottom: 10, lineHeight: 20 },
   errorBox: { marginBottom: 12, gap: 8 },
   link: { color: colors.primary, fontWeight: '600', marginTop: 8 },

@@ -7,7 +7,11 @@ export type PublicDirector = {
   id: string;
   companyId: string | null;
   directorCode: string;
+  /** Internal Mongo link — prefer `userCode` for display */
   userId: string | null;
+  /** Unique business user id (e.g. USR-000002) */
+  userCode: string | null;
+  employeeId: string | null;
   fullName: string;
   din: string | null;
   pan: string | null;
@@ -39,12 +43,17 @@ type DirectorLike = {
   updatedAt?: Date;
 };
 
-export function toPublicDirector(director: DirectorLike): PublicDirector {
+export function toPublicDirector(
+  director: DirectorLike,
+  linkedUser?: { userCode?: string | null; employeeId?: string | null } | null,
+): PublicDirector {
   return {
     id: String(director._id),
     companyId: director.companyId ? String(director.companyId) : null,
     directorCode: director.directorCode,
     userId: director.userId ? String(director.userId) : null,
+    userCode: linkedUser?.userCode ?? null,
+    employeeId: linkedUser?.employeeId ?? null,
     fullName: director.fullName,
     din: director.din ?? null,
     pan: director.pan ?? null,

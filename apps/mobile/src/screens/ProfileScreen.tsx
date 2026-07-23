@@ -63,6 +63,18 @@ export function ProfileScreen() {
         </Text>
       </View>
 
+      {!user?.mustChangePassword ? (
+        <>
+          <Text style={styles.section}>Security</Text>
+          <Pressable
+            style={styles.action}
+            onPress={() => navigation.navigate('ChangePassword')}
+          >
+            <Text style={styles.actionText}>Change password</Text>
+          </Pressable>
+        </>
+      ) : null}
+
       <Text style={styles.section}>Notifications</Text>
       <Pressable
         style={[styles.action, !canViewNotifications && styles.disabled]}

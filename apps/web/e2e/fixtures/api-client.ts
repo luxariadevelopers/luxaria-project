@@ -389,7 +389,12 @@ export class E2eApiClient {
 
   async getExpenseCategoryByCode(
     categoryCode: string,
-  ): Promise<{ id: string; defaultLedgerAccountId?: string | null }> {
+  ): Promise<{
+    id: string;
+    categoryCode: string;
+    name: string;
+    defaultLedgerAccountId?: string | null;
+  }> {
     const res = await this.get(
       `/expense-categories/by-code/${encodeURIComponent(categoryCode)}`,
     );
@@ -446,9 +451,10 @@ export class E2eApiClient {
   async createMaterial(
     suffix: string,
     ledgerAccountId: string,
-  ): Promise<{ id: string }> {
+  ): Promise<{ id: string; name: string }> {
+    const name = `E2E OPC Cement ${suffix}`;
     const res = await this.post('/materials', {
-      name: `E2E OPC Cement ${suffix}`,
+      name,
       category: 'cement',
       baseUnit: 'bag',
       standardRate: 380,
@@ -458,7 +464,11 @@ export class E2eApiClient {
       standardWastagePercentage: 2,
       ledgerAccountId,
     });
-    return this.parseEnvelope(res, 'create material');
+    const created = await this.parseEnvelope<{ id: string }>(
+      res,
+      'create material',
+    );
+    return { id: created.id, name };
   }
 
   async postOpeningStock(
@@ -478,9 +488,10 @@ export class E2eApiClient {
     await this.parseEnvelope(res, 'post opening stock');
   }
 
-  async createVendor(suffix: string): Promise<{ id: string }> {
+  async createVendor(suffix: string): Promise<{ id: string; legalName: string }> {
+    const legalName = `E2E Cement Suppliers ${suffix}`;
     const res = await this.post('/vendors', {
-      legalName: `E2E Cement Suppliers ${suffix}`,
+      legalName,
       materialCategories: ['cement'],
     });
     const vendor = await this.parseEnvelope<{ id: string }>(res, 'create vendor');
@@ -488,7 +499,7 @@ export class E2eApiClient {
       verified: true,
       notes: 'E2E verified vendor',
     });
-    return vendor;
+    return { id: vendor.id, legalName };
   }
 
   async assignVendorToProject(
@@ -553,7 +564,9 @@ export class E2eApiClient {
       customerId: customer.id,
       unitId: unit.id,
       materialId: material.id,
+      materialName: material.name,
       vendorId: vendor.id,
+      vendorName: vendor.legalName,
       companyBankAccountId: companyBankAccount.id,
       expenseCategoryId,
       bankLedgerAccountId,

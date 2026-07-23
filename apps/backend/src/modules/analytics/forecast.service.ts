@@ -225,15 +225,49 @@ export class AnalyticsForecastService {
       );
       projectIds = [new Types.ObjectId(query.projectId)];
     }
-    if (!projectIds.length) {
-      throw new BadRequestException('No accessible projects for forecast');
-    }
 
     const asOf = query.date
       ? this.startOfUtcDay(new Date(query.date))
       : this.startOfUtcDay(new Date());
     const horizonKey = String(query.horizon ?? '30');
     const windows = this.buildWindows(asOf, horizonKey);
+
+    if (!projectIds.length) {
+      const emptyBuckets = windows.map((window) => ({
+        ...computeCashFlowBucket({
+          label: window.label,
+          periodStart: window.start.toISOString(),
+          periodEnd: window.end.toISOString(),
+          collections: 0,
+          contractorPayments: 0,
+          vendorPayments: 0,
+          payrollLabour: 0,
+          statutoryDues: 0,
+          loanInflows: 0,
+          loanRepayments: 0,
+          directorInvestorContributions: 0,
+        }),
+        closingCash: 0,
+      }));
+      return createSuccessResponse(
+        {
+          horizon: horizonKey,
+          asOf: asOf.toISOString(),
+          openingCash: 0,
+          buckets: emptyBuckets,
+          projectFundingGaps: [],
+          drillPath: [
+            {
+              level: 'kpi',
+              label: 'Cash-flow forecast',
+              href: `${API}/analytics/cash-flow-forecast`,
+            },
+          ],
+          emptyReason: 'No accessible projects in scope for this forecast',
+        } satisfies CashFlowForecastView,
+        'Cash-flow forecast (no projects in scope)',
+      );
+    }
 
     const openingCash = await this.sumCashAndBank(projectIds);
 

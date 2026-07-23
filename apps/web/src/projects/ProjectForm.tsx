@@ -9,19 +9,26 @@ import {
   Select,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, FormProvider, useForm } from 'react-hook-form';
 import { toAppError } from '@/api/errors';
 import { FieldErrorSummary } from '@/components/errors';
 import { DateInput } from '@/components/forms/DateInput';
 import { FormSection } from '@/components/forms/FormSection';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { FormTextField } from '@/components/forms/FormTextField';
+import { formatInrInWords } from '@/format';
+import { CapitalPlanFormSection } from './CapitalPlanFormSection';
+import type {
+  CapitalDirectorRow,
+  CapitalInvestorRow,
+} from './capitalPlan';
 import {
   PROJECT_STAGE_OPTIONS,
   PROJECT_STATUS_OPTIONS,
-  PROJECT_TYPE_OPTIONS,
+  projectTypeSelectOptions,
 } from './constants';
 import { ProjectStatus } from './types';
 import type {
@@ -40,6 +47,12 @@ import {
 type Props = {
   mode: 'create' | 'edit';
   initial?: PublicProject | null;
+  /** Prefill capital plan rows (edit mode). */
+  capitalPlanDefaults?: {
+    equalDirectorInvestment?: boolean;
+    capitalDirectors?: CapitalDirectorRow[];
+    capitalInvestors?: CapitalInvestorRow[];
+  } | null;
   company: Pick<ProjectCompany, 'id' | 'legalName' | 'companyCode'>;
   userOptions?: readonly ProjectUserOption[];
   bankOptions?: readonly ProjectBankOption[];
@@ -58,6 +71,7 @@ const numberInputProps = {
 export function ProjectForm({
   mode,
   initial,
+  capitalPlanDefaults,
   company,
   userOptions,
   bankOptions,
@@ -67,19 +81,32 @@ export function ProjectForm({
   onSubmit,
   onCancel,
 }: Props) {
-  const defaults = useMemo(
-    () => buildProjectFormDefaults(initial),
-    [initial],
-  );
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setError,
-  } = useForm<ProjectFormValues>({
+  const defaults = useMemo(() => {
+    const base = buildProjectFormDefaults(initial);
+    if (!capitalPlanDefaults) return base;
+    return {
+      ...base,
+      equalDirectorInvestment:
+        capitalPlanDefaults.equalDirectorInvestment ??
+        base.equalDirectorInvestment,
+      capitalDirectors:
+        capitalPlanDefaults.capitalDirectors ?? base.capitalDirectors,
+      capitalInvestors:
+        capitalPlanDefaults.capitalInvestors ?? base.capitalInvestors,
+    };
+  }, [initial, capitalPlanDefaults]);
+  const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: defaults,
   });
+  const { control, handleSubmit, reset, setError, watch } = form;
+
+  const approvedBudget = watch('approvedBudget');
+  const approvedBudgetInWords = useMemo(() => {
+    const raw = String(approvedBudget ?? '').trim();
+    if (!raw) return '';
+    return formatInrInWords(raw, { empty: '' });
+  }, [approvedBudget]);
 
   useEffect(() => {
     reset(defaults);
@@ -149,6 +176,7 @@ export function ProjectForm({
   );
 
   return (
+    <FormProvider {...form}>
     <Stack
       component="form"
       spacing={2.5}
@@ -179,7 +207,7 @@ export function ProjectForm({
             name="projectType"
             control={control}
             label="Project type"
-            options={PROJECT_TYPE_OPTIONS}
+            options={projectTypeSelectOptions(initial?.projectType)}
             required
           />
         </Stack>
@@ -191,11 +219,6 @@ export function ProjectForm({
           minRows={3}
         />
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <FormTextField
-            name="clientName"
-            control={control}
-            label="Client name"
-          />
           <FormTextField
             name="currency"
             control={control}
@@ -327,7 +350,7 @@ export function ProjectForm({
         </Stack>
       </FormSection>
 
-      <FormSection title="Schedule and commercial">
+      <FormSection title="Schedule">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <DateInput name="startDate" control={control} label="Start date" />
           <DateInput
@@ -358,13 +381,36 @@ export function ProjectForm({
               options={createStatusOptions}
             />
           ) : null}
+        </Stack>
+      </FormSection>
+
+      <FormSection
+        title="Approved budget"
+        description="Optional project budget in INR. Shown on the project summary once saved."
+      >
+        <Stack spacing={0.5} sx={{ maxWidth: { md: 420 } }}>
           <FormTextField
             name="approvedBudget"
             control={control}
-            label="Approved budget"
+            label="Approved budget (₹)"
             type="number"
-            slotProps={{ htmlInput: numberInputProps }}
+            helperText="Leave blank if not yet approved"
+            slotProps={{
+              htmlInput: {
+                ...numberInputProps,
+                'data-testid': 'approved-budget-input',
+              },
+            }}
           />
+          {approvedBudgetInWords ? (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              data-testid="approved-budget-in-words"
+            >
+              {approvedBudgetInWords}
+            </Typography>
+          ) : null}
         </Stack>
         {bankOptions !== undefined ? (
           <FormSelect
@@ -376,10 +422,12 @@ export function ProjectForm({
         ) : null}
       </FormSection>
 
+      <CapitalPlanFormSection />
+
       {mode === 'create' && userOptions !== undefined ? (
         <FormSection
           title="Initial assignments"
-          description="Assignments can be changed later from project settings."
+          description="Optional. Leave blank to assign the project manager and directors later from Settings."
         >
           <FormSelect
             name="projectManager"
@@ -417,7 +465,10 @@ export function ProjectForm({
         </FormSection>
       ) : null}
 
-      <FormSection title="RERA">
+      <FormSection
+        title="RERA"
+        description="Optional. Not required to create a project — add details when registration is available."
+      >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <FormTextField
             name="reraDetails.reraNumber"
@@ -466,5 +517,6 @@ export function ProjectForm({
         ) : null}
       </Stack>
     </Stack>
+    </FormProvider>
   );
 }

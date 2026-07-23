@@ -91,14 +91,26 @@ export function RequestTable({
       valueGetter: (_v, row) => accountLabel(row.pettyCashAccountId),
     },
     {
+      field: 'requestedByName',
+      headerName: 'Created by',
+      width: 150,
+      valueGetter: (_v, row) => row.requestedByName || '—',
+    },
+    {
       field: 'requestedAmount',
       headerName: 'Requested',
       width: 120,
       valueGetter: (_v, row) => formatInr(row.requestedAmount),
     },
     {
+      field: 'approvedByName',
+      headerName: 'Approved by',
+      width: 150,
+      valueGetter: (_v, row) => row.approvedByName || '—',
+    },
+    {
       field: 'approvedAmount',
-      headerName: 'Approved',
+      headerName: 'Approved amt',
       width: 120,
       valueGetter: (_v, row) =>
         row.approvedAmount == null ? '—' : formatInr(row.approvedAmount),

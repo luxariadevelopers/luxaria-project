@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Button,
   FormControl,
   InputLabel,
   MenuItem,
@@ -18,6 +19,7 @@ import { useNotify } from '@/components/NotificationProvider';
 import { useProject } from '@/context/ProjectContext';
 import { AttendanceDetailDrawer } from '@/labour-attendance/AttendanceDetailDrawer';
 import { AttendanceTable } from '@/labour-attendance/AttendanceTable';
+import { CreateAttendanceDrawer } from '@/labour-attendance/CreateAttendanceDrawer';
 import { attendanceStatusLabel } from '@/labour-attendance/labels';
 import { resolveLabourAttendanceCapabilities } from '@/labour-attendance/roleAccess';
 import {
@@ -31,10 +33,10 @@ import {
 } from '@/labour-attendance/useLabourAttendance';
 
 /**
- * Labour attendance list — `/contractors/attendance` (Micro Phase 091).
+ * Labour attendance list — `/contractors/attendance` (Micro Phase 091 / 124).
  *
- * Nest: `GET /labour-attendance`, `GET /labour-attendance/:id`.
- * Permissions: `attendance.view` / `attendance.confirm` (review).
+ * Nest: `GET/POST /labour-attendance`, `GET /labour-attendance/:id`.
+ * Permissions: `attendance.view` / `attendance.create` / `attendance.confirm`.
  */
 export function LabourAttendancePage() {
   const { hasPermission, access } = useAuth();
@@ -52,6 +54,7 @@ export function LabourAttendancePage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const contractors = useQuery({
     queryKey: ['labour-attendance', 'contractors', selectedProjectId],
@@ -134,8 +137,8 @@ export function LabourAttendancePage() {
   return (
     <Stack spacing={2} data-testid="labour-attendance-page">
       <Typography color="text.secondary">
-        Review daily contractor manpower sheets, skill breakdown, GPS/photo
-        evidence, and duplicate flags.
+        Create or review daily contractor manpower sheets, skill breakdown,
+        GPS/photo evidence, and duplicate flags.
       </Typography>
 
       <AttendanceTable
@@ -167,6 +170,13 @@ export function LabourAttendancePage() {
                 })();
               }
             : undefined
+        }
+        toolbarActions={
+          caps.canCreate ? (
+            <Button variant="contained" onClick={() => setCreateOpen(true)}>
+              New attendance
+            </Button>
+          ) : undefined
         }
         filterSlot={
           <Stack
@@ -238,6 +248,19 @@ export function LabourAttendancePage() {
         caps={caps}
         contractorLabel={contractorLabel}
       />
+
+      {caps.canCreate && selectedProjectId ? (
+        <CreateAttendanceDrawer
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          projectId={selectedProjectId}
+          defaultAttendanceDate={attendanceDate}
+          onCreated={(id) => {
+            setSelectedId(id);
+            setDetailOpen(true);
+          }}
+        />
+      ) : null}
     </Stack>
   );
 }

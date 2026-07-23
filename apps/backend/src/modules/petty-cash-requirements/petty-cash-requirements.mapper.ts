@@ -17,6 +17,8 @@ export type PublicPettyCashRequirement = {
   projectId: string;
   pettyCashAccountId: string;
   requestedBy: string;
+  /** Display name for the requester (site creator). */
+  requestedByName: string | null;
   weekStartDate: Date;
   weekEndDate: Date;
   currentCashBalance: number;
@@ -30,17 +32,25 @@ export type PublicPettyCashRequirement = {
   status: PettyCashRequirementStatus;
   approvalRequestId: string | null;
   projectManagerReviewedBy: string | null;
+  projectManagerReviewedByName: string | null;
   projectManagerReviewedAt: Date | null;
   financeReviewedBy: string | null;
+  financeReviewedByName: string | null;
   financeReviewedAt: Date | null;
+  /** Final finance approver display name (null until finance approves). */
+  approvedByName: string | null;
   fundedBy: string | null;
+  fundedByName: string | null;
   fundedAt: Date | null;
   closedBy: string | null;
+  closedByName: string | null;
   closedAt: Date | null;
   rejectionReason: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
+
+export type ActorNameMap = ReadonlyMap<string, string>;
 
 const oid = (v: Types.ObjectId | string | null | undefined): string | null =>
   v ? String(v) : null;
@@ -79,13 +89,20 @@ export function toPublicRequirement(row: {
   rejectionReason?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
-}): PublicPettyCashRequirement {
+}, names: ActorNameMap = new Map()): PublicPettyCashRequirement {
+  const nameOf = (id: Types.ObjectId | string | null | undefined): string | null => {
+    if (!id) return null;
+    return names.get(String(id)) ?? null;
+  };
+  const financeReviewedBy = oid(row.financeReviewedBy);
+  const financeReviewedByName = nameOf(row.financeReviewedBy);
   return {
     id: String(row._id),
     requestNumber: row.requestNumber,
     projectId: String(row.projectId),
     pettyCashAccountId: String(row.pettyCashAccountId),
     requestedBy: String(row.requestedBy),
+    requestedByName: nameOf(row.requestedBy),
     weekStartDate: row.weekStartDate,
     weekEndDate: row.weekEndDate,
     currentCashBalance: row.currentCashBalance,
@@ -104,12 +121,17 @@ export function toPublicRequirement(row: {
     status: row.status,
     approvalRequestId: oid(row.approvalRequestId),
     projectManagerReviewedBy: oid(row.projectManagerReviewedBy),
+    projectManagerReviewedByName: nameOf(row.projectManagerReviewedBy),
     projectManagerReviewedAt: row.projectManagerReviewedAt ?? null,
-    financeReviewedBy: oid(row.financeReviewedBy),
+    financeReviewedBy,
+    financeReviewedByName,
     financeReviewedAt: row.financeReviewedAt ?? null,
+    approvedByName: financeReviewedByName,
     fundedBy: oid(row.fundedBy),
+    fundedByName: nameOf(row.fundedBy),
     fundedAt: row.fundedAt ?? null,
     closedBy: oid(row.closedBy),
+    closedByName: nameOf(row.closedBy),
     closedAt: row.closedAt ?? null,
     rejectionReason: row.rejectionReason ?? null,
     createdAt: row.createdAt,

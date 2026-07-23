@@ -2,6 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type AuthStackParamList = {
   Login: undefined;
+  ForceChangePassword: undefined;
 };
 
 export type MainTabParamList = {
@@ -35,13 +36,16 @@ export type AppStackParamList = {
   LabourAttendanceForm: undefined;
   LabourAttendanceDetail: { attendanceId: string };
   SiteExpenseList: undefined;
-  SiteExpenseForm: undefined;
+  SiteExpenseForm: { draftId?: string } | undefined;
   SiteExpenseDetail: { expenseId: string };
   ApprovalsList: undefined;
   ApprovalDetail: { approvalId: string };
   PettyCashList: undefined;
   PettyCashForm: undefined;
   PettyCashDetail: { requestId: string };
+  PettyCashHome: undefined;
+  PettyCashTransfersList: undefined;
+  PettyCashTransferDetail: { transferId: string };
   PurchaseRequestList: undefined;
   PurchaseRequestForm: undefined;
   PurchaseRequestDetail: { requestId: string };
@@ -51,6 +55,35 @@ export type AppStackParamList = {
   Notifications: undefined;
   NotificationPreferences: undefined;
   ConflictDetail: { transactionId: string };
+  ChangePassword: undefined;
+  FinanceDashboard: undefined;
+  DirectorCommandCentre: undefined;
+  UsersList: undefined;
+  UserDetail: { userId: string };
+  UserForm: { userId?: string } | undefined;
+  DirectorsList: undefined;
+  DirectorDetail: { directorId: string };
+  DirectorForm: { directorId?: string } | undefined;
+  Shareholding: undefined;
+  PostShareCapital: undefined;
+  ShareholdingChangeRequests: undefined;
+  ContributionReceiptList: undefined;
+  ContributionReceiptDetail: { receiptId: string };
+  ContributionReceiptForm: undefined;
+  ProjectCapitalPlan: undefined;
+  JournalList: undefined;
+  JournalDetail: { journalId: string };
+  ReverseJournal: { journalId: string };
+  ProjectFinanceList: undefined;
+  ProjectFinanceEntry:
+    | {
+        kind?: 'income' | 'expense' | 'transfer';
+        createdAccountId?: string;
+        createdCostCentreId?: string;
+      }
+    | undefined;
+  QuickCreateExpenseAccount: { returnKind: 'expense' };
+  QuickCreateCostCentre: { returnKind: 'expense' };
 };
 
 export type RootStackParamList = {

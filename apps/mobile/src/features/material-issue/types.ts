@@ -158,6 +158,14 @@ export type CreateMaterialIssueInput = {
   items: MaterialIssueItemInput[];
 };
 
+/** Nest `AttachMaterialIssueSignaturesDto` */
+export type AttachMaterialIssueSignaturesInput = {
+  recipientSignatureDocumentId: string;
+  recipientSignatureChecksum: string;
+  issuerSignatureDocumentId?: string;
+  issuerSignatureChecksum?: string;
+};
+
 export type MaterialIssueMaterialOption = {
   id: string;
   materialCode: string;

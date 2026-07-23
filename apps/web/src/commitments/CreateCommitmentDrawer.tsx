@@ -92,8 +92,10 @@ export function CreateCommitmentDrawer({
         <Stack spacing={2}>
           <Typography variant="h6">New commitment</Typography>
           <Typography variant="body2" color="text.secondary">
-            Requires contribution_commitment.create. Contribution type and
-            dates are required. Amount cannot be below receipts (0 on create).
+            Requires contribution_commitment.create. For directors: first
+            investment must be <strong>capital</strong>; after that capital is
+            received, further money into a project must be a{' '}
+            <strong>loan</strong> (director loan to that project).
           </Typography>
 
           <FormSelect

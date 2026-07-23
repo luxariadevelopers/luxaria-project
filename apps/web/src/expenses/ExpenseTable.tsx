@@ -156,7 +156,7 @@ export function ExpenseTable({
       error={error}
       onRetry={onRetry}
       emptyTitle="No site expenses"
-      emptyDescription="Submit site expense vouchers from mobile, or adjust date / status filters."
+      emptyDescription="Create a site expense for this project, or adjust date / status filters."
       height={520}
       getRowId={(row) => row.id}
       paginationMode="server"

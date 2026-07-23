@@ -43,13 +43,18 @@ describe('RbacSeedService', () => {
 
     const director = await roleModel.findOne({ code: 'DIRECTOR' }).lean();
     expect(director?.bypassPermissions).toBe(false);
+
+    const managingDirector = await roleModel
+      .findOne({ code: 'MANAGING_DIRECTOR' })
+      .lean();
+    expect(managingDirector?.bypassPermissions).toBe(true);
   });
 
-  it('is idempotent and refreshes system role permissions', async () => {
+  it('is idempotent and unions seed permissions with UI grants', async () => {
     await service.seedRoles();
     await roleModel.updateOne(
       { code: 'READ_ONLY' },
-      { $set: { permissions: ['dashboard.view'] } },
+      { $set: { permissions: ['dashboard.view', 'petty_cash.approve'] } },
     );
 
     const second = await service.seedRoles();
@@ -57,8 +62,50 @@ describe('RbacSeedService', () => {
     expect(second.updated).toBe(ROLE_SEEDS.length);
 
     const readOnly = await roleModel.findOne({ code: 'READ_ONLY' }).lean();
+    const seedPerms =
+      ROLE_SEEDS.find((role) => role.code === 'READ_ONLY')?.permissions ?? [];
     expect(readOnly?.permissions).toEqual(
-      ROLE_SEEDS.find((role) => role.code === 'READ_ONLY')?.permissions,
+      [...new Set([...seedPerms, 'dashboard.view', 'petty_cash.approve'])].sort(),
     );
+    expect(readOnly?.permissions).toContain('petty_cash.approve');
+  });
+
+  it('gives Managing Director full bypass like Super Admin', async () => {
+    await service.seedRoles();
+
+    const md = await roleModel.findOne({ code: 'MANAGING_DIRECTOR' }).lean();
+    const superAdmin = await roleModel
+      .findOne({ code: SUPER_ADMIN_ROLE_CODE })
+      .lean();
+
+    expect(md?.bypassPermissions).toBe(true);
+    expect(superAdmin?.bypassPermissions).toBe(true);
+    expect(md?.permissions?.length).toBe(superAdmin?.permissions?.length);
+  });
+
+  it('limits petty_cash.request to site creators on non-bypass system roles', async () => {
+    await service.seedRoles();
+    await roleModel.updateOne(
+      { code: 'ACCOUNTANT' },
+      { $addToSet: { permissions: 'petty_cash.request' } },
+    );
+
+    await service.seedRoles();
+
+    const supervisor = await roleModel.findOne({ code: 'SITE_SUPERVISOR' }).lean();
+    const engineer = await roleModel.findOne({ code: 'SITE_ENGINEER' }).lean();
+    const director = await roleModel.findOne({ code: 'DIRECTOR' }).lean();
+    const accountant = await roleModel.findOne({ code: 'ACCOUNTANT' }).lean();
+    const financeDirector = await roleModel
+      .findOne({ code: 'FINANCE_DIRECTOR' })
+      .lean();
+
+    expect(supervisor?.permissions).toContain('petty_cash.request');
+    expect(engineer?.permissions).toContain('petty_cash.request');
+    expect(director?.permissions).toContain('petty_cash.approve');
+    expect(director?.permissions).not.toContain('petty_cash.request');
+    expect(accountant?.permissions).not.toContain('petty_cash.request');
+    expect(financeDirector?.permissions).toContain('petty_cash.approve');
+    expect(financeDirector?.permissions).not.toContain('petty_cash.request');
   });
 });

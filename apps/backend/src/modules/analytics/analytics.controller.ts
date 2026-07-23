@@ -45,7 +45,10 @@ export class AnalyticsController {
 
   @Get('director-dashboard')
   @RequirePermissions('analytics.dashboard.view')
-  @ApiOperation({ summary: 'Director dashboard (alias of executive summary)' })
+  @ApiOperation({
+    summary:
+      'Director dashboard payload (same spine as executive summary; web UI uses command centre)',
+  })
   directorDashboard(
     @Query() query: AnalyticsQueryDto,
     @CurrentUser() actor: AuthUser,

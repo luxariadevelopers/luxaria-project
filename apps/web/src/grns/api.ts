@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from '@/api/client';
 import type {
+  CreateGoodsReceiptInput,
   ListGoodsReceiptsQuery,
   PaginatedGoodsReceipts,
   PublicGoodsReceipt,
@@ -89,6 +90,17 @@ export async function fetchGoodsReceipt(
   );
   if (!res.data) {
     throw new Error(res.message || 'Goods receipt unavailable');
+  }
+  return normaliseGrn(res.data);
+}
+
+/** `POST /goods-receipts` — Nest `grn.create` */
+export async function createGoodsReceipt(
+  input: CreateGoodsReceiptInput,
+): Promise<PublicGoodsReceipt> {
+  const res = await apiPost<PublicGoodsReceipt>('/goods-receipts', input);
+  if (!res.data) {
+    throw new Error(res.message || 'Create goods receipt failed');
   }
   return normaliseGrn(res.data);
 }

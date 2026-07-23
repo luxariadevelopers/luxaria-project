@@ -1,11 +1,14 @@
-import { apiGet, apiPatch, apiPost } from '@/api/client';
+import type { ApiResponse } from '@luxaria/shared-types';
+import { apiClient, apiGet, apiPatch, apiPost } from '@/api/client';
+import { resolveUploadsUrl } from '@/print-pdf/resolveUploadsUrl';
 import { readAdminPaginationMeta } from './apiMeta';
-import type {
-  CreateUserInput,
-  ListUsersQuery,
-  PaginatedUsers,
-  PublicUser,
-  UpdateUserInput,
+import {
+  ReportingApprovalMode,
+  type CreateUserInput,
+  type ListUsersQuery,
+  type PaginatedUsers,
+  type PublicUser,
+  type UpdateUserInput,
 } from './types';
 
 function toNullableIso(value: unknown): string | null {
@@ -16,6 +19,12 @@ function toNullableIso(value: unknown): string | null {
 }
 
 export function normaliseAdminUser(user: PublicUser): PublicUser {
+  const officers =
+    user.reportingOfficers?.length
+      ? user.reportingOfficers
+      : user.reportingManager
+        ? [user.reportingManager]
+        : [];
   return {
     ...user,
     email: user.email ?? null,
@@ -26,7 +35,13 @@ export function normaliseAdminUser(user: PublicUser): PublicUser {
     profilePhoto: user.profilePhoto ?? null,
     assignedProjects: user.assignedProjects ?? [],
     roleIds: user.roleIds ?? [],
-    reportingManager: user.reportingManager ?? null,
+    reportingManager: user.reportingManager ?? officers[0] ?? null,
+    reportingOfficers: officers,
+    reportingApprovalMode:
+      user.reportingApprovalMode === ReportingApprovalMode.All
+        ? ReportingApprovalMode.All
+        : ReportingApprovalMode.Any,
+    mustChangePassword: Boolean(user.mustChangePassword),
     joiningDate: toNullableIso(user.joiningDate),
     lastLoginAt: toNullableIso(user.lastLoginAt),
     createdAt: toNullableIso(user.createdAt) ?? undefined,
@@ -105,6 +120,35 @@ export async function resetUserPassword(
   newPassword: string,
 ): Promise<void> {
   await apiPost<null>(`/users/${userId}/reset-password`, { newPassword });
+}
+
+/** `POST /users/:id/profile-photo` — multipart image upload (`user.update`). */
+export async function uploadUserProfilePhoto(
+  userId: string,
+  file: File,
+): Promise<PublicUser> {
+  const form = new FormData();
+  form.append('file', file);
+  const { data: response } = await apiClient.post<ApiResponse<PublicUser>>(
+    `/users/${userId}/profile-photo`,
+    form,
+    { headers: { 'Content-Type': undefined } },
+  );
+  if (!response.data) {
+    throw new Error(response.message || 'Profile photo upload failed');
+  }
+  return normaliseAdminUser(response.data);
+}
+
+export function resolveUserProfilePhotoUrl(
+  profilePhoto: string | null | undefined,
+): string | null {
+  const value = profilePhoto?.trim();
+  if (!value) return null;
+  if (/^(?:https?:|data:|blob:)/i.test(value)) {
+    return value;
+  }
+  return resolveUploadsUrl(value);
 }
 
 /** Full replacement through the UsersController (`user.assign_role`). */

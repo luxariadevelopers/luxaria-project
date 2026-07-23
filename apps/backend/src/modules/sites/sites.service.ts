@@ -405,6 +405,15 @@ export class SitesService {
     siteId?: string;
   }): Promise<void> {
     if (!input.parentSiteId) {
+      // Structure roots must be Site. Warehouse may also be a root (stores).
+      if (
+        input.childType !== SiteType.Site &&
+        input.childType !== SiteType.Warehouse
+      ) {
+        throw new BadRequestException(
+          'Root nodes must be type site. Phase, block, tower, and floor must be created under a parent.',
+        );
+      }
       return;
     }
     if (!Types.ObjectId.isValid(input.parentSiteId)) {

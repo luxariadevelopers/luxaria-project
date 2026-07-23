@@ -265,9 +265,35 @@ export type PublicVendorProjectAssignment = {
   updatedAt?: string;
 };
 
-/** Nest `GET /vendors/:id/ledger` placeholder payload. */
+/** Optional filters for `GET /vendors/:id/ledger`. */
+export type VendorLedgerQuery = {
+  financialYearId?: string;
+  projectId?: string;
+  from?: string;
+  to?: string;
+};
 
-export type VendorLedgerPlaceholder = {
+/** Journal line from Nest `GET /vendors/:id/ledger` (accounting-reports vendor-ledger). */
+export type VendorLedgerLine = {
+  journalId: string;
+  journalNumber: string;
+  journalDate: string;
+  accountCode: string;
+  accountName: string;
+  narration: string;
+  description: string | null;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  projectId: string | null;
+  partyName: string | null;
+  sourceModule: string | null;
+  sourceEntityType: string | null;
+  sourceEntityId: string | null;
+};
+
+/** Nest `GET /vendors/:id/ledger` — journal-backed vendor party ledger. */
+export type VendorLedgerReport = {
   vendorId: string;
   vendorCode: string;
   legalName: string;
@@ -276,19 +302,25 @@ export type VendorLedgerPlaceholder = {
   totalDebit: number;
   totalCredit: number;
   closingBalance: number;
-  entries: Array<{
-    id: string;
-    entryDate: string;
-    description: string;
-    debit: number;
-    credit: number;
-    balance: number;
-    referenceType: string | null;
-    referenceId: string | null;
-  }>;
-  note: string;
+  rows: VendorLedgerLine[];
+  filters: {
+    financialYearId: string | null;
+    financialYearName: string | null;
+    projectId: string | null;
+    projectCode: string | null;
+    projectName: string | null;
+    from: string | null;
+    to: string | null;
+    accountId: string | null;
+    partyId: string | null;
+  } | null;
+  reconciled: boolean;
+  reconciliationNotes: string[];
   asOf: string;
 };
+
+/** @deprecated Use VendorLedgerReport */
+export type VendorLedgerPlaceholder = VendorLedgerReport;
 
 export type PublicVendorInvoiceRow = {
   id: string;

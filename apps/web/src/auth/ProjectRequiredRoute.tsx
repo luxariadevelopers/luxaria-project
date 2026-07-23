@@ -1,26 +1,54 @@
 import { Box, CircularProgress, Stack, Typography } from '@mui/material';
-import type { ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useEffect, type ReactNode } from 'react';
+import { Outlet, useParams } from 'react-router-dom';
 import { EmptyState, PermissionDenied, RetryPanel } from '@/components/errors';
 import { useProject } from '@/context/ProjectContext';
 import { NoProjectAccessPage } from '@/pages/NoProjectAccessPage';
+import { isMongoObjectId } from '@/project-dashboard/routeProjectAccess';
 
 /**
  * Route wrapper for project-scoped screens.
  * Ensures a valid active project (access + workflow status) before rendering.
- * Hiding UI is not enough — this is the route guard; API 403s still surface via RetryPanel.
+ * When the URL includes `:projectId`, activate that project automatically if
+ * the user can access it (so deep links like /projects/:id/dashboard work
+ * even when the header is still on "All projects").
  */
 export function ProjectRequiredRoute() {
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
   const {
     isLoading,
     isReady,
     error,
     hasNoProjectAccess,
+    projects,
     selectedProjectId,
     selectedProject,
     selectionIssue,
+    setSelectedProjectId,
     refetch,
   } = useProject();
+
+  const routeId = routeProjectId?.trim() || '';
+  const routeIdValid = isMongoObjectId(routeId);
+  const routeProject = routeIdValid
+    ? projects.find((project) => project.id === routeId) ?? null
+    : null;
+
+  // Deep-link: URL project wins over header "All projects" / other selection.
+  useEffect(() => {
+    if (!isReady || isLoading || hasNoProjectAccess || error) return;
+    if (!routeProject) return;
+    if (selectedProjectId === routeProject.id) return;
+    setSelectedProjectId(routeProject.id);
+  }, [
+    isReady,
+    isLoading,
+    hasNoProjectAccess,
+    error,
+    routeProject,
+    selectedProjectId,
+    setSelectedProjectId,
+  ]);
 
   if (!isReady || isLoading) {
     return (
@@ -38,6 +66,25 @@ export function ProjectRequiredRoute() {
     return <NoProjectAccessPage />;
   }
 
+  if (routeId && routeIdValid && !routeProject) {
+    return (
+      <PermissionDenied
+        title="Project not authorised"
+        message="You do not have access to this project. Choose an assigned project in the header."
+        showHomeLink
+      />
+    );
+  }
+
+  // Waiting for auto-select from URL to land in context.
+  if (routeProject && selectedProjectId !== routeProject.id) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} />
+      </Box>
+    );
+  }
+
   if (!selectedProjectId || !selectedProject) {
     const description =
       selectionIssue === 'invalid_status'
@@ -48,10 +95,7 @@ export function ProjectRequiredRoute() {
 
     return (
       <Stack spacing={2}>
-        <EmptyState
-          title="Project required"
-          description={description}
-        />
+        <EmptyState title="Project required" description={description} />
         <Typography variant="body2" color="text.secondary">
           Project-scoped data is not loaded until a valid project is active.
         </Typography>

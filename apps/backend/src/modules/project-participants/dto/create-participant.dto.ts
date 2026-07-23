@@ -15,6 +15,7 @@ import {
 import {
   InstrumentType,
   ParticipantType,
+  RepaymentMode,
 } from '../schemas/project-participant.schema';
 
 export class CreateParticipantDto {
@@ -65,18 +66,36 @@ export class CreateParticipantDto {
   lossSharePercentage!: number;
 
   @ApiPropertyOptional({
-    description: 'Required for director_loan / unsecured_loan',
+    description:
+      'Required for loan instruments when repaymentMode is with_interest (or unset)',
     example: 12,
   })
   @ValidateIf(
     (o: CreateParticipantDto) =>
-      o.instrumentType === InstrumentType.DirectorLoan ||
-      o.instrumentType === InstrumentType.UnsecuredLoan,
+      (o.instrumentType === InstrumentType.DirectorLoan ||
+        o.instrumentType === InstrumentType.UnsecuredLoan) &&
+      o.repaymentMode !== RepaymentMode.Lumpsum,
   )
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   interestRate?: number | null;
+
+  @ApiPropertyOptional({
+    description: '% of approved budget this party is expected to fund',
+    example: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  budgetInvestmentPercentage?: number | null;
+
+  @ApiPropertyOptional({ enum: RepaymentMode })
+  @IsOptional()
+  @IsEnum(RepaymentMode)
+  repaymentMode?: RepaymentMode | null;
 
   @ApiProperty({ enum: InstrumentType })
   @IsEnum(InstrumentType)
@@ -137,15 +156,31 @@ export class CreateParticipantVersionDto {
   @ApiPropertyOptional()
   @ValidateIf(
     (o: CreateParticipantVersionDto) =>
-      o.instrumentType === InstrumentType.DirectorLoan ||
-      o.instrumentType === InstrumentType.UnsecuredLoan ||
-      o.instrumentType === undefined,
+      o.repaymentMode !== RepaymentMode.Lumpsum &&
+      (o.instrumentType === InstrumentType.DirectorLoan ||
+        o.instrumentType === InstrumentType.UnsecuredLoan ||
+        o.instrumentType === undefined),
   )
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   interestRate?: number | null;
+
+  @ApiPropertyOptional({
+    description: '% of approved budget this party is expected to fund',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  budgetInvestmentPercentage?: number | null;
+
+  @ApiPropertyOptional({ enum: RepaymentMode })
+  @IsOptional()
+  @IsEnum(RepaymentMode)
+  repaymentMode?: RepaymentMode | null;
 
   @ApiPropertyOptional({ enum: InstrumentType })
   @IsOptional()

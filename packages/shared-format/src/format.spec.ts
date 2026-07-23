@@ -6,6 +6,7 @@ import {
   formatFinancialYearFromStart,
   formatIndianNumber,
   formatInr,
+  formatInrInWords,
   formatPercentage,
   formatQuantity,
   formatTime,
@@ -53,6 +54,33 @@ describe('@luxaria/shared-format', () => {
         crore: formatInr(10000000),
         negative: formatInr(-250.5),
       }).toMatchSnapshot();
+    });
+  });
+
+  describe('formatInrInWords', () => {
+    it('handles nullish, zero, and singular units', () => {
+      expect(formatInrInWords(null)).toBe(EMPTY_DISPLAY);
+      expect(formatInrInWords(0)).toBe('Zero Rupees Only');
+      expect(formatInrInWords(1)).toBe('One Rupee Only');
+      expect(formatInrInWords(0.01)).toBe('One Paisa Only');
+    });
+
+    it('uses Indian crore / lakh grouping', () => {
+      expect(formatInrInWords(8)).toBe('Eight Rupees Only');
+      expect(formatInrInWords(100000)).toBe('One Lakh Rupees Only');
+      expect(formatInrInWords(25_000_000)).toBe(
+        'Two Crore Fifty Lakh Rupees Only',
+      );
+      expect(formatInrInWords(12.5)).toBe(
+        'Twelve Rupees and Fifty Paise Only',
+      );
+    });
+
+    it('supports suffixOnly false and custom empty', () => {
+      expect(formatInrInWords(100, { suffixOnly: false })).toBe(
+        'One Hundred Rupees',
+      );
+      expect(formatInrInWords(undefined, { empty: '' })).toBe('');
     });
   });
 
