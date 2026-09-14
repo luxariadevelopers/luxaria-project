@@ -39,7 +39,7 @@
     "audit:all": "pnpm audit"
   },
   "devDependencies": {
-    "prettier": "^3.5.3",
-    "typescript": "6.0.3"
+    "prettier": "^3.9.6",
+    "typescript": "7.0.2"
   }
 }
